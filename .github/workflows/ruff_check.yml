@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: ["main"]
   workflow_dispatch:
+  workflow_call: # 他のワークフローから呼び出せるようにする
 
 jobs:
   ruff-check:

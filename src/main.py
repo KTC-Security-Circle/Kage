@@ -11,7 +11,8 @@ def main(page: ft.Page) -> None:
         counter.update()
 
     page.floating_action_button = ft.FloatingActionButton(
-        icon=ft.Icons.ADD, on_click=increment_click,
+        icon=ft.Icons.ADD,
+        on_click=increment_click,
     )
     page.add(
         ft.SafeArea(

@@ -6,11 +6,20 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "バージョン番号（例: 1.0.0）"
+        required: false
+        default: "0.1.0"
+      build_number:
+        description: "ビルド番号"
+        required: false
+        default: "1"
 
 # 環境変数
 env:
-  BUILD_NUMBER: 1
-  BUILD_VERSION: 0.1.0
+  BUILD_NUMBER: ${{ github.event.inputs.build_number || '1' }}
+  BUILD_VERSION: ${{ github.event.inputs.version || '0.1.0' }}
   PYTHON_VERSION: 3.12.5
   FLUTTER_VERSION: 3.27.4
   PYTHONUTF8: 1

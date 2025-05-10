@@ -1,16 +1,17 @@
 name: build-windows
 
-# vがつくタグがpushされたときか、手動のタイミングで実行される
+# 手動実行のみに変更
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
+      tag:
+        description: "リリースタグ名 (例: v1.0.0)"
+        required: true
+        default: "v0.0.1"
       version:
         description: "バージョン番号（例: 1.0.0）"
         required: false
-        default: "0.1.0"
+        default: "0.0.1"
       build_number:
         description: "ビルド番号"
         required: false
@@ -18,8 +19,9 @@ on:
 
 # 環境変数
 env:
-  BUILD_NUMBER: ${{ github.event.inputs.build_number || '1' }}
-  BUILD_VERSION: ${{ github.event.inputs.version || '0.1.0' }}
+  BUILD_NUMBER: ${{ github.event.inputs.build_number }}
+  BUILD_VERSION: ${{ github.event.inputs.version }}
+  RELEASE_TAG: ${{ github.event.inputs.tag }}
   PYTHON_VERSION: 3.12.5
   FLUTTER_VERSION: 3.27.4
   PYTHONUTF8: 1
@@ -37,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "Create Release"
-        run: gh release create ${{ github.ref_name }} --draft --verify-tag --notes "Release ${{ github.ref_name }} created"
+        run: gh release create ${{ env.RELEASE_TAG }} --draft --notes "Release ${{ env.RELEASE_TAG }} created"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -85,6 +87,6 @@ jobs:
           overwrite: false
 
       - name: Upload Release
-        run: gh release upload ${{ github.ref_name }} ./build/windows/${{ vars.APP_NAME }}_windows.zip
+        run: gh release upload ${{ env.RELEASE_TAG }} ./build/windows/${{ vars.APP_NAME }}_windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

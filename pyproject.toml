@@ -9,7 +9,6 @@ authors = [
 ]
 dependencies = [
   "flet==0.27.6",
-  "pre-commit>=4.2.0",
 ]
 
 [tool.flet]
@@ -33,6 +32,7 @@ path = "src"
 [tool.uv]
 dev-dependencies = [
     "flet[all]==0.27.6",
+    "pre-commit>=4.2.0",
 ]
 
 # ruffの設定(参考先: https://zenn.dev/mutex_inc/articles/4183b992ccd701)

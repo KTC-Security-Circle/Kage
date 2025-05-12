@@ -74,22 +74,19 @@ class TaskListView:
     def on_delete(self, task_id: int) -> None:
         """タスク削除時のコールバック"""
         remove_task(task_id)
-        self.refresh()
-        self.task_list.update()
+        self.refresh_and_update()
 
     def on_toggle_done(self, task: Task, value: bool | None) -> None:
         """タスク完了切り替え時のコールバック"""
         edit_task(check_task_id(task.id), is_done=bool(value))
-        self.refresh()
-        self.task_list.update()
+        self.refresh_and_update()
 
     def on_edit(self, task: Task) -> None:
         """タスク編集時のコールバック"""
         tid = check_task_id(task.id)
         self.editing[tid] = True
         self.edit_values[tid] = {"title": task.title, "description": task.description}
-        self.refresh()
-        self.task_list.update()
+        self.refresh_and_update()
 
     def on_edit_save(self, task: Task) -> None:
         """タスク編集保存時のコールバック"""

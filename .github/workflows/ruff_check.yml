@@ -1,8 +1,7 @@
 name: ruff-check
 
 on:
-  push:
-    branches: ["main"]
+  push: # 全てのプッシュに対して実行するため、ブランチ指定を削除
   pull_request:
     branches: ["main"]
   workflow_dispatch:
@@ -26,8 +25,8 @@ jobs:
 
       - name: Run Ruff check
         run: |
-          ruff check .
+          ruff check src
 
       - name: Run Ruff format check
         run: |
-          ruff format --check .
+          ruff format --check src

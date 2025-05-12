@@ -30,6 +30,8 @@ env:
 jobs:
   ruff-check:
     uses: ./.github/workflows/ruff_check.yml
+  pyright-check:
+    uses: ./.github/workflows/pyright_check.yml
 
   create-release:
     needs: ruff-check

@@ -35,7 +35,7 @@ dev-dependencies = [
     "pre-commit>=4.2.0",
 ]
 
-# ruffの設定(参考先: https://zenn.dev/mutex_inc/articles/4183b992ccd701)
+# (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]
 line-length = 120
 

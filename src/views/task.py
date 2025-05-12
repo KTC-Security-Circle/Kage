@@ -113,6 +113,11 @@ class TaskListView:
             for task in tasks:
                 self.task_list.controls.append(self.build_task_row(task))
 
+    def refresh_and_update(self) -> None:
+        """タスクリストを再構築し、UIを更新"""
+        self.refresh()
+        self.task_list.update()
+
 
 def task_view(page: ft.Page) -> ft.Container:
     """タスク一覧画面のルートコンテナ"""

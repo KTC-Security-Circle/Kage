@@ -1,7 +1,7 @@
 name: Pyright Type Checking
 
 on:
-  push: # 全てのプッシュに対して実行するため、ブランチ指定を削除
+#   push: # 全てのプッシュに対して実行するため、ブランチ指定を削除
   pull_request:
     branches: ["main"]
   workflow_dispatch:

@@ -34,6 +34,7 @@ path = "src"
 dev-dependencies = [
     "flet[all]==0.27.6",
     "pre-commit>=4.2.0",
+    "pyright>=1.1.400",
     "ruff>=0.11.9",
 ]
 

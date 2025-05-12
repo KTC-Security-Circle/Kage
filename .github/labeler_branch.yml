@@ -1,0 +1,12 @@
+enhancement:
+  - head-branch: ['^feature']
+fix:
+  - head-branch: ['^fix']
+chore:
+  - head-branch: ['^chore']
+bug:
+  - head-branch: ['^bugfix']
+documentation:
+  - head-branch: ['^doc']
+release:
+  - head-branch: ['^release']

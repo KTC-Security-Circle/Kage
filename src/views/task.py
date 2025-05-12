@@ -4,11 +4,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 import flet as ft
-from controller.task_controller import edit_task, fetch_tasks, remove_task
-from view.components import TaskCardCallbacks, task_card
+
+from controllers.task_controller import edit_task, fetch_tasks, remove_task
+from views.components import TaskCardCallbacks, task_card
 
 if TYPE_CHECKING:
-    from model.task import Task
+    from models.task import Task
+
+
+def check_task_id(task_id: int | None) -> int:
+    """タスクIDの存在確認"""
+    if task_id is None:
+        msg = "タスクIDが指定されていません"
+        raise ValueError(msg)
+    return task_id
 
 
 class TaskListView:
@@ -23,17 +32,18 @@ class TaskListView:
 
     def build_task_row(self, task: Task) -> ft.Control:
         """タスク1件分のUIを生成"""
-        is_editing = self.editing.get(task.id, False)
-        values = self.edit_values.get(task.id, {"title": task.title, "description": task.description})
+        tid = check_task_id(task.id)
+        is_editing = self.editing.get(tid, False)
+        values = self.edit_values.get(tid, {"title": task.title, "description": task.description})
 
         callbacks = TaskCardCallbacks(
-            on_title_change=self.on_title_change_factory(task.id),
-            on_desc_change=self.on_desc_change_factory(task.id),
+            on_title_change=self.on_title_change_factory(tid),
+            on_desc_change=self.on_desc_change_factory(tid),
             on_toggle_done=lambda e: self.on_toggle_done(task, e.control.value),
             on_edit=lambda _: self.on_edit(task),
             on_edit_save=lambda _: self.on_edit_save(task),
             on_edit_cancel=lambda _: self.on_edit_cancel(task),
-            on_delete=lambda _: self.on_delete(task.id),
+            on_delete=lambda _: self.on_delete(tid),
         )
 
         return task_card(
@@ -67,30 +77,32 @@ class TaskListView:
         self.refresh()
         self.task_list.update()
 
-    def on_toggle_done(self, task: object, value: bool | None) -> None:
+    def on_toggle_done(self, task: Task, value: bool | None) -> None:
         """タスク完了切り替え時のコールバック"""
-        edit_task(task.id, is_done=bool(value))
+        edit_task(check_task_id(task.id), is_done=bool(value))
         self.refresh()
         self.task_list.update()
 
-    def on_edit(self, task: object) -> None:
+    def on_edit(self, task: Task) -> None:
         """タスク編集時のコールバック"""
-        self.editing[task.id] = True
-        self.edit_values[task.id] = {"title": task.title, "description": task.description}
+        tid = check_task_id(task.id)
+        self.editing[tid] = True
+        self.edit_values[tid] = {"title": task.title, "description": task.description}
         self.refresh()
         self.task_list.update()
 
-    def on_edit_save(self, task: object) -> None:
+    def on_edit_save(self, task: Task) -> None:
         """タスク編集保存時のコールバック"""
-        values = self.edit_values.get(task.id, {"title": task.title, "description": task.description})
-        edit_task(task.id, title=values["title"], description=values["description"])
-        self.editing[task.id] = False
+        tid = check_task_id(task.id)
+        values = self.edit_values.get(tid, {"title": task.title, "description": task.description})
+        edit_task(tid, title=values["title"], description=values["description"])
+        self.editing[tid] = False
         self.refresh()
         self.task_list.update()
 
-    def on_edit_cancel(self, task: object) -> None:
+    def on_edit_cancel(self, task: Task) -> None:
         """タスク編集キャンセル時のコールバック"""
-        self.editing[task.id] = False
+        self.editing[check_task_id(task.id)] = False
         self.refresh()
         self.task_list.update()
 

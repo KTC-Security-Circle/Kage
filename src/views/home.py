@@ -1,6 +1,7 @@
 # view/home.py
 import flet as ft
-from model.task import create_task
+
+from models.task import create_task
 
 
 def home_view(page: ft.Page) -> ft.Column:

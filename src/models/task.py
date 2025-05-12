@@ -23,8 +23,10 @@ class Task(SQLModel, table=True):
     is_done: bool = False
 
 
-def create_task(title: str, description: str = "") -> Task:
+def create_task(title: str, description: str | None = None) -> Task:
     """新しいタスクを作成しDBに保存"""
+    if description is None:
+        description = ""
     task = Task(title=title, description=description)
     with Session(engine) as session:
         session.add(task)
@@ -36,7 +38,8 @@ def create_task(title: str, description: str = "") -> Task:
 def get_tasks() -> list[Task]:
     """全タスクを取得"""
     with Session(engine) as session:
-        return session.exec(select(Task)).all()
+        # 明示的にlist()でリストに変換
+        return list(session.exec(select(Task)).all())
 
 
 def get_task(task_id: int) -> Task | None:

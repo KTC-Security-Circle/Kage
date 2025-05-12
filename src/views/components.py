@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import flet as ft
 
 if TYPE_CHECKING:
-    from model.task import Task
+    from models.task import Task
 
 
 @dataclass

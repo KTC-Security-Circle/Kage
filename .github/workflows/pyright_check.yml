@@ -1,0 +1,41 @@
+name: Pyright Type Checking
+
+on:
+#   push: # 全てのプッシュに対して実行するため、ブランチ指定を削除
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+  workflow_call: # 他のワークフローから呼び出せるようにする
+
+jobs:
+  pyright:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Install dependencies
+        run: |
+          # pyproject.tomlから依存関係をインストール
+          uv sync
+
+      - name: Run pyright
+        run: |
+          uv run pyright
+          # コマンドの終了コードが成功を意味するか確認
+          if [ $? -eq 0 ]; then
+            echo "Pyright check passed successfully!"
+          else
+            echo "Pyright check failed. See errors above."
+            exit 1
+          fi

@@ -10,7 +10,7 @@
 ## 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/yourusername/SigotoDekiruKun.git
+git git@github.com:KTC-Security-Circle/SigotoDekiruKun.git
 cd SigotoDekiruKun
 ```
 

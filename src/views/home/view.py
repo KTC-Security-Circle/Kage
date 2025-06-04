@@ -1,4 +1,3 @@
-# view/home.py
 import flet as ft
 
 from models.task import create_task

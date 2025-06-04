@@ -1,6 +1,3 @@
-# view/components.py
-# 汎用UIコンポーネント(再利用可能な部品)
-
 from __future__ import annotations
 
 from dataclasses import dataclass

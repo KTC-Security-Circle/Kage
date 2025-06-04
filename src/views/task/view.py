@@ -1,4 +1,3 @@
-# view/task.py
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
@@ -6,7 +5,8 @@ from typing import TYPE_CHECKING, Callable
 import flet as ft
 
 from controllers.task_controller import edit_task, fetch_tasks, remove_task
-from views.components import TaskCardCallbacks, task_card
+
+from .components import TaskCardCallbacks, task_card
 
 if TYPE_CHECKING:
     from models.task import Task

@@ -1,9 +1,8 @@
-from views.home.view import home_view
-from views.layout import get_layout
-from views.task.view import task_view
+# views/__init__.py
+# ビュー層の初期化とエクスポート
+
+from views.home.view import create_home_view
 
 __all__ = [
-    "get_layout",
-    "home_view",
-    "task_view",
+    "create_home_view",
 ]

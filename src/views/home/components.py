@@ -1,44 +1,190 @@
+"""ホーム画面のコンポーネントモジュール."""
+
+from __future__ import annotations
+
 from typing import Callable
 
 import flet as ft
 
 
-def create_title() -> ft.Text:
-    """タイトルコンポーネントを作成する
+class MainActionSection(ft.Column):
+    """メインアクションセクションコンポーネント.
+
+    タスク管理ボタンと統計情報を表示するセクション。
+    """
+
+    page: ft.Page
+
+    def __init__(self, page: ft.Page) -> None:
+        """MainActionSectionの初期化.
+
+        Args:
+            page: Fletのページオブジェクト
+        """
+        super().__init__()
+        self.page = page
+        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        self.spacing = 20
+
+        # コンポーネントを構築
+        self._build_components()
+
+    def _build_components(self) -> None:
+        """コンポーネントを構築して追加."""
+        self.controls = [
+            ft.ElevatedButton(
+                text="タスク管理",
+                icon=ft.icons.TASK_ALT,
+                width=200,
+                height=50,
+                style=ft.ButtonStyle(
+                    bgcolor=ft.colors.BLUE_600,
+                    color=ft.colors.WHITE,
+                    text_style=ft.TextStyle(size=16),
+                ),
+                on_click=self._navigate_to_tasks,
+            ),
+            TaskStatsCard(task_count=0),
+        ]
+
+    def _navigate_to_tasks(self, _: ft.ControlEvent) -> None:
+        """タスク画面への遷移処理.
+
+        Args:
+            _: イベントオブジェクト
+        """
+        self.page.go("/task")
+
+
+class TaskStatsCard(ft.Container):
+    """タスク統計情報カードコンポーネント.
+
+    今日のタスク件数などの統計情報を表示するカード。
+    """
+
+    def __init__(self, task_count: int = 0) -> None:
+        """TaskStatsCardの初期化.
+
+        Args:
+            task_count: タスク件数
+        """
+        super().__init__()
+        self.task_count = task_count
+        self.width = 200
+
+        # カードコンテンツを構築
+        self._build_card()
+
+    def _build_card(self) -> None:
+        """カードのコンテンツを構築."""
+        self.content = ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Text(
+                            "今日のタスク",
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            f"{self.task_count}件",
+                            size=24,
+                            color=ft.colors.BLUE_600,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=20,
+            ),
+            elevation=2,
+        )
+
+    def update_task_count(self, count: int) -> None:
+        """タスク件数を更新.
+
+        Args:
+            count: 新しいタスク件数
+        """
+        self.task_count = count
+        self._build_card()
+        self.update()
+
+
+class QuickActionCard(ft.Container):
+    """クイックアクション用のカードコンポーネント.
+
+    ホーム画面で使用する再利用可能なアクションカード。
+    """
+
+    def __init__(
+        self,
+        title: str,
+        icon: str,
+        description: str,
+        on_click_handler: Callable | None = None,
+    ) -> None:
+        """QuickActionCardの初期化.
+
+        Args:
+            title: カードのタイトル
+            icon: 表示するアイコン
+            description: カードの説明文
+            on_click_handler: クリック時のハンドラー関数
+        """
+        super().__init__()
+        self.title = title
+        self.icon = icon
+        self.description = description
+        self.on_click = on_click_handler
+
+        # カードコンテンツを構築
+        self._build_card()
+
+    def _build_card(self) -> None:
+        """カードのコンテンツを構築."""
+        self.content = ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(
+                            name=self.icon,
+                            size=40,
+                            color=ft.colors.BLUE_600,
+                        ),
+                        ft.Text(
+                            self.title,
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            self.description,
+                            size=12,
+                            color=ft.colors.GREY_600,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=5,
+                ),
+                padding=20,
+                width=150,
+                height=120,
+            ),
+            elevation=2,
+        )
+
+
+def create_welcome_message() -> ft.Container:
+    """ウェルカムメッセージを作成.
 
     Returns:
-        ft.Text: タイトルコンポーネント
+        ウェルカムメッセージのContainerコンポーネント
     """
-    return ft.Text("ホームページ", size=30)
-
-
-def create_task_form(
-    on_add_click: Callable[[ft.ControlEvent], None],
-) -> tuple[ft.TextField, ft.TextField, ft.ElevatedButton, ft.Text]:
-    """タスク追加フォームを作成する
-
-    Args:
-        on_add_click: タスク追加ボタンクリック時のコールバック関数
-
-    Returns:
-        tuple: タイトル入力欄、説明入力欄、追加ボタン、メッセージ表示用テキスト
-    """
-    # タスク追加用のテキストフィールド
-    title_field = ft.TextField(label="タスク名", width=300)
-    desc_field = ft.TextField(label="説明", width=300)
-    add_button = ft.ElevatedButton("タスク追加", on_click=on_add_click)
-    msg = ft.Text("")
-
-    return title_field, desc_field, add_button, msg
-
-
-def create_navigation_button(page: ft.Page) -> ft.ElevatedButton:
-    """タスク一覧画面への遷移ボタンを作成する
-
-    Args:
-        page: Fletのページオブジェクト
-
-    Returns:
-        ft.ElevatedButton: 遷移ボタン
-    """
-    return ft.ElevatedButton("タスク一覧へ", on_click=lambda _: page.go("/task"))
+    return ft.Container(
+        content=ft.Text(
+            "タスク管理でもっと効率的に！",
+            size=18,
+            color=ft.colors.GREY_700,
+        ),
+        alignment=ft.alignment.center,
+    )

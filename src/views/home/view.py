@@ -1,43 +1,65 @@
+"""ホーム画面のビューモジュール."""
+
+from __future__ import annotations
+
 import flet as ft
 
-from views.home.components import create_navigation_button, create_task_form, create_title
-from views.home.logic import HomeLogic
+from views.home.components import MainActionSection, create_welcome_message
 
 
-def home_view(page: ft.Page) -> ft.Column:
-    """ホーム画面のビューを作成する
+class HomeView(ft.Column):
+    """ホーム画面のメインビューコンポーネント.
+
+    タスク管理画面への遷移ボタンやダッシュボード情報を表示する。
+    """
+
+    page: ft.Page
+
+    def __init__(self, page: ft.Page) -> None:
+        """HomeViewの初期化.
+
+        Args:
+            page: Fletのページオブジェクト
+        """
+        super().__init__()
+        self.page = page
+        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        self.alignment = ft.MainAxisAlignment.CENTER
+        self.expand = True
+        self.spacing = 30
+
+        # コンポーネントを構築
+        self._build_components()
+
+    def _build_components(self) -> None:
+        """コンポーネントを構築して追加."""
+        self.controls = [
+            create_welcome_message(),
+            MainActionSection(self.page),
+        ]
+
+    def _navigate_to_tasks(self, _: ft.ControlEvent) -> None:
+        """タスク画面への遷移処理.
+
+        Args:
+            _: イベントオブジェクト
+        """
+        self.page.go("/task")
+
+
+def create_home_view(page: ft.Page) -> ft.Container:
+    """ホーム画面ビューを作成する関数.
 
     Args:
         page: Fletのページオブジェクト
 
     Returns:
-        ft.Column: ホーム画面のルートコンポーネント
+        構築されたホーム画面ビュー
     """
-    # コンポーネントの作成
-    title = create_title()
-
-    # フォームコンポーネントを作成（ロジックの初期化後にコールバックを設定）
-    title_field, desc_field, add_button, msg = create_task_form(lambda _: None)
-
-    # ロジックの初期化
-    logic = HomeLogic(title_field, desc_field, msg)
-
-    # ボタンのコールバックを設定
-    add_button.on_click = logic.handle_add_task
-
-    # ナビゲーションボタンの作成
-    nav_button = create_navigation_button(page)
-
-    # 画面レイアウトの構築
-    return ft.Column(
-        [
-            title,
-            title_field,
-            desc_field,
-            add_button,
-            msg,
-            nav_button,
-        ],
-        alignment=ft.MainAxisAlignment.CENTER,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    return ft.Container(
+        content=HomeView(page),
+        expand=True,
+        bgcolor=ft.colors.GREY_50,  # 背景色を設定
+        padding=ft.padding.all(20),  # 全体のパディング
+        alignment=ft.alignment.center,
     )

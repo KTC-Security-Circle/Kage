@@ -3,14 +3,15 @@
 import flet as ft
 
 from views import (
-    get_layout,
-    home_view,
-    task_view,
+    # get_layout,
+    create_home_view,
+    # task_view,
 )
+from views.layout import get_layout
 
 ROUTES = {
-    "/": home_view,
-    "/task": task_view,
+    "/": create_home_view,
+    # "/task": task_view,
     # 今後ページが増えた場合はここに追加
 }
 
@@ -20,12 +21,11 @@ def route_change(e: ft.RouteChangeEvent) -> None:
 
     ROUTES辞書に基づきページを切り替える。
     """
-    page = e.page
+    page: ft.Page = e.page
     page.views.clear()
     view_func = ROUTES.get(page.route)
-    if view_func:
-        page.views.append(get_layout(page, view_func(page)))
-    else:
-        # 未定義ルートの場合はホームにリダイレクト
-        page.views.append(get_layout(page, home_view(page)))
+    if not view_func:
+        page.go("/")
+        return
+    page.views.append(get_layout(page, view_func(page)))
     page.update()

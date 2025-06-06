@@ -15,3 +15,8 @@ engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 
 # アプリケーションのタイトル
 APP_TITLE: str = "タスク管理アプリ"
+
+# タスク用の定数
+TASK_TITLE_MAX_LENGTH = 100
+TASK_DESCRIPTION_MAX_LENGTH = 500
+DESCRIPTION_TRUNCATE_LENGTH = 50

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Callable
 import flet as ft
 
 from logic.task import TaskService, TaskUIHelper
-from models.task import check_task_id
+from models.task import validate_task_id
 
 if TYPE_CHECKING:
     from models.task import Task
@@ -157,7 +157,7 @@ class TaskItem(ft.Card):
         super().__init__()
         self._page = page
         self.task = task
-        self.checked_task_id = check_task_id(task.id)
+        self.validated_task_id = validate_task_id(task.id)
         self.on_task_updated = on_task_updated
         self.on_task_deleted = on_task_deleted
         self.service = TaskService()
@@ -283,7 +283,7 @@ class TaskItem(ft.Card):
     def _on_complete_toggled(self, _: ft.ControlEvent) -> None:
         """完了状態トグル時の処理"""
         try:
-            updated_task = self.service.toggle_task_status(self.checked_task_id)
+            updated_task = self.service.toggle_task_status(self.validated_task_id)
             if updated_task:
                 self.task = updated_task
                 self._update_display()
@@ -312,7 +312,7 @@ class TaskItem(ft.Card):
                 return
 
             # タスク更新
-            updated_task = self.service.update_task_info(self.checked_task_id, title, description)
+            updated_task = self.service.update_task_info(self.validated_task_id, title, description)
 
             if updated_task:
                 self.task = updated_task
@@ -342,7 +342,7 @@ class TaskItem(ft.Card):
 
         def confirm_delete(_: ft.ControlEvent) -> None:
             try:
-                success = self.service.remove_task(self.checked_task_id)
+                success = self.service.remove_task(self.validated_task_id)
                 if success:
                     if self.on_task_deleted:
                         self.on_task_deleted(self.task)

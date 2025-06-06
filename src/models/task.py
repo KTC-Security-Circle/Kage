@@ -21,7 +21,7 @@ class Task(SQLModel, table=True):
     completed: bool = Field(default=False)
 
 
-def check_task_id(task_id: int | None) -> int:
+def validate_task_id(task_id: int | None) -> int:
     """タスクIDのチェック
 
     task.idがPylanceの警告を回避するための関数

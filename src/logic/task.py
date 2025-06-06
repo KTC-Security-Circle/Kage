@@ -17,7 +17,7 @@ from config import (
     TASK_TITLE_MAX_LENGTH,
     engine,
 )
-from models.task import Task, check_task_id
+from models.task import Task, validate_task_id
 
 
 class TaskRepository:
@@ -71,7 +71,7 @@ class TaskRepository:
         Returns:
             Task | None: 見つかったタスクオブジェクト、存在しない場合はNone
         """
-        validated_id = check_task_id(task_id)
+        validated_id = validate_task_id(task_id)
 
         with Session(self.engine) as session:
             statement = select(Task).where(Task.id == validated_id)
@@ -116,7 +116,7 @@ class TaskRepository:
         Returns:
             Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
         """
-        validated_id = check_task_id(task_id)
+        validated_id = validate_task_id(task_id)
 
         with Session(self.engine) as session:
             task = session.get(Task, validated_id)
@@ -151,7 +151,7 @@ class TaskRepository:
         Returns:
             Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
         """
-        validated_id = check_task_id(task_id)
+        validated_id = validate_task_id(task_id)
 
         with Session(self.engine) as session:
             task = session.get(Task, validated_id)
@@ -176,7 +176,7 @@ class TaskRepository:
         Returns:
             bool: 削除に成功した場合True、タスクが存在しない場合False
         """
-        validated_id = check_task_id(task_id)
+        validated_id = validate_task_id(task_id)
 
         with Session(self.engine) as session:
             task = session.get(Task, validated_id)

@@ -1,36 +1,42 @@
 import flet as ft
 
-from models.task import create_task
+from views.home.components import create_navigation_button, create_task_form, create_title
+from views.home.logic import HomeLogic
 
 
 def home_view(page: ft.Page) -> ft.Column:
-    # タスク追加用のテキストフィールド
-    title_field = ft.TextField(label="タスク名", width=300)
-    desc_field = ft.TextField(label="説明", width=300)
-    msg = ft.Text("")
+    """ホーム画面のビューを作成する
 
-    def on_add_click(_: ft.ControlEvent) -> None:
-        # 入力値でタスクを追加
-        if not title_field.value:
-            msg.value = "タスク名を入力してください"
-            msg.update()
-            return
-        create_task(title_field.value, desc_field.value)
-        msg.value = "タスクを追加しました"
-        msg.update()
-        title_field.value = ""
-        desc_field.value = ""
-        title_field.update()
-        desc_field.update()
+    Args:
+        page: Fletのページオブジェクト
 
+    Returns:
+        ft.Column: ホーム画面のルートコンポーネント
+    """
+    # コンポーネントの作成
+    title = create_title()
+
+    # フォームコンポーネントを作成（ロジックの初期化後にコールバックを設定）
+    title_field, desc_field, add_button, msg = create_task_form(lambda _: None)
+
+    # ロジックの初期化
+    logic = HomeLogic(title_field, desc_field, msg)
+
+    # ボタンのコールバックを設定
+    add_button.on_click = logic.handle_add_task
+
+    # ナビゲーションボタンの作成
+    nav_button = create_navigation_button(page)
+
+    # 画面レイアウトの構築
     return ft.Column(
         [
-            ft.Text("ホームページ", size=30),
+            title,
             title_field,
             desc_field,
-            ft.ElevatedButton("タスク追加", on_click=on_add_click),
+            add_button,
             msg,
-            ft.ElevatedButton("タスク一覧へ", on_click=lambda _: page.go("/task")),
+            nav_button,
         ],
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,

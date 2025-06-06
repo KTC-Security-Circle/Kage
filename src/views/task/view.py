@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING, Callable
 import flet as ft
 
 from controllers.task_controller import edit_task, fetch_tasks, remove_task
-
-from .components import TaskCardCallbacks, task_card
+from views.task.components import TaskCardCallbacks, task_card
 
 if TYPE_CHECKING:
     from models.task import Task

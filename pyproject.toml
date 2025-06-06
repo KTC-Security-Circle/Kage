@@ -66,6 +66,7 @@ ignore = [
     "RUF003",
     "COM812",
     "DTZ005",
+    "BLE001",
 ]
 unfixable = [
     "F401", # unused import

@@ -6,14 +6,14 @@ from typing import Callable
 
 import flet as ft
 
+from logic.task import TaskService
+
 
 class MainActionSection(ft.Column):
     """メインアクションセクションコンポーネント.
 
     タスク管理ボタンと統計情報を表示するセクション。
     """
-
-    page: ft.Page
 
     def __init__(self, page: ft.Page) -> None:
         """MainActionSectionの初期化.
@@ -22,9 +22,10 @@ class MainActionSection(ft.Column):
             page: Fletのページオブジェクト
         """
         super().__init__()
-        self.page = page
+        self._page = page
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 20
+        self._task_service = TaskService()
 
         # コンポーネントを構築
         self._build_components()
@@ -44,7 +45,7 @@ class MainActionSection(ft.Column):
                 ),
                 on_click=self._navigate_to_tasks,
             ),
-            TaskStatsCard(task_count=0),
+            TaskStatsCard(task_count=self.get_today_task_count()),
         ]
 
     def _navigate_to_tasks(self, _: ft.ControlEvent) -> None:
@@ -53,7 +54,16 @@ class MainActionSection(ft.Column):
         Args:
             _: イベントオブジェクト
         """
-        self.page.go("/task")
+        self._page.go("/task")
+
+    def get_today_task_count(self) -> int:
+        """今日のタスク件数を取得.
+
+        Returns:
+            今日のタスク件数
+        """
+        tasks = self._task_service.get_task_by_today()
+        return len(tasks) if tasks else 0
 
 
 class TaskStatsCard(ft.Container):

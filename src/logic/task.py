@@ -87,6 +87,19 @@ class TaskRepository:
             statement = select(Task).order_by(desc(Task.created_at))
             return list(session.exec(statement).all())
 
+    def get_task_by_date(self, date: datetime) -> list[Task]:
+        """指定した日付のタスクを取得
+
+        Args:
+            date: 取得するタスクの日付
+
+        Returns:
+            list[Task]: 指定した日付のタスクのリスト
+        """
+        with Session(self.engine) as session:
+            statement = select(Task).where(Task.created_at == date)
+            return list(session.exec(statement).all())
+
     def update_task(
         self,
         task_id: int,
@@ -238,6 +251,26 @@ class TaskService:
         """
         all_tasks = self.repository.get_all_tasks()
         return [task for task in all_tasks if not task.completed]
+
+    def get_task_by_date(self, date: datetime) -> list[Task]:
+        """指定した日付のタスクを取得
+
+        Args:
+            date: 取得するタスクの日付
+
+        Returns:
+            list[Task]: 指定した日付のタスクのリスト
+        """
+        return self.repository.get_task_by_date(date)
+
+    def get_task_by_today(self) -> list[Task]:
+        """今日のタスクを取得
+
+        Returns:
+            list[Task]: 今日のタスクのリスト
+        """
+        today = datetime.now()
+        return self.repository.get_task_by_date(today)
 
     def update_task_info(
         self,
@@ -411,8 +444,3 @@ class TaskUIHelper:
             return False, "タスクの説明は500文字以内で入力してください"
 
         return True, ""
-
-
-# シングルトンインスタンスの提供
-task_service = TaskService()
-task_ui_helper = TaskUIHelper()

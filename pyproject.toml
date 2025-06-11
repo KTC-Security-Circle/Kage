@@ -100,7 +100,9 @@ venvPath = "."
 venv = ".venv"
 
 
-[tool.pytest.options]
+[tool.pytest.ini_options]
+pythonpath = "src"
+
 # テストが格納されているディレクトリを配列で指定
 testpaths = ["tests"]
 
@@ -114,7 +116,11 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 # テスト実行時の追加オプションを1行の文字列で指定
-addopts = "--strict-markers --disable-warnings --verbose --cov=src --cov-report=html --cov-report=term-missing"
+addopts = [
+    "--strict-markers",
+    "--disable-warnings",
+    "--verbose",
+]
 
 # テストマーカーの定義
 markers = [

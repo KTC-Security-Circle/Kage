@@ -10,10 +10,11 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from logic.task import TaskRepository, TaskService
 from views.task.components import TaskCreateForm, TaskList
 
 if TYPE_CHECKING:
-    from models.task import Task
+    from models.task import TaskRead
 
 
 class TaskView(ft.Column):
@@ -29,6 +30,9 @@ class TaskView(ft.Column):
         self.spacing = 20
         self.expand = True
 
+        self.task_repository = TaskRepository()
+        self.task_service = TaskService(repository=self.task_repository)
+
         # コンポーネントの初期化
         self._initialize_components()
 
@@ -38,10 +42,12 @@ class TaskView(ft.Column):
     def _initialize_components(self) -> None:
         """各コンポーネントを初期化"""
         # タスク一覧コンポーネント
-        self.task_list = TaskList(page=self._page)
+        self.task_list = TaskList(page=self._page, service=self.task_service)
 
         # タスク作成フォームコンポーネント
-        self.task_create_form = TaskCreateForm(page=self._page, on_task_created=self._on_task_created)
+        self.task_create_form = TaskCreateForm(
+            page=self._page, service=self.task_service, on_task_created=self._on_task_created
+        )
 
     def _build_layout(self) -> None:
         """レイアウトを構築"""
@@ -83,7 +89,7 @@ class TaskView(ft.Column):
             main_content,
         ]
 
-    def _on_task_created(self, new_task: Task) -> None:
+    def _on_task_created(self, new_task: TaskRead) -> None:
         """タスク作成時のコールバック処理
 
         Args:

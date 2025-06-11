@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import flet as ft
 
-from logic.task import TaskService
+if TYPE_CHECKING:
+    from logic.task import TaskService
 
 
 class MainActionSection(ft.Column):
@@ -15,17 +16,18 @@ class MainActionSection(ft.Column):
     タスク管理ボタンと統計情報を表示するセクション。
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, task_service: TaskService) -> None:
         """MainActionSectionの初期化.
 
         Args:
             page: Fletのページオブジェクト
+            task_service: タスクサービスインスタンス
         """
         super().__init__()
         self._page = page
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 20
-        self._task_service = TaskService()
+        self.task_service = task_service
 
         # コンポーネントを構築
         self._build_components()
@@ -62,8 +64,7 @@ class MainActionSection(ft.Column):
         Returns:
             今日のタスク件数
         """
-        tasks = self._task_service.get_task_by_today()
-        return len(tasks) if tasks else 0
+        return self.task_service.get_task_count_by_today()
 
 
 class TaskStatsCard(ft.Container):

@@ -6,15 +6,21 @@ FletライブラリとTaskServiceを使用してタスク管理機能を実装�
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING, Callable
 
 import flet as ft
 
 from logic.task import TaskService, TaskUIHelper
-from models.task import validate_task_id
+from models.task import TaskUpdate
 
 if TYPE_CHECKING:
-    from models.task import Task
+    from models.task import TaskRead
+
+    # 型定義
+    type OnTaskCreated = Callable[[TaskRead], None] | None
+    type OnTaskUpdated = Callable[[TaskRead], None] | None
+    type OnTaskDeleted = Callable[[TaskRead], None] | None
 
 
 class TaskCreateForm(ft.Column):
@@ -23,17 +29,18 @@ class TaskCreateForm(ft.Column):
     新しいタスクを作成するためのフォームUIを提供します。
     """
 
-    def __init__(self, page: ft.Page, on_task_created: Callable[[Task], None] | None = None) -> None:
+    def __init__(self, page: ft.Page, service: TaskService, on_task_created: OnTaskCreated = None) -> None:
         """TaskCreateFormのコンストラクタ
 
         Args:
             page: Fletのページオブジェクト
+            service: タスクサービスインスタンス
             on_task_created: タスク作成時のコールバック関数
         """
         super().__init__()
         self._page = page
         self.on_task_created = on_task_created
-        self.service = TaskService()
+        self.service = service
         self.ui_helper = TaskUIHelper()
 
         # フォーム要素の初期化
@@ -142,14 +149,16 @@ class TaskItem(ft.Card):
     def __init__(
         self,
         page: ft.Page,
-        task: Task,
-        on_task_updated: Callable[[Task], None] | None = None,
-        on_task_deleted: Callable[[Task], None] | None = None,
+        service: TaskService,
+        task: TaskRead,
+        on_task_updated: OnTaskUpdated = None,
+        on_task_deleted: OnTaskDeleted = None,
     ) -> None:
         """TaskItemのコンストラクタ
 
         Args:
             page: Fletのページオブジェクト
+            service: タスクサービスインスタンス
             task: 表示するタスクオブジェクト
             on_task_updated: タスク更新時のコールバック関数
             on_task_deleted: タスク削除時のコールバック関数
@@ -157,10 +166,9 @@ class TaskItem(ft.Card):
         super().__init__()
         self._page = page
         self.task = task
-        self.validated_task_id = validate_task_id(task.id)
         self.on_task_updated = on_task_updated
         self.on_task_deleted = on_task_deleted
-        self.service = TaskService()
+        self.service = service
         self.ui_helper = TaskUIHelper()
 
         # 編集モードのフラグ
@@ -283,7 +291,7 @@ class TaskItem(ft.Card):
     def _on_complete_toggled(self, _: ft.ControlEvent) -> None:
         """完了状態トグル時の処理"""
         try:
-            updated_task = self.service.toggle_task_status(self.validated_task_id)
+            updated_task = self.service.toggle_task_status(self.task.id)
             if updated_task:
                 self.task = updated_task
                 self._update_display()
@@ -312,7 +320,8 @@ class TaskItem(ft.Card):
                 return
 
             # タスク更新
-            updated_task = self.service.update_task_info(self.validated_task_id, title, description)
+            update_data = TaskUpdate(title=title, description=description)
+            updated_task = self.service.update_task(self.task.id, update_data)
 
             if updated_task:
                 self.task = updated_task
@@ -342,11 +351,9 @@ class TaskItem(ft.Card):
 
         def confirm_delete(_: ft.ControlEvent) -> None:
             try:
-                success = self.service.remove_task(self.validated_task_id)
-                if success:
-                    if self.on_task_deleted:
-                        self.on_task_deleted(self.task)
-
+                self.service.remove_task(self.task.id)
+                if self.on_task_deleted:
+                    self.on_task_deleted(self.task)
                     self._page.open(ft.SnackBar(content=ft.Text("タスクを削除しました")))
                 dialog.open = False
                 self._page.update()
@@ -397,21 +404,26 @@ class TaskItem(ft.Card):
         self.update()
 
 
+class TaskFilter(Enum):
+    """タスクフィルタの列挙型"""
+
+    ALL = "all"
+    COMPLETED = "completed"
+    PENDING = "pending"
+
+
 class TaskList(ft.Column):
     """タスク一覧コンポーネント
 
     複数のタスクを一覧表示し、フィルタリング機能を提供します。
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, service: TaskService) -> None:
         """TaskListのコンストラクタ"""
         super().__init__()
-        self.service = TaskService()
+        self.service = service
         self.tasks = []
-        self.current_filter = "all"  # all, completed, pending
-        if not isinstance(page, ft.Page):
-            e_msg = "page must be an instance of flet.Page"
-            raise TypeError(e_msg)
+        self.current_filter: TaskFilter = TaskFilter.ALL
         self._page = page
 
         # UI要素の初期化
@@ -425,15 +437,15 @@ class TaskList(ft.Column):
             [
                 ft.ElevatedButton(
                     text="すべて",
-                    on_click=lambda _: self._apply_filter("all"),
+                    on_click=lambda _: self._apply_filter(TaskFilter.ALL),
                 ),
                 ft.ElevatedButton(
                     text="未完了",
-                    on_click=lambda _: self._apply_filter("pending"),
+                    on_click=lambda _: self._apply_filter(TaskFilter.PENDING),
                 ),
                 ft.ElevatedButton(
                     text="完了済み",
-                    on_click=lambda _: self._apply_filter("completed"),
+                    on_click=lambda _: self._apply_filter(TaskFilter.COMPLETED),
                 ),
             ]
         )
@@ -464,7 +476,7 @@ class TaskList(ft.Column):
             self._page.open(ft.SnackBar(content=ft.Text(f"タスクの読み込みに失敗しました: {ex}")))
         self._page.update()
 
-    def _apply_filter(self, filter_type: str) -> None:
+    def _apply_filter(self, filter_type: TaskFilter) -> None:
         """フィルタを適用"""
         self.current_filter = filter_type
         self._update_display()
@@ -472,9 +484,9 @@ class TaskList(ft.Column):
     def _update_display(self) -> None:
         """表示を更新"""
         # フィルタに基づいてタスクを絞り込み
-        if self.current_filter == "completed":
+        if self.current_filter == TaskFilter.COMPLETED:
             filtered_tasks = [task for task in self.tasks if task.completed]
-        elif self.current_filter == "pending":
+        elif self.current_filter == TaskFilter.PENDING:
             filtered_tasks = [task for task in self.tasks if not task.completed]
         else:
             filtered_tasks = self.tasks
@@ -492,6 +504,7 @@ class TaskList(ft.Column):
             for task in filtered_tasks:
                 task_item = TaskItem(
                     page=self._page,
+                    service=self.service,
                     task=task,
                     on_task_updated=self._on_task_updated,
                     on_task_deleted=self._on_task_deleted,
@@ -500,23 +513,19 @@ class TaskList(ft.Column):
 
         self._page.update()
 
-    def _on_task_updated(self, updated_task: Task) -> None:
+    def _on_task_updated(self, updated_task: TaskRead) -> None:
         """タスク更新時の処理"""
-        # タスクリストを更新
-        for i, task in enumerate(self.tasks):
-            if task.id == updated_task.id:
-                self.tasks[i] = updated_task
-                break
-
+        # タスクのIDが一致するものを更新
+        self.tasks = [task if task.id != updated_task.id else updated_task for task in self.tasks]
         self._update_display()
 
-    def _on_task_deleted(self, deleted_task: Task) -> None:
+    def _on_task_deleted(self, deleted_task: TaskRead) -> None:
         """タスク削除時の処理"""
         # タスクリストから削除
         self.tasks = [task for task in self.tasks if task.id != deleted_task.id]
         self._update_display()
 
-    def add_task(self, new_task: Task) -> None:
+    def add_task(self, new_task: TaskRead) -> None:
         """新しいタスクを追加"""
         self.tasks.insert(0, new_task)  # 先頭に追加
         self._update_display()

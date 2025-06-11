@@ -7,9 +7,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from typing import TYPE_CHECKING
 
-from sqlmodel import Session, desc, select
+from sqlmodel import Session, desc, func, select
 
 from config import (
     DESCRIPTION_TRUNCATE_LENGTH,
@@ -17,7 +18,10 @@ from config import (
     TASK_TITLE_MAX_LENGTH,
     engine,
 )
-from models.task import Task, validate_task_id
+from models.task import Task, TaskCreate, TaskRead, TaskUpdate
+
+if TYPE_CHECKING:
+    from sqlmodel.sql.expression import SelectOfScalar
 
 
 class TaskRepository:
@@ -31,36 +35,23 @@ class TaskRepository:
         """TaskRepositoryクラスのコンストラクタ"""
         self.engine = engine
 
-    def create_task(self, title: str, description: str = "") -> Task:
+    def create_task(self, task_data: TaskCreate) -> Task:
         """新しいタスクを作成してデータベースに保存
 
         Args:
-            title: タスクのタイトル
-            description: タスクの説明（オプション）
+            task_data: タスクのデータを含むTaskCreateオブジェクト
 
         Returns:
             Task: 作成されたタスクオブジェクト
-
-        Raises:
-            ValueError: タイトルが空の場合
         """
-        if not title.strip():
-            error_msg = "タスクのタイトルは必須です"
-            raise ValueError(error_msg)
-
-        task = Task(
-            title=title.strip(),
-            description=description.strip(),
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
+        db_task = Task.model_validate(task_data)
 
         with Session(self.engine) as session:
-            session.add(task)
+            session.add(db_task)
             session.commit()
-            session.refresh(task)
+            session.refresh(db_task)
 
-        return task
+        return db_task
 
     def get_task_by_id(self, task_id: int) -> Task | None:
         """指定されたIDのタスクを取得
@@ -71,11 +62,20 @@ class TaskRepository:
         Returns:
             Task | None: 見つかったタスクオブジェクト、存在しない場合はNone
         """
-        validated_id = validate_task_id(task_id)
-
         with Session(self.engine) as session:
-            statement = select(Task).where(Task.id == validated_id)
-            return session.exec(statement).first()
+            return session.get(Task, task_id)
+
+    def _get_tasks_by_stmt(self, stmt: SelectOfScalar[Task]) -> list[Task]:
+        """指定されたSQLAlchemyのステートメントに基づいてタスクを取得
+
+        Args:
+            stmt: SQLAlchemyのselectステートメント
+
+        Returns:
+            list[Task]: 見つかったタスクのリスト
+        """
+        with Session(self.engine) as session:
+            return list(session.exec(stmt).all())
 
     def get_all_tasks(self) -> list[Task]:
         """すべてのタスクを取得
@@ -83,110 +83,106 @@ class TaskRepository:
         Returns:
             list[Task]: 全タスクのリスト（作成日時の降順）
         """
-        with Session(self.engine) as session:
-            statement = select(Task).order_by(desc(Task.created_at))
-            return list(session.exec(statement).all())
+        stmt = select(Task).order_by(desc(Task.created_at))
+        return self._get_tasks_by_stmt(stmt)
 
-    def get_task_by_date(self, date: datetime) -> list[Task]:
+    def get_task_by_date(self, target_date: datetime | date) -> list[Task]:
         """指定した日付のタスクを取得
 
         Args:
-            date: 取得するタスクの日付
+            target_date: 取得するタスクの日付
 
         Returns:
             list[Task]: 指定した日付のタスクのリスト
         """
-        with Session(self.engine) as session:
-            statement = select(Task).where(Task.created_at == date)
-            return list(session.exec(statement).all())
+        # 日付のみで比較するため、時刻部分を除外
+        if isinstance(target_date, datetime):
+            target_date = target_date.date()
 
-    def update_task(
-        self,
-        task_id: int,
-        title: str | None = None,
-        description: str | None = None,
-    ) -> Task | None:
+        stmt = select(Task).where(func.date(Task.created_at) == target_date)
+        return self._get_tasks_by_stmt(stmt)
+
+    def get_tasks_by_completed(self) -> list[Task]:
+        """完了済みタスクを取得
+
+        Returns:
+            list[Task]: 完了済みタスクのリスト
+        """
+        stmt = select(Task).where(Task.completed is True).order_by(desc(Task.created_at))
+        return self._get_tasks_by_stmt(stmt)
+
+    def get_tasks_by_pending(self) -> list[Task]:
+        """未完了タスクを取得
+
+        Returns:
+            list[Task]: 未完了タスクのリスト
+        """
+        stmt = select(Task).where(Task.completed is False).order_by(desc(Task.created_at))
+        return self._get_tasks_by_stmt(stmt)
+
+    def _count_tasks_by_stmt(self, stmt: SelectOfScalar[int]) -> int:
+        """指定されたSQLAlchemyのステートメントに基づいてタスクの数をカウント
+
+        Args:
+            stmt: SQLAlchemyのselectステートメント
+
+        Returns:
+            int: タスクの総数
+        """
+        with Session(self.engine) as session:
+            return session.exec(stmt).one()
+
+    def count_all_tasks(self) -> int:
+        """全タスクの数をカウント
+
+        Returns:
+            int: タスクの総数
+        """
+        stmt = select(func.count()).select_from(Task)
+        return self._count_tasks_by_stmt(stmt)
+
+    def count_completed_tasks(self) -> int:
+        """完了済みタスクの数をカウント
+
+        Returns:
+            int: 完了済みタスクの総数
+        """
+        stmt = select(func.count()).select_from(Task).where(Task.completed is True)
+        return self._count_tasks_by_stmt(stmt)
+
+    def update_task(self, task: Task, update_data: TaskUpdate) -> Task:
         """既存のタスクを更新
 
         Args:
-            task_id: 更新するタスクのID
-            title: 新しいタイトル（Noneの場合は更新しない）
-            description: 新しい説明（Noneの場合は更新しない）
-
-        Returns:
-            Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
+            task: 更新するタスクオブジェクト
+            update_data: 更新するデータを含むTaskUpdateオブジェクト
         """
-        validated_id = validate_task_id(task_id)
+        # TaskUpdateから値を取得して更新
+        update_dict = update_data.model_dump(exclude_unset=True)
+        for field, value in update_dict.items():
+            setattr(task, field, value)
+
+        # 更新日時を現在時刻に設定
+        task.updated_at = datetime.now()
 
         with Session(self.engine) as session:
-            task = session.get(Task, validated_id)
-            if not task:
-                return None
-
-            # 更新対象のフィールドのみ変更
-            if title is not None:
-                if not title.strip():
-                    error_msg = "タスクのタイトルは必須です"
-                    raise ValueError(error_msg)
-                task.title = title.strip()
-
-            if description is not None:
-                task.description = description.strip()
-
-            # 更新日時を現在時刻に設定
-            task.updated_at = datetime.now()
-
             session.add(task)
             session.commit()
             session.refresh(task)
-
         return task
 
-    def toggle_task_completion(self, task_id: int) -> Task | None:
-        """タスクの完了状態を切り替え
+    def delete_task(self, task: Task) -> None:
+        """指定されたタスクを削除
 
         Args:
-            task_id: 切り替えるタスクのID
+            task: 削除するタスクオブジェクト
 
         Returns:
-            Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
+            bool: 削除に成功した場合True
         """
-        validated_id = validate_task_id(task_id)
-
         with Session(self.engine) as session:
-            task = session.get(Task, validated_id)
-            if not task:
-                return None
-
-            task.completed = not task.completed
-            task.updated_at = datetime.now()
-
-            session.add(task)
-            session.commit()
-            session.refresh(task)
-
-        return task
-
-    def delete_task(self, task_id: int) -> bool:
-        """指定されたIDのタスクを削除
-
-        Args:
-            task_id: 削除するタスクのID
-
-        Returns:
-            bool: 削除に成功した場合True、タスクが存在しない場合False
-        """
-        validated_id = validate_task_id(task_id)
-
-        with Session(self.engine) as session:
-            task = session.get(Task, validated_id)
-            if not task:
-                return False
-
             session.delete(task)
             session.commit()
-
-        return True
 
 
 class TaskService:
@@ -196,11 +192,11 @@ class TaskService:
     UIレイヤーとデータアクセス層の仲介役として機能します。
     """
 
-    def __init__(self) -> None:
+    def __init__(self, repository: TaskRepository) -> None:
         """TaskServiceクラスのコンストラクタ"""
-        self.repository = TaskRepository()
+        self.repository = repository
 
-    def create_new_task(self, title: str, description: str = "") -> Task:
+    def create_new_task(self, title: str, description: str = "") -> TaskRead:
         """新しいタスクを作成
 
         Args:
@@ -208,143 +204,63 @@ class TaskService:
             description: タスクの説明
 
         Returns:
-            Task: 作成されたタスクオブジェクト
+            TaskRead: 作成されたタスクオブジェクト
 
         Raises:
             ValueError: 入力値が不正な場合
         """
-        return self.repository.create_task(title, description)
+        if not title.strip():
+            error_msg = "タスクのタイトルは必須です"
+            raise ValueError(error_msg)
 
-    def get_task_details(self, task_id: int) -> Task | None:
+        created_task = self.repository.create_task(
+            TaskCreate(
+                title=title,
+                description=description,
+            )
+        )
+        return TaskRead.model_validate(created_task)
+
+    def get_task_details(self, task_id: int) -> TaskRead | None:
         """タスクの詳細を取得
 
         Args:
             task_id: 取得するタスクのID
 
         Returns:
-            Task | None: タスクオブジェクト、存在しない場合はNone
+            TaskRead | None: タスクオブジェクト、存在しない場合はNone
         """
-        return self.repository.get_task_by_id(task_id)
+        db_task = self.repository.get_task_by_id(task_id)
+        if db_task:
+            return TaskRead.model_validate(db_task)
+        return None
 
-    def get_task_list(self) -> list[Task]:
+    def get_task_list(self) -> list[TaskRead]:
         """タスク一覧を取得
 
         Returns:
-            list[Task]: 全タスクのリスト
+            list[TaskRead]: 全タスクのリスト
         """
-        return self.repository.get_all_tasks()
+        all_tasks = self.repository.get_all_tasks()
+        return [TaskRead.model_validate(task) for task in all_tasks]
 
-    def get_completed_tasks(self) -> list[Task]:
+    def get_completed_tasks(self) -> list[TaskRead]:
         """完了済みタスクの一覧を取得
 
         Returns:
-            list[Task]: 完了済みタスクのリスト
+            list[TaskRead]: 完了済みタスクのリスト
         """
-        all_tasks = self.repository.get_all_tasks()
-        return [task for task in all_tasks if task.completed]
+        completed_tasks = self.repository.get_tasks_by_completed()
+        return [TaskRead.model_validate(task) for task in completed_tasks]
 
-    def get_pending_tasks(self) -> list[Task]:
+    def get_pending_tasks(self) -> list[TaskRead]:
         """未完了タスクの一覧を取得
 
         Returns:
-            list[Task]: 未完了タスクのリスト
+            list[TaskRead]: 未完了タスクのリスト
         """
-        all_tasks = self.repository.get_all_tasks()
-        return [task for task in all_tasks if not task.completed]
-
-    def get_task_by_date(self, date: datetime) -> list[Task]:
-        """指定した日付のタスクを取得
-
-        Args:
-            date: 取得するタスクの日付
-
-        Returns:
-            list[Task]: 指定した日付のタスクのリスト
-        """
-        return self.repository.get_task_by_date(date)
-
-    def get_task_by_today(self) -> list[Task]:
-        """今日のタスクを取得
-
-        Returns:
-            list[Task]: 今日のタスクのリスト
-        """
-        today = datetime.now()
-        return self.repository.get_task_by_date(today)
-
-    def update_task_info(
-        self,
-        task_id: int,
-        title: str | None = None,
-        description: str | None = None,
-    ) -> Task | None:
-        """タスク情報を更新
-
-        Args:
-            task_id: 更新するタスクのID
-            title: 新しいタイトル
-            description: 新しい説明
-
-        Returns:
-            Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
-        """
-        return self.repository.update_task(task_id, title, description)
-
-    def mark_task_completed(self, task_id: int) -> Task | None:
-        """タスクを完了としてマーク
-
-        Args:
-            task_id: 完了するタスクのID
-
-        Returns:
-            Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
-        """
-        task = self.repository.get_task_by_id(task_id)
-        if not task:
-            return None
-
-        if not task.completed:
-            return self.repository.toggle_task_completion(task_id)
-        return task
-
-    def mark_task_pending(self, task_id: int) -> Task | None:
-        """タスクを未完了としてマーク
-
-        Args:
-            task_id: 未完了にするタスクのID
-
-        Returns:
-            Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
-        """
-        task = self.repository.get_task_by_id(task_id)
-        if not task:
-            return None
-
-        if task.completed:
-            return self.repository.toggle_task_completion(task_id)
-        return task
-
-    def toggle_task_status(self, task_id: int) -> Task | None:
-        """タスクの完了状態を切り替え
-
-        Args:
-            task_id: 切り替えるタスクのID
-
-        Returns:
-            Task | None: 更新されたタスクオブジェクト、存在しない場合はNone
-        """
-        return self.repository.toggle_task_completion(task_id)
-
-    def remove_task(self, task_id: int) -> bool:
-        """タスクを削除
-
-        Args:
-            task_id: 削除するタスクのID
-
-        Returns:
-            bool: 削除に成功した場合True
-        """
-        return self.repository.delete_task(task_id)
+        pending_tasks = self.repository.get_tasks_by_pending()
+        return [TaskRead.model_validate(task) for task in pending_tasks]
 
     def get_task_count(self) -> dict[str, int]:
         """タスクの統計情報を取得
@@ -352,15 +268,149 @@ class TaskService:
         Returns:
             dict[str, int]: タスクの統計情報
         """
-        all_tasks = self.repository.get_all_tasks()
-        completed_count = sum(1 for task in all_tasks if task.completed)
-        pending_count = len(all_tasks) - completed_count
-
+        total = self.repository.count_all_tasks()
+        completed = self.repository.count_completed_tasks()
+        pending = total - completed
         return {
-            "total": len(all_tasks),
-            "completed": completed_count,
-            "pending": pending_count,
+            "total": total,
+            "completed": completed,
+            "pending": pending,
         }
+
+    def get_task_count_by_date(self, target_date: datetime | date) -> int:
+        """指定した日付のタスク数を取得
+
+        Args:
+            target_date: タスク数を取得する日付
+
+        Returns:
+            int: 指定した日付のタスク数
+        """
+        tasks = self.repository.get_task_by_date(target_date)
+        return len(tasks)
+
+    def get_task_count_by_today(self) -> int:
+        """今日のタスク数を取得
+
+        Returns:
+            int: 今日のタスク数
+        """
+        today = datetime.now().date()
+        return self.get_task_count_by_date(today)
+
+    def get_task_by_date(self, target_date: datetime | date) -> list[TaskRead]:
+        """指定した日付のタスクを取得
+
+        Args:
+            target_date: 取得するタスクの日付
+
+        Returns:
+            list[TaskRead]: 指定した日付のタスクのリスト
+        """
+        tasks = self.repository.get_task_by_date(target_date)
+        return [TaskRead.model_validate(task) for task in tasks]
+
+    def get_task_by_today(self) -> list[TaskRead]:
+        """今日のタスクを取得
+
+        Returns:
+            list[TaskRead]: 今日のタスクのリスト
+        """
+        today = datetime.now().date()
+        return self.get_task_by_date(today)
+
+    def update_task(self, task_id: int, update_data: TaskUpdate) -> TaskRead | None:
+        """タスク情報を更新
+
+        Args:
+            task_id: 更新するタスクのID
+            update_data: 更新するデータを含むTaskUpdateオブジェクト
+
+        Returns:
+            TaskRead | None: 更新されたタスクオブジェクト、存在しない場合はNone
+
+        Raises:
+            ValueError: 入力値が不正な場合
+        """
+        if not update_data.title or not update_data.title.strip():
+            error_msg = "タスクのタイトルは必須です"
+            raise ValueError(error_msg)
+        if len(update_data.title.strip()) > TASK_TITLE_MAX_LENGTH:
+            error_msg = "タスクのタイトルは100文字以内で入力してください"
+            raise ValueError(error_msg)
+
+        task = self.repository.get_task_by_id(task_id)
+        if not task:
+            return None
+
+        updated_task = self.repository.update_task(task, update_data)
+        return TaskRead.model_validate(updated_task)
+
+    def mark_task_completed(self, task_id: int) -> TaskRead | None:
+        """タスクを完了としてマーク
+
+        Args:
+            task_id: 完了するタスクのID
+
+        Returns:
+            TaskRead | None: 更新されたタスクオブジェクト、存在しない場合はNone
+        """
+        task = self.repository.get_task_by_id(task_id)
+        if task and not task.completed:
+            task.completed = True
+            updated_task = self.repository.update_task(task, TaskUpdate())
+            return TaskRead.model_validate(updated_task)
+        return TaskRead.model_validate(task) if task else None
+
+    def mark_task_pending(self, task_id: int) -> TaskRead | None:
+        """タスクを未完了としてマーク
+
+        Args:
+            task_id: 未完了にするタスクのID
+
+        Returns:
+            TaskRead | None: 更新されたタスクオブジェクト、存在しない場合はNone
+        """
+        task = self.repository.get_task_by_id(task_id)
+        if task and task.completed:
+            task.completed = False
+            updated_task = self.repository.update_task(task, TaskUpdate())
+            return TaskRead.model_validate(updated_task)
+        return TaskRead.model_validate(task) if task else None
+
+    def toggle_task_status(self, task_id: int) -> TaskRead | None:
+        """タスクの完了状態を切り替え
+
+        Args:
+            task_id: 切り替えるタスクのID
+
+        Returns:
+            TaskRead | None: 更新されたタスクオブジェクト、存在しない場合はNone
+        """
+        task = self.repository.get_task_by_id(task_id)
+        if not task:
+            return None
+
+        # 完了状態を反転
+        task.completed = not task.completed
+        updated_task = self.repository.update_task(task, TaskUpdate())
+        return TaskRead.model_validate(updated_task)
+
+    def remove_task(self, task_id: int) -> None:
+        """タスクを削除
+
+        Args:
+            task_id: 削除するタスクのID
+
+        Raises:
+            ValueError: タスクIDが存在しない場合
+        """
+        task = self.repository.get_task_by_id(task_id)
+        if not task:
+            error_msg = f"タスクID {task_id} は存在しません"
+            raise ValueError(error_msg)
+
+        self.repository.delete_task(task)
 
 
 class TaskUIHelper:
@@ -371,7 +421,7 @@ class TaskUIHelper:
     """
 
     @staticmethod
-    def format_task_title(task: Task) -> str:
+    def format_task_title(task: TaskRead) -> str:
         """タスクタイトルをUI表示用にフォーマット
 
         Args:
@@ -385,7 +435,7 @@ class TaskUIHelper:
         return f"○ {task.title}"
 
     @staticmethod
-    def format_task_date(task: Task) -> str:
+    def format_task_date(task: TaskRead) -> str:
         """タスクの日付をUI表示用にフォーマット
 
         Args:
@@ -397,7 +447,7 @@ class TaskUIHelper:
         return task.created_at.strftime("%Y/%m/%d %H:%M")
 
     @staticmethod
-    def get_task_status_color(task: Task) -> str:
+    def get_task_status_color(task: TaskRead) -> str:
         """タスクの完了状態に応じた色を取得
 
         Args:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlmodel import Field, SQLModel
+from typing_extensions import deprecated
 
 
 class TaskBase(SQLModel):
@@ -91,6 +92,9 @@ class TaskUpdate(SQLModel):
     completed: bool | None = None
 
 
+@deprecated(
+    "validate_task_idは非推奨です。TaskRead.idを直接使用してください。",
+)
 def validate_task_id(task_id: int | None) -> int:
     """タスクIDのチェック
 

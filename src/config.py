@@ -15,3 +15,6 @@ engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 
 # アプリケーションのタイトル
 APP_TITLE: str = "タスク管理アプリ"
+
+# loguru
+LOG_DIR: str = f"{DB_DIR}/logs"

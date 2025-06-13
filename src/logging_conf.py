@@ -1,8 +1,9 @@
 import sys
+from pathlib import Path
 
 from loguru import logger
 
-from config import DB_DIR
+from config import LOG_DIR
 
 
 def setup_logger() -> None:
@@ -19,7 +20,7 @@ def setup_logger() -> None:
     )
 
     logger.add(
-        f"{DB_DIR}/logs/app.log",  # ファイルにログを出力
+        f"{LOG_DIR}/app.log",  # ファイルにログを出力
         rotation="10 MB",  # ログファイルのローテーション設定
         retention="30 days",  # ログファイルの保持期間
         level="DEBUG",  # ファイルにはDEBUGレベル以上のログを出力
@@ -27,3 +28,27 @@ def setup_logger() -> None:
     )
 
     logger.debug("ロガーの設定が完了しました。")
+
+
+def check_log_dir() -> None:
+    """ログディレクトリの存在を確認し、なければ作成する関数。
+
+    ログディレクトリが存在しない場合は作成し、ログ出力の準備を整える。
+
+    Example:
+    ```python
+    log_dir_path = Path(LOG_DIR)  # ログディレクトリのパスを変数に格納
+
+    if not log_dir_path.exists():
+        log_dir_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"ログディレクトリ '{LOG_DIR}' を作成しました。")
+    ```
+
+    Returns:
+        None: 何も返しません。
+    """
+    log_dir_path = Path(LOG_DIR)  # ログディレクトリのパスを変数に格納
+
+    if not log_dir_path.exists():
+        log_dir_path.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"ログディレクトリ '{LOG_DIR}' を作成しました。")

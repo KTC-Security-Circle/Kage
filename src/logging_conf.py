@@ -19,6 +19,8 @@ def setup_logger() -> None:
         enqueue=True,
     )
 
+    check_log_dir()  # ログディレクトリの存在を確認し、なければ作成
+
     logger.add(
         f"{LOG_DIR}/app.log",  # ファイルにログを出力
         rotation="10 MB",  # ログファイルのローテーション設定

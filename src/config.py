@@ -5,8 +5,8 @@ from pathlib import Path
 
 from sqlmodel import create_engine
 
-# データベース保存先ディレクトリ（環境変数がなければカレントディレクトリ）
-DB_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", ".")
+# データベース保存先ディレクトリ（環境変数がなければFlet指定のstorageフォルダ）
+DB_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
 # データベースファイルのパス
 DB_PATH: Path = Path(DB_DIR) / "tasks.db"
 # データベースエンジンの作成
@@ -20,3 +20,6 @@ APP_TITLE: str = "タスク管理アプリ"
 TASK_TITLE_MAX_LENGTH = 100
 TASK_DESCRIPTION_MAX_LENGTH = 500
 DESCRIPTION_TRUNCATE_LENGTH = 50
+
+# loguru
+LOG_DIR: str = f"{DB_DIR}/logs"

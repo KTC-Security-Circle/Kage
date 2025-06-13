@@ -4,7 +4,7 @@ from sqlmodel import SQLModel
 
 from config import APP_TITLE, engine
 from logging_conf import setup_logger
-from router import route_change
+from router import Router
 
 # ログの設定
 setup_logger()
@@ -22,11 +22,9 @@ def main(page: ft.Page) -> None:
     """
     # ページの初期設定
     page.title = APP_TITLE
-    page.on_route_change = route_change
-    page.go(page.route)
+    Router(page)
 
     logger.info("セッションが開始されました。")
 
 
-# アプリ起動
-ft.app(target=main)
+ft.app(target=main, assets_dir="assets")

@@ -2,81 +2,114 @@
 # SQLModelとSQLiteを使ったタスク管理モデル
 from __future__ import annotations
 
-from sqlmodel import Field, Session, SQLModel, select
+from datetime import datetime
 
-from config import engine
+from sqlmodel import Field, SQLModel
+from typing_extensions import deprecated
 
 
-class Task(SQLModel, table=True):
+class TaskBase(SQLModel):
+    """タスクの基本モデル
+
+    タスクの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
+        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
+        description (str): タスクの詳細説明。デフォルトは空文字列。
+        created_at (datetime): タスクの作成日時。デフォルトは現在の日時。
+        updated_at (datetime): タスクの更新日時。デフォルトは現在の日時。
+        completed (bool): タスクの完了状態。デフォルトはFalse（未完了）。
+    """
+
+    title: str = Field(index=True)
+    description: str = Field(default="")
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    completed: bool = Field(default=False)
+
+
+class Task(TaskBase, table=True):
     """タスクモデル
 
-    Args:
-        id (int): タスクID
-        title (str): タスクタイトル
-        description (str): タスク説明
-        is_done (bool): タスク完了フラグ
+    タスクの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
+        id (int | None): タスクのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
+        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
+        description (str): タスクの詳細説明。デフォルトは空文字列。
+        created_at (datetime): タスクの作成日時。デフォルトは現在の日時。
+        updated_at (datetime): タスクの更新日時。デフォルトは現在の日時。
+        completed (bool): タスクの完了状態。デフォルトはFalse（未完了）。
     """
 
     id: int | None = Field(default=None, primary_key=True)
-    title: str
-    description: str = ""
-    is_done: bool = False
 
 
-def create_task(title: str, description: str | None = None) -> Task:
-    """新しいタスクを作成しDBに保存"""
-    if description is None:
-        description = ""
-    task = Task(title=title, description=description)
-    with Session(engine) as session:
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-    return task
+class TaskCreate(TaskBase):
+    """タスク作成用モデル
+
+    タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
+        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
+        description (str): タスクの詳細説明。デフォルトは空文字列。
+        created_at (datetime): タスクの作成日時。デフォルトは現在の日時。
+        updated_at (datetime): タスクの更新日時。デフォルトは現在の日時。
+        completed (bool): タスクの完了状態。デフォルトはFalse（未完了）。
+    """
 
 
-def get_tasks() -> list[Task]:
-    """全タスクを取得"""
-    with Session(engine) as session:
-        # 明示的にlist()でリストに変換
-        return list(session.exec(select(Task)).all())
+class TaskRead(TaskBase):
+    """タスク読み取り用モデル
+
+    タスクの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
+        id (int): タスクのID。
+        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
+        description (str): タスクの詳細説明。デフォルトは空文字列。
+        created_at (datetime): タスクの作成日時。デフォルトは現在の日時。
+        updated_at (datetime): タスクの更新日時。デフォルトは現在の日時。
+        completed (bool): タスクの完了状態。デフォルトはFalse（未完了）。
+    """
+
+    id: int
 
 
-def get_task(task_id: int) -> Task | None:
-    """IDでタスクを取得"""
-    with Session(engine) as session:
-        return session.get(Task, task_id)
+class TaskUpdate(SQLModel):
+    """タスク更新用モデル
+
+    タスクの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
+        title (str | None): タスクのタイトル。Noneの場合は更新しない。
+        description (str | None): タスクの詳細説明。Noneの場合は更新しない。
+        completed (bool | None): タスクの完了状態。Noneの場合は更新しない。
+    """
+
+    title: str | None = None
+    description: str | None = None
+    completed: bool | None = None
 
 
-def update_task(
-    task_id: int,
-    title: str | None = None,
-    description: str | None = None,
-    is_done: bool | None = None,
-) -> Task | None:
-    """タスクを更新"""
-    with Session(engine) as session:
-        task = session.get(Task, task_id)
-        if not task:
-            return None
-        if title is not None:
-            task.title = title
-        if description is not None:
-            task.description = description
-        if is_done is not None:
-            task.is_done = is_done
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-        return task
+@deprecated(
+    "validate_task_idは非推奨です。TaskRead.idを直接使用してください。",
+)
+def validate_task_id(task_id: int | None) -> int:
+    """タスクIDのチェック
 
+    task.idがPylanceの警告を回避するための関数
 
-def delete_task(task_id: int) -> bool:
-    """タスクを削除"""
-    with Session(engine) as session:
-        task = session.get(Task, task_id)
-        if not task:
-            return False
-        session.delete(task)
-        session.commit()
-        return True
+    Args:
+        task_id: チェックするタスクのID
+
+    Returns:
+        int: 有効なタスクID
+
+    Raises:
+        ValueError: タスクIDがNoneまたは0の場合
+    """
+    if task_id is None or task_id <= 0:
+        e_msg = "タスクIDが指定されていません、または無効です"
+        raise ValueError(e_msg)
+    return task_id

@@ -1,38 +1,49 @@
 # router.py
 # ページルーティングの管理を専用モジュールに分離
+
+from typing import Callable
+
 import flet as ft
 
-from views.home import home_view
-from views.task import task_view
+from views import (
+    # get_layout,
+    create_home_view,
+    create_task_view,
+)
+from views.layout import get_layout
 
-ROUTES = {
-    "/": home_view,
-    "/task": task_view,
+ROUTES: dict[str, Callable[[ft.Page], ft.Container]] = {
+    "/": create_home_view,
+    "/task": create_task_view,
     # 今後ページが増えた場合はここに追加
 }
 
 
-def route_change(e: ft.RouteChangeEvent) -> None:
-    """ページルーティングイベントハンドラ。
+class Router:
+    """ページルーティングを管理するクラス。
 
-    ROUTES辞書に基づきページを切り替える。
+    ページのルーティングとビューの切り替えを行う。
     """
-    page = e.page
-    page.views.clear()
-    view_func = ROUTES.get(page.route)
-    if view_func:
-        page.views.append(
-            ft.View(
-                page.route,
-                [view_func(page)],
-            ),
-        )
-    else:
-        # 未定義ルートの場合はホームにリダイレクト
-        page.views.append(
-            ft.View(
-                "/",
-                [home_view(page)],
-            ),
-        )
-    page.update()
+
+    def __init__(self, page: ft.Page) -> None:
+        """Routerのコンストラクタ。
+
+        Args:
+            page: Fletのページオブジェクト
+        """
+        self.page = page
+        self.page.on_route_change = self.route_change
+        self.page.go(self.page.route)
+
+    def route_change(self, _: ft.RouteChangeEvent) -> None:
+        """ページルーティングイベントハンドラ。
+
+        ROUTES辞書に基づきページを切り替える。
+        """
+        self.page.views.clear()
+        view_func = ROUTES.get(self.page.route)
+        if not view_func:
+            self.page.go("/")
+            return
+        self.page.views.append(get_layout(self.page, view_func(self.page)))
+        self.page.update()

@@ -9,6 +9,7 @@ authors = [
 ]
 dependencies = [
     "flet==0.27.6",
+    "loguru>=0.7.3",
     "sqlmodel>=0.0.24",
 ]
 

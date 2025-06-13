@@ -3,10 +3,8 @@ from loguru import logger
 from sqlmodel import SQLModel
 
 from config import APP_TITLE, engine
-from router import Router
 from logging_conf import setup_logger
-from router import route_change
-
+from router import Router
 
 # ログの設定
 setup_logger()

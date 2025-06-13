@@ -104,26 +104,17 @@ venv = ".venv"
 [tool.pytest.ini_options]
 pythonpath = "src"
 
-# テストが格納されているディレクトリを配列で指定
 testpaths = ["tests"]
-
-# テストファイル名のパターン
 python_files = "test_*.py"
-
-# テストクラス名のパターン
 python_classes = "Test*"
-
-# テスト関数名のパターン
 python_functions = "test_*"
 
-# テスト実行時の追加オプションを1行の文字列で指定
 addopts = [
     "--strict-markers",
     "--disable-warnings",
     "--verbose",
 ]
 
-# テストマーカーの定義
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "unit: marks tests as unit tests",

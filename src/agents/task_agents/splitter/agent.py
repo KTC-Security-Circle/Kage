@@ -18,8 +18,8 @@ from agents.utils import LLMProvider
 class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     """タスク分割エージェントの実装."""
 
-    name = "TaskSplitterAgent"
-    description = "タスクを分割して処理するエージェント"
+    _name = "TaskSplitterAgent"
+    _description = "タスクを分割して処理するエージェント"
     _state = TaskSplitterState
 
     def __init__(self, provider: LLMProvider = LLMProvider.GOOGLE) -> None:

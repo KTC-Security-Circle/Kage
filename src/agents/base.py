@@ -127,7 +127,7 @@ class BaseAgent(ABC):
             BaseChatModel: 使用するLLMモデル
         """
         if not self._model:
-            self._model = get_model(self.provider, "gemini-2.0-flash")
+            self._model = get_model(self.provider)
         return self._model
 
     def get_config(self, thread_id: str) -> RunnableConfig:

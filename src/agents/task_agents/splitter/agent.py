@@ -10,7 +10,7 @@ from langgraph.graph import START, StateGraph
 
 from agents.base import BaseAgent
 from agents.task_agents.splitter.state import TaskSplitterState
-from agents.utils import LLMProvider, get_model
+from agents.utils import LLMProvider
 from logging_conf import agent_logger as logger
 
 
@@ -33,7 +33,7 @@ class TaskSplitterAgent(BaseAgent):
 
     def chatbot(self, state: TaskSplitterState) -> dict[str, list[BaseMessage]]:
         """チャットボットノードの処理."""
-        self._model = get_model(LLMProvider.GOOGLE, "gemini-2.0-flash")
+        self._model = self.get_model()
         response = self._model.invoke(state["messages"])
         return {"messages": [response]}
 

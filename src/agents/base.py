@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -8,13 +9,14 @@ from langgraph.graph import StateGraph
 from loguru import logger
 
 from agents.agent_conf import LLMProvider
-from agents.utils import get_model
+from agents.utils import get_memory, get_model
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from langchain_core.language_models.chat_models import BaseChatModel
     from langchain_core.messages import BaseMessage
+    from langchain_core.runnables.config import RunnableConfig
     from langgraph.graph.state import CompiledStateGraph
 
 
@@ -28,6 +30,16 @@ class AgentStatus(Enum):
     CANCELLED = "cancelled"
 
 
+@dataclass
+class AgentProperty:
+    """エージェントのプロパティ."""
+
+    name: str
+    description: str
+    status: AgentStatus
+    thread_id: str | None = None
+
+
 class BaseAgent(ABC):
     """LangGraphエージェントのベースクラス.
 
@@ -35,12 +47,12 @@ class BaseAgent(ABC):
     """
 
     # 必須
-    name: str
-    description: str
+    _name: str
+    _description: str
     _state: type[Any]
 
     # オプションまたはデフォルト値あり
-    status: AgentStatus = AgentStatus.IDLE
+    _status: AgentStatus = AgentStatus.IDLE
     _model: BaseChatModel | None = None
     _graph: CompiledStateGraph | None = None
 
@@ -52,16 +64,29 @@ class BaseAgent(ABC):
 
         Args:
             provider (LLMProvider): LLMプロバイダ (デフォルトはGOOGLE)
-            tools (list | None): 使用するツールのリスト（オプション）
         """
         self.provider = provider
+        self._memory = get_memory()
 
         self._graph = self._create_graph()
 
     @property
     def is_running(self) -> bool:
         """エージェントが実行中かどうか."""
-        return self.status == AgentStatus.RUNNING
+        return self._status == AgentStatus.RUNNING
+
+    @property
+    def agent_property(self) -> AgentProperty:
+        """エージェントのプロパティを取得.
+
+        Returns:
+            AgentProperty: エージェントのプロパティ
+        """
+        return AgentProperty(
+            name=self._name,
+            description=self._description,
+            status=self._status,
+        )
 
     @abstractmethod
     def create_graph(self, graph_builder: StateGraph) -> StateGraph:
@@ -94,7 +119,7 @@ class BaseAgent(ABC):
             作成されたStateGraphインスタンス
         """
         graph_builder = self.create_graph(StateGraph(self._state))
-        return graph_builder.compile()
+        return graph_builder.compile(checkpointer=self._memory)
 
     def get_model(self) -> BaseChatModel:
         """LLMモデルを取得.
@@ -106,11 +131,15 @@ class BaseAgent(ABC):
             self._model = get_model(self.provider, "gemini-2.0-flash")
         return self._model
 
-    def invoke(self, user_input: str) -> str | None:
+    def get_config(self, thread_id: str) -> RunnableConfig:
+        return {"configurable": {"thread_id": thread_id}}
+
+    def invoke(self, user_input: str, thread_id: str) -> str | None:
         """ユーザー入力を処理して応答を生成.
 
         Args:
             user_input (str): ユーザーからの入力
+            thread_id (str): スレッドID
 
         Returns:
             str: モデルからの応答
@@ -120,16 +149,26 @@ class BaseAgent(ABC):
             err_msg = "Graph is not initialized. Please create the graph before invoking."
             logger.error(err_msg)
             raise RuntimeError(err_msg)
-        response = self._graph.invoke({"messages": [{"role": "user", "content": user_input}]})
+
+        logger.debug(f"Invoking agent with input: {user_input} in thread: {thread_id}")
+        response = self._graph.invoke(
+            {"messages": [{"role": "user", "content": user_input}]},
+            self.get_config(thread_id),
+        )
         if isinstance(response, dict) and "messages" in response:
             return response["messages"][-1].content
 
         logger.error("Invalid response format from graph invoke.")
         return None
 
-    def stream(self, user_input: str) -> Iterator[dict[str, list[BaseMessage]]]:
+    def stream(self, user_input: str, thread_id: str) -> Iterator[dict[str, list[BaseMessage]]]:
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before streaming."
             logger.error(err_msg)
             raise RuntimeError(err_msg)
-        return self._graph.stream({"messages": [{"role": "user", "content": user_input}]})
+
+        logger.debug(f"Streaming agent with input: {user_input} in thread: {thread_id}")
+        return self._graph.stream(
+            {"messages": [{"role": "user", "content": user_input}]},
+            self.get_config(thread_id),
+        )

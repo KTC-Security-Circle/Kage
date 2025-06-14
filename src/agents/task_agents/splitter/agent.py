@@ -38,33 +38,18 @@ class TaskSplitterAgent(BaseAgent):
         return {"messages": [response]}
 
 
-# graph_builder = StateGraph(TaskSplitterState)
-
-
-# def chatbot(state: TaskSplitterState) -> dict[str, list[BaseMessage]]:
-#     model = get_model(LLMProvider.GOOGLE, "gemini-2.0-flash")
-#     return {"messages": [model.invoke(state["messages"])]}
-
-
-# graph_builder.add_node("chatbot", chatbot)
-# graph_builder.add_edge(START, "chatbot")
-# graph = graph_builder.compile()
-
-
-# def stream_graph_updates(user_input: str) -> None:
-#     for event in graph.stream(
-#         {"messages": [{"role": "user", "content": user_input}]},
-#     ):
-#         for value in event.values():
-#             logger.debug("Assistant:" + value["messages"][-1].content)
-
-
 if __name__ == "__main__":
+    from uuid import uuid4
+
     from env import setup_environment
 
     setup_environment()
 
     agent = TaskSplitterAgent()
+
+    thread_id = str(uuid4())
+    # thread_id = "649869e4-0782-4683-98d6-9dd3fda02133"  # Example thread ID for testing
+    logger.debug(f"Starting TaskSplitterAgent with thread ID: {thread_id}")
 
     while True:
         try:
@@ -72,7 +57,7 @@ if __name__ == "__main__":
             if user_input.lower() in ["quit", "exit", "q"]:
                 logger.debug("Goodbye!")
                 break
-            response = agent.invoke(user_input)
+            response = agent.invoke(user_input, thread_id)
             if response:
                 logger.debug("Assistant: " + response)
             else:
@@ -81,7 +66,7 @@ if __name__ == "__main__":
             # fallback if input() is not available
             user_input = "What do you know about LangGraph?"
             logger.debug("User: " + user_input)
-            response = agent.invoke(user_input)
+            response = agent.invoke(user_input, thread_id)
             if response:
                 logger.debug("Assistant: " + response)
             else:

@@ -150,11 +150,11 @@ class BaseAgent(ABC, Generic[StateType, ReturnType]):
         """ユーザー入力を処理して応答を生成.
 
         Args:
-            state (BaseAgentState): エージェントの状態
+            state (StateType): エージェントの状態
             thread_id (str): スレッドID
 
         Returns:
-            str: モデルからの応答
+            ReturnType: モデルからの応答
         """
         # グラフの初期化がされているかを確認
         if not self._graph:
@@ -174,7 +174,7 @@ class BaseAgent(ABC, Generic[StateType, ReturnType]):
         logger.error("Invalid response format from graph invoke.")
         return None
 
-    def stream(self, state: BaseAgentState, thread_id: str) -> Iterator[dict[str, Any] | Any]:
+    def stream(self, state: StateType, thread_id: str) -> Iterator[dict[str, Any] | Any]:
         """ユーザー入力をストリーミングして応答を生成.
 
         Args:

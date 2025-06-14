@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from langchain_core.language_models.chat_models import BaseChatModel
-    from langchain_core.messages import BaseMessage
     from langchain_core.runnables.config import RunnableConfig
     from langgraph.graph.state import CompiledStateGraph
 
@@ -161,14 +160,16 @@ class BaseAgent(ABC):
         logger.error("Invalid response format from graph invoke.")
         return None
 
-    def stream(self, user_input: str, thread_id: str) -> Iterator[dict[str, list[BaseMessage]]]:
+    def stream(self, user_input: str, thread_id: str) -> Iterator[dict[str, Any] | Any]:
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before streaming."
             logger.error(err_msg)
             raise RuntimeError(err_msg)
 
         logger.debug(f"Streaming agent with input: {user_input} in thread: {thread_id}")
-        return self._graph.stream(
+
+        yield from self._graph.stream(
             {"messages": [{"role": "user", "content": user_input}]},
             self.get_config(thread_id),
+            stream_mode="messages",
         )

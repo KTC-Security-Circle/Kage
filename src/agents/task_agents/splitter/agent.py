@@ -64,8 +64,17 @@ if __name__ == "__main__":
                 logger.debug("Assistant: " + response)
             else:
                 logger.debug("No response from the agent.")
-        except Exception as _:
+
+            # stream mode test
+            # for msg, metadata in agent.stream(user_input, thread_id):
+            #     if isinstance(msg, BaseMessage) and msg.content:
+            #         print(msg.content, end="", flush=True)
+            #     else:
+            #         logger.debug("No content in the message. Metadata: " + str(metadata))
+            # logger.debug(f"\nAssistant: Stream completed. {metadata=}")
+        except Exception as e:
             # fallback if input() is not available
+            logger.error(f"An error occurred: {e}")
             user_input = "What do you know about LangGraph?"
             logger.debug("User: " + user_input)
             response = agent.invoke(user_input, thread_id)

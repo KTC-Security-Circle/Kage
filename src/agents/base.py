@@ -6,11 +6,11 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from langgraph.graph import StateGraph
+from loguru import logger
 from typing_extensions import TypedDict
 
 from agents.agent_conf import LLMProvider
 from agents.utils import get_memory, get_model
-from logging_conf import agent_logger as logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -159,15 +159,15 @@ class BaseAgent(ABC, Generic[StateType, ReturnType]):
         # グラフの初期化がされているかを確認
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before invoking."
-            logger.error(err_msg)
+            logger.bind(agents=True).error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.debug(f"Invoking agent with input: {state} in thread: {thread_id}")
+        logger.bind(agents=True).debug(f"Invoking agent with input: {state} in thread: {thread_id}")
         response = self._graph.invoke(
             state,
             self.get_config(thread_id),
         )
-        logger.debug(f"Graph invoke response: {response}")
+        logger.bind(agents=True).debug(f"Graph invoke response: {response}")
         if isinstance(response, dict) and "final_response" in response:
             return response["final_response"]
 
@@ -186,10 +186,10 @@ class BaseAgent(ABC, Generic[StateType, ReturnType]):
         """
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before streaming."
-            logger.error(err_msg)
+            logger.bind(agents=True).error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.debug(f"Streaming agent with input: {state} in thread: {thread_id}")
+        logger.bind(agents=True).debug(f"Streaming agent with input: {state} in thread: {thread_id}")
 
         yield from self._graph.stream(
             state,

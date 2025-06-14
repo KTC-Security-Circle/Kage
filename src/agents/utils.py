@@ -4,9 +4,9 @@ import sqlite3
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.sqlite import SqliteSaver
+from loguru import logger
 
 from agents.agent_conf import SQLITE_DB_PATH, LLMProvider
-from logging_conf import agent_logger as logger
 
 
 def get_sqlite_conn() -> sqlite3.Connection:
@@ -43,7 +43,7 @@ def get_model(provider: LLMProvider, model: str = "") -> BaseChatModel:
     if provider == LLMProvider.GOOGLE:
         if "GOOGLE_API_KEY" not in os.environ:
             err_msg = "GOOGLE_API_KEY is not set in environment variables."
-            logger.error(err_msg)
+            logger.bind(agents=True).error(err_msg)
             raise OSError(err_msg)
 
         gemini_model = model if model else "gemini-2.0-flash"
@@ -54,7 +54,7 @@ def get_model(provider: LLMProvider, model: str = "") -> BaseChatModel:
         )
     elif provider == LLMProvider.HUGGINGFACE:
         err_msg = "Hugging Face LLM is not implemented yet."
-        logger.error(err_msg)
+        logger.bind(agents=True).error(err_msg)
         raise NotImplementedError(err_msg)
 
     return llm

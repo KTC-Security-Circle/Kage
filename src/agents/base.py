@@ -3,9 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from langgraph.graph import StateGraph
+from typing_extensions import TypedDict
 
 from agents.agent_conf import LLMProvider
 from agents.utils import get_memory, get_model
@@ -39,7 +40,19 @@ class AgentProperty:
     thread_id: str | None = None
 
 
-class BaseAgent(ABC):
+class BaseAgentState(TypedDict):
+    """エージェントの状態を表す基本的な型定義."""
+
+    final_response: dict[str, Any] | str
+    """最終的な応答を表す文字列."""
+
+
+# 型変数を定義
+StateType = TypeVar("StateType")
+ReturnType = TypeVar("ReturnType")
+
+
+class BaseAgent(ABC, Generic[StateType, ReturnType]):
     """LangGraphエージェントのベースクラス.
 
     このクラスを継承して具体的なエージェントを実装します。
@@ -133,11 +146,11 @@ class BaseAgent(ABC):
     def get_config(self, thread_id: str) -> RunnableConfig:
         return {"configurable": {"thread_id": thread_id}}
 
-    def invoke(self, user_input: str, thread_id: str) -> str | None:
+    def invoke(self, state: StateType, thread_id: str) -> ReturnType | None:
         """ユーザー入力を処理して応答を生成.
 
         Args:
-            user_input (str): ユーザーからの入力
+            state (BaseAgentState): エージェントの状態
             thread_id (str): スレッドID
 
         Returns:
@@ -149,27 +162,37 @@ class BaseAgent(ABC):
             logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.debug(f"Invoking agent with input: {user_input} in thread: {thread_id}")
+        logger.debug(f"Invoking agent with input: {state} in thread: {thread_id}")
         response = self._graph.invoke(
-            {"messages": [{"role": "user", "content": user_input}]},
+            state,
             self.get_config(thread_id),
         )
-        if isinstance(response, dict) and "messages" in response:
-            return response["messages"][-1].content
+        logger.debug(f"Graph invoke response: {response}")
+        if isinstance(response, dict) and "final_response" in response:
+            return response["final_response"]
 
         logger.error("Invalid response format from graph invoke.")
         return None
 
-    def stream(self, user_input: str, thread_id: str) -> Iterator[dict[str, Any] | Any]:
+    def stream(self, state: BaseAgentState, thread_id: str) -> Iterator[dict[str, Any] | Any]:
+        """ユーザー入力をストリーミングして応答を生成.
+
+        Args:
+            state (BaseAgentState): エージェントの状態
+            thread_id (str): スレッドID
+
+        Yields:
+            dict[str, Any] | Any: ストリーミングされた応答
+        """
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before streaming."
             logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.debug(f"Streaming agent with input: {user_input} in thread: {thread_id}")
+        logger.debug(f"Streaming agent with input: {state} in thread: {thread_id}")
 
         yield from self._graph.stream(
-            {"messages": [{"role": "user", "content": user_input}]},
+            state,
             self.get_config(thread_id),
             stream_mode="messages",
         )

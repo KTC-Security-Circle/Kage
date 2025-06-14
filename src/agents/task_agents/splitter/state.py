@@ -1,8 +1,25 @@
-from typing import Annotated
+from pydantic import BaseModel, Field
 
-from langgraph.graph.message import add_messages
-from typing_extensions import TypedDict
+from agents.base import BaseAgentState
 
 
-class TaskSplitterState(TypedDict):
-    messages: Annotated[list, add_messages]
+class TaskSplitterState(BaseAgentState):
+    """タスク分割エージェントの状態を表すクラス.
+
+    Attributes:
+        final_response (str): 最終的な応答を表す文字列。
+        task_title (str): タスクのタイトル。
+        task_description (str): タスクの説明を表す文字列。
+    """
+
+    task_title: str
+    """タスクのタイトル"""
+    task_description: str
+    """タスクの説明を表す文字列"""
+
+
+class TaskSplitterOutput(BaseModel):
+    """Always use this tool to structure your response to the user."""
+
+    task_titles: list[str] = Field(description="分割されたタスクのタイトルのリスト")
+    task_descriptions: list[str] = Field(description="分割されたタスクの説明のリスト")

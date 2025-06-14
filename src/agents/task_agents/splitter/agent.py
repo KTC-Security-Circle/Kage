@@ -5,16 +5,17 @@ if __package__ is None:
     # Set the package path to the parent directory of this script
     sys.path.append(str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from langchain_core.messages import BaseMessage
+from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import START, StateGraph
 
 from agents.base import BaseAgent
-from agents.task_agents.splitter.state import TaskSplitterState
+from agents.task_agents.splitter.prompt import splitter_agent_prompt
+from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterState
 from agents.utils import LLMProvider
 from logging_conf import agent_logger as logger
 
 
-class TaskSplitterAgent(BaseAgent):
+class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     """タスク分割エージェントの実装."""
 
     name = "TaskSplitterAgent"
@@ -31,11 +32,29 @@ class TaskSplitterAgent(BaseAgent):
         graph_builder.add_edge(START, "chatbot")
         return graph_builder
 
-    def chatbot(self, state: TaskSplitterState) -> dict[str, list[BaseMessage]]:
-        """チャットボットノードの処理."""
+    def _create_agent(self) -> RunnableSerializable:
+        """エージェントのインスタンスを作成."""
         self._model = self.get_model()
-        response = self._model.invoke(state["messages"])
-        return {"messages": [response]}
+        llm_with_tools = self._model.bind_tools([TaskSplitterOutput])
+        self._agent = splitter_agent_prompt | llm_with_tools
+        return self._agent
+
+    def chatbot(self, state: TaskSplitterState) -> dict[str, TaskSplitterOutput]:
+        """チャットボットノードの処理."""
+        self._agent = self._create_agent()
+        response = self._agent.invoke(
+            {
+                "task_name": state["task_title"],
+                "task_description": state["task_description"],
+            },
+        )
+        try:
+            output_obj = TaskSplitterOutput.model_validate(response.tool_calls[0]["args"])
+            logger.debug(f"Output object: {output_obj}")
+        except Exception as e:
+            logger.error(f"Error validating output: {e}")
+            output_obj = TaskSplitterOutput(task_titles=[], task_descriptions=[])
+        return {"final_response": output_obj}
 
 
 if __name__ == "__main__":
@@ -53,33 +72,23 @@ if __name__ == "__main__":
     # thread_id = "649869e4-0782-4683-98d6-9dd3fda02133"  # Example thread ID for testing
     logger.debug(f"Starting TaskSplitterAgent with thread ID: {thread_id}")
 
-    while True:
-        try:
-            user_input = input("User: ")
-            if user_input.lower() in ["quit", "exit", "q"]:
-                logger.debug("Goodbye!")
-                break
-            response = agent.invoke(user_input, thread_id)
-            if response:
-                logger.debug("Assistant: " + response)
-            else:
-                logger.debug("No response from the agent.")
+    task_name = "課題をやる"
+    task_description = "国語、数学、英語の宿題をやる。"
 
-            # stream mode test
-            # for msg, metadata in agent.stream(user_input, thread_id):
-            #     if isinstance(msg, BaseMessage) and msg.content:
-            #         print(msg.content, end="", flush=True)
-            #     else:
-            #         logger.debug("No content in the message. Metadata: " + str(metadata))
-            # logger.debug(f"\nAssistant: Stream completed. {metadata=}")
-        except Exception as e:
-            # fallback if input() is not available
-            logger.error(f"An error occurred: {e}")
-            user_input = "What do you know about LangGraph?"
-            logger.debug("User: " + user_input)
-            response = agent.invoke(user_input, thread_id)
-            if response:
-                logger.debug("Assistant: " + response)
-            else:
-                logger.debug("No response from the agent.")
-            break
+    state = TaskSplitterState(
+        task_title=task_name,
+        task_description=task_description,
+        final_response="",
+    )
+    response = agent.invoke(state, thread_id)
+    if response:
+        logger.debug("Assistant: " + response.model_dump_json())
+    else:
+        logger.debug("No response from the agent.")
+
+    # stream mode test
+    # for msg, metadata in agent.stream(state, thread_id):
+    #     if isinstance(msg, TaskSplitterOutput):
+    #         logger.debug(f"Assistant: {msg.model_dump_json()}")
+    #     else:
+    #         logger.debug("No content in the message. Metadata: " + str(metadata))

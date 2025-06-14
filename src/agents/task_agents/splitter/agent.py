@@ -7,11 +7,11 @@ if __package__ is None:
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph import START, StateGraph
-from loguru import logger
 
 from agents.base import BaseAgent
 from agents.task_agents.splitter.state import TaskSplitterState
 from agents.utils import LLMProvider, get_model
+from logging_conf import agent_logger as logger
 
 
 class TaskSplitterAgent(BaseAgent):
@@ -42,8 +42,10 @@ if __name__ == "__main__":
     from uuid import uuid4
 
     from env import setup_environment
+    from logging_conf import setup_logger
 
     setup_environment()
+    setup_logger()
 
     agent = TaskSplitterAgent()
 

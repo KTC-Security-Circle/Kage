@@ -6,10 +6,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
-from loguru import logger
 
 from agents.agent_conf import LLMProvider
 from agents.utils import get_memory, get_model
+from logging_conf import agent_logger as logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

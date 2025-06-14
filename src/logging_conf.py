@@ -29,7 +29,94 @@ def setup_logger() -> None:
         enqueue=True,
     )
 
+    # ai用ログの設定
+    logger.add(
+        f"{LOG_DIR}/agents.log",  # AI関連のログを別ファイルに出力
+        filter=lambda record: "agents" in record["extra"],  # "agents"が含まれるログのみ出力
+        rotation="10 MB",
+        retention="30 days",
+        level="DEBUG",
+        enqueue=True,
+    )
+
     logger.debug("ロガーの設定が完了しました。")
+
+
+class AgentLogger:
+    """エージェント用のロガークラス。
+
+    エージェント関連のログを出力するためのクラス。
+    """
+
+    def __init__(self) -> None:
+        """初期化メソッド。"""
+
+    @staticmethod
+    def _log(msg: str, level: str) -> None:
+        """ログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+            level (str): ログレベル。
+        """
+        logger.bind(agents=True).log(level, msg)
+
+    @staticmethod
+    def debug(msg: str) -> None:
+        """DEBUGレベルのログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+        """
+        AgentLogger._log(msg, "DEBUG")
+
+    @staticmethod
+    def info(msg: str) -> None:
+        """INFOレベルのログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+        """
+        AgentLogger._log(msg, "INFO")
+
+    @staticmethod
+    def success(msg: str) -> None:
+        """SUCCESSレベルのログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+        """
+        AgentLogger._log(msg, "SUCCESS")
+
+    @staticmethod
+    def warning(msg: str) -> None:
+        """WARNINGレベルのログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+        """
+        AgentLogger._log(msg, "WARNING")
+
+    @staticmethod
+    def error(msg: str) -> None:
+        """ERRORレベルのログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+        """
+        AgentLogger._log(msg, "ERROR")
+
+    @staticmethod
+    def critical(msg: str) -> None:
+        """CRITICALレベルのログを出力するメソッド。
+
+        Args:
+            msg (str): ログメッセージ。
+        """
+        AgentLogger._log(msg, "CRITICAL")
+
+
+agent_logger = AgentLogger()  # エージェント用のロガーインスタンスを作成
 
 
 def check_log_dir() -> None:

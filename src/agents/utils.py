@@ -4,9 +4,9 @@ import sqlite3
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.sqlite import SqliteSaver
-from loguru import logger
 
 from agents.agent_conf import SQLITE_DB_PATH, LLMProvider
+from logging_conf import agent_logger as logger
 
 
 def get_sqlite_conn() -> sqlite3.Connection:

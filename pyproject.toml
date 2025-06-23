@@ -9,7 +9,13 @@ authors = [
 ]
 dependencies = [
     "flet==0.27.6",
+    "langchain>=0.3.25",
+    "langchain-google-genai>=2.1.5",
+    "langgraph>=0.4.8",
+    "langgraph-checkpoint-sqlite>=2.0.10",
+    "langsmith>=0.3.45",
     "loguru>=0.7.3",
+    "python-dotenv>=1.1.0",
     "sqlmodel>=0.0.24",
 ]
 

@@ -21,7 +21,7 @@ cd SigotoDekiruKun
 uv sync
 ```
 
-または、pipでも環境構築できます。
+または、pipでも環境構築できます。(※開発時は非推奨※)
 
 ```bash
 python -m venv venv
@@ -37,7 +37,15 @@ pip install .
 uv run pre-commit install
 ```
 
-## 4. アプリケーションの実行
+## 4. テストの実行
+
+変更が他の機能に影響を与えていないことを確認するために、テストを実行します。
+
+```bash
+uv run pytest
+```
+
+## 5. アプリケーションの実行
 
 ```bash
 uv run flet run

@@ -11,6 +11,7 @@ FletとSQLModelを使用した、クリーンアーキテクチャに基づく�
 
 - **UIフレームワーク**: [Flet](https://flet.dev/)
 - **ORM**: [SQLModel](https://sqlmodel.tiangolo.com/)
+- **AI/Agent**: [LangChain](https://python.langchain.com/), [LangGraph](https://python.langchain.com/docs/langgraph/)
 - **パッケージ管理**: [uv](https://docs.astral.sh/uv/)
 - **静的解析・フォーマッター**: [Ruff](https://docs.astral.sh/ruff/)
 - **Gitフック**: [pre-commit](https://pre-commit.com/)
@@ -21,22 +22,41 @@ FletとSQLModelを使用した、クリーンアーキテクチャに基づく�
 
 - **UI Layer (views)**: FletによるUIコンポーネントと画面表示
 - **Logic Layer (logic)**: ビジネスロジック
+- **Agent Layer (agents)**: LangChain/LangGraphによる自律的なタスク実行
 - **Model Layer (models)**: データ構造とデータベースアクセス
 
 詳細な設計思想については、以下のドキュメントを参照してください。
 
 - [アーキテクチャ設計ガイド](docs/architecture-design.md)
 - [Views の書き方ガイド](docs/views_guide.md)
+- [Agent層 設計ガイド](docs/agents_guide.md)
 
 ## 📂 ディレクトリ構造
 
 ```
 src
-├── logic/      # ビジネスロジック
-├── models/     # データモデル (SQLModel)
-├── views/      # UIコンポーネント (Flet)
-├── main.py     # アプリケーションのエントリーポイント
-└── ...
+├── agents/
+│   ├── __init__.py
+│   ├── tools/              # 共通ツール
+│   └── [agent_name]/       # 特定のエージェント
+│       ├── agent.py
+│       └── graph.py
+├── logic/
+│   ├── __init__.py
+│   ├── repositories/       # データアクセス層 (DB操作)
+│   │   └── task_repository.py
+│   └── services/           # ビジネスロジック層
+│       └── task_service.py
+├── models/
+│   ├── __init__.py
+│   └── task.py             # SQLModelのテーブル定義
+├── views/
+│   ├── __init__.py
+│   ├── shared/             # 共通UIコンポーネント
+│   └── [feature_name]/     # 機能ごとのView
+│       ├── view.py
+│       └── components.py
+└── main.py                 # アプリケーションのエントリーポイント
 ```
 
 ## 🚀 環境構築
@@ -70,6 +90,7 @@ uv run flet run -rd
 - [環境構築ガイド](docs/setup.md)
 - [アーキテクチャ設計ガイド](docs/architecture-design.md)
 - [Views の書き方ガイド](docs/views_guide.md)
+- [Agent層 設計ガイド](docs/agents_guide.md)
 
 ## 📄 ライセンス
 

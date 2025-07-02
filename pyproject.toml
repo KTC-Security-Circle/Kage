@@ -50,9 +50,13 @@ dev-dependencies = [
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]
 line-length = 120
+exclude = [
+    "src/models/migrations/versions/",
+]
 
 [tool.ruff.format]
 docstring-code-format = true
+
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

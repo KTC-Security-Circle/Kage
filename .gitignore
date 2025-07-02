@@ -164,6 +164,3 @@ storage/
 
 # tests
 tests/migrations/test.db
-# 現在ruffが引っかかるため一時的に除外
-tests/migrations/migrations/versions/*
-!/tests/migrations/migrations/versions/__init__.py

@@ -161,3 +161,8 @@ cython_debug/
 
 # Flet
 storage/
+
+# tests
+tests/migrations/test.db
+# 現在ruffが引っかかるため一時的に除外
+tests/migrations/migrations/versions/

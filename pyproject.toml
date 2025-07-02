@@ -8,6 +8,7 @@ authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
+    "alembic>=1.16.2",
     "flet==0.27.6",
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",

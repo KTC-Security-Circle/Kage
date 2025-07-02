@@ -10,7 +10,7 @@ from settings import Base
 from sqlalchemy import engine_from_config, pool
 
 # モデルをインポートしてAlembicがテーブル構造を認識できるようにする
-import models  # noqa: F401
+from task import Task  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

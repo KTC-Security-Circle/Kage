@@ -1,6 +1,27 @@
 # Alembicを使用したマイグレーションの設定
+
+# 導入手順
+# 1. Alembicのインストール
+ ```bash
+pip install alembic
+```
+# 2. Alembicの初期化
+ ```bash
+alembic init migrations
+```
+# 3. マイグレーションファイルの生成
+ ```bash
+alembic revision --autogenerate -m "create tables"
+```
+# 4. マイグレーションの適用
+ ```bash
+alembic upgrade head
+```
+
+
+# 一覧
 ```bash
-# migrationsという名前で作成
+# 最初にmigrationsという名前で作成
 alembic init migrations
 
 # 変更の検出とマイグレーションファイルの生成

@@ -1,12 +1,50 @@
+# ブランチ名に基づくラベル付け
 enhancement:
-  - head-branch: ['^feature']
+  - head-branch: ['^feature', '^enhancement']
 fix:
   - head-branch: ['^fix']
 chore:
   - head-branch: ['^chore']
 bug:
-  - head-branch: ['^bugfix']
+  - head-branch: ['^bugfix', '^bug']
 documentation:
   - head-branch: ['^doc']
 release:
   - head-branch: ['^release']
+
+# ファイルの変更に基づくラベル付け
+docs:
+  - changed-files:
+    - any-glob-to-any-file: ['*.md', 'docs/**/*']
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: ['pyproject.toml', 'uv.lock', 'requirements*.txt']
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/workflows/**/*', '.github/labeler*.yml']
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: ['tests/**/*', '**/test_*.py', '**/*_test.py']
+
+ui:
+  - changed-files:
+    - any-glob-to-any-file: ['src/views/**/*']
+
+agents:
+  - changed-files:
+    - any-glob-to-any-file: ['src/agents/**/*']
+
+logic:
+  - changed-files:
+    - any-glob-to-any-file: ['src/logic/**/*']
+
+models:
+  - changed-files:
+    - any-glob-to-any-file: ['src/models/**/*']
+
+config:
+  - changed-files:
+    - any-glob-to-any-file: ['*.toml', '*.yaml', '*.yml', '*.json', '.env*', '.python-version']

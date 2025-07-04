@@ -11,6 +11,8 @@ documentation:
   - head-branch: ['^doc']
 release:
   - head-branch: ['^release']
+ai:
+  - head-branch: ['^copilot', '^ai', '^assistant', '^bot']
 
 # ファイルの変更に基づくラベル付け
 docs:

@@ -30,7 +30,7 @@ class TestLabelerConfig:
             config = yaml.safe_load(f)
 
         # 必須のラベルが存在することを確認
-        required_labels = ["enhancement", "fix", "bug", "docs", "dependencies", "tests"]
+        required_labels = ["enhancement", "fix", "bug", "docs", "dependencies", "tests", "ai"]
         for label in required_labels:
             assert label in config, f"ラベル '{label}' が設定されていません"
 
@@ -86,3 +86,24 @@ class TestLabelerConfig:
         assert glob_patterns is not None, "docsラベルのglob設定が見つかりません"
         assert "*.md" in glob_patterns, "docsラベルに*.mdパターンが含まれていません"
         assert "docs/**/*" in glob_patterns, "docsラベルにdocs/**/*パターンが含まれていません"
+
+    def test_labeler_config_ai_includes_copilot_branches(self) -> None:
+        """aiラベルがcopilotなどのAIツールブランチに対応していることを確認."""
+        labeler_config_path = Path(__file__).parent.parent / ".github" / "labeler_branch.yml"
+
+        with labeler_config_path.open(encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        ai_config = config.get("ai", [])
+        assert len(ai_config) > 0, "aiラベルの設定が空です"
+
+        # ブランチベースの設定を確認
+        branch_config = None
+        for item in ai_config:
+            if "head-branch" in item:
+                branch_config = item["head-branch"]
+                break
+
+        assert branch_config is not None, "aiラベルのブランチ設定が見つかりません"
+        assert "^copilot" in branch_config, "aiラベルに^copilotパターンが含まれていません"
+        assert "^ai" in branch_config, "aiラベルに^aiパターンが含まれていません"

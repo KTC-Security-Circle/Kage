@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from alembic import context
-from settings import Base
+from src.config import Base
 from sqlalchemy import engine_from_config, pool
 
 # モデルをインポートしてAlembicがテーブル構造を認識できるようにする

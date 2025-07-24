@@ -5,6 +5,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel
+
 # データベース保存先ディレクトリ（環境変数がなければFlet指定のstorageフォルダ）
 DB_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
 # データベースファイルのパス

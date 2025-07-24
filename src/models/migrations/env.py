@@ -6,11 +6,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from alembic import context
-from src.config import Base
 from sqlalchemy import engine_from_config, pool
 
+from src.config import Base
+
 # モデルをインポートしてAlembicがテーブル構造を認識できるようにする
-from task import Task  # noqa: F401
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

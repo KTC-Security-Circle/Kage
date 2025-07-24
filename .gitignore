@@ -161,3 +161,6 @@ cython_debug/
 
 # Flet
 storage/
+
+# tests
+tests/migrations/test.db

@@ -3,7 +3,8 @@
 import os
 from pathlib import Path
 
-from sqlmodel import create_engine
+from sqlalchemy import create_engine
+from sqlmodel import SQLModel
 
 # データベース保存先ディレクトリ（環境変数がなければFlet指定のstorageフォルダ）
 DB_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
@@ -12,6 +13,8 @@ DB_PATH: Path = Path(DB_DIR) / "tasks.db"
 # データベースエンジンの作成
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 
+# SQLModelの基礎クラスを使用
+Base = SQLModel
 
 # アプリケーションのタイトル
 APP_TITLE: str = "タスク管理アプリ"

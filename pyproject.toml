@@ -8,6 +8,7 @@ authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
+    "alembic>=1.16.2",
     "flet==0.27.6",
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",
@@ -49,9 +50,13 @@ dev-dependencies = [
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]
 line-length = 120
+exclude = [
+    "src/models/migrations/versions/",
+]
 
 [tool.ruff.format]
 docstring-code-format = true
+
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -100,7 +105,8 @@ include = ["src"]
 exclude = ["**/node_modules",
     "**/__pycache__",
     "src/experimental",
-    "src/typestubs"
+    "src/typestubs",
+    "src/models/migrations/versions"
 ]
 typeCheckingMode = "basic"
 venvPath = "."

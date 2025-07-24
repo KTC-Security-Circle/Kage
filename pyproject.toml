@@ -110,7 +110,8 @@ include = ["src"]
 exclude = ["**/node_modules",
     "**/__pycache__",
     "src/experimental",
-    "src/typestubs"
+    "src/typestubs",
+    "src/models"
 ]
 typeCheckingMode = "basic"
 venvPath = "."

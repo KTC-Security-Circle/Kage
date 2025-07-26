@@ -17,7 +17,7 @@ engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 Base = SQLModel
 
 # アプリケーションのタイトル
-APP_TITLE: str = "タスク管理アプリ"
+APP_TITLE: str = "Kage"
 
 # タスク用の定数
 TASK_TITLE_MAX_LENGTH = 100

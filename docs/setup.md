@@ -1,6 +1,6 @@
 # 環境構築ガイド
 
-このドキュメントでは、SigotoDekiruKun アプリケーションの開発環境構築手順について説明します。
+このドキュメントでは、Kage アプリケーションの開発環境構築手順について説明します。
 
 ## 前提条件
 
@@ -10,8 +10,8 @@
 ## 1. リポジトリのクローン
 
 ```bash
-git clone git@github.com:KTC-Security-Circle/SigotoDekiruKun.git
-cd SigotoDekiruKun
+git clone git@github.com:KTC-Security-Circle/Kage.git
+cd Kage
 ```
 
 ## 2. 仮想環境のセットアップと依存関係のインストール
@@ -69,7 +69,7 @@ Visual Studio Code でのデバッグ設定例（`.vscode/launch.json`）:
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: SigotoDekiruKun",
+      "name": "Python: Kage",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",

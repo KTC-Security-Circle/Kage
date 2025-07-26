@@ -1,4 +1,4 @@
-# filepath: c:\Users\yukik\dev\SigotoDekiruKun\src\logic\task.py
+# filepath: c:\Users\yukik\dev\Kage\src\logic\task.py
 """タスク管理のビジネスロジック層
 
 このモジュールは、タスクのCRUD操作およびUI表示に必要な

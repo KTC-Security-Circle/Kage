@@ -1,4 +1,4 @@
-# SigotoDekiruKun
+# Kage
 
 FletとSQLModelを使用した、クリーンアーキテクチャに基づくデスクトップアプリケーション開発の学習・実践用プロジェクトです。
 

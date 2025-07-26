@@ -1,11 +1,11 @@
-# SigotoDekiruKun への貢献
+# Kage への貢献
 
 このプロジェクトへの貢献に興味を持っていただき、ありがとうございます。
 バグ報告、機能提案、プルリクエストなど、あらゆる形の貢献を歓迎します。
 
 ## 開発ワークフロー
 
-1.  **Issueの確認**: まず、[Issue Tracker](https://github.com/KTC-Security-Circle/SigotoDekiruKun/issues) を確認し、同様のIssueがないか確認してください。なければ新しいIssueを作成します。
+1.  **Issueの確認**: まず、[Issue Tracker](https://github.com/KTC-Security-Circle/Kage/issues) を確認し、同様のIssueがないか確認してください。なければ新しいIssueを作成します。
 2.  **リポジトリのフォーク**: このリポジトリをフォークします。
 3.  **ブランチの作成**: `feature/機能名` や `fix/バグ修正内容` のような分かりやすい名前で新しいブランチを作成します。
     ```bash

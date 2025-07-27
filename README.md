@@ -1,6 +1,6 @@
 # Kage
 
-FletとSQLModelを使用した、クリーンアーキテクチャに基づくデスクトップアプリケーション開発の学習・実践用プロジェクトです。
+Flet と SQLModel を使用した、クリーンアーキテクチャに基づくデスクトップアプリケーション開発の学習・実践用プロジェクトです。
 
 ## ✨ 主な機能
 
@@ -9,27 +9,27 @@ FletとSQLModelを使用した、クリーンアーキテクチャに基づく�
 
 ## 🛠️ 技術スタック
 
-- **UIフレームワーク**: [Flet](https://flet.dev/)
+- **UI フレームワーク**: [Flet](https://flet.dev/)
 - **ORM**: [SQLModel](https://sqlmodel.tiangolo.com/)
 - **AI/Agent**: [LangChain](https://python.langchain.com/), [LangGraph](https://python.langchain.com/docs/langgraph/)
 - **パッケージ管理**: [uv](https://docs.astral.sh/uv/)
 - **静的解析・フォーマッター**: [Ruff](https://docs.astral.sh/ruff/)
-- **Gitフック**: [pre-commit](https://pre-commit.com/)
+- **Git フック**: [pre-commit](https://pre-commit.com/)
 
 ## 🏗️ アーキテクチャ
 
 本プロジェクトでは、保守性・拡張性を高めるためにレイヤードアーキテクチャを採用しています。
 
-- **UI Layer (views)**: FletによるUIコンポーネントと画面表示
+- **UI Layer (views)**: Flet による UI コンポーネントと画面表示
 - **Logic Layer (logic)**: ビジネスロジック
-- **Agent Layer (agents)**: LangChain/LangGraphによる自律的なタスク実行
+- **Agent Layer (agents)**: LangChain/LangGraph による自律的なタスク実行
 - **Model Layer (models)**: データ構造とデータベースアクセス
 
 詳細な設計思想については、以下のドキュメントを参照してください。
 
 - [アーキテクチャ設計ガイド](docs/architecture-design.md)
 - [Views の書き方ガイド](docs/views_guide.md)
-- [Agent層 設計ガイド](docs/agents_guide.md)
+- [Agent 層 設計ガイド](docs/agents_guide.md)
 
 ## 📂 ディレクトリ構造
 
@@ -64,6 +64,9 @@ src
 環境構築の詳細については、[セットアップガイド](docs/setup.md)を参照してください。
 
 ```bash
+# poethepoetをグローバルにインストール（推奨）
+uv tool install poethepoet
+
 # 仮想環境の作成と依存関係のインストール
 uv sync
 
@@ -73,7 +76,31 @@ uv run pre-commit install
 
 ## 使い方
 
-アプリケーションを実行するには：
+### poethepoet タスクランナーを使用した実行（推奨）
+
+本プロジェクトでは、poethepoet を使用したタスクランナーを導入しています。詳細は[タスクランナーガイド](docs/task_runner.md)を参照してください。
+
+```bash
+# 初回セットアップ
+poe setup
+
+# アプリケーション実行
+poe app-run              # 通常実行
+poe app-dev              # 開発モード（ホットリロード）
+poe app-web              # Webブラウザで実行
+
+# コード品質チェック
+poe check                # 品質チェック一括実行
+poe fix                  # 自動修正一括実行
+
+# テスト実行
+poe test                 # 全テスト実行
+
+# データベース操作
+poe db-upgrade           # マイグレーション実行
+```
+
+### 従来の実行方法
 
 ```bash
 uv run flet run
@@ -87,10 +114,11 @@ uv run flet run -rd
 開発に参加する際は、以下のドキュメントを一読してください。
 
 - [**コントリビューションガイド (CONTRIBUTING.md)**](CONTRIBUTING.md)
+- [**タスクランナーガイド**](docs/task_runner.md) - 開発効率化のための poe コマンド
 - [環境構築ガイド](docs/setup.md)
 - [アーキテクチャ設計ガイド](docs/architecture-design.md)
 - [Views の書き方ガイド](docs/views_guide.md)
-- [Agent層 設計ガイド](docs/agents_guide.md)
+- [Agent 層 設計ガイド](docs/agents_guide.md)
 
 ## 📄 ライセンス
 

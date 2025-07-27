@@ -47,6 +47,63 @@ dev-dependencies = [
     "ruff>=0.11.0, <0.12",
 ]
 
+# Poe the Poet
+[tool.poe.tasks]
+# == Application execution ==
+app-run = "flet run"
+app-dev = "flet run -dr"
+app-web = "flet run --web"
+app-web-dev = "flet run --web -dr"
+app-debug = "flet run -v"
+
+# == Development environment setup ==
+setup = ["sync", "db-upgrade"]
+sync = "uv sync"
+
+# == Database operations ==
+db-upgrade = { shell = "cd src/models && uv run alembic upgrade head" }
+db-downgrade = { shell = "cd src/models && uv run alembic downgrade -1" }
+db-history = { shell = "cd src/models && uv run alembic history" }
+db-current = { shell = "cd src/models && uv run alembic current" }
+
+# == Code quality and formatting ==
+lint = "uv run ruff check src"
+lint-fix = "uv run ruff check src --fix"
+format = "uv run ruff format src"
+format-check = "uv run ruff format src --check"
+type-check = "uv run pyright src"
+
+# == Composite commands ==
+check = ["lint", "format-check", "type-check"]
+fix = ["lint-fix", "format"]
+
+# == Test execution ==
+test = "uv run pytest"
+test-unit = "uv run pytest -m unit"
+test-integration = "uv run pytest -m integration"
+test-cov = "uv run pytest --cov=src --cov-report=html"
+
+# == Dependency management ==
+deps-list = "uv pip list"
+deps-tree = "uv pip tree"
+deps-outdated = "uv pip list --outdated"
+
+# == Build and packaging ==
+build-web = "flet build web"
+build-desktop = "flet build windows"
+pack-desktop = "flet pack"
+
+# == Cleanup ==
+clean = "uv cache clean"
+clean-pyc = { shell = "Get-ChildItem -Path . -Filter '*.pyc' -Recurse | Remove-Item -Force" }
+clean-all = ["clean", "clean-pyc"]
+
+# == Log management ==
+logs-app = { shell = "Get-Content storage/data/logs/app.log -Tail 50" }
+logs-agents = { shell = "Get-Content storage/data/logs/agents.log -Tail 50" }
+logs-clear = { shell = "Remove-Item storage/data/logs/*.log -ErrorAction SilentlyContinue" }
+
+
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]
 line-length = 120

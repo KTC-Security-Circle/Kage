@@ -49,7 +49,11 @@ dev-dependencies = [
 ]
 
 # Poe the Poet
+[tool.poe]
+shell_interpreter = ["powershell", "posix"]
+
 [tool.poe.tasks]
+
 # == Application execution ==
 app-run = "flet run"
 app-dev = "flet run -dr"
@@ -62,10 +66,10 @@ setup = ["sync", "db-upgrade"]
 sync = "uv sync"
 
 # == Database operations ==
-db-upgrade = { shell = "cd src/models && uv run alembic upgrade head" }
-db-downgrade = { shell = "cd src/models && uv run alembic downgrade -1" }
-db-history = { shell = "cd src/models && uv run alembic history" }
-db-current = { shell = "cd src/models && uv run alembic current" }
+db-upgrade = { shell = "Set-Location src/models; uv run alembic upgrade head" }
+db-downgrade = { shell = "Set-Location src/models; uv run alembic downgrade -1" }
+db-history = { shell = "Set-Location src/models; uv run alembic history" }
+db-current = { shell = "Set-Location src/models; uv run alembic current" }
 
 # == Code quality and formatting ==
 lint = "uv run ruff check src"
@@ -86,7 +90,7 @@ test-cov = "uv run pytest --cov=src --cov-report=html"
 
 # == Dependency management ==
 deps-list = "uv pip list"
-deps-tree = "uv pip tree"
+deps-tree = { shell = "uv pip list | Format-Table" }
 deps-outdated = "uv pip list --outdated"
 
 # == Build and packaging ==
@@ -94,15 +98,23 @@ build-web = "flet build web"
 build-desktop = "flet build windows"
 pack-desktop = "flet pack"
 
+# == Windows specific utilities ==
+open-storage = { shell = "Invoke-Item storage" }
+open-logs = { shell = "Invoke-Item storage/data/logs" }
+open-data = { shell = "Invoke-Item storage/data" }
+
 # == Cleanup ==
 clean = "uv cache clean"
 clean-pyc = { shell = "Get-ChildItem -Path . -Filter '*.pyc' -Recurse | Remove-Item -Force" }
-clean-all = ["clean", "clean-pyc"]
+clean-pycache = { shell = "Get-ChildItem -Path . -Name '__pycache__' -Recurse -Directory | Remove-Item -Recurse -Force" }
+clean-all = ["clean", "clean-pyc", "clean-pycache"]
 
 # == Log management ==
-logs-app = { shell = "Get-Content storage/data/logs/app.log -Tail 50" }
+logs-app = { shell = "Get-Content storage/data/logs/app.log -Tail 50"}
 logs-agents = { shell = "Get-Content storage/data/logs/agents.log -Tail 50" }
 logs-clear = { shell = "Remove-Item storage/data/logs/*.log -ErrorAction SilentlyContinue" }
+logs-follow-app = { shell = "Get-Content storage/data/logs/app.log -Wait -Tail 10" }
+logs-follow-agents = { shell = "Get-Content storage/data/logs/agents.log -Wait -Tail 10" }
 
 
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)

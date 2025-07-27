@@ -33,7 +33,7 @@ Flet と SQLModel を使用した、クリーンアーキテクチャに基づ�
 
 ## 📂 ディレクトリ構造
 
-```
+```plain text
 src
 ├── agents/
 │   ├── __init__.py

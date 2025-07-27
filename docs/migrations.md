@@ -1,6 +1,7 @@
 # マイグレーションの方法
 
 ## 基本的なコマンド
+
 ```bash
 # 最初にmigrationsという名前で作成
 alembic init migrations

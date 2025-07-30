@@ -1,7 +1,7 @@
 # router.py
 # ページルーティングの管理を専用モジュールに分離
 
-from typing import Callable
+from collections.abc import Callable
 
 import flet as ft
 

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import flet as ft
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from logic.task import TaskService
 
 

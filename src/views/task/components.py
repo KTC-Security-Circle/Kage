@@ -7,15 +7,17 @@ FletライブラリとTaskServiceを使用してタスク管理機能を実装�
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import flet as ft
 
 from logic.task import TaskService, TaskUIHelper
-from models.task import TaskUpdate
+from models.task import OldTaskUpdate as TaskUpdate
 
 if TYPE_CHECKING:
-    from models.task import TaskRead
+    from collections.abc import Callable
+
+    from models.task import OldTaskRead as TaskRead
 
     # 型定義
     type OnTaskCreated = Callable[[TaskRead], None] | None

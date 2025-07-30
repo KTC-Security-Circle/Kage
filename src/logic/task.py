@@ -18,7 +18,10 @@ from config import (
     TASK_TITLE_MAX_LENGTH,
     engine,
 )
-from models.task import Task, TaskCreate, TaskRead, TaskUpdate
+from models.task import OldTask as Task
+from models.task import OldTaskCreate as TaskCreate
+from models.task import OldTaskRead as TaskRead
+from models.task import OldTaskUpdate as TaskUpdate
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar

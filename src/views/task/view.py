@@ -14,7 +14,7 @@ from logic.task import TaskRepository, TaskService
 from views.task.components import TaskCreateForm, TaskList
 
 if TYPE_CHECKING:
-    from models.task import TaskRead
+    from models.task import OldTaskRead as TaskRead
 
 
 class TaskView(ft.Column):

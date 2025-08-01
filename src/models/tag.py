@@ -11,11 +11,9 @@ class TagBase(SQLModel):
     タグの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        user_id (uuid.UUID): タグを所有するユーザーのID。
         name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
     """
 
-    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
     name: str = Field(index=True)
 
 
@@ -26,7 +24,6 @@ class Tag(TagBase, table=True):
 
     Attributes:
         id (uuid.UUID | None): タグのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
-        user_id (uuid.UUID): タグを所有するユーザーのID。
         name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
     """
 
@@ -39,7 +36,6 @@ class TagCreate(TagBase):
     タグを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        user_id (uuid.UUID): タグを所有するユーザーのID。
         name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
     """
 
@@ -51,7 +47,6 @@ class TagRead(TagBase):
 
     Attributes:
         id (uuid.UUID): タグのID。
-        user_id (uuid.UUID): タグを所有するユーザーのID。
         name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
     """
 

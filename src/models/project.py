@@ -21,13 +21,11 @@ class ProjectBase(SQLModel):
     プロジェクトの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        user_id (uuid.UUID): プロジェクトを所有するユーザーのID。
         title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
         description (str): プロジェクトの説明。デフォルトは空文字列。
         status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
     """
 
-    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
     title: str = Field(index=True)
     description: str = Field(default="")
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, index=True)
@@ -40,7 +38,6 @@ class Project(ProjectBase, table=True):
 
     Attributes:
         id (uuid.UUID | None): プロジェクトのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
-        user_id (uuid.UUID): プロジェクトを所有するユーザーのID。
         title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
         description (str): プロジェクトの説明。デフォルトは空文字列。
         status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
@@ -55,7 +52,6 @@ class ProjectCreate(ProjectBase):
     プロジェクトを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        user_id (uuid.UUID): プロジェクトを所有するユーザーのID。
         title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
         description (str): プロジェクトの説明。デフォルトは空文字列。
         status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
@@ -69,7 +65,6 @@ class ProjectRead(ProjectBase):
 
     Attributes:
         id (uuid.UUID): プロジェクトのID。
-        user_id (uuid.UUID): プロジェクトを所有するユーザーのID。
         title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
         description (str): プロジェクトの説明。デフォルトは空文字列。
         status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。

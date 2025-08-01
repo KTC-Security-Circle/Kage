@@ -1,0 +1,96 @@
+"""[AI GENERATED] プロジェクトリポジトリの実装"""
+
+from loguru import logger
+from sqlmodel import Session, select
+
+from logic.repositories.base import BaseRepository
+from models.project import Project, ProjectCreate, ProjectStatus, ProjectUpdate
+
+
+class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
+    """[AI GENERATED] プロジェクトリポジトリ
+
+    プロジェクトの CRUD 操作を提供するリポジトリクラス。
+    BaseRepository を継承して基本操作を提供し、プロジェクト固有の操作を追加実装。
+    """
+
+    def __init__(self) -> None:
+        """[AI GENERATED] ProjectRepository を初期化する"""
+        super().__init__(Project)
+
+    def get_all(self) -> list[Project]:
+        """[AI GENERATED] 全てのプロジェクト一覧を取得する
+
+        Returns:
+            list[Project]: 全てのプロジェクト一覧
+        """
+        try:
+            with Session(self.engine) as session:
+                statement = select(Project)
+                results = session.exec(statement).all()
+                logger.debug(f"プロジェクトを {len(results)} 件取得しました")
+                return list(results)
+        except Exception as e:
+            logger.exception(f"プロジェクト取得に失敗しました: {e}")
+            raise
+
+    def get_by_status(self, status: ProjectStatus) -> list[Project]:
+        """[AI GENERATED] 指定されたステータスのプロジェクト一覧を取得する
+
+        Args:
+            status: プロジェクトステータス
+
+        Returns:
+            list[Project]: 指定された条件に一致するプロジェクト一覧
+        """
+        try:
+            with Session(self.engine) as session:
+                statement = select(Project).where(Project.status == status)
+                results = session.exec(statement).all()
+                logger.debug(f"ステータス {status} のプロジェクトを {len(results)} 件取得しました")
+                return list(results)
+        except Exception as e:
+            logger.exception(f"ステータス別プロジェクト取得に失敗しました: {e}")
+            raise
+
+    def search_by_title(self, title_query: str) -> list[Project]:
+        """[AI GENERATED] タイトルでプロジェクトを検索する
+
+        Args:
+            title_query: 検索クエリ（部分一致）
+
+        Returns:
+            list[Project]: 検索条件に一致するプロジェクト一覧
+        """
+        try:
+            with Session(self.engine) as session:
+                # Python側でフィルタリングを実行
+                statement = select(Project)
+                all_projects = session.exec(statement).all()
+
+                # タイトルに検索クエリが含まれるプロジェクトをフィルタリング
+                filtered_projects = [
+                    project for project in all_projects if title_query.lower() in project.title.lower()
+                ]
+
+                logger.debug(f"タイトル検索 '{title_query}' で {len(filtered_projects)} 件取得しました")
+                return filtered_projects
+        except Exception as e:
+            logger.exception(f"タイトル検索に失敗しました: {e}")
+            raise
+
+    def get_active_projects(self) -> list[Project]:
+        """[AI GENERATED] アクティブなプロジェクト一覧を取得する
+
+        Returns:
+            list[Project]: アクティブなプロジェクト一覧
+        """
+        return self.get_by_status(ProjectStatus.ACTIVE)
+
+    def get_completed_projects(self) -> list[Project]:
+        """[AI GENERATED] 完了済みプロジェクト一覧を取得する
+
+        Returns:
+            list[Project]: 完了済みプロジェクト一覧
+        """
+        return self.get_by_status(ProjectStatus.COMPLETED)

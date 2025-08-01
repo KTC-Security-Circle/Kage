@@ -7,7 +7,6 @@ from models.project import Project, ProjectCreate, ProjectRead, ProjectStatus, P
 from models.tag import Tag, TagCreate, TagRead, TagUpdate
 from models.task import OldTask, OldTaskCreate, OldTaskRead, OldTaskUpdate
 from models.task_tag import TaskTag, TaskTagCreate, TaskTagRead
-from models.user import User, UserCreate, UserRead, UserUpdate
 
 __all__ = [
     "OldTask",
@@ -31,8 +30,4 @@ __all__ = [
     "TaskTagCreate",
     "TaskTagRead",
     "TaskUpdate",
-    "User",
-    "UserCreate",
-    "UserRead",
-    "UserUpdate",
 ]

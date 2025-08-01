@@ -25,7 +25,6 @@ class TaskBase(SQLModel):
     タスクの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        user_id (uuid.UUID): タスクを所有するユーザーのID。
         project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
         parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。
         title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
@@ -34,7 +33,6 @@ class TaskBase(SQLModel):
         due_date (date | None): タスクの締め切り日。設定されていない場合はNone。
     """
 
-    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
     project_id: uuid.UUID | None = Field(default=None, foreign_key="project.id", index=True)
     parent_id: uuid.UUID | None = Field(default=None, foreign_key="task.id", index=True)
     title: str = Field(index=True)
@@ -50,7 +48,6 @@ class Task(TaskBase, table=True):
 
     Attributes:
         id (uuid.UUID | None): タスクのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
-        user_id (uuid.UUID): タスクを所有するユーザーのID。
         project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
         parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。
         title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
@@ -68,7 +65,6 @@ class TaskCreate(TaskBase):
     タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        user_id (uuid.UUID): タスクを所有するユーザーのID。
         project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
         parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。
         title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
@@ -85,7 +81,6 @@ class TaskRead(TaskBase):
 
     Attributes:
         id (uuid.UUID): タスクのID。
-        user_id (uuid.UUID): タスクを所有するユーザーのID。
         project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
         parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。
         title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。

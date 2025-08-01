@@ -1,6 +1,4 @@
-# model/task.py
-# SQLModelとSQLiteを使ったタスク管理モデル
-from __future__ import annotations
+"""Taskモデルの定義"""
 
 from datetime import datetime
 
@@ -8,7 +6,7 @@ from sqlmodel import Field, SQLModel
 from typing_extensions import deprecated
 
 
-class TaskBase(SQLModel):
+class OldTaskBase(SQLModel):
     """タスクの基本モデル
 
     タスクの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -28,7 +26,7 @@ class TaskBase(SQLModel):
     completed: bool = Field(default=False)
 
 
-class Task(TaskBase, table=True):
+class OldTask(OldTaskBase, table=True):
     """タスクモデル
 
     タスクの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -45,7 +43,7 @@ class Task(TaskBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
 
-class TaskCreate(TaskBase):
+class OldTaskCreate(OldTaskBase):
     """タスク作成用モデル
 
     タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -59,7 +57,7 @@ class TaskCreate(TaskBase):
     """
 
 
-class TaskRead(TaskBase):
+class OldTaskRead(OldTaskBase):
     """タスク読み取り用モデル
 
     タスクの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -76,12 +74,12 @@ class TaskRead(TaskBase):
     id: int
 
 
-class TaskUpdate(SQLModel):
+class OldTaskUpdate(SQLModel):
     """タスク更新用モデル
 
     タスクの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
-    Attributes:
+    Attributes:no
         title (str | None): タスクのタイトル。Noneの場合は更新しない。
         description (str | None): タスクの詳細説明。Noneの場合は更新しない。
         completed (bool | None): タスクの完了状態。Noneの場合は更新しない。

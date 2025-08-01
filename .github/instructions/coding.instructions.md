@@ -20,7 +20,7 @@ Python のコードを生成する場合は必ずこのガイドラインに従�
     フォーマットと静的解析:
 
         フォーマッタ兼リンターは Ruff を使用する。設定は pyproject.toml に従うこと。
-        コードを変更した場合は `poe check (ruff check と ruff format --fix の同時実行タスク)` でフォーマットとチェックを実行し、警告やエラーを修正すること。
+        コードを変更した場合は `poe check (ruff format と ruff check --fix の同時実行タスク)` でフォーマットとチェックを実行し、警告やエラーを修正すること。
 
     型ヒント (Type Hinting):
 

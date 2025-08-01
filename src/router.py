@@ -8,13 +8,13 @@ import flet as ft
 from views import (
     # get_layout,
     create_home_view,
-    create_task_view,
 )
 from views.layout import get_layout
+from views.task.gtd_view import create_gtd_task_view
 
 ROUTES: dict[str, Callable[[ft.Page], ft.Container]] = {
     "/": create_home_view,
-    "/task": create_task_view,
+    "/task": create_gtd_task_view,
     # 今後ページが増えた場合はここに追加
 }
 

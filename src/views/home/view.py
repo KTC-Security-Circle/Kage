@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from logic.task import TaskRepository, TaskService
+from logic.old_task import TaskRepository, TaskService
 from views.home.components import MainActionSection, create_welcome_message
 
 

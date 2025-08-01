@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from logic.task import TaskService, TaskUIHelper
+from logic.old_task import TaskService, TaskUIHelper
 from models.task import OldTaskUpdate as TaskUpdate
 
 if TYPE_CHECKING:

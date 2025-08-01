@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from logic.task import TaskRepository, TaskService
+from logic.old_task import TaskRepository, TaskService
 from views.task.components import TaskCreateForm, TaskList
 
 if TYPE_CHECKING:

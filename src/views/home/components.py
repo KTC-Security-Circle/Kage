@@ -9,7 +9,7 @@ import flet as ft
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from logic.task import TaskService
+    from logic.old_task import TaskService
 
 
 class MainActionSection(ft.Column):

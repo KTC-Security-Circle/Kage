@@ -54,7 +54,7 @@ class GTDTasksBoard(ft.Container):
         self.border_radius = 12
         self.padding = 16
         self.margin = ft.margin.symmetric(vertical=8)
-        self.height = 300  # 明示的な高さを設定（expandを削除）
+        self.expand = True  # 利用可能な縦スペースを最大限活用
 
         # タスクデータ
         self.tasks_by_status: dict[TaskStatus, list[TaskRead]] = {}
@@ -96,6 +96,7 @@ class GTDTasksBoard(ft.Container):
                     self._build_inbox_column(),
                 ],
                 spacing=16,
+                vertical_alignment=ft.CrossAxisAlignment.START,  # 上揃え
             )
             logger.info("GTDTasksBoard コンテンツ構築完了")
         except Exception as e:

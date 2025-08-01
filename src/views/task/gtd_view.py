@@ -91,6 +91,7 @@ class GTDTaskView(ft.Container):
 
         # コンテナのスタイル設定
         self.padding = 20
+        self.expand = True
         self.bgcolor = ft.Colors.GREY_50  # 背景色を設定
 
         logger.info("GTDTaskView ビュー構築完了")
@@ -152,4 +153,4 @@ def create_gtd_task_view(page: ft.Page) -> ft.Container:
     Returns:
         GTDTaskView: 作成されたGTDタスクビューインスタンス
     """
-    return ft.Container(content=GTDTaskView(page=page))
+    return ft.Container(content=GTDTaskView(page=page), expand=True, bgcolor=ft.Colors.GREY_50)

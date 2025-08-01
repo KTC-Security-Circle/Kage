@@ -164,3 +164,6 @@ storage/
 
 # tests
 tests/migrations/test.db
+
+# github copilot
+copilot/

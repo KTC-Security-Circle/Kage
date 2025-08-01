@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import flet as ft
+from loguru import logger
 
 from models.new_task import TaskStatus
 
@@ -342,11 +343,13 @@ class TaskContentArea(ft.Column):
         Args:
             project_id: プロジェクトID
         """
+        logger.warning(f"プロジェクト別タスク表示機能は未実装です (プロジェクトID: {project_id})")
         try:
-            import uuid
-
-            project_uuid = uuid.UUID(project_id)
-            self.current_tasks = self.task_service.get_tasks_by_project_id(project_uuid)
+            # 現在は機能を無効化
+            # import uuid
+            # project_uuid = uuid.UUID(project_id)
+            # self.current_tasks = self.task_service.get_tasks_by_project_id(project_uuid)
+            self.current_tasks = []  # 空のタスクリストを表示
             self.current_mode = "list"
             self._build_content_area()
             self.update()
@@ -491,8 +494,6 @@ class TaskContentArea(ft.Column):
         Args:
             message: エラーメッセージ
         """
-        from loguru import logger
-
         # [AI GENERATED] エラー表示の実装は後で追加
         logger.error(f"UI Error: {message}")
 

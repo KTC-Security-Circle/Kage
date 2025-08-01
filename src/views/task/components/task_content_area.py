@@ -47,6 +47,7 @@ class TaskContentArea(ft.Column):
         self.current_mode = "list"  # "list", "detail", "edit", "quick_add"
         self.current_tasks: list[TaskRead] = []
         self.selected_task: TaskRead | None = None
+        self.current_filter_status: TaskStatus | None = None  # [AI GENERATED] 現在のフィルタリング状態を保持
 
         # コンポーネントの初期化
         self._build_content_area()
@@ -139,9 +140,6 @@ class TaskContentArea(ft.Column):
         Returns:
             タスクカード
         """
-        # ステータスに応じた色を決定
-        status_color = self._get_status_color(task.status)
-
         return ft.Card(
             content=ft.Container(
                 content=ft.Row(
@@ -161,16 +159,20 @@ class TaskContentArea(ft.Column):
                                 ),
                                 ft.Row(
                                     [
-                                        # ステータスバッジ
-                                        ft.Container(
-                                            content=ft.Text(
-                                                task.status.value.replace("_", " ").title(),
-                                                size=10,
-                                                color=ft.Colors.WHITE,
-                                            ),
-                                            bgcolor=status_color,
-                                            padding=ft.padding.symmetric(horizontal=8, vertical=2),
-                                            border_radius=10,
+                                        # ステータス変更ドロップダウン
+                                        ft.Dropdown(
+                                            value=task.status.value,
+                                            options=[
+                                                ft.dropdown.Option("inbox", "📥 Inbox"),
+                                                ft.dropdown.Option("next_action", "🎯 Next Action"),
+                                                ft.dropdown.Option("waiting_for", "⏳ Waiting"),
+                                                ft.dropdown.Option("someday_maybe", "💭 Someday"),
+                                                ft.dropdown.Option("delegated", "👥 Delegated"),
+                                                ft.dropdown.Option("completed", "✅ Completed"),
+                                                ft.dropdown.Option("cancelled", "❌ Cancelled"),
+                                            ],
+                                            width=150,
+                                            on_change=lambda e, t=task: self._change_task_status(t, e.control.value),
                                         ),
                                         # 期限表示
                                         ft.Text(
@@ -326,6 +328,7 @@ class TaskContentArea(ft.Column):
             status: 表示するタスクステータス
         """
         try:
+            self.current_filter_status = status  # [AI GENERATED] 現在のフィルタ状態を保存
             self.current_tasks = self.task_service.get_tasks_by_status(status)
             self.current_mode = "list"
             self._build_content_area()
@@ -402,16 +405,58 @@ class TaskContentArea(ft.Column):
             is_completed: 完了状態
         """
         try:
+            from models.new_task import TaskUpdate
+
             if is_completed:
-                self.task_service.complete_task(task.id)
+                # [AI GENERATED] タスクを完了状態に変更
+                update_data = TaskUpdate(status=TaskStatus.COMPLETED)
+                self.task_service.update_task(task.id, update_data)
             else:
-                # [AI GENERATED] 未完了状態への変更は後で実装
-                return
+                # [AI GENERATED] タスクを未完了状態に変更（前のステータスまたはINBOXに戻す）
+                # 完了状態から戻す場合は、とりあえずINBOXに戻す
+                update_data = TaskUpdate(status=TaskStatus.INBOX)
+                self.task_service.update_task(task.id, update_data)
 
             # タスクリストを更新
             self.refresh()
         except Exception:
             self._show_error("タスクの更新に失敗しました")
+
+    def _change_task_status(self, task: TaskRead, new_status: str) -> None:
+        """タスクのステータスを変更
+
+        Args:
+            task: 対象タスク
+            new_status: 新しいステータス（文字列値）
+        """
+        try:
+            from models.new_task import TaskUpdate
+
+            # [AI GENERATED] 文字列値をTaskStatusに変換
+            status_map = {
+                "inbox": TaskStatus.INBOX,
+                "next_action": TaskStatus.NEXT_ACTION,
+                "waiting_for": TaskStatus.WAITING_FOR,
+                "someday_maybe": TaskStatus.SOMEDAY_MAYBE,
+                "delegated": TaskStatus.DELEGATED,
+                "completed": TaskStatus.COMPLETED,
+                "cancelled": TaskStatus.CANCELLED,
+            }
+
+            if new_status not in status_map:
+                self._show_error(f"無効なステータス: {new_status}")
+                return
+
+            new_task_status = status_map[new_status]
+
+            # タスクのステータスを更新
+            update_data = TaskUpdate(status=new_task_status)
+            self.task_service.update_task(task.id, update_data)
+
+            # タスクリストを更新
+            self.refresh()
+        except Exception:
+            self._show_error("タスクステータスの変更に失敗しました")
 
     def _add_task(self, _: ft.ControlEvent) -> None:
         """タスクを追加"""
@@ -453,5 +498,12 @@ class TaskContentArea(ft.Column):
 
     def refresh(self) -> None:
         """コンテンツを再読み込み"""
+        # [AI GENERATED] 現在のフィルタ状態に基づいてタスクリストを再読み込み
+        if self.current_filter_status is not None:
+            try:
+                self.current_tasks = self.task_service.get_tasks_by_status(self.current_filter_status)
+            except Exception:
+                self._show_error("タスクの再読み込みに失敗しました")
+
         self._build_content_area()
         self.update()

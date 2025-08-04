@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from logic.old_task import TaskRepository, TaskService
-from views.home.components import MainActionSection, create_welcome_message
+from views.home.components import create_welcome_message
 
 
 class HomeView(ft.Column):
@@ -28,8 +27,6 @@ class HomeView(ft.Column):
         self.alignment = ft.MainAxisAlignment.CENTER
         self.expand = True
         self.spacing = 30
-        self.task_repository = TaskRepository()
-        self.task_service = TaskService(self.task_repository)
 
         # コンポーネントを構築
         self._build_components()
@@ -38,7 +35,6 @@ class HomeView(ft.Column):
         """コンポーネントを構築して追加."""
         self.controls = [
             create_welcome_message(),
-            MainActionSection(self.page, self.task_service),
         ]
 
     def _navigate_to_tasks(self, _: ft.ControlEvent) -> None:

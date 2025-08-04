@@ -6,7 +6,7 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from logic.repositories.base import BaseRepository
-from models.task_tag import TaskTag, TaskTagCreate
+from models import TaskTag, TaskTagCreate
 
 
 class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):

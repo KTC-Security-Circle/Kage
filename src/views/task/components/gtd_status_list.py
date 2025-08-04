@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from models.new_task import TaskStatus
+from models import TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable

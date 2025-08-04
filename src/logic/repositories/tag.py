@@ -4,7 +4,7 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from logic.repositories.base import BaseRepository
-from models.tag import Tag, TagCreate, TagUpdate
+from models import Tag, TagCreate, TagUpdate
 
 
 class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):

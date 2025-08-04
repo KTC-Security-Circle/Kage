@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from models.new_task import TaskStatus
+from models import TaskStatus
 
 if TYPE_CHECKING:
     from logic.services.project_service import ProjectService
     from logic.services.task_service import TaskService
-    from models.new_task import TaskRead
+    from models import TaskRead
 
 
 class TaskContentArea(ft.Column):
@@ -408,7 +408,7 @@ class TaskContentArea(ft.Column):
             is_completed: 完了状態
         """
         try:
-            from models.new_task import TaskUpdate
+            from models.task import TaskUpdate
 
             if is_completed:
                 # [AI GENERATED] タスクを完了状態に変更
@@ -433,7 +433,7 @@ class TaskContentArea(ft.Column):
             new_status: 新しいステータス（文字列値）
         """
         try:
-            from models.new_task import TaskUpdate
+            from models.task import TaskUpdate
 
             # [AI GENERATED] 文字列値をTaskStatusに変換
             status_map = {
@@ -468,7 +468,7 @@ class TaskContentArea(ft.Column):
             return
 
         try:
-            from models.new_task import TaskCreate
+            from models.task import TaskCreate
 
             task_data = TaskCreate(
                 title=self.title_field.value,

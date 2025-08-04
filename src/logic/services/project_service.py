@@ -11,8 +11,7 @@ from loguru import logger
 from logic.repositories.project import ProjectRepository
 from logic.repositories.task import TaskRepository
 from logic.services.base import MyBaseError, ServiceBase
-from models.new_task import TaskRead
-from models.project import ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate
+from models import ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate, TaskRead
 
 
 # Custom exceptions for project service errors
@@ -183,7 +182,7 @@ class ProjectService(ServiceBase[ProjectServiceError]):
 
         # [AI GENERATED] 強制削除の場合、関連タスクのproject_idをNoneに更新
         if force and related_tasks:
-            from models.new_task import TaskUpdate
+            from models.task import TaskUpdate
 
             for task in related_tasks:
                 if task.id is not None:  # [AI GENERATED] IDがNoneでないことを確認

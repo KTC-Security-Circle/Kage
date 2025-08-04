@@ -11,14 +11,13 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from logic.services.project_service import ProjectService
-from logic.services.task_service import TaskService
+from logic.services import ProjectService, TaskService
 from views.task.components.gtd_projects_placeholder import GTDProjectsPlaceholder
 from views.task.components.gtd_quick_actions import GTDQuickActions
 from views.task.components.gtd_tasks_board import GTDTasksBoard
 
 if TYPE_CHECKING:
-    from models.new_task import TaskRead, TaskStatus
+    from models import TaskRead, TaskStatus
 
 
 class GTDTaskView(ft.Container):

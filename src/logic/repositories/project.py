@@ -4,7 +4,7 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from logic.repositories.base import BaseRepository
-from models.project import Project, ProjectCreate, ProjectStatus, ProjectUpdate
+from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate
 
 
 class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):

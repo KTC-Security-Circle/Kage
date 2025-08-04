@@ -13,9 +13,7 @@ from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
 from logic.services.base import MyBaseError, ServiceBase
-from models.new_task import TaskCreate, TaskRead, TaskStatus, TaskUpdate
-from models.tag import TagRead
-from models.task_tag import TaskTag, TaskTagCreate
+from models import TagRead, TaskCreate, TaskRead, TaskStatus, TaskTag, TaskTagCreate, TaskUpdate
 
 
 # Custom exceptions for task service errors

@@ -47,6 +47,18 @@ dev-dependencies = [
     "ruff>=0.11.0, <0.12",
 ]
 
+[tool.poe.tasks]
+# == Code quality and formatting ==
+lint = "uv run ruff check src"
+lint-fix = "uv run ruff check src --fix"
+format = "uv run ruff format src"
+format-check = "uv run ruff format src --check"
+type-check = "uv run pyright src"
+
+# == Composite commands ==
+check = ["format", "lint-fix", "type-check"]
+fix = ["lint-fix", "format"]
+
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]
 line-length = 120

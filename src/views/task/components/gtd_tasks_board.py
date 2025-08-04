@@ -16,13 +16,13 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from models.new_task import TaskStatus
+from models import TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from logic.services.task_service import TaskService
-    from models.new_task import TaskRead
+    from logic.services import TaskService
+    from models import TaskRead
 
 
 class GTDTasksBoard(ft.Container):
@@ -291,7 +291,7 @@ class GTDTasksBoard(ft.Container):
     def _toggle_task_completion(self, task: TaskRead, *, is_completed: bool) -> None:
         """タスク完了状態の切り替え"""
         try:
-            from models.new_task import TaskUpdate
+            from models.task import TaskUpdate
 
             new_status = TaskStatus.COMPLETED if is_completed else TaskStatus.NEXT_ACTION
             task_update = TaskUpdate(status=new_status)

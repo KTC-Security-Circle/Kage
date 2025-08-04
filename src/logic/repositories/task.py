@@ -7,7 +7,7 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from logic.repositories.base import BaseRepository
-from models.new_task import Task, TaskCreate, TaskStatus, TaskUpdate
+from models import Task, TaskCreate, TaskStatus, TaskUpdate
 
 
 class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):

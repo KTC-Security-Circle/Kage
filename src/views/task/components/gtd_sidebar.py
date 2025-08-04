@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from logic.services.project_service import ProjectService
     from logic.services.task_service import TaskService
-    from models.new_task import TaskStatus
+    from models import TaskStatus
 
 
 class GTDSidebar(ft.Column):

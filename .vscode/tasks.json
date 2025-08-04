@@ -22,9 +22,6 @@
             "type": "shell",
             "command": "uv",
             "args": ["run", "alembic", "upgrade", "head"],
-            "options": {
-                "cwd": "${workspaceFolder}/src/models"
-            },
             "group": "build",
             "presentation": {
                 "echo": true,

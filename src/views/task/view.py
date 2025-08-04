@@ -13,7 +13,7 @@ from loguru import logger
 
 from logic.services import ProjectService, TaskService
 from views.task.components.projects_placeholder import ProjectsPlaceholder
-from views.task.components.quick_actions import QuickActions
+from views.task.components.quick_actions import QuickActionCommand, QuickActions
 from views.task.components.tasks_board import TasksBoard
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ class TaskView(ft.Container):
 
         logger.info("TaskView ビュー構築完了")
 
-    def _handle_quick_action(self, action: str) -> None:
+    def _handle_quick_action(self, action: QuickActionCommand) -> None:
         """クイックアクション処理
 
         Args:

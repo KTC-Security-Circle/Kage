@@ -11,7 +11,7 @@ import flet as ft
 from loguru import logger
 
 from views.task.components.project_list import ProjectList
-from views.task.components.quick_actions import QuickActions
+from views.task.components.quick_actions import QuickActionCommand, QuickActions
 from views.task.components.status_list import StatusList
 
 if TYPE_CHECKING:
@@ -84,14 +84,14 @@ class Sidebar(ft.Column):
 
         logger.info("Sidebar コンポーネント構築完了")
 
-    def _handle_quick_action(self, action: str) -> None:
+    def _handle_quick_action(self, action: QuickActionCommand) -> None:
         """クイックアクション処理
 
         Args:
             action: 実行するアクション
         """
         logger.info(f"サイドバーからクイックアクション実行: {action}")
-        self.on_section_change("quick_action", {"action": action})
+        self.on_section_change("quick_action", {"action": action.value})
 
     def _handle_project_select(self, project_id: int | None) -> None:
         """プロジェクト選択処理

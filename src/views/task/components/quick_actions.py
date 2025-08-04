@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -12,6 +13,18 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+class QuickActionCommand(Enum):
+    """クイックアクションコマンド
+
+    ユーザーが選択できるクイックアクションのコマンドを定義します。
+    """
+
+    DO_NOW = "do_now"
+    DO_NEXT = "do_next"
+    DO_SOMEDAY = "do_someday"
+    REFERENCE = "reference"
 
 
 class QuickActions(ft.Container):
@@ -22,7 +35,7 @@ class QuickActions(ft.Container):
 
     def __init__(
         self,
-        on_action_click: Callable[[str], None],
+        on_action_click: Callable[[QuickActionCommand], None],
     ) -> None:
         """QuickActionsのコンストラクタ
 
@@ -55,25 +68,25 @@ class QuickActions(ft.Container):
             self._create_action_button(
                 icon=ft.Icons.ADD_CIRCLE,
                 text="すぐにやる",
-                action="do_now",
+                action=QuickActionCommand.DO_NOW,
                 color=ft.Colors.RED_500,
             ),
             self._create_action_button(
                 icon=ft.Icons.SCHEDULE,
                 text="次にやる",
-                action="do_next",
+                action=QuickActionCommand.DO_NEXT,
                 color=ft.Colors.ORANGE_500,
             ),
             self._create_action_button(
                 icon=ft.Icons.ACCESS_TIME,
                 text="いつかやる",
-                action="do_someday",
+                action=QuickActionCommand.DO_SOMEDAY,
                 color=ft.Colors.BLUE_500,
             ),
             self._create_action_button(
                 icon=ft.Icons.BOOKMARK,
                 text="参考資料",
-                action="reference",
+                action=QuickActionCommand.REFERENCE,
                 color=ft.Colors.GREEN_500,
             ),
         ]
@@ -105,7 +118,7 @@ class QuickActions(ft.Container):
         self,
         icon: str,
         text: str,
-        action: str,
+        action: QuickActionCommand,
         color: str,
     ) -> ft.Container:
         """アクションボタンを作成

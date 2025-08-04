@@ -1,4 +1,4 @@
-"""GTDプロジェクトプレースホルダーコンポーネント
+"""プロジェクトプレースホルダーコンポーネント
 
 将来のプロジェクト機能実装までの一時的なプレースホルダーを提供します。
 """
@@ -9,14 +9,14 @@ import flet as ft
 from loguru import logger
 
 
-class GTDProjectsPlaceholder(ft.Container):
-    """GTDプロジェクトプレースホルダーコンポーネント
+class ProjectsPlaceholder(ft.Container):
+    """プロジェクトプレースホルダーコンポーネント
 
     プロジェクト機能が実装されるまでの間、プレースホルダーを表示します。
     """
 
     def __init__(self) -> None:
-        """GTDProjectsPlaceholderのコンストラクタ"""
+        """ProjectsPlaceholderのコンストラクタ"""
         super().__init__()
 
         # スタイル設定
@@ -65,30 +65,33 @@ class GTDProjectsPlaceholder(ft.Container):
                                 size=48,
                                 color=ft.Colors.GREY_400,
                             ),
-                            ft.Container(height=12),
                             ft.Text(
-                                "プロジェクト機能は近日実装予定です",
-                                size=14,
+                                "プロジェクト機能は開発中です",
+                                size=16,
+                                weight=ft.FontWeight.W_500,
                                 color=ft.Colors.GREY_600,
                                 text_align=ft.TextAlign.CENTER,
                             ),
                             ft.Text(
-                                "現在、基本的なタスク管理機能をご利用いただけます",
-                                size=12,
+                                "近日中にリリース予定です。\nタスクの整理やグループ化機能を提供します。",
+                                size=14,
                                 color=ft.Colors.GREY_500,
                                 text_align=ft.TextAlign.CENTER,
                             ),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=4,
+                        spacing=12,
                     ),
+                    bgcolor=ft.Colors.GREY_50,
+                    border_radius=8,
+                    padding=32,
                     alignment=ft.alignment.center,
-                    padding=20,
                 ),
             ],
             spacing=0,
         )
 
-    def on_click_placeholder(self) -> None:
-        """プレースホルダークリック時の処理"""
-        logger.info("プロジェクト機能は未実装のため、プレースホルダーが表示されています")
+    def refresh(self) -> None:
+        """プレースホルダーをリフレッシュ"""
+        logger.info("ProjectsPlaceholder リフレッシュ")
+        # 将来: プロジェクトデータの更新処理を追加

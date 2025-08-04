@@ -1,11 +1,6 @@
-"""GTDタスクボードコンポーネント
+"""タスクボードコンポーネント
 
-2カラム構成（CLOSED vs INBOX）        # スタイル設定
-        self.bgcolor = ft.Colors.WHITE
-        self.border_radius = 12
-        self.padding = 16
-        self.margin = ft.margin.symmetric(vertical=8)
-        self.expand = True  # 利用可能な縦スペースを最大限活用ドを提供します。
+2カラム構成（CLOSED vs INBOX）でタスクボードを提供します。
 将来的にドラッグアンドドロップ機能を追加予定。
 """
 
@@ -25,8 +20,8 @@ if TYPE_CHECKING:
     from models import TaskRead
 
 
-class GTDTasksBoard(ft.Container):
-    """GTDタスクボードコンポーネント
+class TasksBoard(ft.Container):
+    """タスクボードコンポーネント
 
     CLOSED（左）とINBOX（右）の2カラム構成でタスクを表示します。
     """
@@ -37,7 +32,7 @@ class GTDTasksBoard(ft.Container):
         on_task_click: Callable[[TaskRead], None] | None = None,
         on_task_status_change: Callable[[TaskRead, TaskStatus], None] | None = None,
     ) -> None:
-        """GTDTasksBoardのコンストラクタ
+        """TasksBoardのコンストラクタ
 
         Args:
             task_service: タスクサービス
@@ -50,7 +45,7 @@ class GTDTasksBoard(ft.Container):
         self.on_task_status_change = on_task_status_change
 
         # スタイル設定
-        self.bgcolor = ft.Colors.WHITE  # グレーから白に変更
+        self.bgcolor = ft.Colors.WHITE
         self.border_radius = 12
         self.padding = 16
         self.margin = ft.margin.symmetric(vertical=8)
@@ -85,7 +80,7 @@ class GTDTasksBoard(ft.Container):
 
     def _build_content(self) -> None:
         """コンテンツを構築"""
-        logger.info("GTDTasksBoard コンテンツ構築開始")
+        logger.info("TasksBoard コンテンツ構築開始")
 
         try:
             self.content = ft.Row(
@@ -98,9 +93,9 @@ class GTDTasksBoard(ft.Container):
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.START,  # 上揃え
             )
-            logger.info("GTDTasksBoard コンテンツ構築完了")
+            logger.info("TasksBoard コンテンツ構築完了")
         except Exception as e:
-            logger.error(f"GTDTasksBoard コンテンツ構築エラー: {e}")
+            logger.error(f"TasksBoard コンテンツ構築エラー: {e}")
             # エラー時は簡単なテキストを表示
             self.content = ft.Text(
                 f"タスクボード読み込みエラー: {e}",

@@ -1,18 +1,22 @@
-"""GTDタスク管理コンポーネント
+"""タスク管理コンポーネント
 
-GTD（Getting Things Done）ベースのタスク管理UIコンポーネントを提供します。
+タスク管理UIコンポーネントを提供します。
 """
 
-from .gtd_project_list import GTDProjectList
-from .gtd_quick_actions import GTDQuickActions
-from .gtd_sidebar import GTDSidebar
-from .gtd_status_list import GTDStatusList
+from .project_list import ProjectList
+from .projects_placeholder import ProjectsPlaceholder
+from .quick_actions import QuickActions
+from .sidebar import Sidebar
+from .status_list import StatusList
 from .task_content_area import TaskContentArea
+from .tasks_board import TasksBoard
 
 __all__ = [
-    "GTDProjectList",
-    "GTDQuickActions",
-    "GTDSidebar",
-    "GTDStatusList",
+    "ProjectList",
+    "ProjectsPlaceholder",
+    "QuickActions",
+    "Sidebar",
+    "StatusList",
     "TaskContentArea",
+    "TasksBoard",
 ]

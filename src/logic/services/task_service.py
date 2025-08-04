@@ -4,6 +4,7 @@
 リポジトリ層を使用してデータアクセスを行い、複雑なタスク操作を実装します。
 """
 
+import datetime
 import uuid
 
 from loguru import logger
@@ -500,6 +501,33 @@ class TaskService(ServiceBase[TaskServiceError]):
             ValidationError: タスクデータの検証に失敗した場合
         """
         return self.get_tasks_by_status(TaskStatus.SOMEDAY_MAYBE)
+
+    # 今日のタスクを取得するメソッド
+    def get_today_tasks(self) -> list[TaskRead]:
+        """今日のタスクを取得する
+
+        Returns:
+            list[TaskRead]: 今日のタスクのリスト
+
+        Raises:
+            TaskServiceGetError: 今日のタスクの取得に失敗した場合
+            ValidationError: タスクデータの検証に失敗した場合
+        """
+        today_tasks = self.task_repo.get_by_due_date(datetime.datetime.now(tz=datetime.UTC).date())
+        return [TaskRead.model_validate(task) for task in today_tasks]
+
+    def get_today_tasks_count(self) -> int:
+        """今日のタスク件数を取得する
+
+        Returns:
+            int: 今日のタスク件数
+
+        Raises:
+            TaskServiceGetError: 今日のタスク件数の取得に失敗した場合
+            ValidationError: タスクデータの検証に失敗した場合
+        """
+        today_tasks = self.get_today_tasks()
+        return len(today_tasks)
 
     def get_delegated_tasks(self) -> list[TaskRead]:
         """委任済みタスクを取得する

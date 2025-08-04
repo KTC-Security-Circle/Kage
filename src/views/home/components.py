@@ -9,7 +9,7 @@ import flet as ft
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from logic.old_task import TaskService
+    from logic.services import TaskService
 
 
 class MainActionSection(ft.Column):
@@ -66,7 +66,8 @@ class MainActionSection(ft.Column):
         Returns:
             今日のタスク件数
         """
-        return self.task_service.get_task_count_by_today()
+        # return self.task_service.get_task_count_by_today()
+        return self.task_service.get_today_tasks_count()
 
 
 class TaskStatsCard(ft.Container):

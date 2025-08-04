@@ -51,12 +51,11 @@ class Project(SQLModel, table=True):
 
 ```python
 # src/models/migrations/env.py
-from src.models.task import Task, TaskCreate, Project # ここでモデルをインポート
+from src.models.task import Task, Project # ここでモデルをインポート
 
 # モデルのメタデータをターゲットに設定
 target_metadata = [
     Task.metadata,
-    TaskCreate.metadata,
     Project.metadata, # 他のモデルも必要に応じて追加
 ]
 ```

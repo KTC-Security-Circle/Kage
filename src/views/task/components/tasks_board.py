@@ -31,6 +31,7 @@ class TasksBoard(ft.Container):
         task_service: TaskService,
         on_task_click: Callable[[TaskRead], None] | None = None,
         on_task_status_change: Callable[[TaskRead, TaskStatus], None] | None = None,
+        on_task_delete: Callable[[TaskRead], None] | None = None,
     ) -> None:
         """TasksBoardのコンストラクタ
 
@@ -38,11 +39,14 @@ class TasksBoard(ft.Container):
             task_service: タスクサービス
             on_task_click: タスククリック時のコールバック
             on_task_status_change: タスクステータス変更時のコールバック
+            on_task_delete: タスク削除時のコールバック
         """
         super().__init__()
         self.task_service = task_service
         self.on_task_click = on_task_click
         self.on_task_status_change = on_task_status_change
+        self.on_task_delete = on_task_delete
+        self.on_task_delete = on_task_delete
 
         # スタイル設定
         self.bgcolor = ft.Colors.WHITE
@@ -258,6 +262,13 @@ class TasksBoard(ft.Container):
                         tooltip="編集",
                         on_click=lambda _, t=task: self._handle_task_click(t),
                     ),
+                    ft.IconButton(
+                        icon=ft.Icons.DELETE_OUTLINE,
+                        icon_size=16,
+                        icon_color=ft.Colors.RED_400,
+                        tooltip="削除",
+                        on_click=lambda _, t=task: self._handle_task_delete(t),
+                    ),
                 ],
                 spacing=8,
             ),
@@ -305,6 +316,11 @@ class TasksBoard(ft.Container):
         """タスククリック処理"""
         if self.on_task_click:
             self.on_task_click(task)
+
+    def _handle_task_delete(self, task: TaskRead) -> None:
+        """タスク削除処理"""
+        if self.on_task_delete:
+            self.on_task_delete(task)
 
     def refresh(self) -> None:
         """ボードを再読み込み"""

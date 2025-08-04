@@ -12,12 +12,14 @@ import flet as ft
 from loguru import logger
 
 from logic.services import ProjectService, TaskService
+from models import TaskStatus
 from views.task.components.projects_placeholder import ProjectsPlaceholder
 from views.task.components.quick_actions import QuickActionCommand, QuickActions
+from views.task.components.task_dialog import TaskDialog
 from views.task.components.tasks_board import TasksBoard
 
 if TYPE_CHECKING:
-    from models import TaskRead, TaskStatus
+    from models import TaskRead
 
 
 class TaskView(ft.Container):
@@ -42,6 +44,13 @@ class TaskView(ft.Container):
         # サービス初期化
         self.task_service = TaskService()
         self.project_service = ProjectService()
+
+        # ダイアログ初期化
+        self.task_dialog = TaskDialog(
+            page=page,
+            on_task_created=self._on_task_created,
+            on_task_updated=self._on_task_updated,
+        )
 
         # 現在選択中のタスク
         self.selected_task: TaskRead | None = None
@@ -71,6 +80,7 @@ class TaskView(ft.Container):
             task_service=self.task_service,
             on_task_click=self._on_task_click,
             on_task_status_change=self._on_task_status_change,
+            on_task_delete=self._on_task_delete,
         )
 
         # メインレイアウト（縦3セクション構成）
@@ -102,7 +112,14 @@ class TaskView(ft.Container):
             action: 実行するアクション
         """
         logger.info(f"クイックアクション実行: {action}")
-        # 将来: タスク作成ダイアログまたはフォームを表示
+
+        # [AI GENERATED] アクションに応じて適切なステータスでタスク作成ダイアログを表示
+        if action in (QuickActionCommand.DO_NOW, QuickActionCommand.DO_NEXT):
+            self.task_dialog.show_create_dialog(TaskStatus.NEXT_ACTION)
+        elif action == QuickActionCommand.DO_SOMEDAY:
+            self.task_dialog.show_create_dialog(TaskStatus.SOMEDAY_MAYBE)
+        elif action == QuickActionCommand.REFERENCE:
+            self.task_dialog.show_create_dialog(TaskStatus.INBOX)
 
     def _on_task_created(self, task: TaskRead) -> None:
         """タスク作成時のコールバック
@@ -114,6 +131,16 @@ class TaskView(ft.Container):
         # タスクボードの更新
         self.tasks_board.refresh()
 
+    def _on_task_updated(self, task: TaskRead) -> None:
+        """タスク更新時のコールバック
+
+        Args:
+            task: 更新されたタスク
+        """
+        logger.info(f"タスクが更新されました: {task.title}")
+        # タスクボードの更新
+        self.tasks_board.refresh()
+
     def _on_task_click(self, task: TaskRead) -> None:
         """タスククリック時のコールバック
 
@@ -122,7 +149,8 @@ class TaskView(ft.Container):
         """
         logger.info(f"タスクがクリックされました: {task.title}")
         self.selected_task = task
-        # 将来: タスク詳細ダイアログまたは編集画面を表示
+        # [AI GENERATED] タスク編集ダイアログを表示
+        self.task_dialog.show_edit_dialog(task)
 
     def _on_task_status_change(self, task: TaskRead, new_status: TaskStatus) -> None:
         """タスクステータス変更時のコールバック
@@ -134,6 +162,71 @@ class TaskView(ft.Container):
         logger.info(f"タスクステータスが変更されました: {task.title} -> {new_status.value}")
         # タスクボードの更新
         self.tasks_board.refresh()
+
+    def _on_task_delete(self, task: TaskRead) -> None:
+        """タスク削除時のコールバック
+
+        Args:
+            task: 削除対象タスク
+        """
+        logger.info(f"タスク削除要求: {task.title}")
+
+        # [AI GENERATED] 削除確認ダイアログを表示
+        def delete_confirmed(_: ft.ControlEvent) -> None:
+            try:
+                self.task_service.delete_task(task.id)
+                logger.info(f"タスクを削除しました: {task.title}")
+                # タスクボードの更新
+                self.tasks_board.refresh()
+                # 成功メッセージ
+                self._show_success("タスクを削除しました")
+            except Exception as e:
+                logger.error(f"タスク削除エラー: {e}")
+                self._show_error(f"タスクの削除に失敗しました: {e}")
+            finally:
+                # ダイアログを閉じる
+                self._page.close(confirm_dialog)
+
+        def delete_cancelled(_: ft.ControlEvent) -> None:
+            self._page.close(confirm_dialog)
+
+        confirm_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("タスク削除の確認"),
+            content=ft.Text(f"「{task.title}」を削除しますか？\nこの操作は元に戻せません。"),
+            actions=[
+                ft.TextButton(
+                    text="キャンセル",
+                    on_click=delete_cancelled,
+                ),
+                ft.ElevatedButton(
+                    text="削除",
+                    icon=ft.Icons.DELETE,
+                    color=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.RED_500,
+                    on_click=delete_confirmed,
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        self._page.open(confirm_dialog)
+
+    def _show_error(self, message: str) -> None:
+        """エラーメッセージを表示"""
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message, color=ft.Colors.WHITE),
+            bgcolor=ft.Colors.RED_400,
+        )
+        self._page.open(snack_bar)
+
+    def _show_success(self, message: str) -> None:
+        """成功メッセージを表示"""
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message, color=ft.Colors.WHITE),
+            bgcolor=ft.Colors.GREEN_400,
+        )
+        self._page.open(snack_bar)
 
     def refresh_all(self) -> None:
         """全体を再読み込み"""

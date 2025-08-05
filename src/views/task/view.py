@@ -15,6 +15,7 @@ from loguru import logger
 from logic.commands.task_commands import DeleteTaskCommand
 from logic.factory import get_application_service_container
 from models import QuickActionCommand, TaskStatus
+from views.shared import BaseView, ErrorHandlingMixin
 from views.task.components.projects_placeholder import ProjectsPlaceholder
 from views.task.components.quick_actions import QuickActions
 from views.task.components.task_dialog import TaskDialog
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from models import TaskRead
 
 
-class TaskView(ft.Container):
+class TaskView(BaseView, ErrorHandlingMixin):
     """タスク管理のメインビュークラス
 
     新しい3セクション縦レイアウトを実装:
@@ -40,8 +41,7 @@ class TaskView(ft.Container):
         Args:
             page: Fletのページオブジェクト
         """
-        super().__init__()
-        self._page = page
+        super().__init__(page)
         logger.info("TaskView 初期化開始")
 
         container = get_application_service_container()
@@ -57,17 +57,18 @@ class TaskView(ft.Container):
         # 現在選択中のタスク
         self.selected_task: TaskRead | None = None
 
-        # ビューの構築
-        self._build_view()
         logger.info("TaskView 初期化完了")
 
-    def _build_view(self) -> None:
-        """ビューを構築
+    def build_content(self) -> ft.Control:
+        """ビューコンテンツを構築
 
         新しい3セクション縦レイアウト:
         1. QUICK-ACTION: 水平配置のクイックアクションボタン
         2. PROJECTS: プロジェクト管理エリア（将来実装予定）
         3. TASKS: 2カラムタスクボード（CLOSED vs INBOX）
+
+        Returns:
+            ft.Control: 構築されたコンテンツ
         """
         logger.info("TaskView ビュー構築開始")
 
@@ -85,7 +86,7 @@ class TaskView(ft.Container):
         )
 
         # メインレイアウト（縦3セクション構成）
-        self.content = ft.Column(
+        content = ft.Column(
             [
                 # セクション1: QUICK-ACTION（水平配置）
                 self.quick_actions,
@@ -99,12 +100,8 @@ class TaskView(ft.Container):
             expand=True,  # 利用可能な縦スペースを最大限活用
         )
 
-        # コンテナのスタイル設定
-        self.padding = 20
-        self.expand = True
-        self.bgcolor = ft.Colors.GREY_50  # 背景色を設定
-
         logger.info("TaskView ビュー構築完了")
+        return content
 
     def _handle_quick_action(self, action: QuickActionCommand) -> None:
         """クイックアクション処理
@@ -126,7 +123,7 @@ class TaskView(ft.Container):
 
         except Exception as e:
             logger.error(f"クイックアクション処理エラー: {e}")
-            self._show_error(f"アクションの処理に失敗しました: {e}")
+            self.show_error(f"アクションの処理に失敗しました: {e}")
             # [AI GENERATED] エラー時はデフォルトでINBOXステータスを使用
             self.task_dialog.show_create_dialog(TaskStatus.INBOX)
 
@@ -190,61 +187,24 @@ class TaskView(ft.Container):
                 # タスクボードの更新
                 self.tasks_board.refresh()
                 # 成功メッセージ
-                self._show_success("タスクを削除しました")
+                self.show_success("タスクを削除しました")
             except Exception as e:
                 logger.error(f"タスク削除エラー: {e}")
-                self._show_error(f"タスクの削除に失敗しました: {e}")
-            finally:
-                # ダイアログを閉じる
-                self._page.close(confirm_dialog)
+                self.show_error(f"タスクの削除に失敗しました: {e}")
 
-        def delete_cancelled(_: ft.ControlEvent) -> None:
-            self._page.close(confirm_dialog)
-
-        confirm_dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("タスク削除の確認"),
-            content=ft.Text(f"「{task.title}」を削除しますか？\nこの操作は元に戻せません。"),
-            actions=[
-                ft.TextButton(
-                    text="キャンセル",
-                    on_click=delete_cancelled,
-                ),
-                ft.ElevatedButton(
-                    text="削除",
-                    icon=ft.Icons.DELETE,
-                    color=ft.Colors.WHITE,
-                    bgcolor=ft.Colors.RED_500,
-                    on_click=delete_confirmed,
-                ),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
+        self.show_confirm_dialog(
+            title="タスク削除の確認",
+            content=f"「{task.title}」を削除しますか？\nこの操作は元に戻せません。",
+            on_confirm=delete_confirmed,
+            confirm_text="削除",
+            cancel_text="キャンセル",
         )
-
-        self._page.open(confirm_dialog)
-
-    def _show_error(self, message: str) -> None:
-        """エラーメッセージを表示"""
-        snack_bar = ft.SnackBar(
-            content=ft.Text(message, color=ft.Colors.WHITE),
-            bgcolor=ft.Colors.RED_400,
-        )
-        self._page.open(snack_bar)
-
-    def _show_success(self, message: str) -> None:
-        """成功メッセージを表示"""
-        snack_bar = ft.SnackBar(
-            content=ft.Text(message, color=ft.Colors.WHITE),
-            bgcolor=ft.Colors.GREEN_400,
-        )
-        self._page.open(snack_bar)
 
     def refresh_all(self) -> None:
         """全体を再読み込み"""
         logger.info("TaskView リフレッシュ")
         self.tasks_board.refresh()
-        if self._page:
-            self.update()
+        self.refresh()
 
 
 def create_task_view(page: ft.Page) -> ft.Container:
@@ -254,7 +214,8 @@ def create_task_view(page: ft.Page) -> ft.Container:
         page: Fletのページオブジェクト
 
     Returns:
-        TaskView: 作成されたタスクビューインスタンス
+        ft.Container: 作成されたタスクビューインスタンス
     """
     task_view = TaskView(page=page)
-    return ft.Container(content=task_view, expand=True, bgcolor=ft.Colors.GREY_50)
+    task_view.mount()  # コンテンツを構築
+    return task_view

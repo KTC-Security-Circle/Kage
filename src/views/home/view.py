@@ -8,46 +8,49 @@ import flet as ft
 
 from logic.factory import get_application_service_container
 from views.home.components import MainActionSection, create_welcome_message
+from views.shared import BaseView, ErrorHandlingMixin
 
 if TYPE_CHECKING:
     from logic.application.task_application_service import TaskApplicationService
 
 
-class HomeView(ft.Column):
-    """ホーム画面のメインビューコンポーネント.
+class HomeView(BaseView, ErrorHandlingMixin):
+    """ホーム画面のメインビューコンポーネント
 
     タスク管理画面への遷移ボタンやダッシュボード情報を表示する。
     """
 
-    page: ft.Page
-
-    def __init__(self, page: ft.Page, task_app_service: TaskApplicationService) -> None:
-        """HomeViewの初期化.
+    def __init__(self, page: ft.Page) -> None:
+        """HomeViewの初期化
 
         Args:
             page: Fletのページオブジェクト
-            task_app_service: タスクアプリケーションサービス（依存性注入）
         """
-        super().__init__()
-        self.page = page
-        self.task_app_service = task_app_service
-        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-        self.alignment = ft.MainAxisAlignment.CENTER
-        self.expand = True
-        self.spacing = 30
+        super().__init__(page)
 
-        # コンポーネントを構築
-        self._build_components()
+        # 依存性注入
+        container = get_application_service_container()
+        self.task_app_service: TaskApplicationService = container.get_task_application_service()
 
-    def _build_components(self) -> None:
-        """コンポーネントを構築して追加."""
-        self.controls = [
-            create_welcome_message(),
-            MainActionSection(self.page, self.task_app_service),
-        ]
+    def build_content(self) -> ft.Control:
+        """ホーム画面のコンテンツを構築
+
+        Returns:
+            ft.Control: 構築されたコンテンツ
+        """
+        return ft.Column(
+            [
+                create_welcome_message(),
+                MainActionSection(self.page, self.task_app_service),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            expand=True,
+            spacing=30,
+        )
 
     def _navigate_to_tasks(self, _: ft.ControlEvent) -> None:
-        """タスク画面への遷移処理.
+        """タスク画面への遷移処理
 
         Args:
             _: イベントオブジェクト
@@ -56,21 +59,14 @@ class HomeView(ft.Column):
 
 
 def create_home_view(page: ft.Page) -> ft.Container:
-    """ホーム画面ビューを作成する関数.
+    """ホーム画面ビューを作成する関数
 
     Args:
         page: Fletのページオブジェクト
 
     Returns:
-        構築されたホーム画面ビュー
+        ft.Container: 構築されたホーム画面ビュー
     """
-    container = get_application_service_container()
-    task_app_service = container.get_task_application_service()
-
-    return ft.Container(
-        content=HomeView(page, task_app_service),
-        expand=True,
-        bgcolor=ft.Colors.GREY_50,  # 背景色を設定
-        padding=ft.padding.all(20),  # 全体のパディング
-        alignment=ft.alignment.center,
-    )
+    home_view = HomeView(page)
+    home_view.mount()  # コンテンツを構築
+    return home_view

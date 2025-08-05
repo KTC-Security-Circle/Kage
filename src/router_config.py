@@ -39,12 +39,14 @@ def setup_enhanced_routing(page: ft.Page) -> None:
         path="/",
         view_class=HomeView,
         app_bar=create_app_bar("Kage"),
+        name="home",
     )
 
     task_route = create_route_config(
         path="/task",
         view_class=TaskView,
         app_bar=create_app_bar("タスク管理"),
+        name="task",
     )
 
     # [AI GENERATED] ルートを登録

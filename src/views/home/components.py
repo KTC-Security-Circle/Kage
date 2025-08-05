@@ -39,12 +39,12 @@ class MainActionSection(ft.Column):
         self.controls = [
             ft.ElevatedButton(
                 text="タスク管理",
-                icon=ft.icons.TASK_ALT,
+                icon=ft.Icons.TASK_ALT,
                 width=200,
                 height=50,
                 style=ft.ButtonStyle(
-                    bgcolor=ft.colors.BLUE_600,
-                    color=ft.colors.WHITE,
+                    bgcolor=ft.Colors.BLUE_600,
+                    color=ft.Colors.WHITE,
                     text_style=ft.TextStyle(size=16),
                 ),
                 on_click=self._navigate_to_tasks,
@@ -103,7 +103,7 @@ class TaskStatsCard(ft.Container):
                         ft.Text(
                             f"{self.task_count}件",
                             size=24,
-                            color=ft.colors.BLUE_600,
+                            color=ft.Colors.BLUE_600,
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -163,7 +163,7 @@ class QuickActionCard(ft.Container):
                         ft.Icon(
                             name=self.icon,
                             size=40,
-                            color=ft.colors.BLUE_600,
+                            color=ft.Colors.BLUE_600,
                         ),
                         ft.Text(
                             self.title,
@@ -173,7 +173,7 @@ class QuickActionCard(ft.Container):
                         ft.Text(
                             self.description,
                             size=12,
-                            color=ft.colors.GREY_600,
+                            color=ft.Colors.GREY_600,
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ],
@@ -198,7 +198,7 @@ def create_welcome_message() -> ft.Container:
         content=ft.Text(
             "タスク管理でもっと効率的に！",
             size=18,
-            color=ft.colors.GREY_700,
+            color=ft.Colors.GREY_700,
         ),
         alignment=ft.alignment.center,
     )

@@ -62,7 +62,7 @@ def create_home_view(page: ft.Page) -> ft.Container:
     return ft.Container(
         content=HomeView(page),
         expand=True,
-        bgcolor=ft.colors.GREY_50,  # 背景色を設定
+        bgcolor=ft.Colors.GREY_50,  # 背景色を設定
         padding=ft.padding.all(20),  # 全体のパディング
         alignment=ft.alignment.center,
     )

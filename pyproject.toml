@@ -106,6 +106,7 @@ unfixable = [
     "S101",
     "N802",
     "ARG",
+    "SLF001",
 ]
 
 # logger-objects = ["src.library.logger.LOGGER"]

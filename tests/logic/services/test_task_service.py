@@ -122,7 +122,7 @@ class TestTaskService:
         mock_repositories["project_repo"].get_by_id.return_value = None
 
         # 実行と検証
-        with pytest.raises(TaskServiceCreateError, match="プロジェクチ.*が見つかりません"):
+        with pytest.raises(TaskServiceCreateError, match=f"プロジェクトID {task_create.project_id} が見つかりません"):
             task_service.create_task(task_create)
 
         mock_repositories["project_repo"].get_by_id.assert_called_once_with(project_id)

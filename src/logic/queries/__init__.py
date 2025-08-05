@@ -19,6 +19,7 @@ from logic.queries.tag_queries import (
     SearchTagsByNameQuery,
 )
 from logic.queries.task_queries import (
+    GetAllTasksByStatusDictQuery,
     GetTaskByIdQuery,
     GetTasksByStatusQuery,
     GetTodayTasksCountQuery,
@@ -46,6 +47,7 @@ __all__ = [
     "GetTagByNameQuery",
     "SearchTagsByNameQuery",
     # Task Queries
+    "GetAllTasksByStatusDictQuery",
     "GetTaskByIdQuery",
     "GetTasksByStatusQuery",
     "GetTodayTasksCountQuery",

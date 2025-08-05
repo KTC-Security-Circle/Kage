@@ -3,6 +3,7 @@
 
 # [AI GENERATED] 新しいモデルのインポート
 from models.project import Project, ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate
+from models.quick_action import QuickActionCommand
 from models.tag import Tag, TagCreate, TagRead, TagUpdate
 from models.task import (
     Task,
@@ -19,6 +20,7 @@ __all__ = [
     "ProjectRead",
     "ProjectStatus",
     "ProjectUpdate",
+    "QuickActionCommand",
     "Tag",
     "TagCreate",
     "TagRead",

@@ -297,7 +297,7 @@ class TasksBoard(ft.Container):
         try:
             new_status = TaskStatus.COMPLETED if is_completed else TaskStatus.NEXT_ACTION
 
-            # ✅ GOOD: Application Serviceを使用（Session管理不要）
+            # Application Serviceを使用（Session管理不要）
             command = UpdateTaskStatusCommand(
                 task_id=task.id,
                 new_status=new_status,

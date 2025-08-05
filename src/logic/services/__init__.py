@@ -6,13 +6,21 @@
 """
 
 from logic.services.project_service import ProjectService
+from logic.services.quick_action_mapping_service import QuickActionMappingService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
+from logic.services.task_status_display_service import (
+    TaskStatusDisplay,
+    TaskStatusDisplayService,
+)
 from logic.services.task_tag_service import TaskTagService
 
 __all__ = [
     "ProjectService",
+    "QuickActionMappingService",
     "TagService",
     "TaskService",
+    "TaskStatusDisplay",
+    "TaskStatusDisplayService",
     "TaskTagService",
 ]

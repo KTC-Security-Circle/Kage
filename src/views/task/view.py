@@ -14,9 +14,9 @@ from loguru import logger
 
 from logic.commands.task_commands import DeleteTaskCommand
 from logic.factory import get_application_service_container
-from models import TaskStatus
+from models import QuickActionCommand, TaskStatus
 from views.task.components.projects_placeholder import ProjectsPlaceholder
-from views.task.components.quick_actions import QuickActionCommand, QuickActions
+from views.task.components.quick_actions import QuickActions
 from views.task.components.task_dialog import TaskDialog
 from views.task.components.tasks_board import TasksBoard
 

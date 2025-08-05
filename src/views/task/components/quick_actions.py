@@ -5,26 +5,15 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
 
+from models import QuickActionCommand
+
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-class QuickActionCommand(Enum):
-    """クイックアクションコマンド
-
-    ユーザーが選択できるクイックアクションのコマンドを定義します。
-    """
-
-    DO_NOW = "do_now"
-    DO_NEXT = "do_next"
-    DO_SOMEDAY = "do_someday"
-    REFERENCE = "reference"
 
 
 class QuickActions(ft.Container):

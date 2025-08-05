@@ -174,10 +174,10 @@ class ProjectService(ServiceBase[ProjectServiceError]):
             ProjectServiceCheckError: プロジェクトが存在しない場合
             ProjectServiceDeleteError: タスクが関連している場合、または削除に失敗した場合
         """
-        # [AI GENERATED] プロジェクトの存在を確認
+        # プロジェクトの存在を確認
         existing_project = self._check_project_exists(project_id)
 
-        # [AI GENERATED] 関連するタスクがあるかチェック
+        # 関連するタスクがあるかチェック
         related_tasks = self.task_repo.get_by_project_id(project_id)
         if related_tasks and not force:
             self._log_error_and_raise(
@@ -185,12 +185,12 @@ class ProjectService(ServiceBase[ProjectServiceError]):
                 ProjectServiceDeleteError,
             )
 
-        # [AI GENERATED] 強制削除の場合、関連タスクのproject_idをNoneに更新
+        # 強制削除の場合、関連タスクのproject_idをNoneに更新
         if force and related_tasks:
             from models.task import TaskUpdate
 
             for task in related_tasks:
-                if task.id is not None:  # [AI GENERATED] IDがNoneでないことを確認
+                if task.id is not None:  # IDがNoneでないことを確認
                     task_update = TaskUpdate(project_id=None)
                     self.task_repo.update(task.id, task_update)
             logger.info(f"{len(related_tasks)} 個のタスクからプロジェクト関連を削除しました")
@@ -322,7 +322,7 @@ class ProjectService(ServiceBase[ProjectServiceError]):
             ProjectServiceCheckError: プロジェクトが存在しない場合
             ProjectServiceGetError: タスク取得に失敗した場合
         """
-        # [AI GENERATED] プロジェクトの存在を確認
+        # プロジェクトの存在を確認
         self._check_project_exists(project_id)
 
         try:

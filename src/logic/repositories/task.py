@@ -37,7 +37,6 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         try:
             statement = select(Task).where(Task.project_id == project_id)
             results = self.session.exec(statement).all()
-            logger.debug(f"プロジェクト {project_id} のタスクを {len(results)} 件取得しました")
             return list(results)
         except Exception as e:
             logger.exception(f"プロジェクトのタスク取得に失敗しました: {e}")
@@ -55,7 +54,6 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         try:
             statement = select(Task).where(Task.status == status)
             results = self.session.exec(statement).all()
-            logger.debug(f"ステータス {status} のタスクを {len(results)} 件取得しました")
             return list(results)
         except Exception as e:
             logger.exception(f"ステータス別タスク取得に失敗しました: {e}")
@@ -73,7 +71,6 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         try:
             statement = select(Task).where(Task.due_date == due_date)
             results = self.session.exec(statement).all()
-            logger.debug(f"期限日 {due_date} のタスクを {len(results)} 件取得しました")
             return list(results)
         except Exception as e:
             logger.exception(f"期限日別タスク取得に失敗しました: {e}")
@@ -91,7 +88,6 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         try:
             statement = select(Task).where(Task.parent_id == parent_id)
             results = self.session.exec(statement).all()
-            logger.debug(f"親タスク {parent_id} のサブタスクを {len(results)} 件取得しました")
             return list(results)
         except Exception as e:
             logger.exception(f"サブタスク取得に失敗しました: {e}")
@@ -114,7 +110,6 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             # タイトルに検索クエリが含まれるタスクをフィルタリング
             filtered_tasks = [task for task in all_tasks if title_query.lower() in task.title.lower()]
 
-            logger.debug(f"タイトル検索 '{title_query}' で {len(filtered_tasks)} 件取得しました")
         except Exception as e:
             logger.exception(f"タイトル検索に失敗しました: {e}")
             raise
@@ -122,7 +117,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             return filtered_tasks
 
     def get_inbox_tasks(self) -> list[Task]:
-        """[AI GENERATED] INBOXステータスのタスク一覧を取得する
+        """INBOXステータスのタスク一覧を取得する
 
         Returns:
             list[Task]: INBOXステータスのタスク一覧
@@ -130,7 +125,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         return self.get_by_status(TaskStatus.INBOX)
 
     def get_next_action_tasks(self) -> list[Task]:
-        """[AI GENERATED] NEXT_ACTIONステータスのタスク一覧を取得する
+        """NEXT_ACTIONステータスのタスク一覧を取得する
 
         Returns:
             list[Task]: NEXT_ACTIONステータスのタスク一覧
@@ -138,7 +133,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         return self.get_by_status(TaskStatus.NEXT_ACTION)
 
     def get_completed_tasks(self) -> list[Task]:
-        """[AI GENERATED] COMPLETEDステータスのタスク一覧を取得する
+        """COMPLETEDステータスのタスク一覧を取得する
 
         Returns:
             list[Task]: COMPLETEDステータスのタスク一覧
@@ -160,7 +155,6 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             # 期限切れのタスクをフィルタリング
             overdue_tasks = [task for task in all_tasks if task.due_date is not None and task.due_date < today]
 
-            logger.debug(f"期限切れのタスクを {len(overdue_tasks)} 件取得しました")
         except Exception as e:
             logger.exception(f"期限切れタスクの取得に失敗しました: {e}")
             raise

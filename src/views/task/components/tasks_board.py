@@ -2,6 +2,7 @@
 
 2カラム構成（CLOSED vs INBOX）でタスクボードを提供します。
 将来的にドラッグアンドドロップ機能を追加予定。
+Application Serviceパターンを使用してSession管理を分離。
 """
 
 from __future__ import annotations
@@ -10,15 +11,15 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
-from sqlmodel import Session
 
-from config import engine
-from logic.factory import create_service_factory
+from logic.commands.task_commands import UpdateTaskStatusCommand
+from logic.factory import get_application_service_container
 from models import TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from logic.application.task_application_service import TaskApplicationService
     from models import TaskRead
 
 
@@ -46,6 +47,10 @@ class TasksBoard(ft.Container):
         self.on_task_status_change = on_task_status_change
         self.on_task_delete = on_task_delete
 
+        # ✅ Application Serviceを取得（Session管理不要）
+        container = get_application_service_container()
+        self._task_app_service: TaskApplicationService = container.get_task_application_service()
+
         # スタイル設定
         self.bgcolor = ft.Colors.WHITE
         self.border_radius = 12
@@ -63,21 +68,8 @@ class TasksBoard(ft.Container):
     def _load_tasks(self) -> None:
         """タスクデータを読み込み"""
         try:
-            # 各ステータスのタスクを取得
-            status_list = [
-                TaskStatus.NEXT_ACTION,
-                TaskStatus.DELEGATED,
-                TaskStatus.COMPLETED,
-                TaskStatus.INBOX,
-            ]
-
-            # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
-            with Session(engine) as session:
-                service_factory = create_service_factory(session)
-                task_service = service_factory.create_task_service()
-
-                for status in status_list:
-                    self.tasks_by_status[status] = task_service.get_tasks_by_status(status)
+            # ✅ GOOD: Application Serviceを使用（Session管理不要）
+            self.tasks_by_status = self._task_app_service.get_all_tasks_by_status_dict()
 
         except Exception as e:
             logger.error(f"タスク読み込みエラー: {e}")
@@ -300,16 +292,15 @@ class TasksBoard(ft.Container):
     def _toggle_task_completion(self, task: TaskRead, *, is_completed: bool) -> None:
         """タスク完了状態の切り替え"""
         try:
-            from models.task import TaskUpdate
-
             new_status = TaskStatus.COMPLETED if is_completed else TaskStatus.NEXT_ACTION
-            task_update = TaskUpdate(status=new_status)
 
-            # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
-            with Session(engine) as session:
-                service_factory = create_service_factory(session)
-                task_service = service_factory.create_task_service()
-                task_service.update_task(task.id, task_update)
+            # ✅ GOOD: Application Serviceを使用（Session管理不要）
+            command = UpdateTaskStatusCommand(
+                task_id=task.id,
+                new_status=new_status,
+            )
+
+            self._task_app_service.update_task_status(command)
 
             if self.on_task_status_change:
                 self.on_task_status_change(task, new_status)

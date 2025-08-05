@@ -5,14 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import flet as ft
-from sqlmodel import Session
 
-from config import engine
-from logic.factory import create_service_factory
+from logic.factory import get_application_service_container
 from views.home.components import MainActionSection, create_welcome_message
 
 if TYPE_CHECKING:
-    from logic.services.task_service import TaskService
+    from logic.application.task_application_service import TaskApplicationService
 
 
 class HomeView(ft.Column):
@@ -23,16 +21,16 @@ class HomeView(ft.Column):
 
     page: ft.Page
 
-    def __init__(self, page: ft.Page, task_service: TaskService) -> None:
+    def __init__(self, page: ft.Page, task_app_service: TaskApplicationService) -> None:
         """HomeViewの初期化.
 
         Args:
             page: Fletのページオブジェクト
-            task_service: タスクサービス（依存性注入）
+            task_app_service: タスクアプリケーションサービス（依存性注入）
         """
         super().__init__()
         self.page = page
-        self.task_service = task_service
+        self.task_app_service = task_app_service
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.alignment = ft.MainAxisAlignment.CENTER
         self.expand = True
@@ -45,7 +43,7 @@ class HomeView(ft.Column):
         """コンポーネントを構築して追加."""
         self.controls = [
             create_welcome_message(),
-            MainActionSection(self.page, self.task_service),
+            MainActionSection(self.page, self.task_app_service),
         ]
 
     def _navigate_to_tasks(self, _: ft.ControlEvent) -> None:
@@ -66,13 +64,12 @@ def create_home_view(page: ft.Page) -> ft.Container:
     Returns:
         構築されたホーム画面ビュー
     """
-    # 依存性注入を使用してサービスを作成
-    session = Session(engine)
-    service_factory = create_service_factory(session)
-    task_service = service_factory.create_task_service()
+    # ✅ GOOD: Application Serviceを使用（Session管理不要）
+    container = get_application_service_container()
+    task_app_service = container.get_task_application_service()
 
     return ft.Container(
-        content=HomeView(page, task_service),
+        content=HomeView(page, task_app_service),
         expand=True,
         bgcolor=ft.Colors.GREY_50,  # 背景色を設定
         padding=ft.padding.all(20),  # 全体のパディング

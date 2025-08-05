@@ -2,10 +2,14 @@
 
 このモジュールは、サービスとリポジトリの依存性を管理し、
 適切な形で注入するためのファクトリクラスを提供します。
+
+Application Service層への移行をサポートするため、
+従来のcreate_service_factory関数は引き続き利用可能です。
 """
 
 from sqlmodel import Session
 
+from logic.container import ServiceContainer
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
@@ -134,3 +138,22 @@ def create_service_factory(session: Session) -> ServiceFactory:
     """
     repository_factory = RepositoryFactory(session)
     return ServiceFactory(repository_factory)
+
+
+def get_application_service_container() -> ServiceContainer:
+    """Application Service コンテナを取得
+
+    View層での使用を推奨。Session管理が不要になります。
+
+    Returns:
+        ServiceContainer: Application Serviceコンテナ
+
+    Example:
+        >>> container = get_application_service_container()
+        >>> task_app_service = container.get_task_application_service()
+        >>> command = CreateTaskCommand(title="新しいタスク")
+        >>> task = task_app_service.create_task(command)
+    """
+    from logic.container import service_container
+
+    return service_container

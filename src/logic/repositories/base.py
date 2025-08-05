@@ -29,7 +29,7 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
         self.session = session
 
     def create(self, entity_data: CreateT) -> T:
-        """[AI GENERATED] エンティティを作成する
+        """エンティティを作成する
 
         Args:
             entity_data: 作成するエンティティのデータ
@@ -53,7 +53,7 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
         return entity
 
     def get_by_id(self, entity_id: uuid.UUID) -> T | None:
-        """[AI GENERATED] IDでエンティティを取得する
+        """IDでエンティティを取得する
 
         Args:
             entity_id: 取得するエンティティのID
@@ -64,15 +64,13 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
         try:
             # SQLModel の場合、通常 id フィールドはあるのでsession.getを使用
             result = self.session.get(self.model_class, entity_id)
-            if result:
-                logger.debug(f"{self.model_class.__name__} を取得しました: {entity_id}")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の取得に失敗しました: {e}")
             raise
         return result
 
     def get_all(self) -> list[T]:
-        """[AI GENERATED] 全エンティティを取得する
+        """全エンティティを取得する
 
         Returns:
             list[T]: 全エンティティのリスト
@@ -80,14 +78,13 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
         try:
             statement = select(self.model_class)
             results = self.session.exec(statement).all()
-            logger.debug(f"{self.model_class.__name__} を {len(results)} 件取得しました")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の全取得に失敗しました: {e}")
             raise
         return list(results)
 
     def update(self, entity_id: uuid.UUID, entity_data: UpdateT) -> T | None:
-        """[AI GENERATED] エンティティを更新する
+        """エンティティを更新する
 
         Args:
             entity_id: 更新するエンティティのID
@@ -118,7 +115,7 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
         return entity
 
     def delete(self, entity_id: uuid.UUID) -> bool:
-        """[AI GENERATED] エンティティを削除する
+        """エンティティを削除する
 
         Args:
             entity_id: 削除するエンティティのID

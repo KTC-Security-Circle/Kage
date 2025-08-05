@@ -9,7 +9,7 @@ import flet as ft
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from logic.services import TaskService
+    from logic.application.task_application_service import TaskApplicationService
 
 
 class MainActionSection(ft.Column):
@@ -18,18 +18,18 @@ class MainActionSection(ft.Column):
     タスク管理ボタンと統計情報を表示するセクション。
     """
 
-    def __init__(self, page: ft.Page, task_service: TaskService) -> None:
+    def __init__(self, page: ft.Page, task_app_service: TaskApplicationService) -> None:
         """MainActionSectionの初期化.
 
         Args:
             page: Fletのページオブジェクト
-            task_service: タスクサービスインスタンス
+            task_app_service: タスクアプリケーションサービスインスタンス
         """
         super().__init__()
         self._page = page
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 20
-        self.task_service = task_service
+        self.task_app_service = task_app_service
 
         # コンポーネントを構築
         self._build_components()
@@ -66,8 +66,8 @@ class MainActionSection(ft.Column):
         Returns:
             今日のタスク件数
         """
-        # return self.task_service.get_task_count_by_today()
-        return self.task_service.get_today_tasks_count()
+        # ✅ GOOD: Application Serviceを使用（Session管理不要）
+        return self.task_app_service.get_today_tasks_count()
 
 
 class TaskStatsCard(ft.Container):

@@ -2,6 +2,7 @@
 
 このモジュールは、タスク管理UIを提供します。
 新しい3セクション縦レイアウトを実装し、TaskモデルとProjectモデルを使用したモダンなインターフェースを構築します。
+Application Serviceパターンを使用してSession管理を分離。
 """
 
 from __future__ import annotations
@@ -10,10 +11,9 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
-from sqlmodel import Session
 
-from config import engine
-from logic.factory import create_service_factory
+from logic.commands.task_commands import DeleteTaskCommand
+from logic.factory import get_application_service_container
 from models import TaskStatus
 from views.task.components.projects_placeholder import ProjectsPlaceholder
 from views.task.components.quick_actions import QuickActionCommand, QuickActions
@@ -21,6 +21,7 @@ from views.task.components.task_dialog import TaskDialog
 from views.task.components.tasks_board import TasksBoard
 
 if TYPE_CHECKING:
+    from logic.application.task_application_service import TaskApplicationService
     from models import TaskRead
 
 
@@ -42,6 +43,10 @@ class TaskView(ft.Container):
         super().__init__()
         self._page = page
         logger.info("TaskView 初期化開始")
+
+        # ✅ Application Serviceを取得（Session管理不要）
+        container = get_application_service_container()
+        self._task_app_service: TaskApplicationService = container.get_task_application_service()
 
         # ダイアログ初期化（サービスは後で注入）
         self.task_dialog = TaskDialog(
@@ -110,7 +115,7 @@ class TaskView(ft.Container):
         """
         logger.info(f"クイックアクション実行: {action}")
 
-        # [AI GENERATED] アクションに応じて適切なステータスでタスク作成ダイアログを表示
+        # アクションに応じて適切なステータスでタスク作成ダイアログを表示
         if action in (QuickActionCommand.DO_NOW, QuickActionCommand.DO_NEXT):
             self.task_dialog.show_create_dialog(TaskStatus.NEXT_ACTION)
         elif action == QuickActionCommand.DO_SOMEDAY:
@@ -146,7 +151,7 @@ class TaskView(ft.Container):
         """
         logger.info(f"タスクがクリックされました: {task.title}")
         self.selected_task = task
-        # [AI GENERATED] タスク編集ダイアログを表示
+        # タスク編集ダイアログを表示
         self.task_dialog.show_edit_dialog(task)
 
     def _on_task_status_change(self, task: TaskRead, new_status: TaskStatus) -> None:
@@ -168,14 +173,12 @@ class TaskView(ft.Container):
         """
         logger.info(f"タスク削除要求: {task.title}")
 
-        # [AI GENERATED] 削除確認ダイアログを表示
+        # 削除確認ダイアログを表示
         def delete_confirmed(_: ft.ControlEvent) -> None:
             try:
-                # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
-                with Session(engine) as session:
-                    service_factory = create_service_factory(session)
-                    task_service = service_factory.create_task_service()
-                    task_service.delete_task(task.id)
+                # ✅ GOOD: Application Serviceを使用（Session管理不要）
+                command = DeleteTaskCommand(task_id=task.id)
+                self._task_app_service.delete_task(command)
 
                 logger.info(f"タスクを削除しました: {task.title}")
                 # タスクボードの更新
@@ -247,6 +250,5 @@ def create_task_view(page: ft.Page) -> ft.Container:
     Returns:
         TaskView: 作成されたタスクビューインスタンス
     """
-    # [AI GENERATED] with文を使用しない単純なインスタンス作成
     task_view = TaskView(page=page)
     return ft.Container(content=task_view, expand=True, bgcolor=ft.Colors.GREY_50)

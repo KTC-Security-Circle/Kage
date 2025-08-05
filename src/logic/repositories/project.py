@@ -23,7 +23,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
         super().__init__(Project, session)
 
     def get_all(self) -> list[Project]:
-        """[AI GENERATED] 全てのプロジェクト一覧を取得する
+        """全てのプロジェクト一覧を取得する
 
         Returns:
             list[Project]: 全てのプロジェクト一覧
@@ -31,14 +31,13 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
         try:
             statement = select(Project)
             results = self.session.exec(statement).all()
-            logger.debug(f"プロジェクトを {len(results)} 件取得しました")
         except Exception as e:
             logger.exception(f"プロジェクト取得に失敗しました: {e}")
             raise
         return list(results)
 
     def get_by_status(self, status: ProjectStatus) -> list[Project]:
-        """[AI GENERATED] 指定されたステータスのプロジェクト一覧を取得する
+        """指定されたステータスのプロジェクト一覧を取得する
 
         Args:
             status: プロジェクトステータス
@@ -49,14 +48,13 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
         try:
             statement = select(Project).where(Project.status == status)
             results = self.session.exec(statement).all()
-            logger.debug(f"ステータス {status} のプロジェクトを {len(results)} 件取得しました")
         except Exception as e:
             logger.exception(f"ステータス別プロジェクト取得に失敗しました: {e}")
             raise
         return list(results)
 
     def search_by_title(self, title_query: str) -> list[Project]:
-        """[AI GENERATED] タイトルでプロジェクトを検索する
+        """タイトルでプロジェクトを検索する
 
         Args:
             title_query: 検索クエリ（部分一致）
@@ -72,14 +70,13 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             # タイトルに検索クエリが含まれるプロジェクトをフィルタリング
             filtered_projects = [project for project in all_projects if title_query.lower() in project.title.lower()]
 
-            logger.debug(f"タイトル検索 '{title_query}' で {len(filtered_projects)} 件取得しました")
         except Exception as e:
             logger.exception(f"タイトル検索に失敗しました: {e}")
             raise
         return filtered_projects
 
     def get_active_projects(self) -> list[Project]:
-        """[AI GENERATED] アクティブなプロジェクト一覧を取得する
+        """アクティブなプロジェクト一覧を取得する
 
         Returns:
             list[Project]: アクティブなプロジェクト一覧
@@ -87,7 +84,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
         return self.get_by_status(ProjectStatus.ACTIVE)
 
     def get_completed_projects(self) -> list[Project]:
-        """[AI GENERATED] 完了済みプロジェクト一覧を取得する
+        """完了済みプロジェクト一覧を取得する
 
         Returns:
             list[Project]: 完了済みプロジェクト一覧

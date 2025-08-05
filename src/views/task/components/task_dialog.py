@@ -1,6 +1,7 @@
 """タスク作成・編集ダイアログコンポーネント
 
 タスクの作成や編集を行うダイアログを提供します。
+Application Serviceパターンを使用してSession管理を分離。
 """
 
 from __future__ import annotations
@@ -10,16 +11,16 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
-from sqlmodel import Session
 
-from config import engine
-from logic.factory import create_service_factory
-from models import TaskCreate, TaskStatus, TaskUpdate
+from logic.commands.task_commands import CreateTaskCommand, UpdateTaskCommand
+from logic.factory import get_application_service_container
+from models import TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import date
 
+    from logic.application.task_application_service import TaskApplicationService
     from models import TaskRead
 
 
@@ -80,7 +81,10 @@ class TaskAlertDialog(ft.AlertDialog):
 
 
 class TaskDialog:
-    """タスク作成・編集ダイアログ"""
+    """タスク作成・編集ダイアログ
+
+    Application Serviceパターンを使用してSession管理を分離
+    """
 
     def __init__(
         self,
@@ -98,6 +102,10 @@ class TaskDialog:
         self.page = page
         self.on_task_created = on_task_created
         self.on_task_updated = on_task_updated
+
+        # ✅ Application Serviceを取得（Session管理不要）
+        container = get_application_service_container()
+        self._task_app_service: TaskApplicationService = container.get_task_application_service()
 
         # 編集モード（Noneの場合は新規作成）
         self.editing_task: TaskRead | None = None
@@ -246,12 +254,12 @@ class TaskDialog:
     def _on_create(self, _: ft.ControlEvent) -> None:
         """作成/更新ボタンクリック時の処理"""
         try:
-            # [AI GENERATED] バリデーション
+            # バリデーション
             if not self.title_field.value or self.title_field.value.strip() == "":
                 self._show_error("タスクタイトルを入力してください")
                 return
 
-            # [AI GENERATED] 日付の解析
+            # 日付の解析
             due_date = None
             if self.due_date_field.value:
                 try:
@@ -263,10 +271,10 @@ class TaskDialog:
                     return
 
             if self.editing_task is None:
-                # [AI GENERATED] 新規作成
+                # 新規作成
                 self._create_task(due_date)
             else:
-                # [AI GENERATED] 更新
+                # 更新
                 self._update_task(due_date)
 
         except Exception as e:
@@ -279,18 +287,15 @@ class TaskDialog:
             self._show_error("タスクタイトルを入力してください")
             return
 
-        task_data = TaskCreate(
+        # ✅ GOOD: Application Serviceを使用（Session管理不要）
+        command = CreateTaskCommand(
             title=self.title_field.value.strip(),
             description=self.description_field.value.strip() if self.description_field.value else "",
             status=TaskStatus(self.status_dropdown.value),
             due_date=due_date,
         )
 
-        # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
-        with Session(engine) as session:
-            service_factory = create_service_factory(session)
-            task_service = service_factory.create_task_service()
-            created_task = task_service.create_task(task_data)
+        created_task = self._task_app_service.create_task(command)
 
         logger.info(f"タスクを作成しました: {created_task.title}")
 
@@ -313,18 +318,16 @@ class TaskDialog:
             self._show_error("タスクタイトルを入力してください")
             return
 
-        task_data = TaskUpdate(
+        # ✅ GOOD: Application Serviceを使用（Session管理不要）
+        command = UpdateTaskCommand(
+            task_id=self.editing_task.id,
             title=self.title_field.value.strip(),
             description=self.description_field.value.strip() if self.description_field.value else "",
             status=TaskStatus(self.status_dropdown.value),
             due_date=due_date,
         )
 
-        # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
-        with Session(engine) as session:
-            service_factory = create_service_factory(session)
-            task_service = service_factory.create_task_service()
-            updated_task = task_service.update_task(self.editing_task.id, task_data)
+        updated_task = self._task_app_service.update_task(command)
 
         logger.info(f"タスクを更新しました: {updated_task.title}")
 
@@ -335,7 +338,7 @@ class TaskDialog:
         # ダイアログを閉じる
         self.page.close(self.dialog)
 
-        # [AI GENERATED] 成功メッセージ
+        # 成功メッセージ
         self._show_success("タスクを更新しました")
 
     def _show_error(self, message: str) -> None:

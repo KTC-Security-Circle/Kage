@@ -20,7 +20,10 @@ from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
+from logic.services.project_service import ProjectService
+from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
+from logic.services.task_tag_service import TaskTagService
 from models import Task, TaskStatus
 from tests.logic.helpers import create_test_task
 
@@ -111,6 +114,55 @@ def task_service(
         TaskService: テスト用TaskServiceインスタンス
     """
     return TaskService(task_repository, project_repository, tag_repository, task_tag_repository)
+
+
+@pytest.fixture
+def project_service(
+    project_repository: ProjectRepository,
+    task_repository: TaskRepository,
+) -> ProjectService:
+    """テスト用ProjectServiceインスタンスを作成
+
+    Args:
+        project_repository: テスト用ProjectRepositoryインスタンス
+        task_repository: テスト用TaskRepositoryインスタンス
+
+    Returns:
+        ProjectService: テスト用ProjectServiceインスタンス
+    """
+    return ProjectService(project_repository, task_repository)
+
+
+@pytest.fixture
+def tag_service(
+    tag_repository: TagRepository,
+    task_tag_repository: TaskTagRepository,
+) -> TagService:
+    """テスト用TagServiceインスタンスを作成
+
+    Args:
+        tag_repository: テスト用TagRepositoryインスタンス
+        task_tag_repository: テスト用TaskTagRepositoryインスタンス
+
+    Returns:
+        TagService: テスト用TagServiceインスタンス
+    """
+    return TagService(tag_repository, task_tag_repository)
+
+
+@pytest.fixture
+def task_tag_service(
+    task_tag_repository: TaskTagRepository,
+) -> TaskTagService:
+    """テスト用TaskTagServiceインスタンスを作成
+
+    Args:
+        task_tag_repository: テスト用TaskTagRepositoryインスタンス
+
+    Returns:
+        TaskTagService: テスト用TaskTagServiceインスタンス
+    """
+    return TaskTagService(task_tag_repository)
 
 
 @pytest.fixture

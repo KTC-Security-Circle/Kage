@@ -387,22 +387,6 @@ def create_route_config(
     )
 
 
-def create_app_bar(title: str, *, bgcolor: ft.Colors | None = None) -> ft.AppBar:
-    """AppBarを作成するヘルパー関数。
-
-    Args:
-        title: タイトル
-        bgcolor: 背景色
-
-    Returns:
-        ft.AppBar: AppBarインスタンス
-    """
-    return ft.AppBar(
-        title=ft.Text(title),
-        bgcolor=bgcolor or ft.Colors.SURFACE_CONTAINER_HIGHEST,
-    )
-
-
 # ============================================================================
 # ミドルウェア例
 # ============================================================================

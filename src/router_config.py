@@ -14,12 +14,12 @@ if TYPE_CHECKING:
 
 from router import (
     FletNativeRouter,
-    create_app_bar,
     create_route_config,
     logging_middleware,
     performance_middleware,
 )
 from views.home.view import HomeView
+from views.shared import app_bar
 from views.task.view import TaskView
 
 
@@ -38,14 +38,14 @@ def setup_enhanced_routing(page: ft.Page) -> None:
     home_route = create_route_config(
         path="/",
         view_class=HomeView,
-        app_bar=create_app_bar("Kage"),
+        app_bar=app_bar(page),
         name="home",
     )
 
     task_route = create_route_config(
         path="/task",
         view_class=TaskView,
-        app_bar=create_app_bar("タスク管理"),
+        app_bar=app_bar(page, "タスク管理"),
         name="task",
     )
 

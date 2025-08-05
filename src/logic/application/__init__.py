@@ -7,9 +7,11 @@ View層からビジネスロジックとSession管理を分離するための層
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
+from logic.application.task_tag_application_service import TaskTagApplicationService
 
 __all__ = [
     "ProjectApplicationService",
     "TagApplicationService",
     "TaskApplicationService",
+    "TaskTagApplicationService",
 ]

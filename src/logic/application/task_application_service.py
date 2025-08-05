@@ -10,9 +10,16 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from logic.application.base import BaseApplicationService
+from logic.services.quick_action_mapping_service import QuickActionMappingService
+from logic.services.task_status_display_service import (
+    TaskStatusDisplay,
+    TaskStatusDisplayService,
+)
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
+    from datetime import date
+
     from logic.commands.task_commands import (
         CreateTaskCommand,
         DeleteTaskCommand,
@@ -26,7 +33,7 @@ if TYPE_CHECKING:
         GetTodayTasksCountQuery,
     )
     from logic.unit_of_work import UnitOfWork
-    from models import TaskRead, TaskStatus
+    from models import QuickActionCommand, TaskRead, TaskStatus
 
 
 class TaskApplicationService(BaseApplicationService):
@@ -219,3 +226,133 @@ class TaskApplicationService(BaseApplicationService):
                 result[status] = task_service.get_tasks_by_status(status)
 
             return result
+
+    # [AI GENERATED] QuickAction関連のメソッド
+
+    def get_task_status_for_quick_action(self, action: QuickActionCommand) -> TaskStatus:
+        """QuickActionCommandに対応するTaskStatusを取得
+
+        Args:
+            action: クイックアクションコマンド
+
+        Returns:
+            対応するTaskStatus
+
+        Raises:
+            ValueError: 未対応のアクションが指定された場合
+        """
+        logger.info(f"クイックアクション→ステータス変換: {action}")
+        return QuickActionMappingService.map_quick_action_to_task_status(action)
+
+    def get_available_quick_actions(self) -> list[QuickActionCommand]:
+        """利用可能なクイックアクションのリストを取得
+
+        Returns:
+            利用可能なQuickActionCommandのリスト
+        """
+        return QuickActionMappingService.get_available_quick_actions()
+
+    def get_quick_action_description(self, action: QuickActionCommand) -> str:
+        """クイックアクションの説明を取得
+
+        Args:
+            action: クイックアクションコマンド
+
+        Returns:
+            アクションの説明文
+
+        Raises:
+            ValueError: 未対応のアクションが指定された場合
+        """
+        return QuickActionMappingService.get_quick_action_description(action)
+
+    # [AI GENERATED] タスクステータス表示関連のメソッド
+
+    def get_task_status_display(self, status: TaskStatus) -> TaskStatusDisplay:
+        """タスクステータスの表示情報を取得
+
+        Args:
+            status: タスクステータス
+
+        Returns:
+            TaskStatusDisplay: 表示情報
+
+        Raises:
+            ValueError: 未対応のステータスが指定された場合
+        """
+        return TaskStatusDisplayService.get_task_status_display(status)
+
+    def get_board_column_mapping(self) -> dict[str, list[TaskStatus]]:
+        """タスクボードのカラムマッピングを取得
+
+        Returns:
+            カラム名とタスクステータスリストのマッピング
+        """
+        return TaskStatusDisplayService.get_board_column_mapping()
+
+    def get_board_section_display(self, section_name: str, status: TaskStatus) -> str:
+        """ボードセクションの表示ラベルを取得
+
+        Args:
+            section_name: セクション名（"CLOSED" または "INBOX"）
+            status: タスクステータス
+
+        Returns:
+            表示ラベル
+
+        Raises:
+            ValueError: 未対応の組み合わせが指定された場合
+        """
+        return TaskStatusDisplayService.get_board_section_display(section_name, status)
+
+    def get_all_status_displays(self) -> list[TaskStatusDisplay]:
+        """全てのタスクステータスの表示情報を取得
+
+        Returns:
+            全タスクステータスの表示情報リスト
+        """
+        return TaskStatusDisplayService.get_all_status_displays()
+
+    # [AI GENERATED] QuickAction経由でのタスク作成便利メソッド
+
+    def create_task_from_quick_action(
+        self,
+        action: QuickActionCommand,
+        title: str,
+        description: str = "",
+        due_date: date | None = None,
+    ) -> TaskRead:
+        """QuickActionからタスクを作成
+
+        QuickActionCommandを基にTaskStatusを決定してタスクを作成する便利メソッド。
+        View層からの呼び出しを簡素化します。
+
+        Args:
+            action: クイックアクションコマンド
+            title: タスクタイトル
+            description: タスク説明（オプション）
+            due_date: 締切日（オプション）
+
+        Returns:
+            作成されたタスク
+
+        Raises:
+            ValueError: バリデーションエラー
+            RuntimeError: 作成エラー
+        """
+        logger.info(f"QuickAction経由でタスク作成: {action} - {title}")
+
+        # [AI GENERATED] QuickActionに対応するステータスを取得
+        task_status = self.get_task_status_for_quick_action(action)
+
+        # [AI GENERATED] 既存のCreateTaskCommandを使用してタスク作成
+        from logic.commands.task_commands import CreateTaskCommand
+
+        command = CreateTaskCommand(
+            title=title,
+            description=description,
+            status=task_status,
+            due_date=due_date,
+        )
+
+        return self.create_task(command)

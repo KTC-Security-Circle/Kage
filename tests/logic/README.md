@@ -9,12 +9,14 @@
 ## 達成成果
 
 ### テストカバレッジ
+
 - **総合カバレッジ率**: 80%
 - **総テスト数**: 278個
 - **成功率**: 100% (278/278 PASSED)
 - **実行時間**: 3.43秒
 
 ### 実装範囲
+
 - ✅ Repository 層 (71-78% カバレッジ)
 - ✅ Service 層 (54-65% カバレッジ)  
 - ✅ Application Service 層 (90-100% カバレッジ)
@@ -25,22 +27,25 @@
 ## テスト実行コマンド
 
 ### 全テスト実行
+
 ```bash
 uv run pytest tests/logic/ -v
 ```
 
 ### カバレッジ付きテスト実行  
+
 ```bash
 uv run pytest tests/logic/ --cov=src/logic --cov-report=html --cov-report=term-missing
 ```
 
 ### パフォーマンステスト実行
+
 ```bash
 uv run pytest tests/logic/test_performance.py -v
 ```
-  - エラーハンドリング
-  - 複数操作の一貫性テスト
 
+- エラーハンドリング
+- 複数操作の一貫性テスト
 - **tests/logic/repositories/test_task.py** - TaskRepository の固有機能テスト
   - プロジェクト ID によるタスク取得
   - ステータス別タスク取得

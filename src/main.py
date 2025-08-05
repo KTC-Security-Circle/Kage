@@ -4,7 +4,7 @@ from loguru import logger
 from config import APP_TITLE, create_db_and_tables
 from env import setup_environment
 from logging_conf import setup_logger
-from router import Router
+from router_config import setup_enhanced_routing
 
 # 環境変数ファイルの作成
 setup_environment()
@@ -25,7 +25,11 @@ def main(page: ft.Page) -> None:
     """
     # ページの初期設定
     page.title = APP_TITLE
-    Router(page)
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.padding = 0
+
+    # FletNativeRouterを使用したルーティング設定
+    setup_enhanced_routing(page)
 
     logger.info("セッションが開始されました。")
 

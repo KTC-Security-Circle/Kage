@@ -59,7 +59,7 @@ class TaskAlertDialog(ft.AlertDialog):
         self.actions = [
             ft.TextButton(
                 text="キャンセル",
-                on_click=lambda _: self.params.on_cancel,
+                on_click=self.params.on_cancel,
             ),
             self.approve_button,
         ]
@@ -152,36 +152,6 @@ class TaskDialog:
 
     def _create_dialog(self) -> TaskAlertDialog:
         """ダイアログを作成"""
-        # return ft.AlertDialog(
-        #     modal=True,
-        #     title=ft.Text("新しいタスクを作成"),
-        #     content=ft.Container(
-        #         content=ft.Column(
-        #             [
-        #                 self.title_field,
-        #                 self.description_field,
-        #                 self.status_dropdown,
-        #                 self.due_date_field,
-        #             ],
-        #             spacing=16,
-        #             tight=True,
-        #         ),
-        #         width=400,
-        #         height=350,
-        #     ),
-        #     actions=[
-        #         ft.TextButton(
-        #             text="キャンセル",
-        #             on_click=self._on_cancel,
-        #         ),
-        #         ft.ElevatedButton(
-        #             text="作成",
-        #             icon=ft.Icons.ADD,
-        #             on_click=self._on_create,
-        #         ),
-        #     ],
-        #     actions_alignment=ft.MainAxisAlignment.END,
-        # )
         return TaskAlertDialog(
             TaskAlertDialogParams(
                 title="新しいタスクを作成",

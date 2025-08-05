@@ -103,7 +103,6 @@ class TaskDialog:
         self.on_task_created = on_task_created
         self.on_task_updated = on_task_updated
 
-        # ✅ Application Serviceを取得（Session管理不要）
         container = get_application_service_container()
         self._task_app_service: TaskApplicationService = container.get_task_application_service()
 

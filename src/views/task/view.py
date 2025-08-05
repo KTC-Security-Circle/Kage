@@ -44,7 +44,6 @@ class TaskView(ft.Container):
         self._page = page
         logger.info("TaskView 初期化開始")
 
-        # ✅ Application Serviceを取得（Session管理不要）
         container = get_application_service_container()
         self._task_app_service: TaskApplicationService = container.get_task_application_service()
 
@@ -184,7 +183,6 @@ class TaskView(ft.Container):
         # 削除確認ダイアログを表示
         def delete_confirmed(_: ft.ControlEvent) -> None:
             try:
-                # ✅ GOOD: Application Serviceを使用（Session管理不要）
                 command = DeleteTaskCommand(task_id=task.id)
                 self._task_app_service.delete_task(command)
 

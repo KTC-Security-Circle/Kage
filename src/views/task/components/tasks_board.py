@@ -47,7 +47,6 @@ class TasksBoard(ft.Container):
         self.on_task_status_change = on_task_status_change
         self.on_task_delete = on_task_delete
 
-        # ✅ Application Serviceを取得（Session管理不要）
         container = get_application_service_container()
         self._task_app_service: TaskApplicationService = container.get_task_application_service()
 
@@ -68,7 +67,6 @@ class TasksBoard(ft.Container):
     def _load_tasks(self) -> None:
         """タスクデータを読み込み"""
         try:
-            # ✅ GOOD: Application Serviceを使用（Session管理不要）
             from logic.queries.task_queries import GetAllTasksByStatusDictQuery
 
             query = GetAllTasksByStatusDictQuery()

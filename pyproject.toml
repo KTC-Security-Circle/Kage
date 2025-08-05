@@ -127,7 +127,7 @@ venv = ".venv"
 
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+pythonpath = ["src", "."]
 
 testpaths = ["tests"]
 python_files = "test_*.py"

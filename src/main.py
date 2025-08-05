@@ -28,7 +28,7 @@ def main(page: ft.Page) -> None:
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
     page.theme = ft.Theme(
-        color_scheme_seed=ft.colors.BLUE,
+        color_scheme_seed=ft.Colors.BLUE,
         page_transitions=ft.PageTransitionsTheme(
             windows=ft.PageTransitionTheme.NONE,
         ),

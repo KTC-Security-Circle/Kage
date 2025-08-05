@@ -69,7 +69,10 @@ class TasksBoard(ft.Container):
         """タスクデータを読み込み"""
         try:
             # ✅ GOOD: Application Serviceを使用（Session管理不要）
-            self.tasks_by_status = self._task_app_service.get_all_tasks_by_status_dict()
+            from logic.queries.task_queries import GetAllTasksByStatusDictQuery
+
+            query = GetAllTasksByStatusDictQuery()
+            self.tasks_by_status = self._task_app_service.get_all_tasks_by_status_dict(query)
 
         except Exception as e:
             logger.error(f"タスク読み込みエラー: {e}")

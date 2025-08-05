@@ -31,3 +31,8 @@ class GetTaskByIdQuery:
     """ID指定タスク取得クエリ"""
 
     task_id: UUID
+
+
+@dataclass
+class GetAllTasksByStatusDictQuery:
+    """全ステータス別タスク取得クエリ"""

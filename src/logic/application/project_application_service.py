@@ -13,12 +13,15 @@ from logic.application.base import BaseApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
-    import uuid
-
     from logic.commands.project_commands import (
         CreateProjectCommand,
         DeleteProjectCommand,
         UpdateProjectCommand,
+    )
+    from logic.queries.project_queries import (
+        GetAllProjectsQuery,
+        GetProjectByIdQuery,
+        SearchProjectsByTitleQuery,
     )
     from logic.unit_of_work import UnitOfWork
     from models import ProjectRead
@@ -39,7 +42,7 @@ class ProjectApplicationService(BaseApplicationService):
         super().__init__(unit_of_work_factory)
 
     def create_project(self, command: CreateProjectCommand) -> ProjectRead:
-        """[AI GENERATED] プロジェクト作成
+        """プロジェクト作成
 
         Args:
             command: プロジェクト作成コマンド
@@ -66,11 +69,11 @@ class ProjectApplicationService(BaseApplicationService):
             logger.info(f"プロジェクト作成完了: {created_project.title} (ID: {created_project.id})")
             return created_project
 
-    def get_project_by_id(self, project_id: uuid.UUID) -> ProjectRead:
-        """[AI GENERATED] IDでプロジェクトを取得
+    def get_project_by_id(self, query: GetProjectByIdQuery) -> ProjectRead:
+        """プロジェクトをIDで取得
 
         Args:
-            project_id: プロジェクトID
+            query: プロジェクト取得クエリ
 
         Returns:
             取得されたプロジェクト
@@ -78,32 +81,51 @@ class ProjectApplicationService(BaseApplicationService):
         Raises:
             ValueError: プロジェクトが見つからない場合
         """
-        logger.debug(f"プロジェクト取得: {project_id}")
+        logger.debug(f"プロジェクト取得: {query.project_id}")
 
         with self._unit_of_work_factory() as uow:
             project_service = uow.service_factory.create_project_service()
-            project = project_service.get_project_by_id(project_id)
+            project = project_service.get_project_by_id(query.project_id)
 
             if project is None:
-                msg = f"プロジェクトが見つかりません: {project_id}"
+                msg = f"プロジェクトが見つかりません: {query.project_id}"
                 raise ValueError(msg)
 
             return project
 
-    def get_all_projects(self) -> list[ProjectRead]:
-        """[AI GENERATED] 全プロジェクト取得
+    def get_all_projects(self, query: GetAllProjectsQuery) -> list[ProjectRead]:
+        """全プロジェクト取得
+
+        Args:
+            query: 全プロジェクト取得クエリ
 
         Returns:
             プロジェクト一覧
         """
+        _ = query  # 将来の拡張用パラメータ
         logger.debug("全プロジェクト取得")
 
         with self._unit_of_work_factory() as uow:
             project_service = uow.service_factory.create_project_service()
             return project_service.get_all_projects()
 
+    def search_projects_by_title(self, query: SearchProjectsByTitleQuery) -> list[ProjectRead]:
+        """タイトルでプロジェクトを検索
+
+        Args:
+            query: プロジェクト検索クエリ
+
+        Returns:
+            検索結果のプロジェクト一覧
+        """
+        logger.debug(f"プロジェクト検索: {query.title_query}")
+
+        with self._unit_of_work_factory() as uow:
+            project_service = uow.service_factory.create_project_service()
+            return project_service.search_projects(query.title_query)
+
     def update_project(self, command: UpdateProjectCommand) -> ProjectRead:
-        """[AI GENERATED] プロジェクト更新
+        """プロジェクト更新
 
         Args:
             command: プロジェクト更新コマンド
@@ -130,14 +152,11 @@ class ProjectApplicationService(BaseApplicationService):
             logger.info(f"プロジェクト更新完了: {updated_project.title} (ID: {updated_project.id})")
             return updated_project
 
-    def delete_project(self, command: DeleteProjectCommand) -> bool:
-        """[AI GENERATED] プロジェクト削除
+    def delete_project(self, command: DeleteProjectCommand) -> None:
+        """プロジェクト削除
 
         Args:
             command: プロジェクト削除コマンド
-
-        Returns:
-            削除成功時True
 
         Raises:
             ValueError: 削除できない場合
@@ -149,8 +168,9 @@ class ProjectApplicationService(BaseApplicationService):
             project_service = uow.service_factory.create_project_service()
             success = project_service.delete_project(command.project_id)
 
-            if success:
-                uow.commit()
-                logger.info(f"プロジェクト削除完了: {command.project_id}")
+            if not success:
+                msg = f"プロジェクトの削除に失敗しました: {command.project_id}"
+                raise ValueError(msg)
 
-            return success
+            uow.commit()
+            logger.info(f"プロジェクト削除完了: {command.project_id}")

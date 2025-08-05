@@ -20,8 +20,10 @@ if TYPE_CHECKING:
         UpdateTaskStatusCommand,
     )
     from logic.queries.task_queries import (
+        GetAllTasksByStatusDictQuery,
         GetTaskByIdQuery,
         GetTasksByStatusQuery,
+        GetTodayTasksCountQuery,
     )
     from logic.unit_of_work import UnitOfWork
     from models import TaskRead, TaskStatus
@@ -169,12 +171,16 @@ class TaskApplicationService(BaseApplicationService):
             task_service = uow.service_factory.create_task_service()
             return task_service.get_tasks_by_status(query.status)
 
-    def get_today_tasks_count(self) -> int:
+    def get_today_tasks_count(self, query: GetTodayTasksCountQuery) -> int:
         """今日のタスク件数取得
+
+        Args:
+            query: 今日のタスク件数取得クエリ
 
         Returns:
             今日のタスク件数
         """
+        _ = query  # 将来の拡張用パラメータ
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.create_task_service()
             return task_service.get_today_tasks_count()
@@ -192,12 +198,16 @@ class TaskApplicationService(BaseApplicationService):
             task_service = uow.service_factory.create_task_service()
             return task_service.get_task_by_id(query.task_id)
 
-    def get_all_tasks_by_status_dict(self) -> dict[TaskStatus, list[TaskRead]]:
+    def get_all_tasks_by_status_dict(self, query: GetAllTasksByStatusDictQuery) -> dict[TaskStatus, list[TaskRead]]:
         """全ステータスのタスクを辞書形式で取得
+
+        Args:
+            query: 全ステータス別タスク取得クエリ
 
         Returns:
             ステータス別タスク辞書
         """
+        _ = query  # 将来の拡張用パラメータ
         from models import TaskStatus
 
         result = {}

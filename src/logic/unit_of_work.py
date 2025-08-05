@@ -57,6 +57,18 @@ class UnitOfWork(ABC):
     def get_service_factory(self) -> Generator[ServiceFactory, None, None]:
         """サービスファクトリーを取得するコンテキストマネージャー"""
 
+    @property
+    @abstractmethod
+    def session(self) -> Session:
+        """現在のセッションを取得
+
+        Returns:
+            Session: データベースセッション
+
+        Raises:
+            RuntimeError: Unit of Workが初期化されていない場合
+        """
+
 
 class SqlModelUnitOfWork(UnitOfWork):
     """SQLModel用Unit of Work実装

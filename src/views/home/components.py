@@ -67,7 +67,10 @@ class MainActionSection(ft.Column):
             今日のタスク件数
         """
         # ✅ GOOD: Application Serviceを使用（Session管理不要）
-        return self.task_app_service.get_today_tasks_count()
+        from logic.queries.task_queries import GetTodayTasksCountQuery
+
+        query = GetTodayTasksCountQuery()
+        return self.task_app_service.get_today_tasks_count(query)
 
 
 class TaskStatsCard(ft.Container):

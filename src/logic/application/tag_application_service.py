@@ -13,9 +13,8 @@ from logic.application.base import BaseApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
-    import uuid
-
     from logic.commands.tag_commands import CreateTagCommand, DeleteTagCommand, UpdateTagCommand
+    from logic.queries.tag_queries import GetAllTagsQuery, GetTagByIdQuery, SearchTagsByNameQuery
     from logic.unit_of_work import UnitOfWork
     from models import TagRead
 
@@ -35,7 +34,7 @@ class TagApplicationService(BaseApplicationService):
         super().__init__(unit_of_work_factory)
 
     def create_tag(self, command: CreateTagCommand) -> TagRead:
-        """[AI GENERATED] タグ作成
+        """タグ作成
 
         Args:
             command: タグ作成コマンド
@@ -62,11 +61,11 @@ class TagApplicationService(BaseApplicationService):
             logger.info(f"タグ作成完了: {created_tag.name} (ID: {created_tag.id})")
             return created_tag
 
-    def get_tag_by_id(self, tag_id: uuid.UUID) -> TagRead:
-        """[AI GENERATED] IDでタグを取得
+    def get_tag_by_id(self, query: GetTagByIdQuery) -> TagRead:
+        """IDでタグを取得
 
         Args:
-            tag_id: タグID
+            query: タグ取得クエリ
 
         Returns:
             取得されたタグ
@@ -74,47 +73,51 @@ class TagApplicationService(BaseApplicationService):
         Raises:
             ValueError: タグが見つからない場合
         """
-        logger.debug(f"タグ取得: {tag_id}")
+        logger.debug(f"タグ取得: {query.tag_id}")
 
         with self._unit_of_work_factory() as uow:
             tag_service = uow.service_factory.create_tag_service()
-            tag = tag_service.get_tag_by_id(tag_id)
+            tag = tag_service.get_tag_by_id(query.tag_id)
 
             if tag is None:
-                msg = f"タグが見つかりません: {tag_id}"
+                msg = f"タグが見つかりません: {query.tag_id}"
                 raise ValueError(msg)
 
             return tag
 
-    def get_all_tags(self) -> list[TagRead]:
-        """[AI GENERATED] 全タグ取得
+    def get_all_tags(self, query: GetAllTagsQuery) -> list[TagRead]:
+        """全タグ取得
+
+        Args:
+            query: 全タグ取得クエリ
 
         Returns:
             タグ一覧
         """
+        _ = query  # 将来の拡張用パラメータ
         logger.debug("全タグ取得")
 
         with self._unit_of_work_factory() as uow:
             tag_service = uow.service_factory.create_tag_service()
             return tag_service.get_all_tags()
 
-    def get_tag_by_name(self, name: str) -> TagRead | None:
-        """[AI GENERATED] 名前でタグを取得
+    def search_tags_by_name(self, query: SearchTagsByNameQuery) -> list[TagRead]:
+        """名前でタグを検索
 
         Args:
-            name: タグ名
+            query: タグ検索クエリ
 
         Returns:
-            取得されたタグ、見つからない場合はNone
+            検索結果のタグ一覧
         """
-        logger.debug(f"タグ名検索: {name}")
+        logger.debug(f"タグ名検索: {query.name_query}")
 
         with self._unit_of_work_factory() as uow:
             tag_service = uow.service_factory.create_tag_service()
-            return tag_service.get_tag_by_name(name)
+            return tag_service.search_tags(query.name_query)
 
     def update_tag(self, command: UpdateTagCommand) -> TagRead:
-        """[AI GENERATED] タグ更新
+        """タグ更新
 
         Args:
             command: タグ更新コマンド
@@ -141,14 +144,11 @@ class TagApplicationService(BaseApplicationService):
             logger.info(f"タグ更新完了: {updated_tag.name} (ID: {updated_tag.id})")
             return updated_tag
 
-    def delete_tag(self, command: DeleteTagCommand) -> bool:
-        """[AI GENERATED] タグ削除
+    def delete_tag(self, command: DeleteTagCommand) -> None:
+        """タグ削除
 
         Args:
             command: タグ削除コマンド
-
-        Returns:
-            削除成功時True
 
         Raises:
             ValueError: 削除できない場合
@@ -160,23 +160,9 @@ class TagApplicationService(BaseApplicationService):
             tag_service = uow.service_factory.create_tag_service()
             success = tag_service.delete_tag(command.tag_id)
 
-            if success:
-                uow.commit()
-                logger.info(f"タグ削除完了: {command.tag_id}")
+            if not success:
+                msg = f"タグの削除に失敗しました: {command.tag_id}"
+                raise ValueError(msg)
 
-            return success
-
-    def search_tags_by_name(self, name_query: str) -> list[TagRead]:
-        """[AI GENERATED] 名前でタグを検索
-
-        Args:
-            name_query: 検索クエリ（部分一致）
-
-        Returns:
-            検索条件に一致するタグ一覧
-        """
-        logger.debug(f"タグ検索: {name_query}")
-
-        with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
-            return tag_service.search_tags(name_query)
+            uow.commit()
+            logger.info(f"タグ削除完了: {command.tag_id}")

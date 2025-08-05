@@ -8,9 +8,11 @@
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
+from logic.services.task_tag_service import TaskTagService
 
 __all__ = [
     "ProjectService",
     "TagService",
     "TaskService",
+    "TaskTagService",
 ]

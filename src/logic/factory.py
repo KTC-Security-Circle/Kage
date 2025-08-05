@@ -17,6 +17,7 @@ from logic.repositories.task_tag import TaskTagRepository
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
+from logic.services.task_tag_service import TaskTagService
 
 
 class RepositoryFactory:
@@ -123,6 +124,18 @@ class ServiceFactory:
 
         return TagService(
             tag_repo=tag_repo,
+            task_tag_repo=task_tag_repo,
+        )
+
+    def create_task_tag_service(self) -> TaskTagService:
+        """TaskTagServiceを作成する
+
+        Returns:
+            TaskTagService: タスクタグサービスインスタンス
+        """
+        task_tag_repo = self.repository_factory.create_task_tag_repository()
+
+        return TaskTagService(
             task_tag_repo=task_tag_repo,
         )
 

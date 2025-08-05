@@ -115,12 +115,20 @@ class TaskView(ft.Container):
         """
         logger.info(f"クイックアクション実行: {action}")
 
-        # アクションに応じて適切なステータスでタスク作成ダイアログを表示
-        if action in (QuickActionCommand.DO_NOW, QuickActionCommand.DO_NEXT):
-            self.task_dialog.show_create_dialog(TaskStatus.NEXT_ACTION)
-        elif action == QuickActionCommand.DO_SOMEDAY:
-            self.task_dialog.show_create_dialog(TaskStatus.SOMEDAY_MAYBE)
-        elif action == QuickActionCommand.REFERENCE:
+        # [AI GENERATED] ビジネスロジックをApplication Serviceに委譲
+        try:
+            # Application Serviceからアクションに対応するステータスを取得
+            task_status = self._task_app_service.get_task_status_for_quick_action(action)
+
+            # 取得したステータスでタスク作成ダイアログを表示
+            self.task_dialog.show_create_dialog(task_status)
+
+            logger.info(f"クイックアクションマッピング成功: {action} -> {task_status}")
+
+        except Exception as e:
+            logger.error(f"クイックアクション処理エラー: {e}")
+            self._show_error(f"アクションの処理に失敗しました: {e}")
+            # [AI GENERATED] エラー時はデフォルトでINBOXステータスを使用
             self.task_dialog.show_create_dialog(TaskStatus.INBOX)
 
     def _on_task_created(self, task: TaskRead) -> None:

@@ -254,14 +254,14 @@ class TaskDialog:
     def _on_create(self, _: ft.ControlEvent) -> None:
         """作成/更新ボタンクリック時の処理"""
         try:
-            # バリデーション
-            if not self.title_field.value or self.title_field.value.strip() == "":
+            # [AI GENERATED] 最小限のUIバリデーション（空文字チェックのみ）
+            if not self.title_field.value or not self.title_field.value.strip():
                 self._show_error("タスクタイトルを入力してください")
                 return
 
-            # 日付の解析
+            # [AI GENERATED] 日付の基本的なフォーマットチェック
             due_date = None
-            if self.due_date_field.value:
+            if self.due_date_field.value and self.due_date_field.value.strip():
                 try:
                     from datetime import datetime
 
@@ -270,6 +270,7 @@ class TaskDialog:
                     self._show_error("締切日は YYYY-MM-DD 形式で入力してください")
                     return
 
+            # [AI GENERATED] 詳細なバリデーションはApplication Service層に委譲
             if self.editing_task is None:
                 # 新規作成
                 self._create_task(due_date)
@@ -283,13 +284,11 @@ class TaskDialog:
 
     def _create_task(self, due_date: date | None) -> None:
         """タスクを作成"""
-        if not self.title_field.value:
-            self._show_error("タスクタイトルを入力してください")
-            return
+        # [AI GENERATED] バリデーションはApplication Service層に委譲
+        # UIレベルでの基本チェックは_on_createで実施済み
 
-        # ✅ GOOD: Application Serviceを使用（Session管理不要）
         command = CreateTaskCommand(
-            title=self.title_field.value.strip(),
+            title=self.title_field.value.strip() if self.title_field.value else "",
             description=self.description_field.value.strip() if self.description_field.value else "",
             status=TaskStatus(self.status_dropdown.value),
             due_date=due_date,
@@ -318,7 +317,6 @@ class TaskDialog:
             self._show_error("タスクタイトルを入力してください")
             return
 
-        # ✅ GOOD: Application Serviceを使用（Session管理不要）
         command = UpdateTaskCommand(
             task_id=self.editing_task.id,
             title=self.title_field.value.strip(),

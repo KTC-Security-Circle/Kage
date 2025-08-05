@@ -128,10 +128,10 @@ class TasksBoard(ft.Container):
                         spacing=8,
                     ),
                     ft.Container(height=12),  # スペーサー
-                    # ステータスセクション
-                    self._build_status_section("📋 ToDo", TaskStatus.NEXT_ACTION),
-                    self._build_status_section("🔄 InProgress", TaskStatus.DELEGATED),
-                    self._build_status_section("✅ Done", TaskStatus.COMPLETED),
+                    # [AI GENERATED] ステータスセクション（Application Serviceから表示ラベルを取得）
+                    self._build_status_section_from_service("CLOSED", TaskStatus.NEXT_ACTION),
+                    self._build_status_section_from_service("CLOSED", TaskStatus.DELEGATED),
+                    self._build_status_section_from_service("CLOSED", TaskStatus.COMPLETED),
                 ],
                 spacing=16,
                 scroll=ft.ScrollMode.AUTO,  # スクロール機能を追加
@@ -172,9 +172,9 @@ class TasksBoard(ft.Container):
                         spacing=8,
                     ),
                     ft.Container(height=12),  # スペーサー
-                    # ステータスセクション
-                    self._build_status_section("📥 整理用", TaskStatus.INBOX),
-                    self._build_status_section("🎯 次に取るべき行動", TaskStatus.NEXT_ACTION),
+                    # [AI GENERATED] ステータスセクション（Application Serviceから表示ラベルを取得）
+                    self._build_status_section_from_service("INBOX", TaskStatus.INBOX),
+                    self._build_status_section_from_service("INBOX", TaskStatus.NEXT_ACTION),
                 ],
                 spacing=16,
                 scroll=ft.ScrollMode.AUTO,  # スクロール機能を追加
@@ -330,3 +330,23 @@ class TasksBoard(ft.Container):
         self._build_content()
         if self.page:
             self.update()
+
+    def _build_status_section_from_service(self, section_name: str, status: TaskStatus) -> ft.Container:
+        """Application Serviceから表示ラベルを取得してステータスセクションを構築
+
+        Args:
+            section_name: セクション名（"CLOSED" または "INBOX"）
+            status: タスクステータス
+
+        Returns:
+            ステータスセクションのコンテナ
+        """
+        try:
+            # [AI GENERATED] Application Serviceから表示ラベルを取得
+            title = self._task_app_service.get_board_section_display(section_name, status)
+            return self._build_status_section(title, status)
+        except Exception as e:
+            logger.error(f"表示ラベル取得エラー: {e}")
+            # [AI GENERATED] エラー時はフォールバック表示を使用
+            fallback_title = f"⚠️ {status.value}"
+            return self._build_status_section(fallback_title, status)

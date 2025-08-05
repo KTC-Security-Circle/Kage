@@ -10,7 +10,10 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
+from sqlmodel import Session
 
+from config import engine
+from logic.factory import create_service_factory
 from models import TaskCreate, TaskStatus, TaskUpdate
 
 if TYPE_CHECKING:
@@ -272,10 +275,6 @@ class TaskDialog:
 
     def _create_task(self, due_date: date | None) -> None:
         """タスクを作成"""
-        from logic.services import TaskService
-
-        task_service = TaskService()
-
         if not self.title_field.value:
             self._show_error("タスクタイトルを入力してください")
             return
@@ -287,27 +286,28 @@ class TaskDialog:
             due_date=due_date,
         )
 
-        created_task = task_service.create_task(task_data)
+        # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
+        with Session(engine) as session:
+            service_factory = create_service_factory(session)
+            task_service = service_factory.create_task_service()
+            created_task = task_service.create_task(task_data)
+
         logger.info(f"タスクを作成しました: {created_task.title}")
 
-        # [AI GENERATED] コールバック実行
+        # コールバック実行
         if self.on_task_created:
             self.on_task_created(created_task)
 
-        # [AI GENERATED] ダイアログを閉じる
+        # ダイアログを閉じる
         self.page.close(self.dialog)
 
-        # [AI GENERATED] 成功メッセージ
+        # 成功メッセージ
         self._show_success("タスクを作成しました")
 
     def _update_task(self, due_date: date | None) -> None:
         """タスクを更新"""
         if self.editing_task is None:
             return
-
-        from logic.services import TaskService
-
-        task_service = TaskService()
 
         if not self.title_field.value:
             self._show_error("タスクタイトルを入力してください")
@@ -320,14 +320,19 @@ class TaskDialog:
             due_date=due_date,
         )
 
-        updated_task = task_service.update_task(self.editing_task.id, task_data)
+        # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
+        with Session(engine) as session:
+            service_factory = create_service_factory(session)
+            task_service = service_factory.create_task_service()
+            updated_task = task_service.update_task(self.editing_task.id, task_data)
+
         logger.info(f"タスクを更新しました: {updated_task.title}")
 
-        # [AI GENERATED] コールバック実行
+        # コールバック実行
         if self.on_task_updated:
             self.on_task_updated(updated_task)
 
-        # [AI GENERATED] ダイアログを閉じる
+        # ダイアログを閉じる
         self.page.close(self.dialog)
 
         # [AI GENERATED] 成功メッセージ

@@ -10,13 +10,15 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
+from sqlmodel import Session
 
+from config import engine
+from logic.factory import create_service_factory
 from models import TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from logic.services import TaskService
     from models import TaskRead
 
 
@@ -28,7 +30,6 @@ class TasksBoard(ft.Container):
 
     def __init__(
         self,
-        task_service: TaskService,
         on_task_click: Callable[[TaskRead], None] | None = None,
         on_task_status_change: Callable[[TaskRead, TaskStatus], None] | None = None,
         on_task_delete: Callable[[TaskRead], None] | None = None,
@@ -36,16 +37,13 @@ class TasksBoard(ft.Container):
         """TasksBoardのコンストラクタ
 
         Args:
-            task_service: タスクサービス
             on_task_click: タスククリック時のコールバック
             on_task_status_change: タスクステータス変更時のコールバック
             on_task_delete: タスク削除時のコールバック
         """
         super().__init__()
-        self.task_service = task_service
         self.on_task_click = on_task_click
         self.on_task_status_change = on_task_status_change
-        self.on_task_delete = on_task_delete
         self.on_task_delete = on_task_delete
 
         # スタイル設定
@@ -73,8 +71,13 @@ class TasksBoard(ft.Container):
                 TaskStatus.INBOX,
             ]
 
-            for status in status_list:
-                self.tasks_by_status[status] = self.task_service.get_tasks_by_status(status)
+            # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
+            with Session(engine) as session:
+                service_factory = create_service_factory(session)
+                task_service = service_factory.create_task_service()
+
+                for status in status_list:
+                    self.tasks_by_status[status] = task_service.get_tasks_by_status(status)
 
         except Exception as e:
             logger.error(f"タスク読み込みエラー: {e}")
@@ -301,7 +304,12 @@ class TasksBoard(ft.Container):
 
             new_status = TaskStatus.COMPLETED if is_completed else TaskStatus.NEXT_ACTION
             task_update = TaskUpdate(status=new_status)
-            self.task_service.update_task(task.id, task_update)
+
+            # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
+            with Session(engine) as session:
+                service_factory = create_service_factory(session)
+                task_service = service_factory.create_task_service()
+                task_service.update_task(task.id, task_update)
 
             if self.on_task_status_change:
                 self.on_task_status_change(task, new_status)

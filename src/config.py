@@ -13,6 +13,18 @@ DB_PATH: Path = Path(DB_DIR) / "tasks.db"
 # データベースエンジンの作成
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 
+
+# アプリケーション起動時にテーブルを作成するための関数
+def create_db_and_tables() -> None:
+    """アプリケーション起動時にテーブルを作成するための関数"""
+    # この関数は main.py の最初で一度だけ呼び出す
+    from sqlmodel import SQLModel
+
+    from models import __all__  # これで全てのモデルがインポートされる # noqa: F401
+
+    SQLModel.metadata.create_all(engine)
+
+
 # SQLModelの基礎クラスを使用
 Base = SQLModel
 

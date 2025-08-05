@@ -86,10 +86,15 @@ class ProjectService(ServiceBase[ProjectServiceError]):
     複数のリポジトリを組み合わせて、複雑なプロジェクト操作を実装します。
     """
 
-    def __init__(self) -> None:
-        """ProjectServiceを初期化する"""
-        self.project_repo = ProjectRepository()
-        self.task_repo = TaskRepository()
+    def __init__(self, project_repo: ProjectRepository, task_repo: TaskRepository) -> None:
+        """ProjectServiceを初期化する
+
+        Args:
+            project_repo: プロジェクトリポジトリ
+            task_repo: タスクリポジトリ
+        """
+        self.project_repo = project_repo
+        self.task_repo = task_repo
 
     # プロジェクトの存在を確認を確認するメソッド
     def _check_project_exists(self, project_id: uuid.UUID) -> ProjectRead:

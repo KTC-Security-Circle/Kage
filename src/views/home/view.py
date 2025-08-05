@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-import flet as ft
+from typing import TYPE_CHECKING
 
-from logic.services import TaskService
+import flet as ft
+from sqlmodel import Session
+
+from config import engine
+from logic.factory import create_service_factory
 from views.home.components import MainActionSection, create_welcome_message
+
+if TYPE_CHECKING:
+    from logic.services.task_service import TaskService
 
 
 class HomeView(ft.Column):
@@ -16,20 +23,20 @@ class HomeView(ft.Column):
 
     page: ft.Page
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, task_service: TaskService) -> None:
         """HomeViewの初期化.
 
         Args:
             page: Fletのページオブジェクト
+            task_service: タスクサービス（依存性注入）
         """
         super().__init__()
         self.page = page
+        self.task_service = task_service
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.alignment = ft.MainAxisAlignment.CENTER
         self.expand = True
         self.spacing = 30
-
-        self.task_service = TaskService()
 
         # コンポーネントを構築
         self._build_components()
@@ -59,8 +66,13 @@ def create_home_view(page: ft.Page) -> ft.Container:
     Returns:
         構築されたホーム画面ビュー
     """
+    # 依存性注入を使用してサービスを作成
+    session = Session(engine)
+    service_factory = create_service_factory(session)
+    task_service = service_factory.create_task_service()
+
     return ft.Container(
-        content=HomeView(page),
+        content=HomeView(page, task_service),
         expand=True,
         bgcolor=ft.Colors.GREY_50,  # 背景色を設定
         padding=ft.padding.all(20),  # 全体のパディング

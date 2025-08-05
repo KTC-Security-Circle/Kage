@@ -10,8 +10,10 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
+from sqlmodel import Session
 
-from logic.services import ProjectService, TaskService
+from config import engine
+from logic.factory import create_service_factory
 from models import TaskStatus
 from views.task.components.projects_placeholder import ProjectsPlaceholder
 from views.task.components.quick_actions import QuickActionCommand, QuickActions
@@ -41,11 +43,7 @@ class TaskView(ft.Container):
         self._page = page
         logger.info("TaskView 初期化開始")
 
-        # サービス初期化
-        self.task_service = TaskService()
-        self.project_service = ProjectService()
-
-        # ダイアログ初期化
+        # ダイアログ初期化（サービスは後で注入）
         self.task_dialog = TaskDialog(
             page=page,
             on_task_created=self._on_task_created,
@@ -77,7 +75,6 @@ class TaskView(ft.Container):
         self.projects_placeholder = ProjectsPlaceholder()
 
         self.tasks_board = TasksBoard(
-            task_service=self.task_service,
             on_task_click=self._on_task_click,
             on_task_status_change=self._on_task_status_change,
             on_task_delete=self._on_task_delete,
@@ -174,7 +171,12 @@ class TaskView(ft.Container):
         # [AI GENERATED] 削除確認ダイアログを表示
         def delete_confirmed(_: ft.ControlEvent) -> None:
             try:
-                self.task_service.delete_task(task.id)
+                # [AI GENERATED] with文を使用してサービスを作成し、データベースセッションを管理
+                with Session(engine) as session:
+                    service_factory = create_service_factory(session)
+                    task_service = service_factory.create_task_service()
+                    task_service.delete_task(task.id)
+
                 logger.info(f"タスクを削除しました: {task.title}")
                 # タスクボードの更新
                 self.tasks_board.refresh()
@@ -245,4 +247,6 @@ def create_task_view(page: ft.Page) -> ft.Container:
     Returns:
         TaskView: 作成されたタスクビューインスタンス
     """
-    return ft.Container(content=TaskView(page=page), expand=True, bgcolor=ft.Colors.GREY_50)
+    # [AI GENERATED] with文を使用しない単純なインスタンス作成
+    task_view = TaskView(page=page)
+    return ft.Container(content=task_view, expand=True, bgcolor=ft.Colors.GREY_50)

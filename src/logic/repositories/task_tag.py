@@ -1,4 +1,4 @@
-"""[AI GENERATED] タスクタグリポジトリの実装"""
+"""タスクタグリポジトリの実装"""
 
 import uuid
 
@@ -10,7 +10,7 @@ from models import TaskTag, TaskTagCreate
 
 
 class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
-    """[AI GENERATED] タスクタグリポジトリ
+    """タスクタグリポジトリ
 
     タスクとタグの関連の CRUD 操作を提供するリポジトリクラス。
     BaseRepository を継承して基本操作を提供し、タスクタグ固有の操作を追加実装。
@@ -19,12 +19,16 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
     TaskTagは複合主キーのため、一部のBaseRepositoryメソッドはオーバーライドが必要
     """
 
-    def __init__(self) -> None:
-        """[AI GENERATED] TaskTagRepository を初期化する"""
-        super().__init__(TaskTag)
+    def __init__(self, session: Session) -> None:
+        """TaskTagRepository を初期化する
+
+        Args:
+            session: データベースセッション
+        """
+        super().__init__(TaskTag, session)
 
     def get_by_id(self, entity_id: uuid.UUID) -> TaskTag | None:  # noqa: ARG002
-        """[AI GENERATED] TaskTagは複合主キーのため、このメソッドは使用しない
+        """TaskTagは複合主キーのため、このメソッドは使用しない
 
         Args:
             entity_id: 使用されない
@@ -39,7 +43,7 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
         return None
 
     def update(self, entity_id: uuid.UUID, entity_data: TaskTagCreate) -> TaskTag | None:  # noqa: ARG002
-        """[AI GENERATED] TaskTagは更新操作をサポートしない
+        """TaskTagは更新操作をサポートしない
 
         Args:
             entity_id: 使用されない
@@ -56,7 +60,7 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
         return None
 
     def delete(self, entity_id: uuid.UUID) -> bool:  # noqa: ARG002
-        """[AI GENERATED] TaskTagは複合主キーのため、このメソッドは使用しない
+        """TaskTagは複合主キーのため、このメソッドは使用しない
 
         Args:
             entity_id: 使用されない
@@ -71,7 +75,7 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
         return False
 
     def get_by_task_id(self, task_id: uuid.UUID) -> list[TaskTag]:
-        """[AI GENERATED] 指定されたタスクIDの関連一覧を取得する
+        """指定されたタスクIDの関連一覧を取得する
 
         Args:
             task_id: タスクID
@@ -80,17 +84,16 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             list[TaskTag]: 指定されたタスクの関連一覧
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(TaskTag).where(TaskTag.task_id == task_id)
-                results = session.exec(statement).all()
-                logger.debug(f"タスク {task_id} の関連を {len(results)} 件取得しました")
-                return list(results)
+            statement = select(TaskTag).where(TaskTag.task_id == task_id)
+            results = self.session.exec(statement).all()
+            logger.debug(f"タスク {task_id} の関連を {len(results)} 件取得しました")
+            return list(results)
         except Exception as e:
             logger.exception(f"タスクの関連取得に失敗しました: {e}")
             raise
 
     def get_by_tag_id(self, tag_id: uuid.UUID) -> list[TaskTag]:
-        """[AI GENERATED] 指定されたタグIDの関連一覧を取得する
+        """指定されたタグIDの関連一覧を取得する
 
         Args:
             tag_id: タグID
@@ -99,17 +102,16 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             list[TaskTag]: 指定されたタグの関連一覧
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(TaskTag).where(TaskTag.tag_id == tag_id)
-                results = session.exec(statement).all()
-                logger.debug(f"タグ {tag_id} の関連を {len(results)} 件取得しました")
-                return list(results)
+            statement = select(TaskTag).where(TaskTag.tag_id == tag_id)
+            results = self.session.exec(statement).all()
+            logger.debug(f"タグ {tag_id} の関連を {len(results)} 件取得しました")
+            return list(results)
         except Exception as e:
             logger.exception(f"タグの関連取得に失敗しました: {e}")
             raise
 
     def get_by_task_and_tag(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> TaskTag | None:
-        """[AI GENERATED] 指定されたタスクIDとタグIDの関連を取得する
+        """指定されたタスクIDとタグIDの関連を取得する
 
         Args:
             task_id: タスクID
@@ -119,18 +121,18 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             TaskTag | None: 指定された条件に一致する関連、見つからない場合はNone
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(TaskTag).where(TaskTag.task_id == task_id, TaskTag.tag_id == tag_id)
-                result = session.exec(statement).first()
-                if result:
-                    logger.debug(f"タスク {task_id} とタグ {tag_id} の関連を取得しました")
-                return result
+            statement = select(TaskTag).where(TaskTag.task_id == task_id, TaskTag.tag_id == tag_id)
+            result = self.session.exec(statement).first()
+            if result:
+                logger.debug(f"タスク {task_id} とタグ {tag_id} の関連を取得しました")
         except Exception as e:
             logger.exception(f"タスクタグ関連の取得に失敗しました: {e}")
             raise
+        else:
+            return result
 
     def exists(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> bool:
-        """[AI GENERATED] 指定されたタスクIDとタグIDの関連が存在するかチェックする
+        """指定されたタスクIDとタグIDの関連が存在するかチェックする
 
         Args:
             task_id: タスクID
@@ -146,7 +148,7 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             raise
 
     def delete_by_task_and_tag(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> bool:
-        """[AI GENERATED] 指定されたタスクIDとタグIDの関連を削除する
+        """指定されたタスクIDとタグIDの関連を削除する
 
         Args:
             task_id: タスクID
@@ -156,24 +158,24 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             bool: 削除が成功した場合True、見つからない場合False
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(TaskTag).where(TaskTag.task_id == task_id, TaskTag.tag_id == tag_id)
-                task_tag = session.exec(statement).first()
+            statement = select(TaskTag).where(TaskTag.task_id == task_id, TaskTag.tag_id == tag_id)
+            task_tag = self.session.exec(statement).first()
 
-                if task_tag is None:
-                    logger.warning(f"タスクタグ関連が見つかりません: task_id={task_id}, tag_id={tag_id}")
-                    return False
+            if task_tag is None:
+                logger.warning(f"タスクタグ関連が見つかりません: task_id={task_id}, tag_id={tag_id}")
+                return False
 
-                session.delete(task_tag)
-                session.commit()
-                logger.info(f"タスクタグ関連を削除しました: task_id={task_id}, tag_id={tag_id}")
-                return True
+            self.session.delete(task_tag)
+            self.session.commit()
+            logger.info(f"タスクタグ関連を削除しました: task_id={task_id}, tag_id={tag_id}")
         except Exception as e:
             logger.exception(f"タスクタグ関連の削除に失敗しました: {e}")
             raise
+        else:
+            return True
 
     def delete_by_task_id(self, task_id: uuid.UUID) -> int:
-        """[AI GENERATED] 指定されたタスクIDの全ての関連を削除する
+        """指定されたタスクIDの全ての関連を削除する
 
         Args:
             task_id: タスクID
@@ -182,23 +184,23 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             int: 削除された関連の数
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(TaskTag).where(TaskTag.task_id == task_id)
-                task_tags = session.exec(statement).all()
+            statement = select(TaskTag).where(TaskTag.task_id == task_id)
+            task_tags = self.session.exec(statement).all()
 
-                count = len(task_tags)
-                for task_tag in task_tags:
-                    session.delete(task_tag)
+            count = len(task_tags)
+            for task_tag in task_tags:
+                self.session.delete(task_tag)
 
-                session.commit()
-                logger.info(f"タスク {task_id} の関連を {count} 件削除しました")
-                return count
+            self.session.commit()
+            logger.info(f"タスク {task_id} の関連を {count} 件削除しました")
         except Exception as e:
             logger.exception(f"タスクの全関連削除に失敗しました: {e}")
             raise
+        else:
+            return count
 
     def delete_by_tag_id(self, tag_id: uuid.UUID) -> int:
-        """[AI GENERATED] 指定されたタグIDの全ての関連を削除する
+        """指定されたタグIDの全ての関連を削除する
 
         Args:
             tag_id: タグID
@@ -207,17 +209,17 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
             int: 削除された関連の数
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(TaskTag).where(TaskTag.tag_id == tag_id)
-                task_tags = session.exec(statement).all()
+            statement = select(TaskTag).where(TaskTag.tag_id == tag_id)
+            task_tags = self.session.exec(statement).all()
 
-                count = len(task_tags)
-                for task_tag in task_tags:
-                    session.delete(task_tag)
+            count = len(task_tags)
+            for task_tag in task_tags:
+                self.session.delete(task_tag)
 
-                session.commit()
-                logger.info(f"タグ {tag_id} の関連を {count} 件削除しました")
-                return count
+            self.session.commit()
+            logger.info(f"タグ {tag_id} の関連を {count} 件削除しました")
         except Exception as e:
             logger.exception(f"タグの全関連削除に失敗しました: {e}")
             raise
+        else:
+            return count

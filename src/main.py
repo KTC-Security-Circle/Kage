@@ -1,8 +1,7 @@
 import flet as ft
 from loguru import logger
-from sqlmodel import SQLModel
 
-from config import APP_TITLE, engine
+from config import APP_TITLE, create_db_and_tables
 from env import setup_environment
 from logging_conf import setup_logger
 from router import Router
@@ -15,7 +14,7 @@ setup_logger()
 logger.info("アプリケーションを起動します。")
 
 # DB初期化（全テーブル作成）
-SQLModel.metadata.create_all(engine)
+create_db_and_tables()
 
 
 def main(page: ft.Page) -> None:

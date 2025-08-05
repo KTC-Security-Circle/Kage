@@ -23,10 +23,8 @@ class ServiceBase(Generic[T]):
     """サービスの基底クラス
 
     サービスはビジネスロジックを実装するためのクラスで、リポジトリを利用してデータ操作を行います。
+    依存性注入により必要なリポジトリを受け取ります。
     """
-
-    def __init__(self) -> None:
-        """サービスを初期化する"""
 
     def _log_error_and_raise(self, msg: str, exception_class: type[T]) -> NoReturn:
         """エラーメッセージをログに記録し `MyBaseError` を発生させる

@@ -1,4 +1,4 @@
-"""[AI GENERATED] リポジトリの基底クラス"""
+"""リポジトリの基底クラス"""
 
 import uuid
 from typing import Generic, TypeVar
@@ -6,24 +6,27 @@ from typing import Generic, TypeVar
 from loguru import logger
 from sqlmodel import Session, SQLModel, select
 
-from config import engine
-
 T = TypeVar("T", bound=SQLModel)
 CreateT = TypeVar("CreateT", bound=SQLModel)
 UpdateT = TypeVar("UpdateT", bound=SQLModel)
 
 
 class BaseRepository(Generic[T, CreateT, UpdateT]):
-    """[AI GENERATED] リポジトリの基底クラス"""
+    """リポジトリの基底クラス
 
-    def __init__(self, model_class: type[T]) -> None:
-        """[AI GENERATED] リポジトリを初期化する
+    依存性注入によりデータベースセッションを受け取り、
+    CRUD操作の基本実装を提供する。
+    """
+
+    def __init__(self, model_class: type[T], session: Session) -> None:
+        """リポジトリを初期化する
 
         Args:
             model_class: このリポジトリが扱うモデルクラス
+            session: データベースセッション
         """
-        self.engine = engine
         self.model_class = model_class
+        self.session = session
 
     def create(self, entity_data: CreateT) -> T:
         """[AI GENERATED] エンティティを作成する
@@ -38,17 +41,16 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
             Exception: データベース操作エラー
         """
         try:
-            with Session(self.engine) as session:
-                entity = self.model_class(**entity_data.model_dump())
-                session.add(entity)
-                session.commit()
-                session.refresh(entity)
-                entity_id = getattr(entity, "id", "N/A")
-                logger.info(f"{self.model_class.__name__} を作成しました: {entity_id}")
-                return entity
+            entity = self.model_class(**entity_data.model_dump())
+            self.session.add(entity)
+            self.session.commit()
+            self.session.refresh(entity)
+            entity_id = getattr(entity, "id", "N/A")
+            logger.info(f"{self.model_class.__name__} を作成しました: {entity_id}")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の作成に失敗しました: {e}")
             raise
+        return entity
 
     def get_by_id(self, entity_id: uuid.UUID) -> T | None:
         """[AI GENERATED] IDでエンティティを取得する
@@ -60,15 +62,14 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
             T | None: 取得されたエンティティ、見つからない場合はNone
         """
         try:
-            with Session(self.engine) as session:
-                # SQLModel の場合、通常 id フィールドはあるのでsession.getを使用
-                result = session.get(self.model_class, entity_id)
-                if result:
-                    logger.debug(f"{self.model_class.__name__} を取得しました: {entity_id}")
-                return result
+            # SQLModel の場合、通常 id フィールドはあるのでsession.getを使用
+            result = self.session.get(self.model_class, entity_id)
+            if result:
+                logger.debug(f"{self.model_class.__name__} を取得しました: {entity_id}")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の取得に失敗しました: {e}")
             raise
+        return result
 
     def get_all(self) -> list[T]:
         """[AI GENERATED] 全エンティティを取得する
@@ -77,14 +78,13 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
             list[T]: 全エンティティのリスト
         """
         try:
-            with Session(self.engine) as session:
-                statement = select(self.model_class)
-                results = session.exec(statement).all()
-                logger.debug(f"{self.model_class.__name__} を {len(results)} 件取得しました")
-                return list(results)
+            statement = select(self.model_class)
+            results = self.session.exec(statement).all()
+            logger.debug(f"{self.model_class.__name__} を {len(results)} 件取得しました")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の全取得に失敗しました: {e}")
             raise
+        return list(results)
 
     def update(self, entity_id: uuid.UUID, entity_data: UpdateT) -> T | None:
         """[AI GENERATED] エンティティを更新する
@@ -97,26 +97,25 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
             T | None: 更新されたエンティティ、見つからない場合はNone
         """
         try:
-            with Session(self.engine) as session:
-                entity = session.get(self.model_class, entity_id)
-                if entity is None:
-                    logger.warning(f"{self.model_class.__name__} が見つかりません: {entity_id}")
-                    return None
+            entity = self.session.get(self.model_class, entity_id)
+            if entity is None:
+                logger.warning(f"{self.model_class.__name__} が見つかりません: {entity_id}")
+                return None
 
-                # None でない値のみ更新
-                entity_data_dict = entity_data.model_dump(exclude_unset=True)
-                for key, value in entity_data_dict.items():
-                    if value is not None:
-                        setattr(entity, key, value)
+            # None でない値のみ更新
+            entity_data_dict = entity_data.model_dump(exclude_unset=True)
+            for key, value in entity_data_dict.items():
+                if value is not None:
+                    setattr(entity, key, value)
 
-                session.add(entity)
-                session.commit()
-                session.refresh(entity)
-                logger.info(f"{self.model_class.__name__} を更新しました: {entity_id}")
-                return entity
+            self.session.add(entity)
+            self.session.commit()
+            self.session.refresh(entity)
+            logger.info(f"{self.model_class.__name__} を更新しました: {entity_id}")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の更新に失敗しました: {e}")
             raise
+        return entity
 
     def delete(self, entity_id: uuid.UUID) -> bool:
         """[AI GENERATED] エンティティを削除する
@@ -128,16 +127,15 @@ class BaseRepository(Generic[T, CreateT, UpdateT]):
             bool: 削除が成功した場合True、見つからない場合False
         """
         try:
-            with Session(self.engine) as session:
-                entity = session.get(self.model_class, entity_id)
-                if entity is None:
-                    logger.warning(f"{self.model_class.__name__} が見つかりません: {entity_id}")
-                    return False
+            entity = self.session.get(self.model_class, entity_id)
+            if entity is None:
+                logger.warning(f"{self.model_class.__name__} が見つかりません: {entity_id}")
+                return False
 
-                session.delete(entity)
-                session.commit()
-                logger.info(f"{self.model_class.__name__} を削除しました: {entity_id}")
-                return True
+            self.session.delete(entity)
+            self.session.commit()
+            logger.info(f"{self.model_class.__name__} を削除しました: {entity_id}")
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の削除に失敗しました: {e}")
             raise
+        return True

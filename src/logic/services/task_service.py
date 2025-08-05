@@ -89,12 +89,25 @@ class TaskService(ServiceBase[TaskServiceError]):
     複数のリポジトリを組み合わせて、複雑なタスク操作を実装します。
     """
 
-    def __init__(self) -> None:
-        """TaskServiceを初期化する"""
-        self.task_repo = TaskRepository()
-        self.project_repo = ProjectRepository()
-        self.tag_repo = TagRepository()
-        self.task_tag_repo = TaskTagRepository()
+    def __init__(
+        self,
+        task_repo: TaskRepository,
+        project_repo: ProjectRepository,
+        tag_repo: TagRepository,
+        task_tag_repo: TaskTagRepository,
+    ) -> None:
+        """TaskServiceを初期化する
+
+        Args:
+            task_repo: タスクリポジトリ
+            project_repo: プロジェクトリポジトリ
+            tag_repo: タグリポジトリ
+            task_tag_repo: タスクタグリポジトリ
+        """
+        self.task_repo = task_repo
+        self.project_repo = project_repo
+        self.tag_repo = tag_repo
+        self.task_tag_repo = task_tag_repo
 
     # タスクの存在を確認するメソッド
     def _check_task_exists(self, task_id: uuid.UUID) -> TaskRead:

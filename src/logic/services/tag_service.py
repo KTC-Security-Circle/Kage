@@ -82,10 +82,15 @@ class TagService(ServiceBase[TagServiceError]):
     複数のリポジトリを組み合わせて、複雑なタグ操作を実装します。
     """
 
-    def __init__(self) -> None:
-        """TagServiceを初期化する"""
-        self.tag_repo = TagRepository()
-        self.task_tag_repo = TaskTagRepository()
+    def __init__(self, tag_repo: TagRepository, task_tag_repo: TaskTagRepository) -> None:
+        """TagServiceを初期化する
+
+        Args:
+            tag_repo: タグリポジトリ
+            task_tag_repo: タスクタグリポジトリ
+        """
+        self.tag_repo = tag_repo
+        self.task_tag_repo = task_tag_repo
 
     # タグの存在を確認するメソッド
     def _check_tag_exists(self, tag_id: uuid.UUID) -> TagRead:

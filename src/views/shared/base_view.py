@@ -11,6 +11,8 @@ from abc import ABC, abstractmethod
 import flet as ft
 from loguru import logger
 
+from logic.factory import get_application_service_container
+
 
 class BaseView(ft.Container, ABC):
     """すべてのViewの基底クラス
@@ -19,6 +21,16 @@ class BaseView(ft.Container, ABC):
     - ライフサイクル管理（mount/unmount）
     - デフォルトスタイル設定
     - ログ出力の統一
+    - ApplicationServiceContainerへのアクセス
+
+    ErrorHandlingMixinとの組み合わせ:
+        ErrorHandlingMixinと組み合わせることで、統一されたエラーハンドリング機能を利用できます。
+
+        使用例:
+            class TaskView(BaseView, ErrorHandlingMixin):
+                def __init__(self, page: ft.Page) -> None:
+                    super().__init__(page)
+                    # self.show_success(), self.show_error()等が利用可能
     """
 
     def __init__(self, page: ft.Page, **kwargs) -> None:  # type: ignore[misc] # noqa: ANN003
@@ -35,6 +47,8 @@ class BaseView(ft.Container, ABC):
 
         # デフォルトスタイルの設定
         self._setup_default_style()
+
+        self.container = get_application_service_container()
 
         logger.info(f"{self._view_name} 初期化開始")
 

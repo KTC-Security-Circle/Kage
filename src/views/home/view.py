@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from logic.factory import get_application_service_container
 from views.home.components import MainActionSection, create_welcome_message
 from views.shared import BaseView, ErrorHandlingMixin
 
@@ -29,8 +28,7 @@ class HomeView(BaseView, ErrorHandlingMixin):
         super().__init__(page)
 
         # 依存性注入
-        container = get_application_service_container()
-        self.task_app_service: TaskApplicationService = container.get_task_application_service()
+        self.task_app_service: TaskApplicationService = self.container.get_task_application_service()
 
     def build_content(self) -> ft.Control:
         """ホーム画面のコンテンツを構築

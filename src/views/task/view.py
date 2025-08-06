@@ -13,7 +13,6 @@ import flet as ft
 from loguru import logger
 
 from logic.commands.task_commands import DeleteTaskCommand
-from logic.factory import get_application_service_container
 from models import QuickActionCommand, TaskStatus
 from views.shared import BaseView, ErrorHandlingMixin
 from views.task.components.projects_placeholder import ProjectsPlaceholder
@@ -44,8 +43,7 @@ class TaskView(BaseView, ErrorHandlingMixin):
         super().__init__(page)
         logger.info("TaskView 初期化開始")
 
-        container = get_application_service_container()
-        self._task_app_service: TaskApplicationService = container.get_task_application_service()
+        self._task_app_service: TaskApplicationService = self.container.get_task_application_service()
 
         # ダイアログ初期化（サービスは後で注入）
         self.task_dialog = TaskDialog(

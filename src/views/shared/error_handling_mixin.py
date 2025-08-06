@@ -18,7 +18,20 @@ class ErrorHandlingMixin:
     """エラーハンドリングの共通機能を提供するミックスイン
 
     このミックスインを継承することで、統一されたエラー表示機能を利用できます。
-    Fletのページオブジェクトへのアクセスが必要なため、_pageまたはpageプロパティを持つクラスで使用してください。
+    BaseViewクラスと組み合わせて使用することを推奨します。
+
+    必要な条件:
+    - _pageまたはpageプロパティを持つクラスで使用する
+    - BaseViewと組み合わせる場合、_view_nameプロパティも利用される
+
+    使用例:
+        class TaskView(BaseView, ErrorHandlingMixin):
+            def some_method(self):
+                try:
+                    # 何らかの処理
+                    self.show_success("処理が完了しました")
+                except Exception as e:
+                    self.show_error("処理に失敗しました", str(e))
     """
 
     def show_error(self, message: str, details: str | None = None) -> None:
@@ -44,7 +57,7 @@ class ErrorHandlingMixin:
                 on_action=lambda _: self._show_error_details(details) if details else None,
             )
             page.open(snack_bar)
-            logger.error(f"エラー表示: {message}")
+            logger.error(f"[{self._get_view_name()}] エラー表示: {message}")
 
         except Exception as e:
             logger.error(f"エラーメッセージの表示に失敗: {e}")
@@ -68,7 +81,7 @@ class ErrorHandlingMixin:
                 bgcolor=ft.Colors.GREEN_400,
             )
             page.open(snack_bar)
-            logger.info(f"成功メッセージ表示: {message}")
+            logger.info(f"[{self._get_view_name()}] 成功メッセージ表示: {message}")
 
         except Exception as e:
             logger.error(f"成功メッセージの表示に失敗: {e}")
@@ -92,7 +105,7 @@ class ErrorHandlingMixin:
                 bgcolor=ft.Colors.ORANGE_400,
             )
             page.open(snack_bar)
-            logger.warning(f"警告メッセージ表示: {message}")
+            logger.warning(f"[{self._get_view_name()}] 警告メッセージ表示: {message}")
 
         except Exception as e:
             logger.error(f"警告メッセージの表示に失敗: {e}")
@@ -116,7 +129,7 @@ class ErrorHandlingMixin:
                 bgcolor=ft.Colors.BLUE_400,
             )
             page.open(snack_bar)
-            logger.info(f"情報メッセージ表示: {message}")
+            logger.info(f"[{self._get_view_name()}] 情報メッセージ表示: {message}")
 
         except Exception as e:
             logger.error(f"情報メッセージの表示に失敗: {e}")
@@ -179,7 +192,7 @@ class ErrorHandlingMixin:
             )
 
             page.open(confirm_dialog)
-            logger.info(f"確認ダイアログ表示: {title}")
+            logger.info(f"[{self._get_view_name()}] 確認ダイアログ表示: {title}")
 
         except Exception as e:
             logger.error(f"確認ダイアログの表示に失敗: {e}")
@@ -219,12 +232,13 @@ class ErrorHandlingMixin:
     def _get_page(self) -> ft.Page | None:
         """Fletページオブジェクトを取得
 
-        _pageまたはpageプロパティからページオブジェクトを取得します。
+        BaseViewクラスと互換性を持つよう、複数のプロパティ名から
+        ページオブジェクトを取得します。
 
         Returns:
             ft.Page | None: Fletのページオブジェクト、見つからない場合はNone
         """
-        # 複数のプロパティ名をチェック
+        # BaseViewとの互換性のため複数のプロパティ名をチェック
         for attr_name in ["_page", "page"]:
             if hasattr(self, attr_name):
                 page = getattr(self, attr_name)
@@ -233,3 +247,16 @@ class ErrorHandlingMixin:
 
         logger.error(f"{self.__class__.__name__}にページオブジェクトが見つかりません")
         return None
+
+    def _get_view_name(self) -> str:
+        """ビュー名を取得
+
+        BaseViewとの互換性のため、_view_nameまたはクラス名を返します。
+
+        Returns:
+            str: ビュー名
+        """
+        # [AI GENERATED] BaseViewとの互換性のためhasattrでチェック
+        if hasattr(self, "_view_name"):
+            return self._view_name  # type: ignore[attr-defined]
+        return self.__class__.__name__

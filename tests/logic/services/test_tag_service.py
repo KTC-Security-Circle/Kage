@@ -274,7 +274,6 @@ class TestTagServiceDelete:
         expected_calls = [call(task1_id, tag_id), call(task2_id, tag_id)]
         task_tag_repo.delete_by_task_and_tag.assert_has_calls(expected_calls)
         tag_repo.delete.assert_called_once_with(tag_id)
-        tag_repo.delete.assert_called_once_with(tag_id)
 
     def test_delete_tag_not_found(self) -> None:
         """存在しないタグの削除でエラーが発生することをテスト"""

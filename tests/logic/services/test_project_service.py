@@ -351,7 +351,3 @@ class TestProjectServiceDelete:
         # [AI GENERATED] 例外が発生することを確認
         with pytest.raises(ProjectServiceDeleteError):
             service.delete_project(project_id)
-
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(ProjectServiceDeleteError):
-            service.delete_project(project_id)

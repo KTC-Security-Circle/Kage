@@ -1,6 +1,7 @@
 # マイグレーションの方法
 
 ## 基本的なコマンド
+
 ```bash
 
 # マイグレーションの適用
@@ -25,6 +26,7 @@ uv run alembic downgrade <version_id>
 
 # マイグレーションの状態を確認
 ## ここでは、現在のデータベースの状態を確認するコマンド
+
 uv run alembic current
 ```
 

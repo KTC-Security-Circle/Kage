@@ -74,7 +74,7 @@ git clone git@github.com:KTC-Security-Circle/Kage.git
 cd Kage
 ```
 
-## 2. Python の管理とインストール
+## 2. Python の管理と poethepoet のインストール
 
 uv は自動的に Python バージョンを管理できます：
 
@@ -89,7 +89,23 @@ uv python list
 uv python install 3.12
 ```
 
+グローバルに poethepoet をインストールすることで、`uv run`を付けずに直接`poe`コマンドを使用できます：
+
+```bash
+# poethepoetをグローバルにインストール
+uv tool install poethepoet
+```
+
 ## 3. 仮想環境のセットアップと依存関係のインストール
+
+### poethepoet タスクランナーを使用（推奨）
+
+```bash
+# 初回セットアップ（依存関係同期 + DB更新）
+poe setup
+```
+
+### 手動での環境構築
 
 ```bash
 # 仮想環境の作成と依存関係の一括インストール
@@ -159,6 +175,21 @@ uv run pyright src           # 型チェック
 
 変更が他の機能に影響を与えていないことを確認するために、テストを実行します。
 
+### poethepoet を使用した実行（推奨）
+
+```bash
+# 全テスト実行
+poe test
+
+# ユニットテストのみ
+poe test-unit
+
+# カバレッジ付きテスト
+poe test-cov
+```
+
+### 従来のテスト実行方法
+
 ```bash
 # 全テストの実行
 uv run pytest
@@ -171,6 +202,26 @@ uv run pytest tests/test_specific.py
 ```
 
 ## 8. アプリケーションの実行
+
+### poethepoet を使用したアプリ実行（推奨）
+
+```bash
+# 通常実行
+poe app-run
+
+# 開発モード（ホットリロード）
+poe app-dev
+
+# Webブラウザで実行
+poe app-web
+
+# Webブラウザで開発モード
+poe app-web-dev
+```
+
+詳細なタスクコマンドについては[タスクランナーガイド](task_runner.md)を参照してください。
+
+### 従来のアプリ実行方法
 
 ```bash
 # デスクトップアプリとして起動

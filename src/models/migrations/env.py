@@ -10,6 +10,7 @@ from sqlalchemy import engine_from_config, pool
 
 from config import Base
 from models import (
+    memo,
     project,
     tag,
     task,
@@ -38,6 +39,7 @@ target_metadata = [
     project.Project.metadata,
     tag.Tag.metadata,
     task_tag.TaskTag.metadata,
+    memo.Memo.metadata,
 ]
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

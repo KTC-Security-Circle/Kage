@@ -9,10 +9,17 @@
 
 2. **リポジトリのフォーク**: このリポジトリをフォークします。
 
-3. **ブランチの作成**: `feature/機能名` や `fix/バグ修正内容` のような分かりやすい名前で新しいブランチを作成します。
+3. **ブランチの作成**: 新しいブランチを作成します。ブランチ名は[ブランチ命名規則](docs/branch_naming.md)に従ってください。
 
    ```bash
+   # 例: 新機能の場合
    git checkout -b feature/new-task-button
+   
+   # 例: バグ修正の場合
+   git checkout -b fix/textarea-overflow
+   
+   # 例: イシュー番号を含める場合
+   git checkout -b feature/123-task-filter
    ```
 
 4. **poethepoet のインストール**: グローバルに poethepoet をインストールします（未インストールの場合）。

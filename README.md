@@ -119,7 +119,9 @@ uv run flet run --web
 
 開発に参加する際は、以下のドキュメントを参照してください：
 
+- [**🚀 開発者向けクイックリファレンス**](.github/QUICK_REFERENCE.md) - 新規開発者向けの要点まとめ
 - [**コントリビューションガイド (CONTRIBUTING.md)**](CONTRIBUTING.md)
+- [**ブランチ命名規則**](docs/branch_naming.md) - ブランチ作成時の命名ルール
 - [**タスクランナーガイド**](docs/task_runner.md) - 開発効率化のための poe コマンド
 - [環境構築ガイド](docs/setup.md)
 - [アーキテクチャ設計ガイド](docs/architecture-design.md)

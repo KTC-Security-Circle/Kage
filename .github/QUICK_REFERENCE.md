@@ -44,10 +44,10 @@ poe test
 
 ## 📂 アーキテクチャ
 
-- `src/views/`: UI層（Flet）
+- `src/views/`: UI 層（Flet）
 - `src/logic/`: ビジネスロジック層
 - `src/models/`: データモデル層
-- `src/agents/`: AI/Agent層
+- `src/agents/`: AI/Agent 層
 
 ## 📖 詳細ドキュメント
 

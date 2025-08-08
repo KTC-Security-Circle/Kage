@@ -14,10 +14,10 @@
    ```bash
    # 例: 新機能の場合
    git checkout -b feature/new-task-button
-   
+
    # 例: バグ修正の場合
    git checkout -b fix/textarea-overflow
-   
+
    # 例: イシュー番号を含める場合
    git checkout -b feature/123-task-filter
    ```

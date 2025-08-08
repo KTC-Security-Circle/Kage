@@ -3,7 +3,7 @@ name = "kage"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
@@ -45,6 +45,7 @@ dev-dependencies = [
     "pre-commit>=4.2.0",
     "pyright>=1.1.400",
     "pytest>=8.4.0",
+    "pytest-cov>=6.2.1",
     "ruff>=0.11.0, <0.12",
 ]
 
@@ -147,6 +148,7 @@ ignore = [
     "RUF001",
     "RUF002",
     "RUF003",
+    "RUF022",
     "COM812",
     "DTZ005",
     "BLE001",
@@ -162,6 +164,7 @@ unfixable = [
     "S101",
     "N802",
     "ARG",
+    "SLF001",
 ]
 
 # logger-objects = ["src.library.logger.LOGGER"]
@@ -184,7 +187,7 @@ venv = ".venv"
 
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+pythonpath = ["src", "."]
 
 testpaths = ["tests"]
 python_files = "test_*.py"

@@ -1,8 +1,30 @@
-# アーキテクチャ設計ガイド - モデル層とロジック層
+# アーキテクチャ設計ガイド - クリーンアーキテクチャと GTD 基盤
 
 ## はじめに
 
-このドキュメントでは、Kage アプリケーションで採用している**モデル層**と**ロジック層**の設計思想について、Python 初学者向けに分かりやすく説明します。
+このドキュメントでは、Kage アプリケーションで採用している**クリーンアーキテクチャ**に基づく設計思想について、Python 初学者向けに分かりやすく説明します。本プロジェクトは、GTD（Getting Things Done）手法をベースとしたタスク管理システムとして、保守性・拡張性・テスタビリティを重視した設計になっています。
+
+## プロジェクト概要
+
+### 技術スタック（2025 年 8 月現在）
+
+- **UI フレームワーク**: Flet 0.27.6
+- **ORM**: SQLModel 0.0.24
+- **AI/Agent**: LangChain 0.3.26 + LangGraph 0.4.9
+- **パッケージ管理**: uv 0.7.3
+- **開発ツール**: Ruff, Pyright, pytest
+- **データベース**: SQLite（Alembic 対応）
+
+### GTD 基盤の実装
+
+Kage は以下の GTD 核心概念を実装しています：
+
+- **Inbox**: すべてのタスクの受け皿
+- **Next Action**: 次に取る具体的なアクション
+- **Waiting For**: 他者の対応待ち項目
+- **Someday/Maybe**: いつかやるかもしれない項目
+- **Projects**: 複数のアクションを伴う成果
+- **Delegated**: 委譲されたタスク
 
 ## なぜアーキテクチャが重要なのか？
 
@@ -11,28 +33,39 @@
 ```python
 # ❌ 悪い例：すべてが混在している
 import flet as ft
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, create_engine, SQLModel, Field
+import uuid
+from datetime import datetime
+
+# データベース、UI、ビジネスロジックがすべて混在
+class Task(SQLModel, table=True):
+    id: uuid.UUID = Field(primary_key=True)
+    title: str
+    completed: bool = False
 
 def main():
-    # データベース接続、UI作成、ビジネスロジックがすべて混在
     engine = create_engine("sqlite:///tasks.db")
 
     def on_add_task(e):
         # UIからデータを取得
         title = title_field.value
 
-        # バリデーション
+        # バリデーション（ビジネスロジック）
         if not title:
             show_error("タイトルを入力してください")
             return
 
-        # データベースに保存
+        if len(title) > 100:
+            show_error("タイトルは100文字以内で入力してください")
+            return
+
+        # データベースに直接保存（データアクセス）
         with Session(engine) as session:
-            task = Task(title=title)
+            task = Task(id=uuid.uuid4(), title=title)
             session.add(task)
             session.commit()
 
-        # UIを更新
+        # UIを更新（プレゼンテーション）
         refresh_task_list()
 
     # UIコンポーネント作成
@@ -42,236 +75,666 @@ def main():
 
 この書き方の問題点：
 
-- 一つの関数で多くの責任を負っている
-- テストが困難
-- 修正時に他の部分に影響が出やすい
-- コードの再利用ができない
+- **単一責任原則違反**: 一つの関数で多くの責任を負っている
+- **テストが困難**: データベース、UI、ビジネスロジックが密結合
+- **修正時の影響が大きい**: 一箇所の変更が他の部分に波及しやすい
+- **コードの再利用ができない**: 特定の UI に依存したロジック
+- **拡張が困難**: 新機能追加時に既存コードに大きな影響
 
-### 良い例：責任を分離した場合
-
-```python
-# ✅ 良い例：責任が分離されている
-
-# models/task.py - データ構造の定義
-class Task(SQLModel):
-    title: str
-    completed: bool = False
-
-# logic/task.py - ビジネスロジック
-class TaskService:
-    def create_task(self, title: str) -> TaskRead:
-        # バリデーションとタスク作成のロジック
-        pass
-
-# ui/task_view.py - UI表示
-class TaskView:
-    def __init__(self, task_service: TaskService):
-        self.task_service = task_service
-
-    def on_add_task(self, e):
-        # UIからサービス層を呼び出すだけ
-        self.task_service.create_task(title)
-```
-
-## レイヤー構造の概要
-
-本プロジェクトは、関心の分離を徹底するためのレイヤードアーキテクチャを採用しています。
-
-```plain text
-┌─────────────────┐
-│      Views      │ (UI Layer)
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│      Logic      │ (Business Logic Layer)
-└────────┬───┬────┘
-         │   │
-┌────────▼─┐ │ ┌──────────┐
-│  Models  │ │ │  Agents  │ (AI Agent Layer)
-│ (Data)   │ │ │          │
-└──────────┘ │ └─────┬────┘
-             │       │
-             └───────► Tools (e.g., Logic services, APIs)
-```
-
-- **Views**: ユーザーインターフェースを担当します。ユーザーからの入力を受け取り、`Logic`層に処理を依頼します。
-- **Logic**: アプリケーションの中核となるビジネスロジックを担当します。`Models`を通じてデータを操作し、必要に応じて複雑なタスクを`Agents`に委譲します。
-- **Agents**: LLMを利用した自律的なタスク実行を担当します。`Logic`層から呼び出され、与えられた目標を達成するためにツール（他の`Logic`サービスや外部API）を使用します。
-- **Models**: データベースのテーブル定義、データの永続化、およびデータアクセス（リポジトリパターン）を担当します。
-
-## モデル層（Model Layer）の役割
-
-### 1. データ構造の定義
-
-モデル層は「データがどのような形をしているか」を定義します。
+### 良い例：クリーンアーキテクチャに基づく責任分離
 
 ```python
-# models/task.py
+# ✅ 良い例：責任が明確に分離されている
+
+# models/task.py - データ構造とGTDの実装
+from enum import Enum
+from sqlmodel import SQLModel, Field
+import uuid
+
+class TaskStatus(str, Enum):
+    """GTDシステムに基づくタスクステータス"""
+    INBOX = "inbox"
+    NEXT_ACTION = "next_action"
+    WAITING_FOR = "waiting_for"
+    SOMEDAY_MAYBE = "someday_maybe"
+    DELEGATED = "delegated"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
 class TaskBase(SQLModel):
-    """タスクの基本的な属性を定義"""
-    title: str = Field(index=True)  # タスクのタイトル
-    description: str = Field(default="")  # 説明
-    completed: bool = Field(default=False)  # 完了状態
-    created_at: datetime = Field(default_factory=datetime.now)  # 作成日時
-```
+    """タスクの基本モデル"""
+    title: str = Field(index=True)
+    description: str = Field(default="")
+    status: TaskStatus = Field(default=TaskStatus.INBOX, index=True)
 
-### 2. 異なる用途に応じたモデルの提供
-
-```python
 class TaskCreate(TaskBase):
     """新規作成時に使用（IDは不要）"""
     pass
 
 class TaskRead(TaskBase):
     """読み取り時に使用（IDが必要）"""
-    id: int
+    id: uuid.UUID
 
+# logic/services/task_service.py - ビジネスロジック
+class TaskService:
+    def __init__(self, repository: TaskRepository):
+        self.repository = repository
+
+    def create_task(self, command: TaskCreate) -> TaskRead:
+        """GTDルールに従ってタスクを作成"""
+        if not command.title.strip():
+            raise TaskServiceCreateError("タスクのタイトルは必須です")
+
+        return self.repository.create(command)
+
+# logic/application/task_application_service.py - アプリケーションサービス
+class TaskApplicationService:
+    """View層からSession管理を分離"""
+
+    def create_task(self, command: CreateTaskCommand) -> TaskRead:
+        with SqlModelUnitOfWork() as uow:
+            service_factory = create_service_factory(uow.session)
+            task_service = service_factory.create_task_service()
+            return task_service.create_task(command.to_create_model())
+
+# views/task/view.py - UI表示
+class TaskView(BaseView):
+    def __init__(self):
+        self.task_app_service = get_application_service_container().get_task_application_service()
+
+    def on_add_task(self, e):
+        """UIからアプリケーションサービスを呼び出すだけ"""
+        try:
+            command = CreateTaskCommand(title=self.title_field.value)
+            task = self.task_app_service.create_task(command)
+            self.refresh_task_list()
+        except TaskServiceCreateError as e:
+            self.show_error(str(e))
+```
+
+## クリーンアーキテクチャとレイヤー構造
+
+本プロジェクトは、ロバート・C・マーティンのクリーンアーキテクチャ原則に基づき、関心事の分離を徹底したレイヤードアーキテクチャを採用しています。
+
+```text
+┌─────────────────────────────────┐
+│           Views Layer           │ 🎨 UIとユーザーインタラクション
+│         (src/views/)            │
+└──────────────┬──────────────────┘
+               │ Commands/Events
+┌──────────────▼──────────────────┐
+│       Application Layer         │ 🔄 セッション管理とワークフロー調整
+│      (src/logic/application/)   │
+└──────────────┬──────────────────┘
+               │ Business Logic
+┌──────────────▼──────────────────┐
+│        Services Layer           │ 🧠 ビジネスルールとGTDロジック
+│       (src/logic/services/)     │
+└────────┬──────────┬─────────────┘
+         │          │
+┌────────▼────┐ ┌──▼─────────────┐
+│   Models    │ │     Agents     │ 🤖 LLM/AI自動化
+│ (src/models)│ │ (src/agents/)  │
+└─────────────┘ └────────────────┘
+         │
+┌────────▼──────────────────┐
+│    Infrastructure        │ 💾 データ永続化とリポジトリ
+│ (src/logic/repositories/) │
+└───────────────────────────┘
+```
+
+### 各層の責務
+
+- **Views Layer**: Flet を使用した UI 表示、ユーザー入力処理、Application Service の呼び出し
+- **Application Layer**: トランザクション境界管理、複数サービスの調整、セッション管理
+- **Services Layer**: GTD ビジネスルール、ドメインロジック、バリデーション
+- **Models Layer**: エンティティ定義、データ構造、型安全性
+- **Agents Layer**: LangChain/LangGraph による AI 自動化、複雑なタスクの委譲
+- **Infrastructure Layer**: データアクセス、リポジトリパターン、外部システム連携
+
+## モデル層（Model Layer）の詳細設計
+
+### 1. GTD ベースのデータ構造定義
+
+モデル層では、GTD 手法に基づいたタスク管理の概念をデータ構造として表現します。
+
+```python
+# models/task.py - 実際のプロジェクト実装例
+from enum import Enum
+from datetime import date
+from sqlmodel import Field, SQLModel
+import uuid
+
+class TaskStatus(str, Enum):
+    """GTDシステムに基づくタスクステータス"""
+    INBOX = "inbox"                # 受信箱（未分類）
+    NEXT_ACTION = "next_action"    # 次のアクション
+    WAITING_FOR = "waiting_for"    # 他者の対応待ち
+    SOMEDAY_MAYBE = "someday_maybe" # いつかやるかもしれない
+    DELEGATED = "delegated"        # 委譲済み
+    COMPLETED = "completed"        # 完了
+    CANCELLED = "cancelled"        # キャンセル
+
+class TaskBase(SQLModel):
+    """タスクの基本属性を定義"""
+    project_id: uuid.UUID | None = Field(default=None, foreign_key="project.id", index=True)
+    parent_id: uuid.UUID | None = Field(default=None, foreign_key="task.id", index=True)
+    title: str = Field(index=True)  # 検索用インデックス
+    description: str = Field(default="")
+    status: TaskStatus = Field(default=TaskStatus.INBOX, index=True)  # ステータス検索用
+    due_date: date | None = Field(default=None)  # 締切日
+```
+
+### 2. CQRS 対応の型安全なモデル設計
+
+Command Query Responsibility Segregation (CQRS) パターンに基づき、用途別にモデルを分離：
+
+```python
+# 作成用モデル（IDは不要）
+class TaskCreate(TaskBase):
+    """新規タスク作成時に使用"""
+    pass
+
+# 読み取り用モデル（IDが必要）
+class TaskRead(TaskBase):
+    """タスク取得・表示時に使用"""
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+# 更新用モデル（変更フィールドのみ）
 class TaskUpdate(SQLModel):
-    """更新時に使用（変更する項目のみ）"""
+    """タスク更新時に使用（部分更新対応）"""
     title: str | None = None
     description: str | None = None
-    completed: bool | None = None
+    status: TaskStatus | None = None
+    due_date: date | None = None
+
+# データベーステーブル定義
+class Task(TaskBase, table=True):
+    """実際のデータベーステーブル"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 ```
 
-### なぜ複数のモデルを作るの？
-
-#### 理由 1: 用途に応じた制約
-
-- 新規作成時には ID は不要（データベースが自動生成）
-- 読み取り時には ID が必要（どのタスクかを特定するため）
-- 更新時には変更する項目のみを受け取る
-
-#### 理由 2: セキュリティ
-
-- API で受け取るデータと内部で使うデータを分離
-- 不正なデータの侵入を防ぐ
-
-### 3. データの整合性保証
-
-- タスク作成時のクラスと分離することで、IDチェックを行う関数を定義がいらなくなる
-
-## ロジック層（Logic Layer）の役割
-
-### 1. ビジネスルールの実装
-
-ロジック層は「アプリケーションの仕様」を実装します。
+### 3. 関連エンティティとの連携
 
 ```python
-class TaskService:
-    def create_new_task(self, title: str, description: str = "") -> TaskRead:
-        """新しいタスクを作成"""
-        # ビジネスルール：タイトルは必須
-        if not title.strip():
-            raise ValueError("タスクのタイトルは必須です")
+# models/project.py - プロジェクト管理
+class Project(SQLModel, table=True):
+    """GTDのプロジェクト概念を実装"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(index=True)
+    description: str = Field(default="")
+    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
 
-        # データベースへの保存（リポジトリ層に委譲）
-        created_task = self.repository.create_task(
-            TaskCreate(title=title, description=description)
+# models/tag.py - タグシステム
+class Tag(SQLModel, table=True):
+    """コンテキストとタグ管理"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(unique=True, index=True)
+    color: str = Field(default="#808080")
+
+# models/task_tag.py - 多対多関係
+class TaskTag(SQLModel, table=True):
+    """タスクとタグの関係テーブル"""
+    task_id: uuid.UUID = Field(foreign_key="task.id", primary_key=True)
+    tag_id: uuid.UUID = Field(foreign_key="tag.id", primary_key=True)
+```
+
+### なぜ複数のモデルを作るのか？
+
+#### 理由 1: 型安全性の確保
+
+```python
+# ❌ 悪い例：単一モデルでの曖昧な使用
+def create_task(task: Task) -> Task:  # IDが含まれてしまう可能性
+    pass
+
+# ✅ 良い例：意図が明確
+def create_task(task_data: TaskCreate) -> TaskRead:  # IDは不要、戻り値はIDを含む
+    pass
+```
+
+#### 理由 2: セキュリティとバリデーション
+
+```python
+# API経由での不正なID指定を防止
+@app.post("/api/tasks")
+def create_task_endpoint(task: TaskCreate):  # IDフィールドが存在しない
+    return task_service.create_task(task)
+```
+
+#### 理由 3: 部分更新の最適化
+
+```python
+# 必要な項目のみを更新
+def update_task_status(task_id: uuid.UUID, status: TaskStatus) -> TaskRead:
+    update_data = TaskUpdate(status=status)  # titleやdescriptionは変更しない
+    return repository.update(task_id, update_data)
+```
+
+## サービス層（Services Layer）の詳細設計
+
+### 1. GTD ビジネスルールの実装
+
+サービス層は「GTD の原則とアプリケーションの仕様」を実装します。
+
+```python
+# logic/services/task_service.py - 実際のプロジェクト実装
+class TaskService(ServiceBase):
+    """タスクのビジネスロジックを管理"""
+
+    def __init__(self, task_repo: TaskRepository, project_repo: ProjectRepository):
+        self.task_repo = task_repo
+        self.project_repo = project_repo
+
+    def create_task(self, task_data: TaskCreate) -> TaskRead:
+        """GTDルールに従ってタスクを作成"""
+        # ビジネスルール1: タイトルは必須
+        if not task_data.title.strip():
+            raise TaskServiceCreateError("タスクのタイトルは必須です")
+
+        # ビジネスルール2: プロジェクトの存在確認
+        if task_data.project_id:
+            project = self.project_repo.get_by_id(task_data.project_id)
+            if not project:
+                raise TaskServiceCreateError("指定されたプロジェクトが存在しません")
+
+        # ビジネスルール3: 新規タスクは自動的にInboxに配置（GTD原則）
+        if not task_data.status:
+            task_data.status = TaskStatus.INBOX
+
+        return self.task_repo.create(task_data)
+
+    def move_to_next_action(self, task_id: uuid.UUID) -> TaskRead:
+        """タスクをNext Actionに移動（GTDワークフロー）"""
+        task = self.task_repo.get_by_id(task_id)
+        if not task:
+            raise TaskServiceError("タスクが見つかりません")
+
+        # GTDルール: Inboxからのみ Next Action に移動可能
+        if task.status != TaskStatus.INBOX:
+            raise TaskServiceError("InboxのタスクのみNext Actionに移動できます")
+
+        update_data = TaskUpdate(status=TaskStatus.NEXT_ACTION)
+        return self.task_repo.update(task_id, update_data)
+```
+
+### 2. 複雑な GTD ワークフローの実装
+
+```python
+class TaskService(ServiceBase):
+    def process_inbox_item(self, task_id: uuid.UUID, decision: InboxDecision) -> TaskRead:
+        """Inboxアイテムの処理（GTDの核心プロセス）"""
+        task = self.task_repo.get_by_id(task_id)
+
+        match decision.action:
+            case InboxAction.DELETE:
+                # 不要なタスクを削除
+                self.task_repo.delete(task_id)
+                return None
+
+            case InboxAction.DELEGATE:
+                # タスクを委譲
+                update_data = TaskUpdate(
+                    status=TaskStatus.DELEGATED,
+                    description=f"Delegated to: {decision.delegate_to}"
+                )
+                return self.task_repo.update(task_id, update_data)
+
+            case InboxAction.DO_NOW:
+                # 2分以内で完了可能なタスクはすぐに実行
+                update_data = TaskUpdate(status=TaskStatus.COMPLETED)
+                return self.task_repo.update(task_id, update_data)
+
+            case InboxAction.SCHEDULE:
+                # 特定の日時に実行するタスク
+                update_data = TaskUpdate(
+                    status=TaskStatus.NEXT_ACTION,
+                    due_date=decision.scheduled_date
+                )
+                return self.task_repo.update(task_id, update_data)
+
+            case InboxAction.SOMEDAY_MAYBE:
+                # いつかやるかもしれないタスク
+                update_data = TaskUpdate(status=TaskStatus.SOMEDAY_MAYBE)
+                return self.task_repo.update(task_id, update_data)
+
+    def get_next_actions_by_context(self, context_tags: list[str]) -> list[TaskRead]:
+        """コンテキスト別のNext Action取得（GTD実践）"""
+        return self.task_repo.get_by_status_and_tags(
+            TaskStatus.NEXT_ACTION,
+            context_tags
+        )
+```
+
+### 3. Repository パターンによるデータアクセス分離
+
+```python
+# logic/repositories/task.py - 実際のプロジェクト実装
+class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
+    """タスクのデータアクセスを担当"""
+
+    def get_by_status_and_tags(self, status: TaskStatus, tag_names: list[str]) -> list[Task]:
+        """ステータスとタグでタスクを検索（GTD実践用）"""
+        stmt = (
+            select(Task)
+            .where(Task.status == status)
+            .join(TaskTag)
+            .join(Tag)
+            .where(Tag.name.in_(tag_names))
+        )
+        return self.session.exec(stmt).all()
+
+    def get_overdue_tasks(self) -> list[Task]:
+        """期限切れタスクの取得"""
+        today = date.today()
+        stmt = select(Task).where(
+            and_(
+                Task.due_date < today,
+                Task.status.in_([TaskStatus.NEXT_ACTION, TaskStatus.WAITING_FOR])
+            )
+        )
+        return self.session.exec(stmt).all()
+
+    def get_tasks_by_project(self, project_id: uuid.UUID) -> list[Task]:
+        """プロジェクト別タスク取得"""
+        stmt = select(Task).where(Task.project_id == project_id)
+        return self.session.exec(stmt).all()
+```
+
+## アプリケーション層（Application Layer）の設計
+
+アプリケーション層は、ビューからビジネスロジックを完全に分離し、トランザクション境界とセッション管理を担当します。
+
+### 1. Application Service パターン
+
+```python
+# logic/application/task_application_service.py - 実際のプロジェクト実装
+class TaskApplicationService(BaseApplicationService):
+    """View層からSession管理を分離し、ビジネスロジックを調整"""
+
+    def create_task(self, command: CreateTaskCommand) -> TaskRead:
+        """タスク作成のワークフロー調整"""
+        with SqlModelUnitOfWork() as uow:
+            # サービスファクトリでDIコンテナから取得
+            service_factory = create_service_factory(uow.session)
+            task_service = service_factory.create_task_service()
+
+            # ビジネスロジックの実行
+            task = task_service.create_task(command.to_create_model())
+
+            # トランザクションコミットは UnitOfWork が管理
+            return task
+
+    def process_gtd_inbox_review(self, decisions: list[InboxDecision]) -> list[TaskRead]:
+        """GTD Inbox Review の一括処理"""
+        results = []
+
+        # 単一トランザクションで複数タスクを処理
+        with SqlModelUnitOfWork() as uow:
+            service_factory = create_service_factory(uow.session)
+            task_service = service_factory.create_task_service()
+
+            for decision in decisions:
+                try:
+                    result = task_service.process_inbox_item(
+                        decision.task_id,
+                        decision
+                    )
+                    results.append(result)
+                    logger.info(f"Processed task {decision.task_id}: {decision.action}")
+                except TaskServiceError as e:
+                    # エラーが発生した場合、全体をロールバック
+                    logger.error(f"Failed to process {decision.task_id}: {e}")
+                    raise
+
+        return results
+```
+
+### 2. Command/Query パターンの実装
+
+```python
+# logic/commands/task_commands.py - コマンドパターン
+@dataclass
+class CreateTaskCommand:
+    """タスク作成コマンド"""
+    title: str
+    description: str = ""
+    project_id: uuid.UUID | None = None
+    due_date: date | None = None
+
+    def to_create_model(self) -> TaskCreate:
+        """ドメインモデルに変換"""
+        return TaskCreate(
+            title=self.title,
+            description=self.description,
+            project_id=self.project_id,
+            due_date=self.due_date
         )
 
-        # 読み取り用モデルに変換して返す
-        return TaskRead.model_validate(created_task)
+# logic/queries/task_queries.py - クエリパターン
+@dataclass
+class GetTasksByStatusQuery:
+    """ステータス別タスク取得クエリ"""
+    status: TaskStatus
+    limit: int = 100
+    offset: int = 0
+
+class TaskQuery:
+    """タスククエリサービス"""
+
+    def get_tasks_by_status(self, query: GetTasksByStatusQuery) -> list[TaskRead]:
+        with SqlModelUnitOfWork() as uow:
+            repo = TaskRepository(Task, uow.session)
+            tasks = repo.get_by_status(query.status, query.limit, query.offset)
+            return [TaskRead.model_validate(task) for task in tasks]
 ```
 
-### 2. 複雑な操作の組み合わせ
+### 3. 依存性注入とファクトリパターン
 
 ```python
-def toggle_task_status(self, task_id: int) -> TaskRead | None:
-    """タスクの完了状態を切り替え"""
-    # 1. タスクを取得
-    task = self.repository.get_task_by_id(task_id)
-    if not task:
-        return None
+# logic/container.py - DI コンテナの実装
+class ServiceContainer:
+    """サービスコンテナ（Dependency Injection）"""
 
-    # 2. 状態を反転
-    task.completed = not task.completed
+    def __init__(self) -> None:
+        self._task_app_service: TaskApplicationService | None = None
+        self._project_app_service: ProjectApplicationService | None = None
+        self._tag_app_service: TagApplicationService | None = None
 
-    # 3. 更新して保存
-    updated_task = self.repository.update_task(task, TaskUpdate())
+    def get_task_application_service(self) -> TaskApplicationService:
+        """タスクApplication Serviceを取得（シングルトン）"""
+        if self._task_app_service is None:
+            self._task_app_service = TaskApplicationService()
+        return self._task_app_service
 
-    # 4. 結果を返す
-    return TaskRead.model_validate(updated_task)
+# logic/factory.py - ファクトリパターン
+class ServiceFactory:
+    """サービスファクトリ（Session注入）"""
+
+    def __init__(self, repository_factory: RepositoryFactory):
+        self.repository_factory = repository_factory
+
+    def create_task_service(self) -> TaskService:
+        """TaskServiceを生成"""
+        task_repo = self.repository_factory.create_task_repository()
+        project_repo = self.repository_factory.create_project_repository()
+        return TaskService(task_repo, project_repo)
+
+# 使用例
+def get_application_service_container() -> ServiceContainer:
+    """View層で使用するDIコンテナ取得"""
+    return service_container  # グローバルシングルトン
 ```
 
-### 3. Repository パターンの採用
-
-データベースアクセスを Repository クラスに分離：
+### 4. Unit of Work パターンによるトランザクション管理
 
 ```python
-class TaskRepository:
-    """データベースアクセスを担当"""
+# logic/unit_of_work.py - トランザクション境界管理
+class SqlModelUnitOfWork:
+    """SQLModel用のUnit of Workパターン実装"""
 
-    def create_task(self, task_data: TaskCreate) -> Task:
-        """データベースにタスクを保存"""
-        db_task = Task.model_validate(task_data)
-        with Session(self.engine) as session:
-            session.add(db_task)
-            session.commit()
-            session.refresh(db_task)
-        return db_task
-
-    def get_tasks_by_completed(self) -> list[Task]:
-        """完了済みタスクを取得"""
-        stmt = select(Task).where(Task.completed is True)
-        return self._get_tasks_by_stmt(stmt)
-```
-
-### なぜ Repository パターンを使うの？
-
-#### 理由 1: データベースの種類を変更しやすい
-
-- SQLite から PostgreSQL に変更する場合
-- Repository の実装だけを変更すればよい
-
-#### 理由 2: テストしやすい
-
-```python
-# テスト用のモックRepositoryを作成可能
-class MockTaskRepository:
     def __init__(self):
-        self.tasks = []
+        self.session = Session(get_engine())
 
-    def create_task(self, task_data: TaskCreate) -> Task:
-        # メモリ上でタスクを管理
-        task = Task(**task_data.model_dump(), id=len(self.tasks) + 1)
-        self.tasks.append(task)
-        return task
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.session.commit()  # 正常終了時はコミット
+        else:
+            self.session.rollback()  # 例外発生時はロールバック
+        self.session.close()
+
+    def commit(self):
+        """明示的なコミット"""
+        self.session.commit()
+
+    def rollback(self):
+        """明示的なロールバック"""
+        self.session.rollback()
 ```
 
-## Agent層（Agent Layer）の役割
+## Agent 層（Agent Layer）と AI 統合
 
-Agent層は、`Logic`層だけでは実現が難しい、複雑な判断や複数の手順を要するタスクを実行します。`Logic`層は、特定のタスクをAgent層に委譲します。
+Agent 層は、LangChain/LangGraph を使用して LLM ベースの自動化と複雑な判断を実装します。
 
-- **責務**: LLMを活用した自律的な問題解決、複数ツールの連携、状態の管理。
-- **実装**: `LangChain`と`LangGraph`を使用して実装します。
-- **詳細**: [Agent層 設計ガイド](agents_guide.md)を参照してください。
-
-## UI 補助クラスの設計
-
-UI に関連する処理も分離：
+### 1. GTD 自動化エージェント
 
 ```python
-class TaskUIHelper:
-    """UI表示のための補助機能"""
+# agents/gtd_processor.py - GTD処理の自動化
+class GTDProcessorAgent:
+    """GTD処理を自動化するエージェント"""
 
-    @staticmethod
-    def format_task_title(task: TaskRead) -> str:
-        """タスクタイトルを表示用にフォーマット"""
-        if task.completed:
-            return f"✓ {task.title}"  # 完了済み
-        return f"○ {task.title}"     # 未完了
+    def __init__(self):
+        self.llm = ChatGoogleGenerativeAI(model="gemini-pro")
+        self.task_service_tool = TaskServiceTool()  # Services層のツール化
 
-    @staticmethod
-    def validate_task_input(title: str, description: str = "") -> tuple[bool, str]:
-        """入力値の検証"""
-        if not title or not title.strip():
-            return False, "タスクのタイトルを入力してください"
+    def auto_categorize_inbox_item(self, task_description: str) -> InboxDecision:
+        """Inboxアイテムの自動分類"""
+        prompt = f"""
+        以下のタスクをGTDの原則に従って分類してください：
 
-        if len(title.strip()) > TASK_TITLE_MAX_LENGTH:
-            return False, "タスクのタイトルは100文字以内で入力してください"
+        タスク: {task_description}
 
-        return True, ""
+        分類選択肢:
+        1. DELETE - 不要なタスク
+        2. DO_NOW - 2分以内で完了可能
+        3. DELEGATE - 他者に委譲すべき
+        4. SCHEDULE - 特定日時に実行
+        5. SOMEDAY_MAYBE - いつかやるかもしれない
+
+        理由と共に回答してください。
+        """
+
+        response = self.llm.invoke(prompt)
+        return self._parse_categorization_response(response.content)
+
+# agents/task_automation.py - タスク自動化
+class TaskAutomationAgent:
+    """タスクの自動処理エージェント"""
+
+    def suggest_next_actions(self, context: str, available_time: int) -> list[TaskRead]:
+        """現在のコンテキストと利用可能時間に基づく推奨アクション"""
+        # LangGraphで複雑なワークフローを実装
+        workflow = StateGraph(TaskSuggestionState)
+
+        workflow.add_node("analyze_context", self._analyze_context)
+        workflow.add_node("filter_by_time", self._filter_by_available_time)
+        workflow.add_node("prioritize_tasks", self._prioritize_tasks)
+
+        workflow.add_edge("analyze_context", "filter_by_time")
+        workflow.add_edge("filter_by_time", "prioritize_tasks")
+
+        app = workflow.compile()
+
+        initial_state = TaskSuggestionState(
+            context=context,
+            available_time=available_time
+        )
+
+        result = app.invoke(initial_state)
+        return result["suggested_tasks"]
 ```
+
+### 2. LangGraph による複雑なワークフロー
+
+```python
+# agents/workflows/weekly_review.py - 週次レビューの自動化
+class WeeklyReviewWorkflow:
+    """GTD週次レビューの自動化ワークフロー"""
+
+    def create_review_workflow(self) -> StateGraph:
+        """週次レビューのワークフローを構築"""
+        workflow = StateGraph(WeeklyReviewState)
+
+        # ノード定義
+        workflow.add_node("collect_completed_tasks", self._collect_completed_tasks)
+        workflow.add_node("review_project_progress", self._review_project_progress)
+        workflow.add_node("update_someday_maybe", self._update_someday_maybe)
+        workflow.add_node("plan_next_week", self._plan_next_week)
+        workflow.add_node("generate_review_report", self._generate_review_report)
+
+        # エッジ定義（実行順序）
+        workflow.add_edge(START, "collect_completed_tasks")
+        workflow.add_edge("collect_completed_tasks", "review_project_progress")
+        workflow.add_edge("review_project_progress", "update_someday_maybe")
+        workflow.add_edge("update_someday_maybe", "plan_next_week")
+        workflow.add_edge("plan_next_week", "generate_review_report")
+        workflow.add_edge("generate_review_report", END)
+
+        return workflow.compile()
+
+    def _collect_completed_tasks(self, state: WeeklyReviewState) -> dict:
+        """今週完了したタスクを収集"""
+        task_service = self.service_container.get_task_application_service()
+        completed_tasks = task_service.get_completed_tasks_this_week()
+
+        return {
+            "completed_tasks": completed_tasks,
+            "completion_stats": self._calculate_completion_stats(completed_tasks)
+        }
+```
+
+### 3. Agent-Service 連携パターン
+
+```python
+# agents/tools/task_service_tool.py - Services層のツール化
+class TaskServiceTool(BaseTool):
+    """TaskServiceをLangChainツールとして公開"""
+
+    name = "task_service"
+    description = "GTDタスク管理システムとの連携"
+
+    def _run(self, action: str, **kwargs) -> str:
+        """エージェントからサービス層を呼び出し"""
+        task_app_service = get_application_service_container().get_task_application_service()
+
+        match action:
+            case "create_task":
+                command = CreateTaskCommand(**kwargs)
+                task = task_app_service.create_task(command)
+                return f"タスクを作成しました: {task.title}"
+
+            case "get_next_actions":
+                context = kwargs.get("context", [])
+                tasks = task_app_service.get_next_actions_by_context(context)
+                return f"Next Actions: {[task.title for task in tasks]}"
+
+            case "complete_task":
+                task_id = kwargs["task_id"]
+                task = task_app_service.complete_task(task_id)
+                return f"タスクを完了しました: {task.title}"
+```
+
+- **責務**: LLM を活用した自律的な問題解決、GTD ワークフローの自動化、複数サービスの連携
+- **実装**: `LangChain 0.3.26`と`LangGraph 0.4.9`を使用した状態管理型ワークフロー
+- **連携**: Services 層をツール化してエージェントから利用
+- **詳細**: [Agent 層 設計ガイド](agents_guide.md)を参照してください
 
 ## 設計の利点
 
@@ -282,64 +745,390 @@ class TaskUIHelper:
 
 ### 2. テストしやすさ
 
-```python
+````python
 # ビジネスロジックを単独でテスト可能
-def test_create_task_with_empty_title():
-    repository = MockTaskRepository()
-    service = TaskService(repository)
+## Views層（View Layer）- Flet UI
 
-    with pytest.raises(ValueError, match="タスクのタイトルは必須です"):
-        service.create_new_task("")
+Views層は、Fletを使用してクロスプラットフォーム対応のモダンなUIを提供します。
+
+### 1. ビューの階層構造
+
+```python
+# views/base.py - ベースビュークラス
+class BaseView(ABC):
+    """全ビューの基底クラス"""
+
+    def __init__(self, page: ft.Page, service_container: ServiceContainer):
+        self.page = page
+        self.service_container = service_container
+        self._content: ft.Control | None = None
+
+    @abstractmethod
+    def build(self) -> ft.Control:
+        """ビューのUIを構築"""
+        pass
+
+    @property
+    def content(self) -> ft.Control:
+        """ビューのコンテンツを取得（遅延構築）"""
+        if self._content is None:
+            self._content = self.build()
+        return self._content
+
+    def refresh(self) -> None:
+        """ビューを再構築"""
+        self._content = None
+        self.page.update()
+
+# views/main_view.py - メインビュー
+class MainView(BaseView):
+    """アプリケーションのメインビュー"""
+
+    def __init__(self, page: ft.Page, service_container: ServiceContainer):
+        super().__init__(page, service_container)
+        self.task_list_view = TaskListView(page, service_container)
+        self.inbox_view = InboxView(page, service_container)
+        self.project_view = ProjectView(page, service_container)
+
+    def build(self) -> ft.Control:
+        """メインレイアウトを構築"""
+        return ft.Container(
+            content=ft.Row([
+                # サイドバー
+                ft.Container(
+                    content=self._build_sidebar(),
+                    width=200,
+                    bgcolor=ft.colors.SURFACE_VARIANT
+                ),
+                # メインコンテンツエリア
+                ft.Container(
+                    content=self._build_main_content(),
+                    expand=True
+                )
+            ]),
+            expand=True
+        )
+
+    def _build_sidebar(self) -> ft.Control:
+        """サイドバーメニューを構築"""
+        return ft.Column([
+            ft.TextButton("📥 Inbox", on_click=self._on_inbox_click),
+            ft.TextButton("⚡ Next Actions", on_click=self._on_next_actions_click),
+            ft.TextButton("📋 Projects", on_click=self._on_projects_click),
+            ft.TextButton("🔍 Contexts", on_click=self._on_contexts_click),
+            ft.TextButton("⏰ Scheduled", on_click=self._on_scheduled_click),
+            ft.TextButton("🤔 Someday/Maybe", on_click=self._on_someday_click),
+        ])
+````
+
+### 2. GTD 特化コンポーネント
+
+```python
+# views/components/task_component.py - タスクコンポーネント
+class TaskComponent(ft.UserControl):
+    """GTDタスクを表示するコンポーネント"""
+
+    def __init__(self, task: TaskRead, on_complete: Callable[[str], None] = None):
+        super().__init__()
+        self.task = task
+        self.on_complete = on_complete
+
+    def build(self) -> ft.Control:
+        """タスクカードのUIを構築"""
+        # GTD分類による色分け
+        status_color = self._get_status_color(self.task.status)
+
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Checkbox(
+                            value=self.task.status == TaskStatus.DONE,
+                            on_change=self._on_checkbox_change
+                        ),
+                        ft.Text(
+                            self.task.title,
+                            style=ft.TextStyle(
+                                decoration=ft.TextDecoration.LINE_THROUGH
+                                if self.task.status == TaskStatus.DONE
+                                else None
+                            ),
+                            expand=True
+                        ),
+                        self._build_status_chip()
+                    ]),
+                    if self.task.description:
+                        ft.Text(
+                            self.task.description,
+                            size=12,
+                            color=ft.colors.ON_SURFACE_VARIANT
+                        ),
+                    self._build_metadata_row()
+                ]),
+                padding=ft.padding.all(16)
+            ),
+            surface_tint_color=status_color
+        )
+
+    def _get_status_color(self, status: TaskStatus) -> str:
+        """GTDステータスに応じた色を取得"""
+        color_map = {
+            TaskStatus.INBOX: ft.colors.ORANGE,
+            TaskStatus.NEXT_ACTION: ft.colors.GREEN,
+            TaskStatus.WAITING: ft.colors.YELLOW,
+            TaskStatus.SCHEDULED: ft.colors.BLUE,
+            TaskStatus.SOMEDAY_MAYBE: ft.colors.PURPLE,
+            TaskStatus.DONE: ft.colors.GREY,
+        }
+        return color_map.get(status, ft.colors.SURFACE)
+
+# views/components/quick_capture.py - クイックキャプチャー
+class QuickCaptureComponent(ft.UserControl):
+    """GTDクイックキャプチャー（Inbox追加）"""
+
+    def __init__(self, task_service: TaskApplicationService):
+        super().__init__()
+        self.task_service = task_service
+        self.text_field = ft.TextField(
+            label="何をしますか？",
+            hint_text="思いついたことを何でも入力してください",
+            on_submit=self._on_submit,
+            expand=True
+        )
+
+    def build(self) -> ft.Control:
+        return ft.Row([
+            self.text_field,
+            ft.IconButton(
+                icon=ft.icons.ADD,
+                tooltip="Inboxに追加",
+                on_click=self._on_submit
+            )
+        ])
+
+    def _on_submit(self, e=None):
+        """Inboxアイテムを作成"""
+        if not self.text_field.value:
+            return
+
+        try:
+            command = CreateTaskCommand(
+                title=self.text_field.value,
+                status=TaskStatus.INBOX
+            )
+            self.task_service.create_task(command)
+
+            # 成功フィードバック
+            self.page.show_snack_bar(
+                ft.SnackBar(content=ft.Text("Inboxに追加しました"))
+            )
+            self.text_field.value = ""
+            self.text_field.update()
+
+        except Exception as e:
+            logger.exception("Inboxアイテム作成エラー")
+            self.page.show_snack_bar(
+                ft.SnackBar(
+                    content=ft.Text(f"エラー: {str(e)}"),
+                    bgcolor=ft.colors.ERROR
+                )
+            )
 ```
 
-### 3. 再利用性
+### 3. ルーティングとナビゲーション
 
-- サービス層は CLI アプリや Web アプリでも使用可能
-- モデルは他のプロジェクトでも流用可能
+```python
+# router.py - ビュールーティング
+class ViewRouter:
+    """ビュー間のナビゲーション管理"""
 
-### 4. 保守性
+    def __init__(self, page: ft.Page, service_container: ServiceContainer):
+        self.page = page
+        self.service_container = service_container
+        self.views: dict[str, BaseView] = {}
+        self.current_view: str = "main"
 
-- 機能追加時に適切な場所にコードを配置
-- バグ修正時に影響範囲を特定しやすい
+    def navigate_to(self, view_name: str, **kwargs) -> None:
+        """指定されたビューに遷移"""
+        if view_name not in self.views:
+            self.views[view_name] = self._create_view(view_name)
+
+        view = self.views[view_name]
+        self.page.clean()
+        self.page.add(view.content)
+        self.current_view = view_name
+        self.page.update()
+
+    def _create_view(self, view_name: str) -> BaseView:
+        """ビューのファクトリメソッド"""
+        view_factories = {
+            "main": lambda: MainView(self.page, self.service_container),
+            "inbox": lambda: InboxView(self.page, self.service_container),
+            "projects": lambda: ProjectView(self.page, self.service_container),
+            "contexts": lambda: ContextView(self.page, self.service_container),
+        }
+
+        factory = view_factories.get(view_name)
+        if not factory:
+            raise ValueError(f"Unknown view: {view_name}")
+
+        return factory()
+```
+
+- **責務**: ユーザーインターフェース、ユーザー体験、GTD 特化 UI、リアルタイム更新
+- **実装**: `Flet 0.27.6`を使用したクロスプラットフォーム対応 UI
+- **パターン**: MVP パターン、コンポーネントベース設計、ルーティング
+- **詳細**: [Views 層 設計ガイド](views_guide.md)を参照してください
+
+## テスト戦略
+
+### 1. 単体テストの構造
+
+```python
+# tests/logic/services/test_task_service.py - サービス層テスト
+class TestTaskService:
+    """TaskService のテスト"""
+
+    def test_create_task_with_valid_data(self):
+        """正常なタスク作成のテスト"""
+        repository = MockTaskRepository()
+        service = TaskService(repository)
+
+        task_data = TaskCreate(
+            title="新しいタスク",
+            description="説明"
+        )
+
+        result = service.create_task(task_data)
+
+        assert result.title == "新しいタスク"
+        assert result.status == TaskStatus.INBOX
+        assert len(repository.tasks) == 1
+
+    def test_create_task_with_empty_title(self):
+        """タイトルが空の場合のテスト"""
+        repository = MockTaskRepository()
+        service = TaskService(repository)
+
+        with pytest.raises(ValueError, match="タスクのタイトルは必須です"):
+            service.create_new_task("")
+```
+
+### 2. 統合テストの実装
+
+```python
+# tests/integration/test_gtd_workflow.py - GTDワークフロー統合テスト
+class TestGTDWorkflow:
+    """GTDワークフロー全体のテスト"""
+
+    @pytest.fixture
+    def service_container(self):
+        """テスト用サービスコンテナ"""
+        return create_test_service_container()
+
+    def test_inbox_to_next_action_workflow(self, service_container):
+        """Inbox → Next Action の完全なワークフロー"""
+        task_app_service = service_container.get_task_application_service()
+
+        # 1. Inboxアイテム作成
+        command = CreateTaskCommand(
+            title="重要な会議の準備",
+            status=TaskStatus.INBOX
+        )
+        inbox_task = task_app_service.create_task(command)
+
+        # 2. GTD処理（分類）
+        decision = InboxDecision(
+            task_id=inbox_task.id,
+            action=InboxAction.MAKE_NEXT_ACTION,
+            context_id=None,
+            scheduled_date=None
+        )
+
+        # 3. Next Actionに変換
+        next_action = task_app_service.process_inbox_item(decision)
+
+        # 4. 検証
+        assert next_action.status == TaskStatus.NEXT_ACTION
+        assert next_action.title == "重要な会議の準備"
+```
+
+- **責務**: 品質保証、リグレッション防止、仕様の文書化
+- **実装**: `pytest`を使用した包括的テストスイート
+- **カバレッジ**: 単体テスト、統合テスト、エンドツーエンドテスト
 
 ## 実際の使用例
 
 ```python
-# main.py
-def main():
+# main.py - アプリケーションエントリーポイント
+def main(page: ft.Page):
+    """Fletアプリケーションのメイン関数"""
     # 依存関係の組み立て
-    repository = TaskRepository()
-    service = TaskService(repository)
-    ui_helper = TaskUIHelper()
+    service_container = create_service_container()
+    router = ViewRouter(page, service_container)
 
-    # UI層では、サービス層を呼び出すだけ
-    def on_add_task(e):
-        is_valid, error_msg = ui_helper.validate_task_input(title_field.value)
-        if not is_valid:
-            show_error(error_msg)
-            return
+    # GTD特化のページ設定
+    page.title = "Kage - GTD Task Manager"
+    page.theme_mode = ft.ThemeMode.SYSTEM
+    page.padding = 0
 
-        try:
-            new_task = service.create_new_task(title_field.value, description_field.value)
-            refresh_task_list()
-        except ValueError as e:
-            show_error(str(e))
+    # メインビューを表示
+    router.navigate_to("main")
+
+if __name__ == "__main__":
+    ft.app(target=main)
+```
+
+### UI 層では、Application Service を呼び出すだけ
+
+```python
+# views/components/task_form.py - タスク作成フォーム
+def on_add_task(self, e):
+    """タスク追加ボタンのイベントハンドラ"""
+    # バリデーション
+    if not self.title_field.value:
+        self._show_error("タスクのタイトルを入力してください")
+        return
+
+    try:
+        # Application Serviceを呼び出し
+        command = CreateTaskCommand(
+            title=self.title_field.value,
+            description=self.description_field.value,
+            status=TaskStatus.INBOX
+        )
+
+        task_app_service = self.service_container.get_task_application_service()
+        new_task = task_app_service.create_task(command)
+
+        # UI更新
+        self._clear_form()
+        self._refresh_task_list()
+        self._show_success(f"タスク「{new_task.title}」を作成しました")
+
+    except Exception as e:
+        logger.exception("タスク作成エラー")
+        self._show_error(f"エラーが発生しました: {str(e)}")
 ```
 
 ## まとめ
 
 この設計パターンを採用することで：
 
-- **理解しやすい**: 各クラスの責任が明確
-- **修正しやすい**: 影響範囲が限定される
+- **理解しやすい**: 各層の責任が明確で、GTD の概念と一致
+- **修正しやすい**: 影響範囲が限定され、変更の波及を抑制
 - **テストしやすい**: 各層を独立してテスト可能
-- **拡張しやすい**: 新機能を適切な場所に配置
-- **再利用しやすい**: 他のプロジェクトでも流用可能
+- **拡張しやすい**: AI 機能やエージェント追加が容易
+- **再利用しやすい**: コア機能は他のインターフェースでも利用可能
 
-最初は複雑に感じるかもしれませんが、アプリケーションが大きくなるにつれて、この設計の価値を実感できるはずです。
+最初は複雑に感じるかもしれませんが、GTD ワークフローの複雑さを管理し、LLM との統合を行う上で、この設計の価値を実感できるはずです。
 
 ## 参考資料
 
 - [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Getting Things Done (GTD)](https://gettingthingsdone.com/)
 - [Repository Pattern](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design)
 - [SQLModel Documentation](https://sqlmodel.tiangolo.com/)
+- [Flet Documentation](https://flet.dev/)
+- [LangChain Documentation](https://python.langchain.com/)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)

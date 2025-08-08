@@ -90,7 +90,7 @@ class TestCIConfiguration:
 
         ラベル付けはすべてのPRで実行されるべきため、パスフィルタは不要。
         """
-        label_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "assgin_label.yml"
+        label_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "assign_label.yml"
 
         with label_workflow_path.open(encoding="utf-8") as f:
             workflow_config = yaml.safe_load(f)

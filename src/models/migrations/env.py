@@ -3,13 +3,18 @@ from logging.config import fileConfig
 from pathlib import Path
 
 # 親ディレクトリをPATHに追加
-sys.path.append(str(Path(__file__).parent.parent.absolute()))
+sys.path.append(str(Path(__file__).parent.parent.parent.absolute()))
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from src.config import Base
-from src.models.task import Task
+from config import Base
+from models import (
+    project,
+    tag,
+    task,
+    task_tag,
+)
 
 # モデルをインポートしてAlembicがテーブル構造を認識できるようにする
 
@@ -21,14 +26,19 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, encoding="utf-8")
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 # target_metadata = Base.metadata
-target_metadata = [Task.metadata]
+target_metadata = [
+    task.Task.metadata,
+    project.Project.metadata,
+    tag.Tag.metadata,
+    task_tag.TaskTag.metadata,
+]
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")

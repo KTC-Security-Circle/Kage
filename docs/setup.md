@@ -305,6 +305,24 @@ Visual Studio Code でのデバッグ設定例（`.vscode/launch.json`）:
 
 ### 開発ワークフロー
 
+#### ブランチ作成とコード変更
+
+開発を始める前に、適切なブランチを作成します：
+
+```bash
+# ブランチ命名規則に従ってブランチを作成
+# 詳細は: docs/branch_naming.md を参照
+git checkout -b feature/new-task-filter
+git checkout -b fix/123-null-pointer
+git checkout -b chore/update-deps
+```
+
+**ブランチ命名規則**:
+
+- `<type>/<slug>` または `<type>/<issue-number>-<slug>` の形式
+- type: `feature`, `fix`, `chore`, `docs`, `refactor` など
+- 詳細な規則は [ブランチ命名規則](branch_naming.md) を参照
+
 #### 日常的な開発作業
 
 ```bash

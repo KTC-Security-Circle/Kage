@@ -3,6 +3,7 @@
 このパッケージは、Application Service層で使用するCommand DTOsを提供します。
 """
 
+from logic.commands.memo_commands import CreateMemoCommand, DeleteMemoCommand, UpdateMemoCommand
 from logic.commands.project_commands import (
     CreateProjectCommand,
     DeleteProjectCommand,
@@ -24,6 +25,10 @@ from logic.commands.task_tag_commands import (
 )
 
 __all__ = [
+    # Memo Commands
+    "CreateMemoCommand",
+    "DeleteMemoCommand",
+    "UpdateMemoCommand",
     # Project Commands
     "CreateProjectCommand",
     "DeleteProjectCommand",

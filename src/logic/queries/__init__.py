@@ -3,6 +3,12 @@
 このパッケージは、Application Service層で使用するQuery DTOsを提供します。
 """
 
+from logic.queries.memo_queries import (
+    GetAllMemosQuery,
+    GetMemoByIdQuery,
+    GetMemosByTaskIdQuery,
+    SearchMemosQuery,
+)
 from logic.queries.project_queries import (
     GetActiveProjectsQuery,
     GetAllProjectsQuery,
@@ -33,6 +39,11 @@ from logic.queries.task_tag_queries import (
 )
 
 __all__ = [
+    # Memo Queries
+    "GetAllMemosQuery",
+    "GetMemoByIdQuery",
+    "GetMemosByTaskIdQuery",
+    "SearchMemosQuery",
     # Project Queries
     "GetActiveProjectsQuery",
     "GetAllProjectsQuery",

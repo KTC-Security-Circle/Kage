@@ -16,10 +16,12 @@ import pytest
 from sqlalchemy import Engine, create_engine
 from sqlmodel import Session, SQLModel
 
+from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
+from logic.services.memo_service import MemoService
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
@@ -65,6 +67,12 @@ def test_session(test_engine: Engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
+def memo_repository(test_session: Session) -> MemoRepository:
+    """テスト用MemoRepositoryインスタンスを作成"""
+    return MemoRepository(test_session)
+
+
+@pytest.fixture
 def task_repository(test_session: Session) -> TaskRepository:
     """テスト用TaskRepositoryインスタンスを作成
 
@@ -93,6 +101,23 @@ def tag_repository(test_session: Session) -> TagRepository:
 def task_tag_repository(test_session: Session) -> TaskTagRepository:
     """テスト用TaskTagRepositoryインスタンスを作成"""
     return TaskTagRepository(test_session)
+
+
+@pytest.fixture
+def memo_service(
+    memo_repository: MemoRepository,
+    task_repository: TaskRepository,
+) -> MemoService:
+    """テスト用MemoServiceインスタンスを作成
+
+    Args:
+        memo_repository: テスト用MemoRepositoryインスタンス
+        task_repository: テスト用TaskRepositoryインスタンス
+
+    Returns:
+        MemoService: テスト用MemoServiceインスタンス
+    """
+    return MemoService(memo_repository, task_repository)
 
 
 @pytest.fixture

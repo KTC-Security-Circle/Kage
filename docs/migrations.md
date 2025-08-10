@@ -30,7 +30,8 @@ uv run alembic downgrade <version_id>
 uv run alembic current
 ```
 
-# モデルの追加方法
+## モデルの追加方法
+
 ```python
 # src/models/task.py
 
@@ -61,7 +62,9 @@ target_metadata = [
     Project.metadata, # 他のモデルも必要に応じて追加
 ]
 ```
-# マイグレーションの作成
+
+## マイグレーションの作成
+
 ```bash
 # 新しいマイグレーションを作成
 uv run alembic revision --autogenerate -m "add project table"

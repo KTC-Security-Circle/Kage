@@ -592,7 +592,7 @@ class TaskCreateForm(ft.Column):
 - ライフサイクル管理が重要な場合
 - 複数のメソッドで状態を共有する場合
 
-## どちらを選ぶべきか {#which-to-choose}
+## どちらを選ぶべきか
 
 ### 判断基準
 

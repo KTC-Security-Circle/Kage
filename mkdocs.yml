@@ -46,7 +46,6 @@ nav:
       - エージェント: agents_guide.md
       - マイグレーション: migrations.md
       - タスクランナー: task_runner.md
-      - ブランチ命名: branch_naming.md
   - 付録:
       - コントリビューション: contributing_docs.md
 
@@ -57,12 +56,12 @@ plugins:
   - git-committers:
       repository: KTC-Security-Circle/Kage
       branch: main
-      token: $MKDOCS_GIT_COMMITTERS_APIKEY
 
 markdown_extensions:
-  # attr_list は toc より前に読み込むことで、カスタムID {#...} を有効化
-  - attr_list
   - admonition
+  - toc:
+      permalink: true
+      toc_depth: 2-3
   - pymdownx.details
   - pymdownx.tabbed
   - pymdownx.highlight
@@ -77,6 +76,4 @@ markdown_extensions:
         - .
       check_paths: true
   - def_list
-  - toc:
-      permalink: true
-      toc_depth: 2-3
+  - attr_list

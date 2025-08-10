@@ -1,0 +1,2093 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Kage - LLM を活用したタスク管理アプリケーションの開発者向けドキュメント">
+      
+      
+      
+        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/setup/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../architecture-design/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>セットアップ - Kage Developer Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Noto Sans JP";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_2" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+    <a href=".." title="Kage Developer Docs" class="md-header__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kage Developer Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              セットアップ
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="検索">
+        
+        <button type="reset" class="md-search__icon md-icon" title="クリア" aria-label="クリア" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/KTC-Security-Circle/Kage" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    KTC-Security-Circle/Kage
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="タブ" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  はじめに
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  開発ガイド
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../contributing_docs/" class="md-tabs__link">
+          
+  
+  
+  付録
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kage Developer Docs" class="md-nav__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kage Developer Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/KTC-Security-Circle/Kage" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    KTC-Security-Circle/Kage
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    はじめに
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    開発ガイド
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            開発ガイド
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    セットアップ
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    セットアップ
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      クイックスタート
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      前提条件
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="前提条件">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      必須要件
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      推奨ツール
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      uv のインストール
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="uv のインストール">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#windows-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      Windows での uv インストール
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      インストール確認
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. リポジトリのクローン
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-python-poethepoet" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Python の管理と poethepoet のインストール
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. 仮想環境のセットアップと依存関係のインストール
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. 仮想環境のセットアップと依存関係のインストール">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poethepoet" class="md-nav__link">
+    <span class="md-ellipsis">
+      poethepoet タスクランナーを使用（推奨）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      手動での環境構築
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      依存関係ツリーの確認
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      レガシー pip での環境構築（非推奨）
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. データベースの初期化
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-pre-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. pre-commit のインストール
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. 環境構築の確認
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. テストの実行
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. テストの実行">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poethepoet_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      poethepoet を使用した実行（推奨）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      従来のテスト実行方法
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. アプリケーションの実行
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. アプリケーションの実行">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poethepoet_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      poethepoet を使用したアプリ実行（推奨）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      従来のアプリ実行方法
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      起動方法の詳細
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vs-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      VS Code タスクを使用した起動
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      開発環境の設定
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="開発環境の設定">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ide" class="md-nav__link">
+    <span class="md-ellipsis">
+      推奨されるエディタ/IDE
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      デバッグ設定
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      開発ワークフロー
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      トラブルシューティング
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="トラブルシューティング">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      よくある問題と解決策
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      パフォーマンス最適化
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      管理者向けの追加情報
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="管理者向けの追加情報">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      プロジェクト構成
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      依存関係管理
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cicd" class="md-nav__link">
+    <span class="md-ellipsis">
+      CI/CD との統合
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      アプリケーションビルド手順
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      セキュリティ考慮事項
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      バックアップ・復元
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      ドキュメント更新履歴
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    アーキテクチャ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../views_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    画面設計
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    エージェント
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    マイグレーション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task_runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    タスクランナー
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branch_naming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ブランチ命名
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    付録
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            付録
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing_docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コントリビューション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      クイックスタート
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      前提条件
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="前提条件">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      必須要件
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      推奨ツール
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      uv のインストール
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="uv のインストール">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#windows-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      Windows での uv インストール
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      インストール確認
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. リポジトリのクローン
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-python-poethepoet" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Python の管理と poethepoet のインストール
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. 仮想環境のセットアップと依存関係のインストール
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. 仮想環境のセットアップと依存関係のインストール">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poethepoet" class="md-nav__link">
+    <span class="md-ellipsis">
+      poethepoet タスクランナーを使用（推奨）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      手動での環境構築
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      依存関係ツリーの確認
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      レガシー pip での環境構築（非推奨）
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. データベースの初期化
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-pre-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. pre-commit のインストール
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. 環境構築の確認
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. テストの実行
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. テストの実行">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poethepoet_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      poethepoet を使用した実行（推奨）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      従来のテスト実行方法
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. アプリケーションの実行
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. アプリケーションの実行">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poethepoet_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      poethepoet を使用したアプリ実行（推奨）
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      従来のアプリ実行方法
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      起動方法の詳細
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vs-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      VS Code タスクを使用した起動
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      開発環境の設定
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="開発環境の設定">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ide" class="md-nav__link">
+    <span class="md-ellipsis">
+      推奨されるエディタ/IDE
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      デバッグ設定
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      開発ワークフロー
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      トラブルシューティング
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="トラブルシューティング">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      よくある問題と解決策
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      パフォーマンス最適化
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      管理者向けの追加情報
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="管理者向けの追加情報">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      プロジェクト構成
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      依存関係管理
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cicd" class="md-nav__link">
+    <span class="md-ellipsis">
+      CI/CD との統合
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_27" class="md-nav__link">
+    <span class="md-ellipsis">
+      アプリケーションビルド手順
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_29" class="md-nav__link">
+    <span class="md-ellipsis">
+      セキュリティ考慮事項
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_31" class="md-nav__link">
+    <span class="md-ellipsis">
+      バックアップ・復元
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_33" class="md-nav__link">
+    <span class="md-ellipsis">
+      ドキュメント更新履歴
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">環境構築ガイド<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>このドキュメントでは、Kage アプリケーションの開発環境構築手順について説明します。</p>
+<h2 id="_2">クイックスタート<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>経験豊富な開発者向けの最短手順：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. uvのインストール（Windows PowerShell）</span>
+powershell<span class="w"> </span>-ExecutionPolicy<span class="w"> </span>ByPass<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;irm https://astral.sh/uv/install.ps1 | iex&quot;</span>
+
+<span class="c1"># 2. プロジェクトのクローンと環境構築</span>
+git<span class="w"> </span>clone<span class="w"> </span>git@github.com:KTC-Security-Circle/Kage.git
+<span class="nb">cd</span><span class="w"> </span>Kage
+uv<span class="w"> </span>sync
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>install
+
+<span class="c1"># 3. アプリケーション起動</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run<span class="w"> </span>-rd
+</code></pre></div>
+<h2 id="_3">前提条件<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="_4">必須要件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>OS</strong>: Windows 10/11（推奨）</li>
+<li><strong>Python</strong>: 3.12 以上（Python 3.12.5 推奨）</li>
+<li><strong>パッケージマネージャー</strong>: <a href="https://docs.astral.sh/uv/">uv</a> 0.7.3 以上（現在 0.7.3 でテスト済み）</li>
+</ul>
+<h3 id="_5">推奨ツール<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>エディタ</strong>: <a href="https://code.visualstudio.com/">Visual Studio Code</a></li>
+<li>Python 拡張機能</li>
+<li>Pylance 拡張機能</li>
+<li><strong>Git</strong>: バージョン管理用</li>
+</ul>
+<h2 id="uv">uv のインストール<a class="headerlink" href="#uv" title="Permanent link">&para;</a></h2>
+<h3 id="windows-uv">Windows での uv インストール<a class="headerlink" href="#windows-uv" title="Permanent link">&para;</a></h3>
+<p>最も簡単な方法は PowerShell を使用することです：</p>
+<div class="highlight"><pre><span></span><code><span class="c"># PowerShellで実行（管理者権限不要）</span>
+<span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">ByPass</span> <span class="n">-c</span> <span class="s2">&quot;irm https://astral.sh/uv/install.ps1 | iex&quot;</span>
+</code></pre></div>
+<h4 id="_6">その他のインストール方法<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># pipxを使用（Python環境が既にある場合）</span>
+pipx<span class="w"> </span>install<span class="w"> </span>uv
+
+<span class="c1"># pipを使用（非推奨）</span>
+pip<span class="w"> </span>install<span class="w"> </span>uv
+
+<span class="c1"># WinGetを使用</span>
+winget<span class="w"> </span>install<span class="w"> </span>--id<span class="o">=</span>astral-sh.uv<span class="w"> </span>-e
+</code></pre></div>
+<h3 id="_7">インストール確認<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>--version
+<span class="c1"># 出力例: uv 0.7.3 (3c413f74b 2025-05-07)</span>
+</code></pre></div>
+<h2 id="1">1. リポジトリのクローン<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:KTC-Security-Circle/Kage.git
+<span class="nb">cd</span><span class="w"> </span>Kage
+</code></pre></div>
+<h2 id="2-python-poethepoet">2. Python の管理と poethepoet のインストール<a class="headerlink" href="#2-python-poethepoet" title="Permanent link">&para;</a></h2>
+<p>uv は自動的に Python バージョンを管理できます：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># プロジェクトで必要なPython（3.12以上）を自動インストール</span>
+uv<span class="w"> </span>python<span class="w"> </span>install
+
+<span class="c1"># 利用可能なPythonバージョンを確認</span>
+uv<span class="w"> </span>python<span class="w"> </span>list
+
+<span class="c1"># 特定のバージョンをインストール（必要に応じて）</span>
+uv<span class="w"> </span>python<span class="w"> </span>install<span class="w"> </span><span class="m">3</span>.12
+</code></pre></div>
+<p>グローバルに poethepoet をインストールすることで、<code>uv run</code>を付けずに直接<code>poe</code>コマンドを使用できます：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># poethepoetをグローバルにインストール</span>
+uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>poethepoet
+</code></pre></div>
+<h2 id="3">3. 仮想環境のセットアップと依存関係のインストール<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="poethepoet">poethepoet タスクランナーを使用（推奨）<a class="headerlink" href="#poethepoet" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 初回セットアップ（依存関係同期 + DB更新）</span>
+poe<span class="w"> </span>setup
+</code></pre></div>
+<h3 id="_8">手動での環境構築<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 仮想環境の作成と依存関係の一括インストール</span>
+uv<span class="w"> </span>sync
+</code></pre></div>
+<p><strong>注意</strong>: <code>uv sync</code>は以下を自動的に実行します：</p>
+<ul>
+<li>仮想環境の作成（<code>.venv</code>ディレクトリ）</li>
+<li>本番環境用依存関係のインストール</li>
+<li>開発環境用依存関係のインストール（<code>[tool.uv.dev-dependencies]</code>）</li>
+<li>プロジェクト自体を editable mode でインストール</li>
+</ul>
+<h3 id="_9">依存関係ツリーの確認<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># インストールされた依存関係を確認</span>
+uv<span class="w"> </span>tree
+</code></pre></div>
+<p>現在のプロジェクトは以下の主要な依存関係を使用しています：</p>
+<ul>
+<li><strong>Flet</strong>: 0.27.6（UI フレームワーク）</li>
+<li><strong>LangChain/LangGraph</strong>: AI/Agent 機能</li>
+<li><strong>SQLModel</strong>: ORM</li>
+<li><strong>Alembic</strong>: データベースマイグレーション</li>
+<li><strong>開発ツール</strong>: Ruff, Pyright, pytest, pre-commit</li>
+</ul>
+<h3 id="pip">レガシー pip での環境構築（非推奨）<a class="headerlink" href="#pip" title="Permanent link">&para;</a></h3>
+<p>通常の開発では推奨されませんが、必要に応じて：</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+venv<span class="se">\S</span>cripts<span class="se">\a</span>ctivate<span class="w">  </span><span class="c1"># Windows</span>
+pip<span class="w"> </span>install<span class="w"> </span>.
+</code></pre></div>
+<h2 id="4">4. データベースの初期化<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># データベースマイグレーションの実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
+</code></pre></div>
+<h2 id="5-pre-commit">5. pre-commit のインストール<a class="headerlink" href="#5-pre-commit" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>install
+</code></pre></div>
+<h2 id="6">6. 環境構築の確認<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<p>すべての設定が正しく完了したことを確認：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># プロジェクトの整合性チェック</span>
+uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>check
+
+<span class="c1"># またはステップごとに確認</span>
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src<span class="w">        </span><span class="c1"># コードフォーマット</span>
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src<span class="w"> </span>--fix<span class="w">   </span><span class="c1"># リント・自動修正</span>
+uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w"> </span>src<span class="w">           </span><span class="c1"># 型チェック</span>
+</code></pre></div>
+<h2 id="7">7. テストの実行<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<p>変更が他の機能に影響を与えていないことを確認するために、テストを実行します。</p>
+<h3 id="poethepoet_1">poethepoet を使用した実行（推奨）<a class="headerlink" href="#poethepoet_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 全テスト実行</span>
+poe<span class="w"> </span><span class="nb">test</span>
+
+<span class="c1"># ユニットテストのみ</span>
+poe<span class="w"> </span>test-unit
+
+<span class="c1"># カバレッジ付きテスト</span>
+poe<span class="w"> </span>test-cov
+</code></pre></div>
+<h3 id="_10">従来のテスト実行方法<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 全テストの実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>pytest
+
+<span class="c1"># カバレッジ付きテスト実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>--cov<span class="o">=</span>src<span class="w"> </span>--cov-report<span class="o">=</span>html
+
+<span class="c1"># 特定のテストファイルのみ実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_specific.py
+</code></pre></div>
+<h2 id="8">8. アプリケーションの実行<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="poethepoet_2">poethepoet を使用したアプリ実行（推奨）<a class="headerlink" href="#poethepoet_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 通常実行</span>
+poe<span class="w"> </span>app-run
+
+<span class="c1"># 開発モード（ホットリロード）</span>
+poe<span class="w"> </span>app-dev
+
+<span class="c1"># Webブラウザで実行</span>
+poe<span class="w"> </span>app-web
+
+<span class="c1"># Webブラウザで開発モード</span>
+poe<span class="w"> </span>app-web-dev
+</code></pre></div>
+<p>詳細なタスクコマンドについては<a href="../task_runner/">タスクランナーガイド</a>を参照してください。</p>
+<h3 id="_11">従来のアプリ実行方法<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># デスクトップアプリとして起動</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run
+
+<span class="c1"># ホットリロード付きで起動（開発時推奨）</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run<span class="w"> </span>-rd
+
+<span class="c1"># Webアプリとして起動</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run<span class="w"> </span>--web
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run<span class="w"> </span>--web<span class="w"> </span>--port<span class="w"> </span><span class="m">8550</span><span class="w">  </span><span class="c1"># ポート指定</span>
+
+<span class="c1"># 特定のファイルを指定して起動</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run<span class="w"> </span>src/main.py
+</code></pre></div>
+<h3 id="_12">起動方法の詳細<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>デスクトップモード</strong>: ネイティブ Windows アプリとして起動</li>
+<li><strong>ホットリロード</strong>: ファイル変更時に自動で再読み込み</li>
+<li><strong>Web モード</strong>: ブラウザでアクセス可能（フラグなしの場合はランダムポート）</li>
+</ul>
+<h3 id="vs-code">VS Code タスクを使用した起動<a class="headerlink" href="#vs-code" title="Permanent link">&para;</a></h3>
+<p>プロジェクトには以下の VS Code タスクが設定済みです：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># タスクランナーで環境セットアップ</span>
+Ctrl+Shift+P<span class="w"> </span>→<span class="w"> </span><span class="s2">&quot;Tasks: Run Task&quot;</span><span class="w"> </span>→<span class="w"> </span><span class="s2">&quot;setup project&quot;</span>
+</code></pre></div>
+<p>利用可能なタスク：</p>
+<ul>
+<li><code>uv sync</code>: 依存関係の同期</li>
+<li><code>alembic upgrade</code>: データベースマイグレーション</li>
+<li><code>setup project</code>: 上記 2 つの順次実行</li>
+</ul>
+<h2 id="_13">開発環境の設定<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<h3 id="ide">推奨されるエディタ/IDE<a class="headerlink" href="#ide" title="Permanent link">&para;</a></h3>
+<h4 id="visual-studio-code">Visual Studio Code（推奨）<a class="headerlink" href="#visual-studio-code" title="Permanent link">&para;</a></h4>
+<p>必須拡張機能：</p>
+<ul>
+<li><strong>Python</strong> (<code>ms-python.python</code>)</li>
+<li><strong>Pylance</strong> (<code>ms-python.vscode-pylance</code>)</li>
+</ul>
+<p>推奨拡張機能：</p>
+<ul>
+<li><strong>Ruff</strong> (<code>charliermarsh.ruff</code>)</li>
+</ul>
+<h3 id="_14">デバッグ設定<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
+<p>Visual Studio Code でのデバッグ設定例（<code>.vscode/launch.json</code>）:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;configurations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Python: Kage&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}/src/main.py&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;console&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integratedTerminal&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;python&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}/.venv/Scripts/python.exe&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Python: Kage (Web)&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}/src/main.py&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;--web&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;console&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integratedTerminal&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;python&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}/.venv/Scripts/python.exe&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="_15">開発ワークフロー<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
+<h4 id="_16">ブランチ作成とコード変更<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h4>
+<p>開発を始める前に、適切なブランチを作成します：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ブランチ命名規則に従ってブランチを作成</span>
+<span class="c1"># 詳細は: docs/branch_naming.md を参照</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/new-task-filter
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/123-null-pointer
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>chore/update-deps
+</code></pre></div>
+<p><strong>ブランチ命名規則</strong>:</p>
+<ul>
+<li><code>&lt;type&gt;/&lt;slug&gt;</code> または <code>&lt;type&gt;/&lt;issue-number&gt;-&lt;slug&gt;</code> の形式</li>
+<li>type: <code>feature</code>, <code>fix</code>, <code>chore</code>, <code>docs</code>, <code>refactor</code> など</li>
+<li>詳細な規則は <a href="../branch_naming/">ブランチ命名規則</a> を参照</li>
+</ul>
+<h4 id="_17">日常的な開発作業<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># 新しい依存関係の追加</span>
+uv<span class="w"> </span>add<span class="w"> </span>パッケージ名
+
+<span class="c1"># 開発用依存関係の追加</span>
+uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span>パッケージ名
+
+<span class="c1"># 依存関係の削除</span>
+uv<span class="w"> </span>remove<span class="w"> </span>パッケージ名
+
+<span class="c1"># ロックファイルの更新</span>
+uv<span class="w"> </span>lock
+
+<span class="c1"># 環境の再同期</span>
+uv<span class="w"> </span>sync
+</code></pre></div>
+<h4 id="_18">コード品質チェック<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># すべてのコード品質チェックを実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>poe<span class="w"> </span>check
+
+<span class="c1"># 個別実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src<span class="w">        </span><span class="c1"># フォーマット</span>
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src<span class="w"> </span>--fix<span class="w">   </span><span class="c1"># リント（自動修正付き）</span>
+uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w"> </span>src<span class="w">           </span><span class="c1"># 型チェック</span>
+</code></pre></div>
+<h2 id="_19">トラブルシューティング<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h2>
+<h3 id="_20">よくある問題と解決策<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h3>
+<h4 id="1-uv">1. uv が見つからないエラー<a class="headerlink" href="#1-uv" title="Permanent link">&para;</a></h4>
+<p><strong>症状</strong>: <code>'uv' is not recognized as an internal or external command</code></p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># uvが正しくインストールされているか確認</span>
+where<span class="w"> </span>uv
+
+<span class="c1"># PATHに追加されていない場合、環境変数の確認</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$env</span>:PATH<span class="w">  </span><span class="c1"># PowerShell</span>
+</code></pre></div>
+<h4 id="2-python">2. Python バージョンの問題<a class="headerlink" href="#2-python" title="Permanent link">&para;</a></h4>
+<p><strong>症状</strong>: <code>Python 3.12 or higher is required</code></p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># uvでPythonを管理</span>
+uv<span class="w"> </span>python<span class="w"> </span>install<span class="w"> </span><span class="m">3</span>.12
+uv<span class="w"> </span>python<span class="w"> </span>pin<span class="w"> </span><span class="m">3</span>.12
+
+<span class="c1"># 現在のPythonバージョン確認</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>--version
+</code></pre></div>
+<h4 id="3_1">3. 依存関係の競合<a class="headerlink" href="#3_1" title="Permanent link">&para;</a></h4>
+<p><strong>症状</strong>: 依存関係解決エラーや古いパッケージの警告</p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ロックファイルを削除して再生成</span>
+rm<span class="w"> </span>uv.lock
+uv<span class="w"> </span>sync
+
+<span class="c1"># キャッシュをクリア</span>
+uv<span class="w"> </span>cache<span class="w"> </span>clean
+</code></pre></div>
+<h4 id="4-pre-commit">4. pre-commit フックエラー<a class="headerlink" href="#4-pre-commit" title="Permanent link">&para;</a></h4>
+<p><strong>症状</strong>: コミット時に pre-commit フックが失敗</p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># pre-commitを再インストール</span>
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>uninstall
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>install
+
+<span class="c1"># 全ファイルに対してpre-commitを実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
+</code></pre></div>
+<h4 id="5-flet">5. Flet アプリの起動エラー<a class="headerlink" href="#5-flet" title="Permanent link">&para;</a></h4>
+<p><strong>症状</strong>: <code>flet: command not found</code> や Flet クライアントのダウンロードエラー</p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># uvを使用してFletを実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>run<span class="w"> </span>src/main.py
+
+<span class="c1"># Fletクライアントを手動でダウンロード</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import flet as ft; ft.app(lambda page: None)&quot;</span>
+</code></pre></div>
+<h4 id="6_1">6. データベース関連のエラー<a class="headerlink" href="#6_1" title="Permanent link">&para;</a></h4>
+<p><strong>症状</strong>: SQLite ファイルが見つからない、またはマイグレーションエラー</p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># データベースファイルの確認</span>
+ls<span class="w"> </span>storage/data/
+
+<span class="c1"># マイグレーションの状況確認</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>current
+
+<span class="c1"># 強制的にマイグレーション実行</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
+</code></pre></div>
+<h3 id="_21">パフォーマンス最適化<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h3>
+<h4 id="uv_1">uv の高速化設定<a class="headerlink" href="#uv_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># uvの並列処理を最大化</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">UV_CONCURRENT_DOWNLOADS</span><span class="o">=</span><span class="m">10</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">UV_CONCURRENT_BUILDS</span><span class="o">=</span><span class="m">4</span>
+
+<span class="c1"># または .uvrc ファイルに設定</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;concurrent-downloads = 10&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>.uvrc
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;concurrent-builds = 4&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.uvrc
+</code></pre></div>
+<h2 id="_22">管理者向けの追加情報<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h2>
+<h3 id="_23">プロジェクト構成<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Kage/
+├── .vscode/              # VS Code設定
+│   ├── tasks.json       # タスク定義
+│   ├── settings.json    # エディタ設定
+│   └── extensions.json  # 推奨拡張機能
+├── docs/                # ドキュメント
+├── src/                 # アプリケーションソースコード
+│   ├── agents/         # AI/Agentモジュール
+│   ├── logic/          # ビジネスロジック
+│   ├── models/         # データモデル
+│   ├── views/          # UI層
+│   └── main.py         # アプリケーションエントリーポイント
+├── tests/              # テストコード
+├── storage/            # データベース・ファイルストレージ
+├── pyproject.toml      # プロジェクト設定・依存関係
+├── uv.lock            # 依存関係のロックファイル
+└── alembic.ini        # データベースマイグレーション設定
+</code></pre></div>
+<h3 id="_24">依存関係管理<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h3>
+<h4 id="_25">本番環境デプロイ用<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># 本番環境用の依存関係のみインストール</span>
+uv<span class="w"> </span>sync<span class="w"> </span>--no-dev
+
+<span class="c1"># requirements.txtの生成（必要に応じて）</span>
+uv<span class="w"> </span><span class="nb">export</span><span class="w"> </span>--no-dev<span class="w"> </span>-o<span class="w"> </span>requirements.txt
+</code></pre></div>
+<h4 id="_26">新しい依存関係の追加<a class="headerlink" href="#_26" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># 本番依存関係</span>
+uv<span class="w"> </span>add<span class="w"> </span>新しいパッケージ
+
+<span class="c1"># 開発依存関係</span>
+uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </span>新しい開発ツール
+
+<span class="c1"># オプショナル依存関係</span>
+uv<span class="w"> </span>add<span class="w"> </span>--optional<span class="w"> </span>feature<span class="w"> </span>新しいパッケージ
+</code></pre></div>
+<h3 id="cicd">CI/CD との統合<a class="headerlink" href="#cicd" title="Permanent link">&para;</a></h3>
+<h4 id="github-actions">GitHub Actions での設定例<a class="headerlink" href="#github-actions" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># .github/workflows/test.yml</span>
+<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test</span>
+<span class="nt">on</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">push</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pull_request</span><span class="p p-Indicator">]</span>
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">test</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">windows-latest</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v4</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astral-sh/setup-uv@v1</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.7.3&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uv sync</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uv run pytest</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uv run poe check</span>
+</code></pre></div>
+<h3 id="_27">アプリケーションビルド手順<a class="headerlink" href="#_27" title="Permanent link">&para;</a></h3>
+<h4 id="_28">開発版ビルド<a class="headerlink" href="#_28" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># デスクトップアプリケーションのパッケージ化</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>pack<span class="w"> </span>src/main.py
+
+<span class="c1"># 配布可能なexeファイルの生成</span>
+uv<span class="w"> </span>run<span class="w"> </span>flet<span class="w"> </span>pack<span class="w"> </span>src/main.py<span class="w"> </span>--distpath<span class="w"> </span>./dist<span class="w"> </span>--name<span class="w"> </span>Kage
+</code></pre></div>
+<h4 id="github-actions_1">GitHub Actions での自動ビルド<a class="headerlink" href="#github-actions_1" title="Permanent link">&para;</a></h4>
+<p>プロジェクトには<code>.github/workflows/build_windows.yml</code>が設定されており、以下の機能を提供：</p>
+<ul>
+<li>プルリクエスト・プッシュ時の自動テスト</li>
+<li>リリースタグ作成時の自動ビルド・デプロイ</li>
+<li>Windows 用実行ファイルの生成</li>
+</ul>
+<p><strong>手動ビルドトリガー</strong>:</p>
+<ol>
+<li>GitHub リポジトリの "Actions" タブに移動</li>
+<li>"Build Windows" ワークフローを選択</li>
+<li>"Run workflow" ボタンをクリック</li>
+</ol>
+<h3 id="_29">セキュリティ考慮事項<a class="headerlink" href="#_29" title="Permanent link">&para;</a></h3>
+<h4 id="_30">開発時の注意点<a class="headerlink" href="#_30" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># 機密情報の環境変数管理</span>
+cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+<span class="c1"># .envファイルを編集（Gitにコミットしない）</span>
+
+<span class="c1"># pre-commitフックでセキュリティチェック</span>
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
+</code></pre></div>
+<h3 id="_31">バックアップ・復元<a class="headerlink" href="#_31" title="Permanent link">&para;</a></h3>
+<h4 id="_32">データベースバックアップ<a class="headerlink" href="#_32" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># SQLiteデータベースのバックアップ</span>
+cp<span class="w"> </span>storage/data/kage.db<span class="w"> </span>storage/data/backup_<span class="k">$(</span>date<span class="w"> </span>+%Y%m%d<span class="k">)</span>.db
+
+<span class="c1"># 設定ファイルのバックアップ</span>
+tar<span class="w"> </span>-czf<span class="w"> </span>config_backup.tar.gz<span class="w"> </span>.env<span class="w"> </span>pyproject.toml<span class="w"> </span>alembic.ini
+</code></pre></div>
+<hr />
+<h2 id="_33">ドキュメント更新履歴<a class="headerlink" href="#_33" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>2025 年 8 月 6 日</strong>: uv の最新情報とプロジェクト構成に基づいて全面改訂</li>
+<li><strong>uv 0.7.3 対応</strong>: 最新の uv コマンドと機能に対応</li>
+<li><strong>Flet 0.27.6 対応</strong>: 最新の Flet バージョンの起動方法を反映</li>
+<li><strong>開発ワークフロー</strong>: VS Code 統合とタスクランナーの説明を追加</li>
+</ul>
+
+
+
+
+
+
+
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="最終更新日">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月10日 18:05:46 UTC">2025年8月10日</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="作成日">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月10日 18:05:46 UTC">2025年8月10日</span>
+  </span>
+
+    
+    
+    
+      
+  <span class="md-source-file__fact">
+    
+      
+  <span class="md-icon" title="投稿者">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+  </span>
+  <span>GitHub</span>
+
+    
+    <nav>
+      
+        <a href="https://github.com/snow7y" class="md-author" title="@snow7y">
+          
+          <img src="https://avatars.githubusercontent.com/u/103980824?v=4&size=72" alt="snow7y">
+        </a>
+      
+        <a href="https://github.com/Shota-Kizaki" class="md-author" title="@Shota-Kizaki">
+          
+          <img src="https://avatars.githubusercontent.com/u/104074879?v=4&size=72" alt="Shota-Kizaki">
+        </a>
+      
+        <a href="https://github.com/apps/copilot-swe-agent" class="md-author" title="@Copilot">
+          
+          <img src="https://avatars.githubusercontent.com/in/1143301?v=4&size=72" alt="Copilot">
+        </a>
+      
+      
+      
+    </nav>
+  </span>
+
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.instant", "navigation.expand", "search.suggest", "search.highlight", "content.code.annotate", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>

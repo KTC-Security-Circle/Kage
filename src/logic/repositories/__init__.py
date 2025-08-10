@@ -5,6 +5,7 @@
 """
 
 from logic.repositories.base import BaseRepository
+from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
@@ -12,6 +13,7 @@ from logic.repositories.task_tag import TaskTagRepository
 
 __all__ = [
     "BaseRepository",
+    "MemoRepository",
     "ProjectRepository",
     "TagRepository",
     "TaskRepository",

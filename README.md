@@ -77,6 +77,16 @@ uv sync
 uv run pre-commit install
 ```
 
+### Developer Docs (MkDocs)
+
+開発者ドキュメントは MkDocs + Material で構築されています。
+
+- ローカル起動: `uv run mkdocs serve`
+- ビルド: `uv run mkdocs build`
+- デプロイ（GitHub Pages／gh-pages ブランチ）: CI が `main` への push で自動デプロイします。手動で行う場合は `uv run mkdocs gh-deploy --force` でも可能です。
+
+サイト URL: <https://ktc-security-circle.github.io/Kage/>
+
 ## 使い方
 
 ### poethepoet タスクランナーを使用した実行（推奨）

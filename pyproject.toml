@@ -41,6 +41,10 @@ path = "src"
 [tool.uv]
 dev-dependencies = [
     "flet[all]==0.27.6",
+    "mkdocs>=1.6.1",
+    "mkdocs-git-committers-plugin-2>=2.5.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+    "mkdocs-material>=9.6.16",
     "poethepoet>=0.36.0",
     "pre-commit>=4.2.0",
     "pyright>=1.1.400",
@@ -98,6 +102,11 @@ deps-outdated = "uv pip list --outdated"
 build-web = "flet build web"
 build-desktop = "flet build windows"
 pack-desktop = "flet pack"
+
+# == Documentation (MkDocs) ==
+docs-serve = "uv run mkdocs serve -a 127.0.0.1:8000"
+docs-build = "uv run mkdocs build"
+docs-deploy = "uv run mkdocs gh-deploy --force --no-history"
 
 # == Windows specific utilities ==
 open-storage = { shell = "Invoke-Item storage" }

@@ -1,0 +1,79 @@
+site_name: Kage Developer Docs
+site_description: "Kage - LLM を活用したタスク管理アプリケーションの開発者向けドキュメント"
+site_url: https://ktc-security-circle.github.io/Kage/
+repo_name: KTC-Security-Circle/Kage
+repo_url: https://github.com/KTC-Security-Circle/Kage
+edit_uri: edit/main/docs/
+
+# Material for MkDocs
+theme:
+  name: material
+  language: ja
+  features:
+    - navigation.tabs
+    - navigation.instant
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: blue grey
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: blue grey
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: "Noto Sans JP"
+    code: "Roboto Mono"
+
+nav:
+  - はじめに: index.md
+  - 開発ガイド:
+      - セットアップ: setup.md
+      - アーキテクチャ: architecture-design.md
+      - 画面設計: views_guide.md
+      - エージェント: agents_guide.md
+      - マイグレーション: migrations.md
+      - タスクランナー: task_runner.md
+  - 付録:
+      - コントリビューション: contributing_docs.md
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - git-committers:
+      repository: KTC-Security-Circle/Kage
+      branch: main
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+      toc_depth: 2-3
+  - pymdownx.details
+  - pymdownx.tabbed
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.snippets:
+      base_path:
+        - docs
+        - .
+      check_paths: true
+  - def_list
+  - attr_list

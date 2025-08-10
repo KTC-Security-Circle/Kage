@@ -33,7 +33,7 @@ jobs:
 
       - name: Build site
         env:
-          MKDOCS_GIT_COMMITTERS_APIKEY: ${{ secrets.GITHUB_TOKEN }}
+          MKDOCS_GIT_COMMITTERS_APIKEY: ${{ secrets.MKDOCS_GIT_COMMITTERS_APIKEY }}
         run: uv run mkdocs build --strict
 
       - name: Deploy to GitHub Pages

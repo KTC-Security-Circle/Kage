@@ -32,6 +32,8 @@ jobs:
         run: uv sync
 
       - name: Build site
+        env:
+          MKDOCS_GIT_COMMITTERS_APIKEY: ${{ secrets.GITHUB_TOKEN }}
         run: uv run mkdocs build --strict
 
       - name: Deploy to GitHub Pages

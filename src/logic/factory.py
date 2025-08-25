@@ -10,10 +10,12 @@ Application Service層への移行をサポートするため、
 from sqlmodel import Session
 
 from logic.container import ServiceContainer
+from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
+from logic.services.memo_service import MemoService
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
@@ -33,6 +35,14 @@ class RepositoryFactory:
             session: データベースセッション
         """
         self.session = session
+
+    def create_memo_repository(self) -> MemoRepository:
+        """MemoRepositoryを作成する
+
+        Returns:
+            MemoRepository: メモリポジトリインスタンス
+        """
+        return MemoRepository(self.session)
 
     def create_task_repository(self) -> TaskRepository:
         """TaskRepositoryを作成する
@@ -80,6 +90,20 @@ class ServiceFactory:
             repository_factory: リポジトリファクトリ
         """
         self.repository_factory = repository_factory
+
+    def create_memo_service(self) -> MemoService:
+        """MemoServiceを作成する
+
+        Returns:
+            MemoService: メモサービスインスタンス
+        """
+        memo_repo = self.repository_factory.create_memo_repository()
+        task_repo = self.repository_factory.create_task_repository()
+
+        return MemoService(
+            memo_repo=memo_repo,
+            task_repo=task_repo,
+        )
 
     def create_task_service(self) -> TaskService:
         """TaskServiceを作成する

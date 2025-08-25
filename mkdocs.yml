@@ -52,6 +52,8 @@ nav:
       - コントリビューション: dev/contributing_docs.md
   - APIリファレンス:
       - モデル: dev/reference/models.md
+      - コマンドとクエリ: dev/reference/commands_queries.md
+
 
 plugins:
   - search

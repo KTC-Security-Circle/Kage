@@ -1,12 +1,20 @@
-# Kage 開発者ドキュメント
+# Kage ドキュメント
 
-ようこそ。ここは Kage (LLM を活用したタスク管理アプリケーション) の開発者向けドキュメントです。
+ようこそ。ここでは Kage の「アプリコンセプト / 利用イメージ」と「開発者向け技術ドキュメント」を整理しています。
 
-- プロジェクトのセットアップ: [setup.md](setup.md)
-- アーキテクチャ: [architecture-design.md](architecture-design.md)
-- 画面設計: [views_guide.md](views_guide.md)
-- エージェント: [agents_guide.md](agents_guide.md)
-- マイグレーション: [migrations.md](migrations.md)
-- タスクランナー: [task_runner.md](task_runner.md)
+## アプリ概要
 
-上記の各ページから詳細なガイドに進めます。開発中に見つかった改善点は Issue / PR で歓迎します。
+- コンセプト: [app/concept.md](app/concept.md)
+
+## 開発ガイド入口
+
+- セットアップ: [dev/setup.md](dev/setup.md)
+- アーキテクチャ: [dev/architecture-design.md](dev/architecture-design.md)
+- 画面設計: [dev/views_guide.md](dev/views_guide.md)
+- エージェント: [dev/agents_guide.md](dev/agents_guide.md)
+- マイグレーション: [dev/migrations.md](dev/migrations.md)
+- タスクランナー: [dev/task_runner.md](dev/task_runner.md)
+- ブランチ命名: [dev/branch_naming.md](dev/branch_naming.md)
+- コントリビューション: [dev/contributing_docs.md](dev/contributing_docs.md)
+
+改善提案・不備報告は Issue / PR で歓迎します。

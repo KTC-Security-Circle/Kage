@@ -39,16 +39,17 @@ theme:
 
 nav:
   - はじめに: index.md
+  - アプリ概要:
+      - コンセプト: app/concept.md
   - 開発ガイド:
-      - セットアップ: setup.md
-      - アーキテクチャ: architecture-design.md
-      - 画面設計: views_guide.md
-      - エージェント: agents_guide.md
-      - マイグレーション: migrations.md
-      - タスクランナー: task_runner.md
-      - ブランチ命名: branch_naming.md
-  - 付録:
-      - コントリビューション: contributing_docs.md
+      - セットアップ: dev/setup.md
+      - アーキテクチャ: dev/architecture-design.md
+      - 画面設計: dev/views_guide.md
+      - エージェント: dev/agents_guide.md
+      - マイグレーション: dev/migrations.md
+      - タスクランナー: dev/task_runner.md
+      - ブランチ命名: dev/branch_naming.md
+      - コントリビューション: dev/contributing_docs.md
 
 plugins:
   - search

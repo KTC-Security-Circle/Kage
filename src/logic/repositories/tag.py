@@ -1,7 +1,7 @@
 """タグリポジトリの実装"""
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 from logic.repositories.base import BaseRepository
 from models import Tag, TagCreate, TagUpdate
@@ -67,12 +67,10 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             list[Tag]: 検索条件に一致するタグ一覧
         """
         try:
-            # Python側でフィルタリングを実行
-            statement = select(Tag)
-            all_tags = self.session.exec(statement).all()
-
-            # タグ名に検索クエリが含まれるタグをフィルタリング
-            filtered_tags = [tag for tag in all_tags if name_query.lower() in tag.name.lower()]
+            # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
+            # [AI GENERATED] 大文字小文字を区別しない検索のためfunc.lower()を使用
+            statement = select(Tag).where(func.lower(Tag.name).contains(func.lower(name_query)))  # pyright: ignore[reportAttributeAccessIssue]
+            filtered_tags = list(self.session.exec(statement).all())
 
             logger.debug(f"タグ名検索 '{name_query}' で {len(filtered_tags)} 件取得しました")
         except Exception as e:

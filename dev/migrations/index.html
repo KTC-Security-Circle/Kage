@@ -10,26 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/contributing_docs/">
+        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/dev/migrations/">
       
       
-        <link rel="prev" href="../branch_naming/">
+        <link rel="prev" href="../agents_guide/">
       
       
+        <link rel="next" href="../task_runner/">
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
     
     
       
-        <title>コントリビューション - Kage Developer Docs</title>
+        <title>マイグレーション - Kage Developer Docs</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,7 +50,9 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#_2" class="md-skip">
           コンテンツにスキップ
         </a>
       
@@ -88,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="ヘッダー">
-    <a href=".." title="Kage Developer Docs" class="md-header__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+    <a href="../.." title="Kage Developer Docs" class="md-header__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -108,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              コントリビューション
+              マイグレーション
             
           </span>
         </div>
@@ -221,7 +225,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -242,11 +246,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../setup/" class="md-tabs__link">
+        <a href="../../app/concept/" class="md-tabs__link">
           
   
   
-  開発ガイド
+  アプリ概要
 
         </a>
       </li>
@@ -264,11 +268,31 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../setup/" class="md-tabs__link">
           
   
   
-  付録
+  開発ガイド
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference/models/" class="md-tabs__link">
+          
+  
+  
+  APIリファレンス
 
         </a>
       </li>
@@ -298,7 +322,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ナビゲーション" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Kage Developer Docs" class="md-nav__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+    <a href="../.." title="Kage Developer Docs" class="md-nav__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -328,7 +352,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -371,7 +395,7 @@
   
   
   <span class="md-ellipsis">
-    開発ガイド
+    アプリ概要
     
   </span>
   
@@ -381,6 +405,82 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            アプリ概要
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../app/concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コンセプト
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    開発ガイド
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             開発ガイド
           </label>
@@ -482,10 +582,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../migrations/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    マイグレーション
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -496,6 +616,51 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      基本的なコマンド
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      モデルの追加方法
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      マイグレーションの作成
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -547,6 +712,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing_docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コントリビューション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -558,34 +746,31 @@
       
   
   
-    
   
   
-  
     
     
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
-    付録
+    APIリファレンス
     
   </span>
   
@@ -593,10 +778,10 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
-            付録
+            APIリファレンス
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -604,76 +789,43 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    コントリビューション
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../reference/models/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    コントリビューション
+    モデル
     
   </span>
   
 
       </a>
-      
-        
+    </li>
+  
 
-<nav class="md-nav md-nav--secondary" aria-label="目次">
+              
+            
+              
+                
   
   
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目次
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      開発ワークフロー
-    </span>
-  </a>
+    <li class="md-nav__item">
+      <a href="../reference/commands_queries/" class="md-nav__link">
+        
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      コーディング規約
-    </span>
-  </a>
   
-</li>
-      
-    </ul>
+  <span class="md-ellipsis">
+    コマンドとクエリ
+    
+  </span>
   
-</nav>
-      
+
+      </a>
     </li>
   
 
@@ -711,18 +863,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
-      開発ワークフロー
+      基本的なコマンド
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
-      コーディング規約
+      モデルの追加方法
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      マイグレーションの作成
     </span>
   </a>
   
@@ -747,99 +908,65 @@
   
 
 
-<h1 id="kage">Kage への貢献<a class="headerlink" href="#kage" title="Permanent link">&para;</a></h1>
-<p>このプロジェクトへの貢献に興味を持っていただき、ありがとうございます。
-バグ報告、機能提案、プルリクエストなど、あらゆる形の貢献を歓迎します。</p>
-<h2 id="_1">開発ワークフロー<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p><strong>Issue の確認</strong>: まず、<a href="https://github.com/KTC-Security-Circle/Kage/issues">Issue Tracker</a> を確認し、同様の Issue がないか確認してください。なければ新しい Issue を作成します。</p>
-</li>
-<li>
-<p><strong>リポジトリのフォーク</strong>: このリポジトリをフォークします。</p>
-</li>
-<li>
-<p><strong>ブランチの作成</strong>: 新しいブランチを作成します。ブランチ名は<a href="../branch_naming/">ブランチ命名規則</a>に従ってください。</p>
-</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="c1"># 例: 新機能の場合</span>
-git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/new-task-button
+<h1 id="_1">マイグレーションの方法<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">基本的なコマンド<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># マイグレーションの適用</span>
+<span class="c1"># ここでは、最新のマイグレーションを適用するコマンド</span>
+<span class="c1"># 基本的に最初に行うこと</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
 
-<span class="c1"># 例: バグ修正の場合</span>
-git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/textarea-overflow
+<span class="c1"># マイグレーションのダウングレード</span>
+<span class="c1">## ここでは、1つ前のバージョンに戻すコマンド</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>downgrade<span class="w"> </span>-1
 
-<span class="c1"># 例: イシュー番号を含める場合</span>
-git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/123-task-filter
+<span class="c1"># マイグレーションの履歴を表示</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span><span class="nb">history</span>
+
+<span class="c1"># 特定のバージョンのマイグレーションを適用</span>
+<span class="c1">## ここでは、特定のバージョンIDを指定してマイグレーションを適用</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>&lt;version_id&gt;
+
+<span class="c1"># 特定のバージョンにダウングレード</span>
+<span class="c1">## ここでは、特定のバージョンIDを指定してダウングレード</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>downgrade<span class="w"> </span>&lt;version_id&gt;
+
+<span class="c1"># マイグレーションの状態を確認</span>
+<span class="c1">## ここでは、現在のデータベースの状態を確認するコマンド</span>
+
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>current
 </code></pre></div>
-<ol>
-<li><strong>poethepoet のインストール</strong>: グローバルに poethepoet をインストールします（未インストールの場合）。</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="c1"># poethepoetをグローバルにインストール</span>
-uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>poethepoet
-</code></pre></div>
-<ol>
-<li><strong>環境セットアップ</strong>: poethepoet タスクランナーを使用した初回セットアップを実行します。</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="c1"># 初回セットアップ（依存関係同期 + DB更新）</span>
-poe<span class="w"> </span>setup
-</code></pre></div>
-<ol>
-<li>
-<p><strong>コードの変更</strong>: コーディング規約に従って、コードの追加・修正を行います。</p>
-</li>
-<li>
-<p><strong>テストとコード品質チェック</strong>: 変更によって既存の機能が壊れていないことを確認します。</p>
-</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="c1"># 品質チェック（lint + format-check + type-check）</span>
-poe<span class="w"> </span>check
+<h2 id="_3">モデルの追加方法<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># src/models/task.py</span>
 
-<span class="c1"># 自動修正（lint-fix + format）</span>
-poe<span class="w"> </span>fix
+<span class="c1"># モデル(例)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Project</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクトモデル</span>
 
-<span class="c1"># テスト実行</span>
-poe<span class="w"> </span><span class="nb">test</span>
-</code></pre></div>
-<ol>
-<li><strong>開発中の動作確認</strong>: アプリケーションを起動して動作を確認します。</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="c1"># 開発モード（ホットリロード）</span>
-poe<span class="w"> </span>app-dev
-</code></pre></div>
-<ol>
-<li>
-<p><strong>コミット</strong>: 変更内容をコミットします。コミットメッセージは分かりやすく記述してください。</p>
-</li>
-<li>
-<p><strong>プルリクエストの作成</strong>: フォークしたリポジトリから、このリポジトリの <code>main</code> ブランチに対してプルリクエストを作成します。プルリクエストのテンプレートに従い、変更内容を説明してください。</p>
-</li>
-</ol>
-<p>詳細なタスクコマンドについては<a href="../task_runner/">タスクランナーガイド</a>を参照してください。</p>
-<h2 id="_2">コーディング規約<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>静的解析</strong>: <code>ruff</code> を使用した静的解析とフォーマットを適用します。<code>pre-commit</code>フックが自動で実行します。</li>
-<li><strong>命名規則</strong>:</li>
-<li>クラス名: <code>PascalCase</code></li>
-<li>関数・変数名: <code>snake_case</code></li>
-<li><strong>Docstring</strong>: クラスや公開関数には、Google スタイルの docstring を記述してください。</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">my_function</span><span class="p">(</span><span class="n">param1</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">param2</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;関数の概要説明.</span>
+<span class="sd">    プロジェクト情報を管理するテーブル。</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        param1: 引数1の説明.</span>
-<span class="sd">        param2: 引数2の説明.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        戻り値の説明.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int | None): プロジェクトID</span>
+<span class="sd">        name (str): プロジェクト名</span>
+<span class="sd">        created_at (datetime): 作成日時</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># ...</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
 </code></pre></div>
-<ul>
-<li><strong>型ヒント</strong>: すべての関数・メソッドの引数と戻り値に型ヒントを付けてください。</li>
-<li><strong>コメント</strong>: 複雑なロジックや重要な処理には、日本語で簡潔なコメントを記述してください。</li>
-</ul>
-<p>ご協力に感謝します！</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># src/models/migrations/env.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">src.models.task</span><span class="w"> </span><span class="kn">import</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Project</span> <span class="c1"># ここでモデルをインポート</span>
+
+<span class="c1"># モデルのメタデータをターゲットに設定</span>
+<span class="n">target_metadata</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">Task</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+    <span class="n">Project</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span> <span class="c1"># 他のモデルも必要に応じて追加</span>
+<span class="p">]</span>
+</code></pre></div>
+<h2 id="_4">マイグレーションの作成<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># 新しいマイグレーションを作成</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>revision<span class="w"> </span>--autogenerate<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;add project table&quot;</span>
+</code></pre></div>
 
 
 
@@ -862,7 +989,7 @@ poe<span class="w"> </span>app-dev
     <span class="md-icon" title="最終更新日">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月10日 18:05:46 UTC">2025年8月10日</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月25日 05:48:04 UTC">2025年8月25日</span>
   </span>
 
     
@@ -872,7 +999,7 @@ poe<span class="w"> </span>app-dev
     <span class="md-icon" title="作成日">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月10日 18:05:46 UTC">2025年8月10日</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月25日 05:48:04 UTC">2025年8月25日</span>
   </span>
 
     
@@ -945,10 +1072,10 @@ poe<span class="w"> </span>app-dev
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.instant", "navigation.expand", "search.suggest", "search.highlight", "content.code.annotate", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.instant", "navigation.expand", "search.suggest", "search.highlight", "content.code.annotate", "content.code.copy", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.50899def.min.js"></script>
+      <script src="../../assets/javascripts/bundle.50899def.min.js"></script>
       
     
   </body>

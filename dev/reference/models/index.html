@@ -1,0 +1,4088 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Kage - LLM を活用したタスク管理アプリケーションの開発者向けドキュメント">
+      
+      
+      
+        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/dev/reference/models/">
+      
+      
+        <link rel="prev" href="../../contributing_docs/">
+      
+      
+        <link rel="next" href="../commands_queries/">
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>モデル - Kage Developer Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Noto Sans JP";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_2" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+    <a href="../../.." title="Kage Developer Docs" class="md-header__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kage Developer Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              モデル
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="検索">
+        
+        <button type="reset" class="md-search__icon md-icon" title="クリア" aria-label="クリア" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/KTC-Security-Circle/Kage" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    KTC-Security-Circle/Kage
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="タブ" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  はじめに
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../app/concept/" class="md-tabs__link">
+          
+  
+  
+  アプリ概要
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../setup/" class="md-tabs__link">
+          
+  
+  
+  開発ガイド
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  APIリファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Kage Developer Docs" class="md-nav__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kage Developer Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/KTC-Security-Circle/Kage" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    KTC-Security-Circle/Kage
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    はじめに
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    アプリ概要
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            アプリ概要
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../app/concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コンセプト
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    開発ガイド
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            開発ガイド
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    セットアップ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    アーキテクチャ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../views_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    画面設計
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    エージェント
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    マイグレーション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task_runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    タスクランナー
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../branch_naming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ブランチ命名
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing_docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コントリビューション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    APIリファレンス
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            APIリファレンス
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    モデル
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    モデル
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      データベース用 モデル
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="データベース用 モデル">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.models.task" class="md-nav__link">
+    <span class="md-ellipsis">
+      task
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.project" class="md-nav__link">
+    <span class="md-ellipsis">
+      project
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      tag
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.task_tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_tag
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.memo" class="md-nav__link">
+    <span class="md-ellipsis">
+      memo
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands_queries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コマンドとクエリ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      データベース用 モデル
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="データベース用 モデル">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.models.task" class="md-nav__link">
+    <span class="md-ellipsis">
+      task
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.project" class="md-nav__link">
+    <span class="md-ellipsis">
+      project
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      tag
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.task_tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_tag
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.models.memo" class="md-nav__link">
+    <span class="md-ellipsis">
+      memo
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">モデル一覧<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">データベース用 モデル<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>データベースのテーブルに対応するモデルです。
+SQLModelを継承して定義されており、データベースのCRUD操作に使用されます。</p>
+<p>基本各モデルは以下の形で定義されます。</p>
+<ul>
+<li>Base: 基本的なモデルクラス</li>
+<li>Main: テーブル定義用のクラス （DB操作時に使用）</li>
+<li>Create: 新規作成用のモデルクラス</li>
+<li>Read: 読み取り用のモデルクラス</li>
+<li>Update: 更新用のモデルクラス</li>
+</ul>
+<p>この設計は、データの整合性と操作の明確化を目的としています。</p>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.models.task" class="doc doc-heading">
+            <code>src.models.task</code>
+
+
+<a href="#src.models.task" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>新しいTaskモデルの定義</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task.Task" class="doc doc-heading">
+            <code>Task</code>
+
+
+<a href="#src.models.task.Task" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TaskBase (src.models.task.TaskBase)" href="#src.models.task.TaskBase">TaskBase</a></code></p>
+
+
+        <p>新しいタスクモデル</p>
+<p>タスクの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.id">id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのID。デフォルトはNoneで、データベースに保存時に自動生成されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.project_id">project_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.parent_id">parent_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>親タスクのID。サブタスクの場合に使用。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのタイトル。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの詳細説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TaskStatus (src.models.task.TaskStatus)" href="#src.models.task.TaskStatus">TaskStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのステータス。デフォルトはINBOX。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.Task.due_date">due_date</span></code></td>
+            <td>
+                  <code><span title="datetime.date">date</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの締め切り日。設定されていない場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Task</span><span class="p">(</span><span class="n">TaskBase</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;新しいタスクモデル</span>
+
+<span class="sd">    タスクの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (uuid.UUID | None): タスクのID。デフォルトはNoneで、データベースに保存時に自動生成されます。</span>
+<span class="sd">        project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</span>
+<span class="sd">        parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。</span>
+<span class="sd">        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): タスクの詳細説明。デフォルトは空文字列。</span>
+<span class="sd">        status (TaskStatus): タスクのステータス。デフォルトはINBOX。</span>
+<span class="sd">        due_date (date | None): タスクの締め切り日。設定されていない場合はNone。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task.TaskBase" class="doc doc-heading">
+            <code>TaskBase</code>
+
+
+<a href="#src.models.task.TaskBase" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>タスクの基本モデル</p>
+<p>タスクの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskBase.project_id">project_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskBase.parent_id">parent_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>親タスクのID。サブタスクの場合に使用。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskBase.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのタイトル。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskBase.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの詳細説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskBase.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TaskStatus (src.models.task.TaskStatus)" href="#src.models.task.TaskStatus">TaskStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのステータス。デフォルトはINBOX。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskBase.due_date">due_date</span></code></td>
+            <td>
+                  <code><span title="datetime.date">date</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの締め切り日。設定されていない場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskBase</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクの基本モデル</span>
+
+<span class="sd">    タスクの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</span>
+<span class="sd">        parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。</span>
+<span class="sd">        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): タスクの詳細説明。デフォルトは空文字列。</span>
+<span class="sd">        status (TaskStatus): タスクのステータス。デフォルトはINBOX。</span>
+<span class="sd">        due_date (date | None): タスクの締め切り日。設定されていない場合はNone。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">project_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">foreign_key</span><span class="o">=</span><span class="s2">&quot;project.id&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">parent_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">foreign_key</span><span class="o">=</span><span class="s2">&quot;task.id&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">TaskStatus</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">TaskStatus</span><span class="o">.</span><span class="n">INBOX</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">due_date</span><span class="p">:</span> <span class="n">date</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task.TaskCreate" class="doc doc-heading">
+            <code>TaskCreate</code>
+
+
+<a href="#src.models.task.TaskCreate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TaskBase (src.models.task.TaskBase)" href="#src.models.task.TaskBase">TaskBase</a></code></p>
+
+
+        <p>新しいタスク作成用モデル</p>
+<p>タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskCreate.project_id">project_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskCreate.parent_id">parent_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>親タスクのID。サブタスクの場合に使用。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskCreate.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのタイトル。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskCreate.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの詳細説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskCreate.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TaskStatus (src.models.task.TaskStatus)" href="#src.models.task.TaskStatus">TaskStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのステータス。デフォルトはINBOX。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskCreate.due_date">due_date</span></code></td>
+            <td>
+                  <code><span title="datetime.date">date</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの締め切り日。設定されていない場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskCreate</span><span class="p">(</span><span class="n">TaskBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;新しいタスク作成用モデル</span>
+
+<span class="sd">    タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</span>
+<span class="sd">        parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。</span>
+<span class="sd">        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): タスクの詳細説明。デフォルトは空文字列。</span>
+<span class="sd">        status (TaskStatus): タスクのステータス。デフォルトはINBOX。</span>
+<span class="sd">        due_date (date | None): タスクの締め切り日。設定されていない場合はNone。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task.TaskRead" class="doc doc-heading">
+            <code>TaskRead</code>
+
+
+<a href="#src.models.task.TaskRead" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TaskBase (src.models.task.TaskBase)" href="#src.models.task.TaskBase">TaskBase</a></code></p>
+
+
+        <p>新しいタスク読み取り用モデル</p>
+<p>タスクの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.id">id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのID。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.project_id">project_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.parent_id">parent_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>親タスクのID。サブタスクの場合に使用。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのタイトル。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの詳細説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TaskStatus (src.models.task.TaskStatus)" href="#src.models.task.TaskStatus">TaskStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのステータス。デフォルトはINBOX。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskRead.due_date">due_date</span></code></td>
+            <td>
+                  <code><span title="datetime.date">date</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの締め切り日。設定されていない場合はNone。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskRead</span><span class="p">(</span><span class="n">TaskBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;新しいタスク読み取り用モデル</span>
+
+<span class="sd">    タスクの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (uuid.UUID): タスクのID。</span>
+<span class="sd">        project_id (uuid.UUID | None): タスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。</span>
+<span class="sd">        parent_id (uuid.UUID | None): 親タスクのID。サブタスクの場合に使用。</span>
+<span class="sd">        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): タスクの詳細説明。デフォルトは空文字列。</span>
+<span class="sd">        status (TaskStatus): タスクのステータス。デフォルトはINBOX。</span>
+<span class="sd">        due_date (date | None): タスクの締め切り日。設定されていない場合はNone。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task.TaskStatus" class="doc doc-heading">
+            <code>TaskStatus</code>
+
+
+<a href="#src.models.task.TaskStatus" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="str">str</span></code>, <code><span title="enum.Enum">Enum</span></code></p>
+
+
+        <p>タスクのステータス（GTDシステムに基づく）</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskStatus</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクのステータス（GTDシステムに基づく）&quot;&quot;&quot;</span>
+
+    <span class="n">INBOX</span> <span class="o">=</span> <span class="s2">&quot;inbox&quot;</span>
+    <span class="n">NEXT_ACTION</span> <span class="o">=</span> <span class="s2">&quot;next_action&quot;</span>
+    <span class="n">WAITING_FOR</span> <span class="o">=</span> <span class="s2">&quot;waiting_for&quot;</span>
+    <span class="n">SOMEDAY_MAYBE</span> <span class="o">=</span> <span class="s2">&quot;someday_maybe&quot;</span>
+    <span class="n">DELEGATED</span> <span class="o">=</span> <span class="s2">&quot;delegated&quot;</span>
+    <span class="n">COMPLETED</span> <span class="o">=</span> <span class="s2">&quot;completed&quot;</span>
+    <span class="n">CANCELLED</span> <span class="o">=</span> <span class="s2">&quot;cancelled&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task.TaskUpdate" class="doc doc-heading">
+            <code>TaskUpdate</code>
+
+
+<a href="#src.models.task.TaskUpdate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>新しいタスク更新用モデル</p>
+<p>タスクの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskUpdate.project_id">project_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクが属するプロジェクトのID。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskUpdate.parent_id">parent_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>親タスクのID。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskUpdate.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのタイトル。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskUpdate.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの詳細説明。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskUpdate.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TaskStatus (src.models.task.TaskStatus)" href="#src.models.task.TaskStatus">TaskStatus</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのステータス。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task.TaskUpdate.due_date">due_date</span></code></td>
+            <td>
+                  <code><span title="datetime.date">date</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクの締め切り日。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskUpdate</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;新しいタスク更新用モデル</span>
+
+<span class="sd">    タスクの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        project_id (uuid.UUID | None): タスクが属するプロジェクトのID。Noneの場合は更新しない。</span>
+<span class="sd">        parent_id (uuid.UUID | None): 親タスクのID。Noneの場合は更新しない。</span>
+<span class="sd">        title (str | None): タスクのタイトル。Noneの場合は更新しない。</span>
+<span class="sd">        description (str | None): タスクの詳細説明。Noneの場合は更新しない。</span>
+<span class="sd">        status (TaskStatus | None): タスクのステータス。Noneの場合は更新しない。</span>
+<span class="sd">        due_date (date | None): タスクの締め切り日。Noneの場合は更新しない。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">project_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">parent_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">TaskStatus</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">due_date</span><span class="p">:</span> <span class="n">date</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.models.project" class="doc doc-heading">
+            <code>src.models.project</code>
+
+
+<a href="#src.models.project" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>Projectモデルの定義</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.project.Project" class="doc doc-heading">
+            <code>Project</code>
+
+
+<a href="#src.models.project.Project" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="ProjectBase (src.models.project.ProjectBase)" href="#src.models.project.ProjectBase">ProjectBase</a></code></p>
+
+
+        <p>プロジェクトモデル</p>
+<p>プロジェクトの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.Project.id">id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのID。デフォルトはNoneで、データベースに保存時に自動生成されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.Project.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクト名。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.Project.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトの説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.Project.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProjectStatus (src.models.project.ProjectStatus)" href="#src.models.project.ProjectStatus">ProjectStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのステータス。デフォルトはACTIVE。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/project.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Project</span><span class="p">(</span><span class="n">ProjectBase</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクトモデル</span>
+
+<span class="sd">    プロジェクトの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (uuid.UUID | None): プロジェクトのID。デフォルトはNoneで、データベースに保存時に自動生成されます。</span>
+<span class="sd">        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): プロジェクトの説明。デフォルトは空文字列。</span>
+<span class="sd">        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.project.ProjectBase" class="doc doc-heading">
+            <code>ProjectBase</code>
+
+
+<a href="#src.models.project.ProjectBase" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>プロジェクトの基本モデル</p>
+<p>プロジェクトの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectBase.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクト名。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectBase.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトの説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectBase.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProjectStatus (src.models.project.ProjectStatus)" href="#src.models.project.ProjectStatus">ProjectStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのステータス。デフォルトはACTIVE。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/project.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProjectBase</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクトの基本モデル</span>
+
+<span class="sd">    プロジェクトの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): プロジェクトの説明。デフォルトは空文字列。</span>
+<span class="sd">        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">ProjectStatus</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">ProjectStatus</span><span class="o">.</span><span class="n">ACTIVE</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.project.ProjectCreate" class="doc doc-heading">
+            <code>ProjectCreate</code>
+
+
+<a href="#src.models.project.ProjectCreate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="ProjectBase (src.models.project.ProjectBase)" href="#src.models.project.ProjectBase">ProjectBase</a></code></p>
+
+
+        <p>プロジェクト作成用モデル</p>
+<p>プロジェクトを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectCreate.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクト名。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectCreate.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトの説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectCreate.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProjectStatus (src.models.project.ProjectStatus)" href="#src.models.project.ProjectStatus">ProjectStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのステータス。デフォルトはACTIVE。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/project.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProjectCreate</span><span class="p">(</span><span class="n">ProjectBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクト作成用モデル</span>
+
+<span class="sd">    プロジェクトを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): プロジェクトの説明。デフォルトは空文字列。</span>
+<span class="sd">        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.project.ProjectRead" class="doc doc-heading">
+            <code>ProjectRead</code>
+
+
+<a href="#src.models.project.ProjectRead" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="ProjectBase (src.models.project.ProjectBase)" href="#src.models.project.ProjectBase">ProjectBase</a></code></p>
+
+
+        <p>プロジェクト読み取り用モデル</p>
+<p>プロジェクトの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectRead.id">id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのID。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectRead.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクト名。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectRead.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトの説明。デフォルトは空文字列。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectRead.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProjectStatus (src.models.project.ProjectStatus)" href="#src.models.project.ProjectStatus">ProjectStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのステータス。デフォルトはACTIVE。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/project.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProjectRead</span><span class="p">(</span><span class="n">ProjectBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクト読み取り用モデル</span>
+
+<span class="sd">    プロジェクトの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (uuid.UUID): プロジェクトのID。</span>
+<span class="sd">        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">        description (str): プロジェクトの説明。デフォルトは空文字列。</span>
+<span class="sd">        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.project.ProjectStatus" class="doc doc-heading">
+            <code>ProjectStatus</code>
+
+
+<a href="#src.models.project.ProjectStatus" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="str">str</span></code>, <code><span title="enum.Enum">Enum</span></code></p>
+
+
+        <p>プロジェクトのステータス</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/project.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProjectStatus</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクトのステータス&quot;&quot;&quot;</span>
+
+    <span class="n">ACTIVE</span> <span class="o">=</span> <span class="s2">&quot;active&quot;</span>
+    <span class="n">ON_HOLD</span> <span class="o">=</span> <span class="s2">&quot;on_hold&quot;</span>
+    <span class="n">COMPLETED</span> <span class="o">=</span> <span class="s2">&quot;completed&quot;</span>
+    <span class="n">CANCELLED</span> <span class="o">=</span> <span class="s2">&quot;cancelled&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.project.ProjectUpdate" class="doc doc-heading">
+            <code>ProjectUpdate</code>
+
+
+<a href="#src.models.project.ProjectUpdate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>プロジェクト更新用モデル</p>
+<p>プロジェクトの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectUpdate.title">title</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクト名。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectUpdate.description">description</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトの説明。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.project.ProjectUpdate.status">status</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProjectStatus (src.models.project.ProjectStatus)" href="#src.models.project.ProjectStatus">ProjectStatus</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>プロジェクトのステータス。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/project.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProjectUpdate</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクト更新用モデル</span>
+
+<span class="sd">    プロジェクトの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        title (str | None): プロジェクト名。Noneの場合は更新しない。</span>
+<span class="sd">        description (str | None): プロジェクトの説明。Noneの場合は更新しない。</span>
+<span class="sd">        status (ProjectStatus | None): プロジェクトのステータス。Noneの場合は更新しない。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">ProjectStatus</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.models.tag" class="doc doc-heading">
+            <code>src.models.tag</code>
+
+
+<a href="#src.models.tag" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>Tagモデルの定義</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.tag.Tag" class="doc doc-heading">
+            <code>Tag</code>
+
+
+<a href="#src.models.tag.Tag" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TagBase (src.models.tag.TagBase)" href="#src.models.tag.TagBase">TagBase</a></code></p>
+
+
+        <p>タグモデル</p>
+<p>タグの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.Tag.id">id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグのID。デフォルトはNoneで、データベースに保存時に自動生成されます。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.Tag.name">name</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Tag</span><span class="p">(</span><span class="n">TagBase</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグモデル</span>
+
+<span class="sd">    タグの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (uuid.UUID | None): タグのID。デフォルトはNoneで、データベースに保存時に自動生成されます。</span>
+<span class="sd">        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.tag.TagBase" class="doc doc-heading">
+            <code>TagBase</code>
+
+
+<a href="#src.models.tag.TagBase" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>タグの基本モデル</p>
+<p>タグの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.TagBase.name">name</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TagBase</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグの基本モデル</span>
+
+<span class="sd">    タグの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.tag.TagCreate" class="doc doc-heading">
+            <code>TagCreate</code>
+
+
+<a href="#src.models.tag.TagCreate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TagBase (src.models.tag.TagBase)" href="#src.models.tag.TagBase">TagBase</a></code></p>
+
+
+        <p>タグ作成用モデル</p>
+<p>タグを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.TagCreate.name">name</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TagCreate</span><span class="p">(</span><span class="n">TagBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグ作成用モデル</span>
+
+<span class="sd">    タグを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.tag.TagRead" class="doc doc-heading">
+            <code>TagRead</code>
+
+
+<a href="#src.models.tag.TagRead" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TagBase (src.models.tag.TagBase)" href="#src.models.tag.TagBase">TagBase</a></code></p>
+
+
+        <p>タグ読み取り用モデル</p>
+<p>タグの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.TagRead.id">id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグのID。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.TagRead.name">name</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TagRead</span><span class="p">(</span><span class="n">TagBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグ読み取り用モデル</span>
+
+<span class="sd">    タグの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (uuid.UUID): タグのID。</span>
+<span class="sd">        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.tag.TagUpdate" class="doc doc-heading">
+            <code>TagUpdate</code>
+
+
+<a href="#src.models.tag.TagUpdate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>タグ更新用モデル</p>
+<p>タグの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.tag.TagUpdate.name">name</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグ名。Noneの場合は更新しない。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TagUpdate</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグ更新用モデル</span>
+
+<span class="sd">    タグの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str | None): タグ名。Noneの場合は更新しない。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.models.task_tag" class="doc doc-heading">
+            <code>src.models.task_tag</code>
+
+
+<a href="#src.models.task_tag" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>TaskTagモデルの定義（多対多の関連テーブル）</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task_tag.TaskTag" class="doc doc-heading">
+            <code>TaskTag</code>
+
+
+<a href="#src.models.task_tag.TaskTag" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TaskTagBase (src.models.task_tag.TaskTagBase)" href="#src.models.task_tag.TaskTagBase">TaskTagBase</a></code></p>
+
+
+        <p>タスクとタグの関連モデル</p>
+<p>タスクとタグの多対多関係をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTag.task_id">task_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのID。複合主キーの一部。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTag.tag_id">tag_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグのID。複合主キーの一部。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task_tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskTag</span><span class="p">(</span><span class="n">TaskTagBase</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクとタグの関連モデル</span>
+
+<span class="sd">    タスクとタグの多対多関係をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        task_id (uuid.UUID): タスクのID。複合主キーの一部。</span>
+<span class="sd">        tag_id (uuid.UUID): タグのID。複合主キーの一部。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task_tag.TaskTagBase" class="doc doc-heading">
+            <code>TaskTagBase</code>
+
+
+<a href="#src.models.task_tag.TaskTagBase" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>タスクとタグの関連の基本モデル</p>
+<p>タスクとタグの多対多関係を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTagBase.task_id">task_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのID。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTagBase.tag_id">tag_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグのID。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task_tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskTagBase</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクとタグの関連の基本モデル</span>
+
+<span class="sd">    タスクとタグの多対多関係を定義するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        task_id (uuid.UUID): タスクのID。</span>
+<span class="sd">        tag_id (uuid.UUID): タグのID。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">foreign_key</span><span class="o">=</span><span class="s2">&quot;task.id&quot;</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">foreign_key</span><span class="o">=</span><span class="s2">&quot;tag.id&quot;</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task_tag.TaskTagCreate" class="doc doc-heading">
+            <code>TaskTagCreate</code>
+
+
+<a href="#src.models.task_tag.TaskTagCreate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TaskTagBase (src.models.task_tag.TaskTagBase)" href="#src.models.task_tag.TaskTagBase">TaskTagBase</a></code></p>
+
+
+        <p>タスクとタグの関連作成用モデル</p>
+<p>タスクとタグの関連を新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTagCreate.task_id">task_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのID。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTagCreate.tag_id">tag_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグのID。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task_tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskTagCreate</span><span class="p">(</span><span class="n">TaskTagBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクとタグの関連作成用モデル</span>
+
+<span class="sd">    タスクとタグの関連を新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        task_id (uuid.UUID): タスクのID。</span>
+<span class="sd">        tag_id (uuid.UUID): タグのID。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.task_tag.TaskTagRead" class="doc doc-heading">
+            <code>TaskTagRead</code>
+
+
+<a href="#src.models.task_tag.TaskTagRead" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TaskTagBase (src.models.task_tag.TaskTagBase)" href="#src.models.task_tag.TaskTagBase">TaskTagBase</a></code></p>
+
+
+        <p>タスクとタグの関連読み取り用モデル</p>
+<p>タスクとタグの関連情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</p>
+
+
+<p><span class="doc-section-title">属性：</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTagRead.task_id">task_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タスクのID。</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.models.task_tag.TaskTagRead.tag_id">tag_id</span></code></td>
+            <td>
+                  <code><span title="uuid.UUID">UUID</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>タグのID。</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/task_tag.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TaskTagRead</span><span class="p">(</span><span class="n">TaskTagBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクとタグの関連読み取り用モデル</span>
+
+<span class="sd">    タスクとタグの関連情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        task_id (uuid.UUID): タスクのID。</span>
+<span class="sd">        tag_id (uuid.UUID): タグのID。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.models.memo" class="doc doc-heading">
+            <code>src.models.memo</code>
+
+
+<a href="#src.models.memo" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>Memoモデルの定義</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.memo.Memo" class="doc doc-heading">
+            <code>Memo</code>
+
+
+<a href="#src.models.memo.Memo" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="MemoBase (src.models.memo.MemoBase)" href="#src.models.memo.MemoBase">MemoBase</a></code></p>
+
+
+        <p>メモモデル</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/memo.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Memo</span><span class="p">(</span><span class="n">MemoBase</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;メモモデル&quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.memo.MemoBase" class="doc doc-heading">
+            <code>MemoBase</code>
+
+
+<a href="#src.models.memo.MemoBase" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>メモの基本モデル</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/memo.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MemoBase</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;メモの基本モデル&quot;&quot;&quot;</span>
+
+    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;マークダウン形式のメモ内容&quot;</span><span class="p">)</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">foreign_key</span><span class="o">=</span><span class="s2">&quot;task.id&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.memo.MemoCreate" class="doc doc-heading">
+            <code>MemoCreate</code>
+
+
+<a href="#src.models.memo.MemoCreate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="MemoBase (src.models.memo.MemoBase)" href="#src.models.memo.MemoBase">MemoBase</a></code></p>
+
+
+        <p>メモ作成用モデル</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/memo.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MemoCreate</span><span class="p">(</span><span class="n">MemoBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;メモ作成用モデル&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.memo.MemoRead" class="doc doc-heading">
+            <code>MemoRead</code>
+
+
+<a href="#src.models.memo.MemoRead" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="MemoBase (src.models.memo.MemoBase)" href="#src.models.memo.MemoBase">MemoBase</a></code></p>
+
+
+        <p>メモ読み取り用モデル</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/memo.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MemoRead</span><span class="p">(</span><span class="n">MemoBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;メモ読み取り用モデル&quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.models.memo.MemoUpdate" class="doc doc-heading">
+            <code>MemoUpdate</code>
+
+
+<a href="#src.models.memo.MemoUpdate" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="sqlmodel.SQLModel">SQLModel</span></code></p>
+
+
+        <p>メモ更新用モデル</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/models/memo.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MemoUpdate</span><span class="p">(</span><span class="n">SQLModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;メモ更新用モデル&quot;&quot;&quot;</span>
+
+    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="最終更新日">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月25日 05:48:04 UTC">2025年8月25日</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="作成日">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月25日 05:48:04 UTC">2025年8月25日</span>
+  </span>
+
+    
+    
+    
+      
+  <span class="md-source-file__fact">
+    
+      
+  <span class="md-icon" title="投稿者">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+  </span>
+  <span>GitHub</span>
+
+    
+    <nav>
+      
+        <a href="https://github.com/snow7y" class="md-author" title="@snow7y">
+          
+          <img src="https://avatars.githubusercontent.com/u/103980824?v=4&size=72" alt="snow7y">
+        </a>
+      
+      
+      
+    </nav>
+  </span>
+
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.instant", "navigation.expand", "search.suggest", "search.highlight", "content.code.annotate", "content.code.copy", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>

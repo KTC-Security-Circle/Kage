@@ -1,0 +1,4602 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Kage - LLM を活用したタスク管理アプリケーションの開発者向けドキュメント">
+      
+      
+      
+        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/dev/reference/commands_queries/">
+      
+      
+        <link rel="prev" href="../models/">
+      
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>コマンドとクエリ - Kage Developer Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Noto Sans JP";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#command" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+    <a href="../../.." title="Kage Developer Docs" class="md-header__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kage Developer Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              コマンドとクエリ
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="blue-grey"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="検索">
+        
+        <button type="reset" class="md-search__icon md-icon" title="クリア" aria-label="クリア" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/KTC-Security-Circle/Kage" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    KTC-Security-Circle/Kage
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="タブ" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  はじめに
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../app/concept/" class="md-tabs__link">
+          
+  
+  
+  アプリ概要
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../setup/" class="md-tabs__link">
+          
+  
+  
+  開発ガイド
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../models/" class="md-tabs__link">
+          
+  
+  
+  APIリファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Kage Developer Docs" class="md-nav__button md-logo" aria-label="Kage Developer Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kage Developer Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/KTC-Security-Circle/Kage" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    KTC-Security-Circle/Kage
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    はじめに
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    アプリ概要
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            アプリ概要
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../app/concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コンセプト
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    開発ガイド
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            開発ガイド
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    セットアップ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    アーキテクチャ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../views_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    画面設計
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    エージェント
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    マイグレーション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task_runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    タスクランナー
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../branch_naming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ブランチ命名
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing_docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    コントリビューション
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    APIリファレンス
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            APIリファレンス
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    モデル
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    コマンドとクエリ
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    コマンドとクエリ
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command" class="md-nav__link">
+    <span class="md-ellipsis">
+      Command オブジェクトについて
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command オブジェクトについて">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      利用例 (タスク作成)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query オブジェクトについて
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query オブジェクトについて">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      利用例 (ステータス別タスク取得)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      コマンド API リファレンス
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="コマンド API リファレンス">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスク関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.task_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      プロジェクト関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.project_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      project_commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      タグ関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.tag_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      tag_commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスクタグ関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.task_tag_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_tag_commands
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      クエリ API リファレンス
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="クエリ API リファレンス">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      プロジェクト関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.project_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      project_queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      タグ関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.tag_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      tag_queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスク関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.task_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスクタグ関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.task_tag_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_tag_queries
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command" class="md-nav__link">
+    <span class="md-ellipsis">
+      Command オブジェクトについて
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command オブジェクトについて">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      利用例 (タスク作成)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query オブジェクトについて
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query オブジェクトについて">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      利用例 (ステータス別タスク取得)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      コマンド API リファレンス
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="コマンド API リファレンス">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスク関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.task_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      プロジェクト関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.project_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      project_commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      タグ関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.tag_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      tag_commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスクタグ関連コマンド
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.commands.task_tag_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_tag_commands
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      クエリ API リファレンス
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="クエリ API リファレンス">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      プロジェクト関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.project_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      project_queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      タグ関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.tag_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      tag_queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスク関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.task_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      タスクタグ関連クエリ
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.logic.queries.task_tag_queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      task_tag_queries
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">コマンド / クエリ一覧<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>アプリケーションサービス層に処理を依頼するための 2 種類の DTO (Command / Query) をまとめて参照できるページです。UI や Agent からドメイン操作を行う際に、状態を変更するか（Command）、取得するか（Query）で使い分けます。</p>
+<table>
+<thead>
+<tr>
+<th>区分</th>
+<th>目的</th>
+<th>副作用</th>
+<th>命名例</th>
+<th>代表メソッド/変換</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command</td>
+<td>状態変更(作成/更新/削除/ステータス変更)</td>
+<td>あり</td>
+<td>CreateTaskCommand</td>
+<td>to_task_create(), to_project_update() など</td>
+</tr>
+<tr>
+<td>Query</td>
+<td>状態取得(検索/一覧/件数/存在確認)</td>
+<td>なし</td>
+<td>GetTasksByStatusQuery</td>
+<td>(変換不要: 条件値のみ)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="command">Command オブジェクトについて<a class="headerlink" href="#command" title="Permanent link">&para;</a></h2>
+<p>書き込み系ユースケース（状態変更）を依頼するための不変 DTO です。呼び出し側は必要最小限の入力をまとめ、Application Service に渡します。</p>
+<p>設計指針:</p>
+<ul>
+<li>1 コマンド = 1 ユースケース (副作用を伴う操作)</li>
+<li>dataclass により軽量でテスト容易</li>
+<li><code>to_xxx_create</code> / <code>to_xxx_update</code> などでモデルへ変換</li>
+<li>Validation は上位 (UI/Service) で実施し、DTO 自体はデータキャリア</li>
+</ul>
+<h3 id="_2">利用例 (タスク作成)<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">logic.commands.task_commands</span><span class="w"> </span><span class="kn">import</span> <span class="n">CreateTaskCommand</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">logic.application_services.task_application_service</span><span class="w"> </span><span class="kn">import</span> <span class="n">TaskApplicationService</span>
+
+<span class="n">cmd</span> <span class="o">=</span> <span class="n">CreateTaskCommand</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;調査&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;仕様確認&quot;</span><span class="p">)</span>
+<span class="n">service</span> <span class="o">=</span> <span class="n">TaskApplicationService</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">service</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="query">Query オブジェクトについて<a class="headerlink" href="#query" title="Permanent link">&para;</a></h2>
+<p>読み取り系ユースケース（状態取得）を依頼するための DTO です。フィルタ条件をカプセル化しサービス層に渡します。</p>
+<p>設計指針:</p>
+<ul>
+<li>1 クエリ = 1 読み取りユースケース (副作用なし)</li>
+<li>dataclass によりシンプル</li>
+<li>条件/識別子のみを保持しロジックを持たない</li>
+<li>複雑化する場合は新たな専用クエリを追加し責務分離</li>
+</ul>
+<h3 id="_3">利用例 (ステータス別タスク取得)<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">logic.queries.task_queries</span><span class="w"> </span><span class="kn">import</span> <span class="n">GetTasksByStatusQuery</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">logic.application_services.task_application_service</span><span class="w"> </span><span class="kn">import</span> <span class="n">TaskApplicationService</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">models</span><span class="w"> </span><span class="kn">import</span> <span class="n">TaskStatus</span>
+
+<span class="n">q</span> <span class="o">=</span> <span class="n">GetTasksByStatusQuery</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">TaskStatus</span><span class="o">.</span><span class="n">INBOX</span><span class="p">)</span>
+<span class="n">service</span> <span class="o">=</span> <span class="n">TaskApplicationService</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">tasks</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">get_tasks_by_status</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="api">コマンド API リファレンス<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
+<h3 id="_4">タスク関連コマンド<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.commands.task_commands" class="doc doc-heading">
+            <code>src.logic.commands.task_commands</code>
+
+
+<a href="#src.logic.commands.task_commands" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>タスク関連のコマンドオブジェクト</p>
+<p>Application Service層で使用するCommand DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_commands.CreateTaskCommand" class="doc doc-heading">
+            <code>CreateTaskCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_commands.CreateTaskCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスク作成コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CreateTaskCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスク作成コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">TaskStatus</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">INBOX</span>
+    <span class="n">due_date</span><span class="p">:</span> <span class="n">date</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_task_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskCreate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;TaskCreateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TaskCreate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">TaskCreate</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+            <span class="n">due_date</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">due_date</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.task_commands.CreateTaskCommand.to_task_create" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_task_create</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.task_commands.CreateTaskCommand.to_task_create" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>TaskCreateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>TaskCreate</code></td>            <td>
+                  <code><span title="models.TaskCreate">TaskCreate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/task_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_task_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskCreate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TaskCreateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        TaskCreate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TaskCreate</span><span class="p">(</span>
+        <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+        <span class="n">due_date</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">due_date</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_commands.DeleteTaskCommand" class="doc doc-heading">
+            <code>DeleteTaskCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_commands.DeleteTaskCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスク削除コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeleteTaskCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスク削除コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_commands.UpdateTaskCommand" class="doc doc-heading">
+            <code>UpdateTaskCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_commands.UpdateTaskCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスク更新コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UpdateTaskCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスク更新コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">TaskStatus</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">INBOX</span>
+    <span class="n">due_date</span><span class="p">:</span> <span class="n">date</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_task_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskUpdate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;TaskUpdateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TaskUpdate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">TaskUpdate</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+            <span class="n">due_date</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">due_date</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.task_commands.UpdateTaskCommand.to_task_update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_task_update</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.task_commands.UpdateTaskCommand.to_task_update" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>TaskUpdateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>TaskUpdate</code></td>            <td>
+                  <code><span title="models.TaskUpdate">TaskUpdate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/task_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_task_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskUpdate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TaskUpdateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        TaskUpdate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TaskUpdate</span><span class="p">(</span>
+        <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+        <span class="n">due_date</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">due_date</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_commands.UpdateTaskStatusCommand" class="doc doc-heading">
+            <code>UpdateTaskStatusCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_commands.UpdateTaskStatusCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクステータス更新コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UpdateTaskStatusCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクステータス更新コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">new_status</span><span class="p">:</span> <span class="n">TaskStatus</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="_5">プロジェクト関連コマンド<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.commands.project_commands" class="doc doc-heading">
+            <code>src.logic.commands.project_commands</code>
+
+
+<a href="#src.logic.commands.project_commands" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>プロジェクト関連のコマンドオブジェクト</p>
+<p>Application Service層で使用するCommand DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.project_commands.CreateProjectCommand" class="doc doc-heading">
+            <code>CreateProjectCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.project_commands.CreateProjectCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>プロジェクト作成コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/project_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CreateProjectCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクト作成コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">ProjectStatus</span> <span class="o">=</span> <span class="n">ProjectStatus</span><span class="o">.</span><span class="n">ACTIVE</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_project_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectCreate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;ProjectCreateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ProjectCreate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ProjectCreate</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.project_commands.CreateProjectCommand.to_project_create" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_project_create</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.project_commands.CreateProjectCommand.to_project_create" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>ProjectCreateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>ProjectCreate</code></td>            <td>
+                  <code><span title="models.ProjectCreate">ProjectCreate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/project_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_project_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectCreate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ProjectCreateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ProjectCreate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ProjectCreate</span><span class="p">(</span>
+        <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.project_commands.DeleteProjectCommand" class="doc doc-heading">
+            <code>DeleteProjectCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.project_commands.DeleteProjectCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>プロジェクト削除コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/project_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeleteProjectCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクト削除コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">project_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.project_commands.UpdateProjectCommand" class="doc doc-heading">
+            <code>UpdateProjectCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.project_commands.UpdateProjectCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>プロジェクト更新コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/project_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UpdateProjectCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクト更新コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">project_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">ProjectStatus</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_project_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectUpdate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;ProjectUpdateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ProjectUpdate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ProjectUpdate</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.project_commands.UpdateProjectCommand.to_project_update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_project_update</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.project_commands.UpdateProjectCommand.to_project_update" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>ProjectUpdateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>ProjectUpdate</code></td>            <td>
+                  <code><span title="models.ProjectUpdate">ProjectUpdate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/project_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_project_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectUpdate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ProjectUpdateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ProjectUpdate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ProjectUpdate</span><span class="p">(</span>
+        <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.project_commands.UpdateProjectStatusCommand" class="doc doc-heading">
+            <code>UpdateProjectStatusCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.project_commands.UpdateProjectStatusCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>プロジェクトステータス更新コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/project_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UpdateProjectStatusCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;プロジェクトステータス更新コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">project_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">new_status</span><span class="p">:</span> <span class="n">ProjectStatus</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_project_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectUpdate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;ProjectUpdateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ProjectUpdate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ProjectUpdate</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">new_status</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.project_commands.UpdateProjectStatusCommand.to_project_update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_project_update</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.project_commands.UpdateProjectStatusCommand.to_project_update" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>ProjectUpdateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>ProjectUpdate</code></td>            <td>
+                  <code><span title="models.ProjectUpdate">ProjectUpdate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/project_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_project_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectUpdate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ProjectUpdateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ProjectUpdate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ProjectUpdate</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">new_status</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="_6">タグ関連コマンド<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.commands.tag_commands" class="doc doc-heading">
+            <code>src.logic.commands.tag_commands</code>
+
+
+<a href="#src.logic.commands.tag_commands" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>タグ関連のコマンドオブジェクト</p>
+<p>Application Service層で使用するCommand DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.tag_commands.CreateTagCommand" class="doc doc-heading">
+            <code>CreateTagCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.tag_commands.CreateTagCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タグ作成コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CreateTagCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグ作成コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_tag_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TagCreate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;TagCreateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TagCreate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">TagCreate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.tag_commands.CreateTagCommand.to_tag_create" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_tag_create</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.tag_commands.CreateTagCommand.to_tag_create" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>TagCreateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>TagCreate</code></td>            <td>
+                  <code><span title="models.TagCreate">TagCreate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/tag_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_tag_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TagCreate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TagCreateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        TagCreate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TagCreate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.tag_commands.DeleteTagCommand" class="doc doc-heading">
+            <code>DeleteTagCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.tag_commands.DeleteTagCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タグ削除コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeleteTagCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグ削除コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.tag_commands.UpdateTagCommand" class="doc doc-heading">
+            <code>UpdateTagCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.tag_commands.UpdateTagCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タグ更新コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UpdateTagCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグ更新コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_tag_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TagUpdate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;TagUpdateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TagUpdate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">TagUpdate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.tag_commands.UpdateTagCommand.to_tag_update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_tag_update</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.tag_commands.UpdateTagCommand.to_tag_update" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>TagUpdateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>TagUpdate</code></td>            <td>
+                  <code><span title="models.TagUpdate">TagUpdate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/tag_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_tag_update</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TagUpdate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TagUpdateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        TagUpdate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TagUpdate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="_7">タスクタグ関連コマンド<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.commands.task_tag_commands" class="doc doc-heading">
+            <code>src.logic.commands.task_tag_commands</code>
+
+
+<a href="#src.logic.commands.task_tag_commands" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>タスクタグ関連のコマンドオブジェクト</p>
+<p>Application Service層で使用するCommand DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_tag_commands.CreateTaskTagCommand" class="doc doc-heading">
+            <code>CreateTaskTagCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_tag_commands.CreateTaskTagCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクタグ関連作成コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CreateTaskTagCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクタグ関連作成コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_task_tag_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskTagCreate</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;TaskTagCreateモデルに変換</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TaskTagCreate: モデル変換結果</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">TaskTagCreate</span><span class="p">(</span>
+            <span class="n">task_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">task_id</span><span class="p">,</span>
+            <span class="n">tag_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tag_id</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h5 id="src.logic.commands.task_tag_commands.CreateTaskTagCommand.to_task_tag_create" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_task_tag_create</span><span class="p">()</span></code>
+
+<a href="#src.logic.commands.task_tag_commands.CreateTaskTagCommand.to_task_tag_create" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+        <p>TaskTagCreateモデルに変換</p>
+
+
+    <p><span class="doc-section-title">戻り値：</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>名前</th>          <th>タイプ</th>
+          <th>デスクリプション</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>TaskTagCreate</code></td>            <td>
+                  <code><span title="models.TaskTagCreate">TaskTagCreate</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>モデル変換結果</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="quote">
+              <summary>ソースコード位置： <code>src/logic/commands/task_tag_commands.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_task_tag_create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskTagCreate</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TaskTagCreateモデルに変換</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        TaskTagCreate: モデル変換結果</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TaskTagCreate</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">task_id</span><span class="p">,</span>
+        <span class="n">tag_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tag_id</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_tag_commands.DeleteTaskTagCommand" class="doc doc-heading">
+            <code>DeleteTaskTagCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_tag_commands.DeleteTaskTagCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクタグ関連削除コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeleteTaskTagCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクタグ関連削除コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_tag_commands.DeleteTaskTagsByTagCommand" class="doc doc-heading">
+            <code>DeleteTaskTagsByTagCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_tag_commands.DeleteTaskTagsByTagCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タグのすべてのタスク関連削除コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeleteTaskTagsByTagCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグのすべてのタスク関連削除コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.commands.task_tag_commands.DeleteTaskTagsByTaskCommand" class="doc doc-heading">
+            <code>DeleteTaskTagsByTaskCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.commands.task_tag_commands.DeleteTaskTagsByTaskCommand" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクのすべてのタグ関連削除コマンド</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/commands/task_tag_commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeleteTaskTagsByTaskCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクのすべてのタグ関連削除コマンド&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><hr />
+<h2 id="api_1">クエリ API リファレンス<a class="headerlink" href="#api_1" title="Permanent link">&para;</a></h2>
+<h3 id="_8">プロジェクト関連クエリ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.queries.project_queries" class="doc doc-heading">
+            <code>src.logic.queries.project_queries</code>
+
+
+<a href="#src.logic.queries.project_queries" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>プロジェクト関連のクエリオブジェクト</p>
+<p>Application Service層で使用するQuery DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.project_queries.GetActiveProjectsQuery" class="doc doc-heading">
+            <code>GetActiveProjectsQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.project_queries.GetActiveProjectsQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>アクティブプロジェクト取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/project_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetActiveProjectsQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;アクティブプロジェクト取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.project_queries.GetAllProjectsQuery" class="doc doc-heading">
+            <code>GetAllProjectsQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.project_queries.GetAllProjectsQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>全プロジェクト取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/project_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetAllProjectsQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;全プロジェクト取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.project_queries.GetCompletedProjectsQuery" class="doc doc-heading">
+            <code>GetCompletedProjectsQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.project_queries.GetCompletedProjectsQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>完了プロジェクト取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/project_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetCompletedProjectsQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;完了プロジェクト取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.project_queries.GetProjectByIdQuery" class="doc doc-heading">
+            <code>GetProjectByIdQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.project_queries.GetProjectByIdQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>ID指定プロジェクト取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/project_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetProjectByIdQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ID指定プロジェクト取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">project_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.project_queries.GetProjectsByStatusQuery" class="doc doc-heading">
+            <code>GetProjectsByStatusQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.project_queries.GetProjectsByStatusQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>ステータス別プロジェクト取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/project_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetProjectsByStatusQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ステータス別プロジェクト取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">status</span><span class="p">:</span> <span class="n">ProjectStatus</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.project_queries.SearchProjectsByTitleQuery" class="doc doc-heading">
+            <code>SearchProjectsByTitleQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.project_queries.SearchProjectsByTitleQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タイトル検索プロジェクト取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/project_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchProjectsByTitleQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タイトル検索プロジェクト取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">title_query</span><span class="p">:</span> <span class="nb">str</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="_9">タグ関連クエリ<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.queries.tag_queries" class="doc doc-heading">
+            <code>src.logic.queries.tag_queries</code>
+
+
+<a href="#src.logic.queries.tag_queries" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>タグ関連のクエリオブジェクト</p>
+<p>Application Service層で使用するQuery DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.tag_queries.CheckTagExistsByNameQuery" class="doc doc-heading">
+            <code>CheckTagExistsByNameQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.tag_queries.CheckTagExistsByNameQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>名前によるタグ存在確認クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CheckTagExistsByNameQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;名前によるタグ存在確認クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.tag_queries.GetAllTagsQuery" class="doc doc-heading">
+            <code>GetAllTagsQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.tag_queries.GetAllTagsQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>全タグ取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetAllTagsQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;全タグ取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.tag_queries.GetTagByIdQuery" class="doc doc-heading">
+            <code>GetTagByIdQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.tag_queries.GetTagByIdQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>ID指定タグ取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTagByIdQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ID指定タグ取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.tag_queries.GetTagByNameQuery" class="doc doc-heading">
+            <code>GetTagByNameQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.tag_queries.GetTagByNameQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>名前指定タグ取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTagByNameQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;名前指定タグ取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.tag_queries.SearchTagsByNameQuery" class="doc doc-heading">
+            <code>SearchTagsByNameQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.tag_queries.SearchTagsByNameQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>名前検索タグ取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchTagsByNameQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;名前検索タグ取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">name_query</span><span class="p">:</span> <span class="nb">str</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="_10">タスク関連クエリ<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.queries.task_queries" class="doc doc-heading">
+            <code>src.logic.queries.task_queries</code>
+
+
+<a href="#src.logic.queries.task_queries" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>タスク関連のクエリオブジェクト</p>
+<p>Application Service層で使用するQuery DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_queries.GetAllTasksByStatusDictQuery" class="doc doc-heading">
+            <code>GetAllTasksByStatusDictQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_queries.GetAllTasksByStatusDictQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>全ステータス別タスク取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetAllTasksByStatusDictQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;全ステータス別タスク取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_queries.GetTaskByIdQuery" class="doc doc-heading">
+            <code>GetTaskByIdQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_queries.GetTaskByIdQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>ID指定タスク取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTaskByIdQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ID指定タスク取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_queries.GetTasksByStatusQuery" class="doc doc-heading">
+            <code>GetTasksByStatusQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_queries.GetTasksByStatusQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>ステータス別タスク取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTasksByStatusQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ステータス別タスク取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">status</span><span class="p">:</span> <span class="n">TaskStatus</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_queries.GetTodayTasksCountQuery" class="doc doc-heading">
+            <code>GetTodayTasksCountQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_queries.GetTodayTasksCountQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>今日のタスク件数取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTodayTasksCountQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;今日のタスク件数取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="_11">タスクタグ関連クエリ<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h3 id="src.logic.queries.task_tag_queries" class="doc doc-heading">
+            <code>src.logic.queries.task_tag_queries</code>
+
+
+<a href="#src.logic.queries.task_tag_queries" class="headerlink" title="Permanent link">&para;</a></h3>
+
+    <div class="doc doc-contents first">
+
+        <p>タスクタグ関連のクエリオブジェクト</p>
+<p>Application Service層で使用するQuery DTOs (Data Transfer Objects)</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_tag_queries.CheckTaskTagExistsQuery" class="doc doc-heading">
+            <code>CheckTaskTagExistsQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_tag_queries.CheckTaskTagExistsQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクタグ関連存在確認クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CheckTaskTagExistsQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクタグ関連存在確認クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_tag_queries.GetAllTaskTagsQuery" class="doc doc-heading">
+            <code>GetAllTaskTagsQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_tag_queries.GetAllTaskTagsQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>全タスクタグ関連取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetAllTaskTagsQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;全タスクタグ関連取得クエリ&quot;&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_tag_queries.GetTaskTagByTaskAndTagQuery" class="doc doc-heading">
+            <code>GetTaskTagByTaskAndTagQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_tag_queries.GetTaskTagByTaskAndTagQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクIDとタグIDでタスクタグ関連取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTaskTagByTaskAndTagQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクIDとタグIDでタスクタグ関連取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_tag_queries.GetTaskTagsByTagIdQuery" class="doc doc-heading">
+            <code>GetTaskTagsByTagIdQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_tag_queries.GetTaskTagsByTagIdQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タグID指定でタスクタグ関連取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTaskTagsByTagIdQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タグID指定でタスクタグ関連取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">tag_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="src.logic.queries.task_tag_queries.GetTaskTagsByTaskIdQuery" class="doc doc-heading">
+            <code>GetTaskTagsByTaskIdQuery</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#src.logic.queries.task_tag_queries.GetTaskTagsByTaskIdQuery" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+
+        <p>タスクID指定でタスクタグ関連取得クエリ</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>src/logic/queries/task_tag_queries.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GetTaskTagsByTaskIdQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;タスクID指定でタスクタグ関連取得クエリ&quot;&quot;&quot;</span>
+
+    <span class="n">task_id</span><span class="p">:</span> <span class="n">UUID</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="最終更新日">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月25日 05:48:04 UTC">2025年8月25日</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="作成日">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="2025年8月25日 05:48:04 UTC">2025年8月25日</span>
+  </span>
+
+    
+    
+    
+      
+  <span class="md-source-file__fact">
+    
+      
+  <span class="md-icon" title="投稿者">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+  </span>
+  <span>GitHub</span>
+
+    
+    <nav>
+      
+        <a href="https://github.com/snow7y" class="md-author" title="@snow7y">
+          
+          <img src="https://avatars.githubusercontent.com/u/103980824?v=4&size=72" alt="snow7y">
+        </a>
+      
+      
+      
+    </nav>
+  </span>
+
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.instant", "navigation.expand", "search.suggest", "search.highlight", "content.code.annotate", "content.code.copy", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>

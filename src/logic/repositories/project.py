@@ -1,7 +1,7 @@
 """プロジェクトリポジトリの実装"""
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 from logic.repositories.base import BaseRepository
 from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate
@@ -63,12 +63,10 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             list[Project]: 検索条件に一致するプロジェクト一覧
         """
         try:
-            # Python側でフィルタリングを実行
-            statement = select(Project)
-            all_projects = self.session.exec(statement).all()
-
-            # タイトルに検索クエリが含まれるプロジェクトをフィルタリング
-            filtered_projects = [project for project in all_projects if title_query.lower() in project.title.lower()]
+            # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
+            # [AI GENERATED] 大文字小文字を区別しない検索のためfunc.lower()を使用
+            statement = select(Project).where(func.lower(Project.title).contains(func.lower(title_query)))  # pyright: ignore[reportAttributeAccessIssue]
+            filtered_projects = list(self.session.exec(statement).all())
 
         except Exception as e:
             logger.exception(f"タイトル検索に失敗しました: {e}")

@@ -3,7 +3,7 @@
 import uuid
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 from logic.repositories.base import BaseRepository
 from models import Memo, MemoCreate, MemoUpdate
@@ -58,7 +58,8 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
         """
         try:
             # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
-            statement = select(Memo).where(Memo.content.contains(content_query))  # pyright: ignore[reportAttributeAccessIssue]
+            # [AI GENERATED] 大文字小文字を区別しない検索のためfunc.lower()を使用
+            statement = select(Memo).where(func.lower(Memo.content).contains(func.lower(content_query)))  # pyright: ignore[reportAttributeAccessIssue]
             filtered_memos = list(self.session.exec(statement).all())
 
         except Exception as e:

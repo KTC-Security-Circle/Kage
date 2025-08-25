@@ -50,9 +50,20 @@ nav:
       - タスクランナー: dev/task_runner.md
       - ブランチ命名: dev/branch_naming.md
       - コントリビューション: dev/contributing_docs.md
+  - APIリファレンス:
+      - モデル: dev/reference/models.md
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            heading_level: 3
+            show_root_heading: true
+            docstring_style: google
+            show_source: true
+
   - git-revision-date-localized:
       enable_creation_date: true
   - git-committers:

@@ -41,6 +41,7 @@ nav:
   - はじめに: index.md
   - アプリ概要:
       - コンセプト: app/concept.md
+      - UI ガイド: app/ui.md
   - 開発ガイド:
       - セットアップ: dev/setup.md
       - アーキテクチャ: dev/architecture-design.md

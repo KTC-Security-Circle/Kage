@@ -57,12 +57,9 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Exception: データベース操作エラー
         """
         try:
-            # [AI GENERATED] Python側でフィルタリングを実行（SQLiteの制限を回避）
-            statement = select(Memo)
-            all_memos = self.session.exec(statement).all()
-
-            # [AI GENERATED] メモ内容に検索クエリが含まれるメモをフィルタリング
-            filtered_memos = [memo for memo in all_memos if content_query.lower() in memo.content.lower()]
+            # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
+            statement = select(Memo).where(Memo.content.contains(content_query))  # pyright: ignore[reportAttributeAccessIssue]
+            filtered_memos = list(self.session.exec(statement).all())
 
         except Exception as e:
             logger.exception(f"メモ内容検索に失敗しました: {e}")

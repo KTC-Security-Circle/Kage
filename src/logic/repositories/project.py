@@ -1,7 +1,7 @@
 """プロジェクトリポジトリの実装"""
 
 from loguru import logger
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from logic.repositories.base import BaseRepository
 from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate

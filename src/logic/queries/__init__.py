@@ -9,6 +9,7 @@ from logic.queries.memo_queries import (
     GetMemosByTaskIdQuery,
     SearchMemosQuery,
 )
+from logic.queries.one_liner_queries import OneLinerContext
 from logic.queries.project_queries import (
     GetActiveProjectsQuery,
     GetAllProjectsQuery,
@@ -44,6 +45,8 @@ __all__ = [
     "GetMemoByIdQuery",
     "GetMemosByTaskIdQuery",
     "SearchMemosQuery",
+    # One-liner Queries
+    "OneLinerContext",
     # Project Queries
     "GetActiveProjectsQuery",
     "GetAllProjectsQuery",

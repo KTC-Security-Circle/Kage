@@ -11,6 +11,7 @@ from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
+from logic.services.one_liner_service import OneLinerService
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
@@ -126,6 +127,16 @@ class TestServiceFactory:
         assert isinstance(service, TaskTagService)
         # [AI GENERATED] 依存性が正しく注入されていることを確認
         assert isinstance(service.task_tag_repo, TaskTagRepository)
+
+    def test_create_one_liner_service(self, test_session: Session) -> None:
+        """OneLinerService が正しく作成されることをテスト"""
+        repository_factory = RepositoryFactory(test_session)
+        service_factory = ServiceFactory(repository_factory)
+
+        service = service_factory.create_one_liner_service()
+
+        assert isinstance(service, OneLinerService)
+        # [AI GENERATED] OneLinerServiceはリポジトリに依存しないため、リポジトリのチェックは不要
 
     def test_service_factory_creates_different_instances(self, test_session: Session) -> None:
         """ServiceFactory が呼び出しごとに新しいインスタンスを作成することをテスト"""

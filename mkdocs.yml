@@ -72,6 +72,7 @@ plugins:
   - git-committers:
       repository: KTC-Security-Circle/Kage
       branch: main
+      enabled: !ENV [MKDOCS_GIT_COMMITTERS_ENABLED, false]
 
 markdown_extensions:
   # attr_list は toc より前に読み込むことで、カスタムID {#...} を有効化

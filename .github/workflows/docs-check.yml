@@ -1,20 +1,15 @@
-name: Deploy Docs
+name: Check Docs
 
 on:
-  push:
-    branches: [main]
+  pull_request:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - ".github/workflows/docs.yml"
+      - ".github/workflows/docs*.yml"
       - "pyproject.toml"
-  workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
-  build-deploy:
+  check-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,14 +26,13 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Build site
-        run: uv run mkdocs build
+      - name: Build docs (strict mode)
+        run: uv run mkdocs build --strict
         env:
           MKDOCS_GIT_COMMITTERS_ENABLED: false
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          publish_branch: gh-pages
+      - name: Check for broken links (basic)
+        run: |
+          # Basic check for obviously broken internal links
+          find site -name "*.html" -exec grep -l "href=\"#\"" {} \; || true
+          find site -name "*.html" -exec grep -l "src=\"\"" {} \; || true

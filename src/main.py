@@ -27,11 +27,20 @@ def main(page: ft.Page) -> None:
     page.title = APP_TITLE
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
+    page.fonts = {
+        "default": "/fonts/BIZ_UDGothic/BIZUDGothic-Regular.ttf",
+        "bold": "/fonts/BIZ_UDGothic/BIZUDGothic-Bold.ttf",
+    }
     page.theme = ft.Theme(
         color_scheme_seed=ft.Colors.GREY_700,
         page_transitions=ft.PageTransitionsTheme(
             windows=ft.PageTransitionTheme.NONE,
+            linux=ft.PageTransitionTheme.NONE,
+            macos=ft.PageTransitionTheme.NONE,
+            ios=ft.PageTransitionTheme.NONE,
+            android=ft.PageTransitionTheme.NONE,
         ),
+        font_family="default",
     )
 
     # FletNativeRouterを使用したルーティング設定

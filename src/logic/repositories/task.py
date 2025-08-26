@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from logic.repositories.base import BaseRepository
 from models import Task, TaskCreate, TaskStatus, TaskUpdate
@@ -103,12 +103,10 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             list[Task]: 検索条件に一致するタスク一覧
         """
         try:
-            # Python側でフィルタリングを実行（SQLiteの制限を回避）
-            statement = select(Task)
-            all_tasks = self.session.exec(statement).all()
-
-            # タイトルに検索クエリが含まれるタスクをフィルタリング
-            filtered_tasks = [task for task in all_tasks if title_query.lower() in task.title.lower()]
+            # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
+            # [AI GENERATED] 大文字小文字を区別しない検索のためfunc.lower()を使用
+            statement = select(Task).where(func.lower(Task.title).contains(func.lower(title_query)))  # pyright: ignore[reportAttributeAccessIssue]
+            filtered_tasks = list(self.session.exec(statement).all())
 
         except Exception as e:
             logger.exception(f"タイトル検索に失敗しました: {e}")

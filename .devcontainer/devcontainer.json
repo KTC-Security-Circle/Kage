@@ -1,0 +1,36 @@
+{
+  "name": "Kage",
+  "dockerComposeFile": "../.devcontainer/docker-compose.yml",
+  "service": "vscode",
+  "runServices": ["vscode"],
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/dhoeric/features/hadolint:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "exiasr.hadolint",
+        "kevinrose.vsc-python-indent",
+        "mosapride.zenkaku",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "njpwerner.autodocstring",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python"
+      }
+    }
+  },
+  "containerEnv": {
+    "DISPLAY": "dummy",
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
+  },
+  "postCreateCommand": "chmod +x /workspace/.devcontainer/setup.sh && /workspace/.devcontainer/setup.sh",
+  "remoteUser": "vscode"
+}

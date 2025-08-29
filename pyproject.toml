@@ -1,15 +1,23 @@
 [project]
-name = "sigotodekirukun"
+name = "kage"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
 authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
+    "alembic>=1.16.2",
     "flet==0.27.6",
+    "langchain>=0.3.25",
+    "langchain-google-genai>=2.1.5",
+    "langgraph>=0.4.8",
+    "langgraph-checkpoint-sqlite>=2.0.10",
+    "langsmith>=0.3.45",
     "loguru>=0.7.3",
+    "python-dotenv>=1.1.0",
     "sqlmodel>=0.0.24",
 ]
 
@@ -20,7 +28,7 @@ org = "com.mycompany"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "sigotodekirukun"
+product = "Kage"
 
 # company name to display in about app dialogs
 company = "Flet"
@@ -34,18 +42,104 @@ path = "src"
 [tool.uv]
 dev-dependencies = [
     "flet[all]==0.27.6",
+    "mkdocs>=1.6.1",
+    "mkdocs-git-committers-plugin-2>=2.5.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+    "mkdocs-material>=9.6.16",
+    "mkdocstrings>=0.30.0",
+    "mkdocstrings-python>=1.17.0",
+    "poethepoet>=0.36.0",
     "pre-commit>=4.2.0",
     "pyright>=1.1.400",
     "pytest>=8.4.0",
-    "ruff>=0.11.9",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.11.0, <0.12",
 ]
+
+# Poe the Poet
+[tool.poe]
+shell_interpreter = ["powershell", "posix"]
+
+[tool.poe.tasks]
+
+# == Application execution ==
+app-run = "flet run"
+app-dev = "flet run -dr"
+app-web = "flet run --web"
+app-web-dev = "flet run --web -dr"
+app-debug = "flet run -v"
+
+# == Development environment setup ==
+setup = ["sync", "db-upgrade"]
+sync = "uv sync"
+
+# == Database operations ==
+db-upgrade = { shell = "Set-Location src/models; uv run alembic upgrade head" }
+db-downgrade = { shell = "Set-Location src/models; uv run alembic downgrade -1" }
+db-history = { shell = "Set-Location src/models; uv run alembic history" }
+db-current = { shell = "Set-Location src/models; uv run alembic current" }
+
+# == Code quality and formatting ==
+lint = "uv run ruff check src"
+lint-fix = "uv run ruff check src --fix"
+format = "uv run ruff format src"
+format-check = "uv run ruff format src --check"
+type-check = "uv run pyright src"
+
+# == Composite commands ==
+check = ["lint", "format-check", "type-check"]
+fix = ["lint-fix", "format"]
+
+# == Test execution ==
+test = "uv run pytest"
+test-unit = "uv run pytest -m unit"
+test-integration = "uv run pytest -m integration"
+test-cov = "uv run pytest --cov=src --cov-report=html"
+
+# == Dependency management ==
+deps-list = "uv pip list"
+deps-tree = { shell = "uv pip list | Format-Table" }
+deps-outdated = "uv pip list --outdated"
+
+# == Build and packaging ==
+build-web = "flet build web"
+build-desktop = "flet build windows"
+pack-desktop = "flet pack"
+
+# == Documentation (MkDocs) ==
+docs-serve = "uv run mkdocs serve -a 127.0.0.1:8000"
+docs-build = "uv run mkdocs build"
+docs-deploy = "uv run mkdocs gh-deploy --force --no-history"
+
+# == Windows specific utilities ==
+open-storage = { shell = "Invoke-Item storage" }
+open-logs = { shell = "Invoke-Item storage/data/logs" }
+open-data = { shell = "Invoke-Item storage/data" }
+
+# == Cleanup ==
+clean = "uv cache clean"
+clean-pyc = { shell = "Get-ChildItem -Path . -Filter '*.pyc' -Recurse | Remove-Item -Force" }
+clean-pycache = { shell = "Get-ChildItem -Path . -Name '__pycache__' -Recurse -Directory | Remove-Item -Recurse -Force" }
+clean-all = ["clean", "clean-pyc", "clean-pycache"]
+
+# == Log management ==
+logs-app = { shell = "Get-Content storage/data/logs/app.log -Tail 50"}
+logs-agents = { shell = "Get-Content storage/data/logs/agents.log -Tail 50" }
+logs-clear = { shell = "Remove-Item storage/data/logs/*.log -ErrorAction SilentlyContinue" }
+logs-follow-app = { shell = "Get-Content storage/data/logs/app.log -Wait -Tail 10" }
+logs-follow-agents = { shell = "Get-Content storage/data/logs/agents.log -Wait -Tail 10" }
+
 
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]
 line-length = 120
+exclude = [
+    "src/models/migrations/versions/",
+]
 
 [tool.ruff.format]
 docstring-code-format = true
+
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -66,6 +160,7 @@ ignore = [
     "RUF001",
     "RUF002",
     "RUF003",
+    "RUF022",
     "COM812",
     "DTZ005",
     "BLE001",
@@ -75,12 +170,13 @@ unfixable = [
     "F841", # unused variable
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
     "D",
     "S101",
     "N802",
     "ARG",
+    "SLF001",
 ]
 
 # logger-objects = ["src.library.logger.LOGGER"]
@@ -94,7 +190,8 @@ include = ["src"]
 exclude = ["**/node_modules",
     "**/__pycache__",
     "src/experimental",
-    "src/typestubs"
+    "src/typestubs",
+    "src/models/migrations/versions"
 ]
 typeCheckingMode = "basic"
 venvPath = "."
@@ -102,7 +199,7 @@ venv = ".venv"
 
 
 [tool.pytest.ini_options]
-pythonpath = "src"
+pythonpath = ["src", "."]
 
 testpaths = ["tests"]
 python_files = "test_*.py"

@@ -4,6 +4,21 @@ on:
   # push: # 全てのプッシュに対して実行するため、ブランチ指定を削除
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/copilot-instructions.md"
+      - ".github/workflows/**"
+      - ".pre-commit-config.yaml"
+      - "pyproject.toml"
+      - ".vscode/**"
+      - ".gitignore"
+      - "uv.lock"
+      - ".python-version"
   workflow_dispatch:
   workflow_call: # 他のワークフローから呼び出せるようにする
 
@@ -21,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          pip install 'ruff>=0.11.0, <0.12'
 
       - name: Run Ruff check
         run: |

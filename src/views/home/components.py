@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import flet as ft
 
 if TYPE_CHECKING:
-    from logic.task import TaskService
+    from collections.abc import Callable
+
+    from logic.application.task_application_service import TaskApplicationService
 
 
 class MainActionSection(ft.Column):
@@ -16,18 +18,18 @@ class MainActionSection(ft.Column):
     タスク管理ボタンと統計情報を表示するセクション。
     """
 
-    def __init__(self, page: ft.Page, task_service: TaskService) -> None:
+    def __init__(self, page: ft.Page, task_app_service: TaskApplicationService) -> None:
         """MainActionSectionの初期化.
 
         Args:
             page: Fletのページオブジェクト
-            task_service: タスクサービスインスタンス
+            task_app_service: タスクアプリケーションサービスインスタンス
         """
         super().__init__()
         self._page = page
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 20
-        self.task_service = task_service
+        self.task_app_service = task_app_service
 
         # コンポーネントを構築
         self._build_components()
@@ -37,12 +39,12 @@ class MainActionSection(ft.Column):
         self.controls = [
             ft.ElevatedButton(
                 text="タスク管理",
-                icon=ft.icons.TASK_ALT,
+                icon=ft.Icons.TASK_ALT,
                 width=200,
                 height=50,
                 style=ft.ButtonStyle(
-                    bgcolor=ft.colors.BLUE_600,
-                    color=ft.colors.WHITE,
+                    # bgcolor=ft.Colors.BLUE_600,
+                    # color=ft.Colors.WHITE,
                     text_style=ft.TextStyle(size=16),
                 ),
                 on_click=self._navigate_to_tasks,
@@ -64,7 +66,10 @@ class MainActionSection(ft.Column):
         Returns:
             今日のタスク件数
         """
-        return self.task_service.get_task_count_by_today()
+        from logic.queries.task_queries import GetTodayTasksCountQuery
+
+        query = GetTodayTasksCountQuery()
+        return self.task_app_service.get_today_tasks_count(query)
 
 
 class TaskStatsCard(ft.Container):
@@ -100,7 +105,7 @@ class TaskStatsCard(ft.Container):
                         ft.Text(
                             f"{self.task_count}件",
                             size=24,
-                            color=ft.colors.BLUE_600,
+                            # color=ft.Colors.BLUE_600,
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -160,7 +165,7 @@ class QuickActionCard(ft.Container):
                         ft.Icon(
                             name=self.icon,
                             size=40,
-                            color=ft.colors.BLUE_600,
+                            # color=ft.Colors.BLUE_600,
                         ),
                         ft.Text(
                             self.title,
@@ -170,7 +175,7 @@ class QuickActionCard(ft.Container):
                         ft.Text(
                             self.description,
                             size=12,
-                            color=ft.colors.GREY_600,
+                            # color=ft.Colors.GREY_600,
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ],
@@ -195,7 +200,7 @@ def create_welcome_message() -> ft.Container:
         content=ft.Text(
             "タスク管理でもっと効率的に！",
             size=18,
-            color=ft.colors.GREY_700,
+            # color=ft.Colors.GREY_700,
         ),
         alignment=ft.alignment.center,
     )

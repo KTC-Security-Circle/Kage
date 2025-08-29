@@ -3,7 +3,8 @@
 import os
 from pathlib import Path
 
-from sqlmodel import create_engine
+from sqlalchemy import create_engine
+from sqlmodel import SQLModel
 
 # データベース保存先ディレクトリ（環境変数がなければFlet指定のstorageフォルダ）
 DB_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
@@ -13,8 +14,22 @@ DB_PATH: Path = Path(DB_DIR) / "tasks.db"
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 
 
+# アプリケーション起動時にテーブルを作成するための関数
+def create_db_and_tables() -> None:
+    """アプリケーション起動時にテーブルを作成するための関数"""
+    # この関数は main.py の最初で一度だけ呼び出す
+    from sqlmodel import SQLModel
+
+    from models import __all__  # これで全てのモデルがインポートされる # noqa: F401
+
+    SQLModel.metadata.create_all(engine)
+
+
+# SQLModelの基礎クラスを使用
+Base = SQLModel
+
 # アプリケーションのタイトル
-APP_TITLE: str = "タスク管理アプリ"
+APP_TITLE: str = "Kage"
 
 # タスク用の定数
 TASK_TITLE_MAX_LENGTH = 100

@@ -29,6 +29,16 @@ def setup_logger() -> None:
         enqueue=True,
     )
 
+    # ai用ログの設定
+    logger.add(
+        f"{LOG_DIR}/agents.log",  # AI関連のログを別ファイルに出力
+        filter=lambda record: "agents" in record["extra"],  # "agents"が含まれるログのみ出力
+        rotation="10 MB",
+        retention="30 days",
+        level="DEBUG",
+        enqueue=True,
+    )
+
     logger.debug("ロガーの設定が完了しました。")
 
 

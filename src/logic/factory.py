@@ -16,6 +16,7 @@ from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
 from logic.services.memo_service import MemoService
+from logic.services.one_liner_service import OneLinerService
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
@@ -162,6 +163,15 @@ class ServiceFactory:
         return TaskTagService(
             task_tag_repo=task_tag_repo,
         )
+
+    def create_one_liner_service(self) -> OneLinerService:
+        """OneLinerServiceを作成する
+
+        Returns:
+            OneLinerService: 一言コメントサービスインスタンス
+        """
+        # [AI GENERATED] OneLinerServiceはリポジトリに依存しないため、直接インスタンス化
+        return OneLinerService()
 
 
 def create_service_factory(session: Session) -> ServiceFactory:

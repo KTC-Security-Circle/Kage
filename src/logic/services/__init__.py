@@ -6,6 +6,7 @@
 """
 
 from logic.services.memo_service import MemoService
+from logic.services.one_liner_service import OneLinerService
 from logic.services.project_service import ProjectService
 from logic.services.quick_action_mapping_service import QuickActionMappingService
 from logic.services.tag_service import TagService
@@ -18,6 +19,7 @@ from logic.services.task_tag_service import TaskTagService
 
 __all__ = [
     "MemoService",
+    "OneLinerService",
     "ProjectService",
     "QuickActionMappingService",
     "TagService",

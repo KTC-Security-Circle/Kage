@@ -13,6 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=True \
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+    git-lfs \
     # For OpenCV etc...
     libgl1 libglib2.0-0 \
     # To remove the image size, it is recommended refresh the package cache as follows

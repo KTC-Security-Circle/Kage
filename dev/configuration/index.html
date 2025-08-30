@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/dev/branch_naming/">
+        <link rel="canonical" href="https://ktc-security-circle.github.io/Kage/dev/configuration/">
       
       
-        <link rel="prev" href="../task_runner/">
+        <link rel="prev" href="../contributing_docs/">
       
       
-        <link rel="next" href="../contributing_docs/">
+        <link rel="next" href="../reference/models/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>ブランチ命名 - Kage Developer Docs</title>
+        <title>設定と環境変数 - Kage Developer Docs</title>
       
     
     
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ブランチ命名
+              設定と環境変数
             
           </span>
         </div>
@@ -651,30 +651,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    ブランチ命名
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../branch_naming/" class="md-nav__link">
         
   
   
@@ -685,96 +665,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="目次">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目次
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      基本形
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#type" class="md-nav__link">
-    <span class="md-ellipsis">
-      type 一覧
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#issue" class="md-nav__link">
-    <span class="md-ellipsis">
-      Issue 番号併用 (任意)
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      禁止 / 避ける
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      良い例
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      悪い例
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      運用フロー (推奨)
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      補足
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -807,10 +697,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    設定と環境変数
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -821,6 +731,168 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      概要
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      目的
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      主要コンポーネント
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      環境変数レジストリ
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="環境変数レジストリ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      定義一覧 (自動生成)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      設定値の解決優先順位
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      編集フロー
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="編集フロー">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      トランザクション特性
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#yaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      YAML 永続化
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="YAML 永続化">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      生成される初期 config.yaml (抜粋 / 自動生成)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      よくある追加シナリオ
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      テスト戦略概要
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      ベストプラクティス
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      今後の改善候補
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -956,25 +1028,7 @@
         <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
-      基本形
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#type" class="md-nav__link">
-    <span class="md-ellipsis">
-      type 一覧
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#issue" class="md-nav__link">
-    <span class="md-ellipsis">
-      Issue 番号併用 (任意)
+      概要
     </span>
   </a>
   
@@ -983,7 +1037,7 @@
         <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
-      禁止 / 避ける
+      目的
     </span>
   </a>
   
@@ -992,7 +1046,7 @@
         <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
-      良い例
+      主要コンポーネント
     </span>
   </a>
   
@@ -1001,25 +1055,115 @@
         <li class="md-nav__item">
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
-      悪い例
+      環境変数レジストリ
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="環境変数レジストリ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      定義一覧 (自動生成)
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      運用フロー (推奨)
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
-      補足
+      設定値の解決優先順位
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      編集フロー
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="編集フロー">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      トランザクション特性
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#yaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      YAML 永続化
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="YAML 永続化">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      生成される初期 config.yaml (抜粋 / 自動生成)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      よくある追加シナリオ
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      テスト戦略概要
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      ベストプラクティス
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      今後の改善候補
     </span>
   </a>
   
@@ -1044,108 +1188,234 @@
   
 
 
-<h1 id="_1">ブランチ命名規則<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>最小限で分かりやすく。<code>fix/内容</code> みたいな形。</p>
-<h2 id="_2">基本形<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>&lt;type&gt;/&lt;slug&gt;
+<h1 id="_1">設定・環境変数ガイド<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>本ドキュメントでは Kage における設定管理と環境変数の仕組み、および拡張方法について説明します。</p>
+<h2 id="_2">概要<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Kage では以下の 3 レイヤで設定値を統合し、優先順位を付けて解決します。</p>
+<ol>
+<li>実行時環境変数 (<code>os.environ</code>) - 最優先（CI や一時上書きに使用）</li>
+<li>パース済み <code>.env</code> / 既定値 (<code>EnvSettings</code> Pydantic モデル)</li>
+<li>永続 YAML 設定ファイル (<code>config.yaml</code>) - ユーザー編集用の保存層</li>
+</ol>
+<div class="highlight"><pre><span></span><code>┌────────────────────┐  ← 1. Runtime Env (os.environ)
+│ DATABASE_URL=...    │  # その場で上書き
+└──────────┬─────────┘
+           ▼ マージ
+┌────────────────────┐  ← 2. EnvSettings (.env + 型変換)
+│ OPENAI_API_KEY=...  │
+└──────────┬─────────┘
+           ▼ フォールバック
+┌────────────────────┐  ← 3. config.yaml (ruamel.yaml, コメント保持)
+│ database:
+│   url: sqlite:///... │
+└────────────────────┘
 </code></pre></div>
-<p><code>slug</code> は英小文字 + 数字 + ハイフン。日本語可だがスペースは <code>-</code> に。短く。</p>
-<h2 id="type">type 一覧<a class="headerlink" href="#type" title="Permanent link">&para;</a></h2>
+<h2 id="_3">目的<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>コメント保持可能な YAML でユーザー設定を永続化</li>
+<li>型安全 (Pydantic v2) + 変更容易な編集レイヤ</li>
+<li>環境変数を一元管理し、欠落/未設定を検出</li>
+<li>実行時の即時上書き（テスト・CI・一時カスタム）</li>
+</ul>
+<h2 id="_4">主要コンポーネント<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>type</th>
-<th>用途</th>
+<th>コンポーネント</th>
+<th>役割</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>feature</td>
-<td>新機能</td>
+<td><code>EnvSettings</code></td>
+<td><code>.env</code> 読込と型付きアクセス、未設定警告</td>
 </tr>
 <tr>
-<td>fix</td>
-<td>バグ修正</td>
+<td><code>ENV_VARS</code> (レジストリ)</td>
+<td>利用する環境変数メタ定義（説明/種類/必須）</td>
 </tr>
 <tr>
-<td>refactor</td>
-<td>挙動変えない整理</td>
+<td><code>ConfigManager</code></td>
+<td>YAML 読込/保存、編集トランザクション、統合解決</td>
 </tr>
 <tr>
-<td>perf</td>
-<td>パフォーマンス改善</td>
-</tr>
-<tr>
-<td>chore</td>
-<td>雑タスク / 依存更新 / リリースノートに含めない作業</td>
-</tr>
-<tr>
-<td>build</td>
-<td>ビルド/依存/設定変更</td>
-</tr>
-<tr>
-<td>ci</td>
-<td>CI 周り</td>
-</tr>
-<tr>
-<td>docs</td>
-<td>ドキュメント</td>
-</tr>
-<tr>
-<td>test</td>
-<td>テスト追加/調整</td>
-</tr>
-<tr>
-<td>revert</td>
-<td>取り消し用</td>
-</tr>
-<tr>
-<td>spike</td>
-<td>検証用 (短命)</td>
+<td><code>edit()</code> コンテキスト</td>
+<td>不変モデルを編集可能モデルに一時変換し YAML へ永続化</td>
 </tr>
 </tbody>
 </table>
-<h2 id="issue">Issue 番号併用 (任意)<a class="headerlink" href="#issue" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>&lt;type&gt;/&lt;issue-number&gt;-&lt;slug&gt;
+<h2 id="_5">環境変数レジストリ<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p><code>src/settings/models.py</code> 内 <code>ENV_VARS</code> に <code>EnvVarDef</code> のリストとして定義します。</p>
+<div class="highlight"><pre><span></span><code><span class="n">EnvVarDef</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;OPENAI_API_KEY&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;ai&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;OpenAI API キー&quot;</span><span class="p">)</span>
 </code></pre></div>
-<p>例: <code>fix/123-null-pointer</code>, <code>feature/45-task-filter</code></p>
-<h2 id="_3">禁止 / 避ける<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<ul>
-<li>大文字</li>
-<li>スペース (→ <code>-</code>)</li>
-<li>アンダースコア <code>_</code></li>
-<li>先頭 / 末尾のハイフン</li>
-<li>100 文字超え</li>
-<li>意味不明 (<code>fix/tmp</code>, <code>feature/test</code> など)</li>
-</ul>
-<h2 id="_4">良い例<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>fix/textarea-overflow
-feature/task-tag-rel
-docs/branch-naming
-refactor/service-layer-split
-perf/query-cache
-chore/update-ruff
-ci/add-windows-job
-</code></pre></div>
-<h2 id="_5">悪い例<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>Fix/Overflow        # 大文字
-fix/テスト 修正      # スペース
-feature_task_api    # アンダースコア
-fix/tmp             # 意味不明
-</code></pre></div>
-<h2 id="_6">運用フロー (推奨)<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p>追加手順:</p>
 <ol>
-<li>main から作成</li>
-<li>コミット &amp; PR 作成 (Draft 可)</li>
-<li>レビュー &amp; squash merge</li>
-<li>マージ後ローカルとリモートのブランチ削除</li>
+<li><code>ENV_VARS</code> に <code>EnvVarDef</code> を追加</li>
+<li><code>EnvSettings</code> にフィールドを型付きで追加（必要なら）</li>
+<li>ドキュメント更新（本ファイル）</li>
 </ol>
-<h2 id="_7">補足<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p><code>init_environment()</code> 実行時の挙動:</p>
 <ul>
-<li>spike は成果まとまったら feature / fix に作り直し</li>
-<li>revert/ ブランチは GitHub の "Revert" ボタン利用時にも合わせる</li>
-<li>迷ったら <code>fix/明確な短い説明</code> か <code>chore/...</code> に寄せる</li>
+<li><code>.env</code> が無ければテンプレ生成（コメント付き）</li>
+<li>レジストリにあるが .env に欠けているキーを追記</li>
+<li>必須(required=True) かつ未設定値をログ警告</li>
 </ul>
+<h3 id="_6">定義一覧 (自動生成)<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<!-- BEGIN:ENV_VARS_TABLE -->
+
+<table>
+<thead>
+<tr>
+<th>キー</th>
+<th>型</th>
+<th>カテゴリ</th>
+<th>デフォルト</th>
+<th>コメント</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FLET_SECRET_KEY</td>
+<td>str</td>
+<td>flet</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>GOOGLE_API_KEY</td>
+<td>str</td>
+<td>ai</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LANGSMITH_API_KEY</td>
+<td>str</td>
+<td>ai</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LANGSMITH_TRACING</td>
+<td>bool</td>
+<td>ai</td>
+<td>false</td>
+<td>false/true</td>
+</tr>
+<tr>
+<td>KAGE_USE_LLM_ONE_LINER</td>
+<td>bool</td>
+<td>ai</td>
+<td>false</td>
+<td>false/true</td>
+</tr>
+<tr>
+<td>DATABASE_URL</td>
+<td>str</td>
+<td>db</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<!-- END:ENV_VARS_TABLE -->
+
+<h2 id="_7">設定値の解決優先順位<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p><code>ConfigManager.database_url</code> などのプロパティでは以下の順で解決:</p>
+<ol>
+<li><code>os.environ.get("DATABASE_URL")</code></li>
+<li><code>EnvSettings.get().database_url</code>（<code>.env</code> 由来の型済値）</li>
+<li>YAML (<code>config.yaml</code>) 内の保存値</li>
+</ol>
+<p>テストで monkeypatch した環境変数も即時反映されます（<code>EnvSettings</code> をキャッシュしない設計）。</p>
+<h2 id="_8">編集フロー<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<p>ランタイム利用は不変 (frozen) Pydantic モデル。編集時は一時的に「編集用モデル」へ変換し、コンテキスト終了で差分を YAML に保存します。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">settings.manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">config_manager</span>
+
+<span class="k">with</span> <span class="n">config_manager</span><span class="o">.</span><span class="n">edit</span><span class="p">()</span> <span class="k">as</span> <span class="n">cfg</span><span class="p">:</span>
+    <span class="n">cfg</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">theme</span> <span class="o">=</span> <span class="s2">&quot;dark&quot;</span>
+    <span class="n">cfg</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;postgresql+psycopg://user:pass@host/db&quot;</span>
+<span class="c1"># ← ここで自動保存 &amp; 不変モデルへ戻る</span>
+</code></pre></div>
+<h3 id="_9">トランザクション特性<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li>コンテキスト内例外発生時は保存されません</li>
+<li>ネスト編集は最初のコンテキストに集約（深さカウント）</li>
+<li>差分計算で最小限フィールドを書換</li>
+</ul>
+<h2 id="yaml">YAML 永続化<a class="headerlink" href="#yaml" title="Permanent link">&para;</a></h2>
+<ul>
+<li>ライブラリ: <code>ruamel.yaml</code>（コメント保持）</li>
+<li>パス: <code>CONFIG_PATH</code> (<code>src/config.py</code>)</li>
+<li>未存在時はデフォルト設定で生成</li>
+</ul>
+<h3 id="configyaml">生成される初期 config.yaml (抜粋 / 自動生成)<a class="headerlink" href="#configyaml" title="Permanent link">&para;</a></h3>
+<!-- BEGIN:DEFAULT_CONFIG_YAML -->
+
+<div class="highlight"><pre><span></span><code><span class="nt">window</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">size</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1280</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">720</span>
+<span class="w">  </span><span class="nt">position</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<span class="nt">user</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">last_login_user</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">theme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">light</span>
+<span class="nt">database</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sqlite:///storage/data/tasks.db</span>
+</code></pre></div>
+<!-- END:DEFAULT_CONFIG_YAML -->
+
+<h2 id="_10">よくある追加シナリオ<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>シナリオ</th>
+<th>手順概要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI API キー追加</td>
+<td><code>.env</code> に値を設定（<code>OPENAI_API_KEY=sk-...</code>）</td>
+</tr>
+<tr>
+<td>DB 接続を Postgres に切替</td>
+<td><code>DATABASE_URL</code> を環境変数または <code>.env</code> で設定</td>
+</tr>
+<tr>
+<td>UI テーマ変更</td>
+<td><code>with config_manager.edit(): cfg.app.theme = "dark"</code></td>
+</tr>
+<tr>
+<td>新しい環境変数</td>
+<td><code>ENV_VARS</code> + <code>EnvSettings</code> フィールド追加 + doc 追記</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_11">テスト戦略概要<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>.env</code> の欠落キー補完: <code>init_environment</code> テスト</li>
+<li>優先順位: monkeypatch で <code>os.environ</code> を上書き → 即時反映検証</li>
+<li>編集コンテキスト: before/after を比較し immutability を確認</li>
+<li>空文字ブール → None 変換: バリデータテスト</li>
+</ul>
+<h2 id="_12">ベストプラクティス<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<ul>
+<li>一時的な上書きは環境変数で行い、永続変更は編集コンテキストで行う</li>
+<li>必須キーは CI で空チェック（将来的に追加予定）</li>
+<li>直接 <code>os.getenv</code> を使用せず <code>ConfigManager</code>/<code>EnvSettings</code> 経由に統一</li>
+</ul>
+<h2 id="_13">今後の改善候補<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>EnvSettings.reload()</code> の追加（明示再読込）</li>
+<li><code>.env.example</code> の自動同期生成</li>
+<li>設定 UI (Flet) の提供</li>
+<li>未使用設定検出スクリプト</li>
+</ul>
+<hr />
+<p>最終更新: 2025-08-31</p>
 
 
 

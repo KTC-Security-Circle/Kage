@@ -60,7 +60,8 @@ class ConfigManager(Generic[TSettings]):
         self._yaml = YAML()
         self._yaml.indent(mapping=2, sequence=4, offset=2)
         self._settings: TSettings = self._load_or_create()
-        self._env = EnvSettings()
+
+    # 環境設定は都度 EnvSettings.get() / os.environ を参照し最新値を使うため固定キャッシュしない
 
     # --- properties -------------------------------------------------
     @property
@@ -69,11 +70,19 @@ class ConfigManager(Generic[TSettings]):
 
     @property
     def env(self) -> EnvSettings:
-        return self._env
+        # 常に最新の環境変数状態を取得 (EnvSettings.get はキャッシュされるが init_environment で再評価される)
+        return EnvSettings.get()
 
     @property
     def database_url(self) -> str:
-        return self._env.database_url or cast("AppSettings", self._settings).database.url
+        # 直接 os.environ の値を最優先し、なければ EnvSettings.get() 経由、それも無ければ設定ファイル値
+        import os
+
+        env_val = os.environ.get("DATABASE_URL")
+        if env_val:
+            return env_val
+        env_settings = EnvSettings.get()
+        return env_settings.database_url or cast("AppSettings", self._settings).database.url
 
     @property
     def theme(self) -> str:

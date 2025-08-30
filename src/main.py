@@ -2,13 +2,9 @@ import flet as ft
 from loguru import logger
 
 from config import APP_TITLE, create_db_and_tables
-from env import setup_environment
 from logging_conf import setup_logger
 from router_config import setup_enhanced_routing
 from settings.manager import apply_page_settings, get_config_manager  # [AI GENERATED] 設定管理を追加
-
-# 環境変数ファイルの作成
-setup_environment()
 
 # ログの設定
 setup_logger()

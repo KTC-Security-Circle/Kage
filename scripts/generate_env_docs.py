@@ -4,7 +4,8 @@
 `docs/dev/configuration.md` のマーカー区間を自動更新する。
 
 実行手順:
-    uv run python -m devtools.generate_env_docs
+    # workspace ルートで実行
+    uv run python -m src.scripts.generate_env_docs
 
 差分:
     - <!-- BEGIN:ENV_VARS_TABLE --> ～ <!-- END:ENV_VARS_TABLE -->

@@ -5,6 +5,7 @@ from config import APP_TITLE, create_db_and_tables
 from env import setup_environment
 from logging_conf import setup_logger
 from router_config import setup_enhanced_routing
+from settings.manager import apply_page_settings, get_config_manager  # [AI GENERATED] 設定管理を追加
 
 # 環境変数ファイルの作成
 setup_environment()
@@ -25,7 +26,10 @@ def main(page: ft.Page) -> None:
     """
     # ページの初期設定
     page.title = APP_TITLE
-    page.theme_mode = ft.ThemeMode.LIGHT
+    # 設定ファイル読み込み（初期生成含む）
+    get_config_manager()
+    # 設定適用（テーマ等）
+    apply_page_settings(page)
     page.padding = 0
     page.fonts = {
         "default": "/fonts/BIZ_UDGothic/BIZUDGothic-Regular.ttf",
@@ -46,7 +50,7 @@ def main(page: ft.Page) -> None:
     # FletNativeRouterを使用したルーティング設定
     setup_enhanced_routing(page)
 
-    logger.info("セッションが開始されました。")
+    logger.info("セッションが開始されました。設定適用済み。")
 
 
 ft.app(target=main, assets_dir="assets")

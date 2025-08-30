@@ -17,7 +17,9 @@ dependencies = [
     "langgraph-checkpoint-sqlite>=2.0.10",
     "langsmith>=0.3.45",
     "loguru>=0.7.3",
+    "pydantic>=2.11.7",
     "python-dotenv>=1.1.0",
+    "ruamel-yaml>=0.18.15",
     "sqlmodel>=0.0.24",
 ]
 

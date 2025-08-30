@@ -7,9 +7,9 @@ from sqlalchemy import create_engine
 from sqlmodel import SQLModel
 
 # データベース保存先ディレクトリ（環境変数がなければFlet指定のstorageフォルダ）
-DB_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
+STORAGE_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
 # データベースファイルのパス
-DB_PATH: Path = Path(DB_DIR) / "tasks.db"
+DB_PATH: Path = Path(STORAGE_DIR) / "tasks.db"
 # データベースエンジンの作成
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 
@@ -37,4 +37,6 @@ TASK_DESCRIPTION_MAX_LENGTH = 500
 DESCRIPTION_TRUNCATE_LENGTH = 50
 
 # loguru
-LOG_DIR: str = f"{DB_DIR}/logs"
+LOG_DIR: str = f"{STORAGE_DIR}/logs"
+
+CONFIG_PATH: Path = Path(STORAGE_DIR) / "app_config.yaml"

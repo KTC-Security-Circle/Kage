@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from config import DB_DIR
+from config import STORAGE_DIR
 
 
 class LLMProvider(Enum):
@@ -12,4 +12,4 @@ class LLMProvider(Enum):
     HUGGINGFACE = "huggingface"
 
 
-SQLITE_DB_PATH = f"{DB_DIR}/agents.db"
+SQLITE_DB_PATH = f"{STORAGE_DIR}/agents.db"

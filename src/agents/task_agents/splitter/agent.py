@@ -60,10 +60,10 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
 if __name__ == "__main__":
     from uuid import uuid4
 
-    from env import setup_environment
     from logging_conf import setup_logger
+    from settings.models import EnvSettings
 
-    setup_environment()
+    EnvSettings.init_environment()
     setup_logger()
 
     agent = TaskSplitterAgent()

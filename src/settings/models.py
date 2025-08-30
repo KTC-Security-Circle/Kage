@@ -229,12 +229,15 @@ class EnvSettings(BaseSettings):
         return cls._cached
 
     @classmethod
-    def _create_env_file(cls, env_path: Path) -> None:  # [AI GENERATED]
+    def _create_env_file(cls, env_path: Path) -> None:
+        """.env ファイルを作成し、必要な環境変数のキーを定義する。
+
+        Args:
+            env_path (Path): .env ファイルのパス
+        """
         sections: dict[str, list[str]] = {}
         for var in ENV_VARS:
-            default_part = var.default if var.default is not None else ""
-            comment_part = f"  # {var.comment}" if var.comment else ""
-            sections.setdefault(var.category, []).append(f"{var.key}={default_part}{comment_part}")
+            sections.setdefault(var.category, []).append(cls._format_env_line(var))  # [AI GENERATED] 共通化
         lines: list[str] = ["# environment variables", ""]
         for category, vars_lines in sections.items():
             lines.append(f"## {category} variables")
@@ -244,25 +247,43 @@ class EnvSettings(BaseSettings):
         logger.info(f".envファイルを作成しました: {env_path}")
 
     @classmethod
-    def _ensure_keys(cls, env_path: Path) -> None:  # [AI GENERATED]
+    def _ensure_keys(cls, env_path: Path) -> None:
+        """.env ファイルに必要な環境変数のキーが存在することを確認し、不足している場合は追記する。
+
+        Args:
+            env_path (Path): .env ファイルのパス
+        """
         existing = dotenv_values(env_path)
         missing_defs = [v for v in ENV_VARS if v.key not in existing]
         if not missing_defs:
             return
         with env_path.open("a", encoding="utf-8") as f:
             for var in missing_defs:
-                default_part = var.default if var.default is not None else ""
-                comment_part = f"  # {var.comment}" if var.comment else ""
-                f.write(f"{var.key}={default_part}{comment_part}\n")
+                f.write(cls._format_env_line(var) + "\n")  # [AI GENERATED] 共通化
         logger.warning(f".env に不足キーを追記しました: {[v.key for v in missing_defs]}")
 
     @classmethod
-    def _warn_unset(cls) -> None:  # [AI GENERATED]
+    def _warn_unset(cls) -> None:
+        """環境変数が未設定の場合の警告を出力する。"""
         inst = cls.get()
         for var in ENV_VARS:
             value = getattr(inst, var.key.lower()) if hasattr(inst, var.key.lower()) else None
             if value in (None, ""):
                 logger.warning(f"環境変数が設定されていません: {var.key}")
+
+    @staticmethod
+    def _format_env_line(var: EnvVarDef) -> str:
+        """EnvVarDef から .env 用の1行を生成する。
+
+        Args:
+            var (EnvVarDef): 変換対象
+
+        Returns:
+            str: FOO=bar 形式 (コメント含む)
+        """
+        default_part = var.default if var.default is not None else ""
+        comment_part = f"  # {var.comment}" if var.comment else ""
+        return f"{var.key}={default_part}{comment_part}"
 
 
 __all__ = [

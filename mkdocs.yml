@@ -51,10 +51,10 @@ nav:
       - タスクランナー: dev/task_runner.md
       - ブランチ命名: dev/branch_naming.md
       - コントリビューション: dev/contributing_docs.md
+      - 設定と環境変数: dev/configuration.md
   - APIリファレンス:
       - モデル: dev/reference/models.md
       - コマンドとクエリ: dev/reference/commands_queries.md
-
 
 plugins:
   - search

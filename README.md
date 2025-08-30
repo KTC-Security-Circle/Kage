@@ -81,12 +81,14 @@ uv run pre-commit install
 
 開発者ドキュメントは MkDocs + Material で構築されています。
 
-**推奨コマンド（poethepoet使用）**:
+**推奨コマンド（poethepoet 使用）**:
+
 - ローカル起動: `poe docs-serve`
 - ビルド: `poe docs-build`
 - デプロイ: `poe docs-deploy`
 
 **従来のコマンド**:
+
 - ローカル起動: `uv run mkdocs serve`
 - ビルド: `uv run mkdocs build`
 - デプロイ（GitHub Pages／gh-pages ブランチ）: CI が `main` への push で自動デプロイします。手動で行う場合は `uv run mkdocs gh-deploy --force` でも可能です。
@@ -143,3 +145,13 @@ uv run flet run --web
 - [アーキテクチャ設計ガイド](docs/dev/architecture-design.md)
 - [Views の書き方ガイド](docs/dev/views_guide.md)
 - [Agent 層 設計ガイド](docs/dev/agents_guide.md)
+
+## ⚙️ 設定と環境変数
+
+Kage では設定値を以下の優先順位で統合します：
+
+1. 実行時環境変数 (os.environ)
+2. `.env` + 既定値 (`EnvSettings` により型付与)
+3. `config.yaml`（コメント保持可能な永続層）
+
+YAML は編集コンテキストを通じて安全に更新でき、環境変数は `ENV_VARS` レジストリで一元管理されます。詳細は[設定・環境変数ガイド](docs/dev/configuration.md)を参照してください。

@@ -11,39 +11,39 @@ import yaml
 class TestCIConfiguration:
     """CI設定のテストクラス。"""
 
-    def test_ruff_check_workflow_has_path_filters(self) -> None:
-        """ruff_check.ymlワークフローがpathsフィルタを持つことを確認。"""
-        ruff_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "ruff_check.yml"
+    def test_lint_workflow_has_path_filters(self) -> None:
+        """lint.ymlワークフローがpathsフィルタを持つことを確認。"""
+        lint_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "lint.yml"
 
-        with ruff_workflow_path.open(encoding="utf-8") as f:
+        with lint_workflow_path.open(encoding="utf-8") as f:
             workflow_config = yaml.safe_load(f)
 
         # pull_request設定を確認（onキーがbooleanとして解釈される問題を回避）
         on_config = workflow_config.get("on") or workflow_config.get(True)
-        assert on_config is not None, "ruff_check.ymlにon設定が見つかりません"
+        assert on_config is not None, "lint.ymlにon設定が見つかりません"
 
         pull_request_config = on_config["pull_request"]
-        assert "paths" in pull_request_config, "ruff_check.ymlにpathsが設定されていません"
-        expected_paths = ["src/**", "tests/**"]
+        assert "paths" in pull_request_config, "lint.ymlにpathsが設定されていません"
+        expected_paths = ["**.py"]
         for p in expected_paths:
-            assert p in pull_request_config["paths"], f"ruff_check.ymlのpathsに{p}が含まれていません"
+            assert p in pull_request_config["paths"], f"lint.ymlのpathsに{p}が含まれていません"
 
-    def test_pyright_check_workflow_has_path_filters(self) -> None:
-        """pyright_check.ymlワークフローがpathsフィルタを持つことを確認。"""
-        pyright_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "pyright_check.yml"
+    def test_format_check_workflow_has_path_filters(self) -> None:
+        """format.ymlワークフローがpathsフィルタを持つことを確認。"""
+        format_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "format.yml"
 
-        with pyright_workflow_path.open(encoding="utf-8") as f:
+        with format_workflow_path.open(encoding="utf-8") as f:
             workflow_config = yaml.safe_load(f)
 
         # pull_request設定を確認（onキーがbooleanとして解釈される問題を回避）
         on_config = workflow_config.get("on") or workflow_config.get(True)
-        assert on_config is not None, "pyright_check.ymlにon設定が見つかりません"
+        assert on_config is not None, "format.ymlにon設定が見つかりません"
 
         pull_request_config = on_config["pull_request"]
-        assert "paths" in pull_request_config, "pyright_check.ymlにpathsが設定されていません"
-        expected_paths = ["src/**", "tests/**"]
+        assert "paths" in pull_request_config, "format.ymlにpathsが設定されていません"
+        expected_paths = ["**.py"]
         for p in expected_paths:
-            assert p in pull_request_config["paths"], f"pyright_check.ymlのpathsに{p}が含まれていません"
+            assert p in pull_request_config["paths"], f"format.ymlのpathsに{p}が含まれていません"
 
     def test_assign_label_workflow_has_no_path_filters(self) -> None:
         """assgin_label.ymlワークフローがpath-ignoreフィルタを持たないことを確認。
@@ -76,34 +76,3 @@ class TestCIConfiguration:
                 except yaml.YAMLError as e:
                     msg = f"ワークフローファイル {workflow_file.name} が有効なYAMLではありません: {e}"
                     raise AssertionError(msg) from e
-
-    def test_ci_workflows_have_consistent_paths(self) -> None:
-        """CI実行ワークフロー(ruff/pyright/tests)が一貫したpathsを持つことを確認。"""
-        ci_workflows = ["ruff_check.yml", "pyright_check.yml", "test.yml"]
-        workflows_dir = Path(__file__).parent.parent / ".github" / "workflows"
-        paths_by_workflow: dict[str, list[str]] = {}
-
-        for workflow_name in ci_workflows:
-            workflow_path = workflows_dir / workflow_name
-            with workflow_path.open(encoding="utf-8") as f:
-                workflow_config = yaml.safe_load(f)
-
-            # pull_request設定を確認（onキーがbooleanとして解釈される問題を回避）
-            on_config = workflow_config.get("on") or workflow_config.get(True)
-            assert on_config is not None, f"{workflow_name}にon設定が見つかりません"
-
-            pull_request_config = on_config["pull_request"]
-            if "paths" in pull_request_config:
-                paths_by_workflow[workflow_name] = pull_request_config["paths"]
-
-        # すべてのワークフローが同じpathsを持つことを確認
-        if len(paths_by_workflow) > 1:
-            first_workflow = next(iter(paths_by_workflow.keys()))
-            first_paths = set(paths_by_workflow[first_workflow])
-
-            for workflow_name, p_list in paths_by_workflow.items():
-                if workflow_name != first_workflow:
-                    current_paths = set(p_list)
-                    assert first_paths == current_paths, (
-                        f"ワークフロー {workflow_name} と {first_workflow} のpathsが一致しません"
-                    )

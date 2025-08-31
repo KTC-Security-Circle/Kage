@@ -8,6 +8,7 @@
     "editor.formatOnSave": true
   },
   "python.testing.pytestArgs": ["tests"],
+  "python.testing.cwd": "${workspaceFolder}",
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true
 }

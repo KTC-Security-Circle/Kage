@@ -8,11 +8,11 @@ chore:
 bug:
   - head-branch: ["^bugfix", "^bug"]
 documentation:
-  - head-branch: ["^doc"]
+  - head-branch: ["^doc", "^docs"]
 release:
   - head-branch: ["^release"]
 ai:
-  - head-branch: ["^copilot", "^ai", "^assistant", "^bot"]
+  - head-branch: ["^copilot", "^ai", "^assistant", "^bot", "^renovate"]
 
 # ファイルの変更に基づくラベル付け
 docs:
@@ -65,5 +65,5 @@ config:
         ".python-version",
         "**/.python-version",
         "Dockerfile",
-        "**/Dockerfile"
+        "**/Dockerfile",
       ]

@@ -15,6 +15,9 @@ from logic.queries.memo_queries import (
 )
 from models import MemoRead
 
+# 定数
+EXPECTED_MEMO_PAIR_COUNT = 2
+
 
 class TestMemoApplicationService:
     """MemoApplicationServiceのテストクラス"""
@@ -55,7 +58,7 @@ class TestMemoApplicationService:
         # Arrange
         task_id = uuid.uuid4()
         command = CreateMemoCommand(content="テスト用メモ", task_id=task_id)
-        
+
         created_memo = MemoRead(
             id=uuid.uuid4(),
             content="テスト用メモ",
@@ -110,7 +113,7 @@ class TestMemoApplicationService:
         memo_id = uuid.uuid4()
         task_id = uuid.uuid4()
         command = UpdateMemoCommand(memo_id=memo_id, content="更新後メモ")
-        
+
         updated_memo = MemoRead(
             id=memo_id,
             content="更新後メモ",
@@ -174,7 +177,7 @@ class TestMemoApplicationService:
         memo_id = uuid.uuid4()
         task_id = uuid.uuid4()
         query = GetMemoByIdQuery(memo_id=memo_id)
-        
+
         memo = MemoRead(
             id=memo_id,
             content="取得テスト用メモ",
@@ -236,7 +239,7 @@ class TestMemoApplicationService:
 
         # Assert
         assert result == memos
-        assert len(result) == 2
+        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
         mock_memo_service.get_all_memos.assert_called_once()
 
     def test_get_memos_by_task_id_success(
@@ -262,7 +265,7 @@ class TestMemoApplicationService:
 
         # Assert
         assert result == memos
-        assert len(result) == 2
+        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
         mock_memo_service.get_memos_by_task_id.assert_called_once_with(task_id)
 
     def test_search_memos_success(
@@ -289,7 +292,7 @@ class TestMemoApplicationService:
 
         # Assert
         assert result == matching_memos
-        assert len(result) == 2
+        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
         mock_memo_service.search_memos.assert_called_once_with(search_query)
 
     def test_search_memos_empty_query(

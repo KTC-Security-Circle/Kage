@@ -10,7 +10,7 @@ authors = [
 ]
 dependencies = [
     "alembic>=1.16.2",
-    "flet==0.27.6",
+    "flet==0.28.3",
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",
     "langgraph>=0.4.8",
@@ -44,7 +44,7 @@ path = "src"
 
 [tool.uv]
 dev-dependencies = [
-    "flet[all]==0.27.6",
+    "flet[all]==0.28.3",
     "mkdocs>=1.6.1",
     "mkdocs-git-committers-plugin-2>=2.5.0",
     "mkdocs-git-revision-date-localized-plugin>=1.4.7",

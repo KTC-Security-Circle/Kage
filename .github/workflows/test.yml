@@ -1,0 +1,69 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/test.yml"
+      - "**.py"
+      - ".coveragerc"
+      - ".env**"
+      - ".python-version"
+      - "tests"
+      - "pyproject.toml"
+      - "pytest.ini"
+      - "uv.lock"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/test.yml"
+      - "**.py"
+      - ".coveragerc"
+      - ".env**"
+      - ".python-version"
+      - "tests"
+      - "pyproject.toml"
+      - "pytest.ini"
+      - "uv.lock"
+
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python with uv
+        uses: ./.github/actions/setup-python-with-uv
+
+      - name: Run pytest
+        run: |
+          set -o pipefail
+          uv run pytest --junitxml=pytest.xml --cov=. --cov-report=term | tee pytest-coverage.txt
+
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@v1
+        with:
+          pytest-coverage-path: ./pytest-coverage.txt
+          junitxml-path: ./pytest.xml
+
+      - name: Creating coverage folder
+        run: mkdir -p coverage
+
+      - name: Coverage Bagdge
+        uses: tj-actions/coverage-badge-py@v2
+        with:
+          output: coverage/coverage.svg
+
+      - name: Publish coverage report to coverage-badge branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: coverage-badge
+          folder: coverage

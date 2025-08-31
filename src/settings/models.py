@@ -192,8 +192,16 @@ class EnvSettings(BaseSettings):
     @field_validator("langsmith_tracing", "kage_use_llm_one_liner", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: object) -> object:  # [AI GENERATED] 空文字を未設定扱いに変換
-        if isinstance(v, str) and v.strip() == "":
-            return None
+        if isinstance(v, str):
+            raw = v
+            # インラインコメントが含まれる場合 (' # ' 区切り) はコメント除去
+            if "#" in raw:
+                # 例: 'false  # false/true' -> 'false'
+                raw = raw.split("#", 1)[0]
+            raw = raw.strip()
+            if raw == "":
+                return None
+            return raw  # bool 変換は pydantic に委ねる
         return v
 
     # --- utilities -------------------------------------

@@ -9,6 +9,8 @@ from logic.repositories.memo import MemoRepository
 from models import Memo, MemoCreate, MemoUpdate
 from tests.logic.helpers import create_test_task
 
+EXPECTED_MEMO_PAIR_COUNT = 2  # [AI GENERATED] 正常系で作成 / 取得される複数メモの想定件数（2件）
+
 
 class TestMemoRepository:
     """MemoRepositoryのテストクラス"""
@@ -17,6 +19,8 @@ class TestMemoRepository:
         """メモ作成のテスト（正常系）"""
         # [AI GENERATED] テスト用タスクを作成してデータベースに保存
         task = create_test_task()
+        if task.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add(task)
         test_session.commit()
         test_session.refresh(task)
@@ -40,6 +44,8 @@ class TestMemoRepository:
         """IDでメモ取得のテスト（正常系）"""
         # [AI GENERATED] テスト用タスクとメモを作成
         task = create_test_task()
+        if task.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add(task)
         test_session.commit()
         test_session.refresh(task)
@@ -80,6 +86,8 @@ class TestMemoRepository:
         # [AI GENERATED] テスト用タスクを作成
         task1 = create_test_task("タスク1")
         task2 = create_test_task("タスク2")
+        if task1.id is None or task2.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add_all([task1, task2])
         test_session.commit()
         test_session.refresh(task1)
@@ -105,7 +113,7 @@ class TestMemoRepository:
         all_memos = memo_repo.get_all()
 
         # Assert
-        assert len(all_memos) == 2
+        assert len(all_memos) == EXPECTED_MEMO_PAIR_COUNT
         memo_contents = [memo.content for memo in all_memos]
         assert "メモ1" in memo_contents
         assert "メモ2" in memo_contents
@@ -114,6 +122,8 @@ class TestMemoRepository:
         """メモ更新のテスト（正常系）"""
         # [AI GENERATED] テスト用タスクとメモを作成
         task = create_test_task()
+        if task.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add(task)
         test_session.commit()
         test_session.refresh(task)
@@ -155,6 +165,8 @@ class TestMemoRepository:
         """メモ削除のテスト（正常系）"""
         # [AI GENERATED] テスト用タスクとメモを作成
         task = create_test_task()
+        if task.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add(task)
         test_session.commit()
         test_session.refresh(task)
@@ -175,7 +187,7 @@ class TestMemoRepository:
 
         # Assert
         assert success is True
-        
+
         # [AI GENERATED] 削除されたことを確認
         deleted_memo = memo_repo.get_by_id(memo.id)
         assert deleted_memo is None
@@ -196,6 +208,8 @@ class TestMemoRepository:
         # [AI GENERATED] テスト用タスクを作成
         task1 = create_test_task("タスク1")
         task2 = create_test_task("タスク2")
+        if task1.id is None or task2.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add_all([task1, task2])
         test_session.commit()
         test_session.refresh(task1)
@@ -227,13 +241,13 @@ class TestMemoRepository:
         task2_memos = memo_repo.get_by_task_id(task2.id)
 
         # Assert
-        assert len(task1_memos) == 2
+        assert len(task1_memos) == EXPECTED_MEMO_PAIR_COUNT
         assert len(task2_memos) == 1
-        
+
         task1_contents = [memo.content for memo in task1_memos]
         assert "タスク1のメモ1" in task1_contents
         assert "タスク1のメモ2" in task1_contents
-        
+
         assert task2_memos[0].content == "タスク2のメモ1"
 
     def test_get_by_task_id_empty(self, test_session: Session) -> None:
@@ -251,6 +265,8 @@ class TestMemoRepository:
         """内容で検索のテスト"""
         # [AI GENERATED] テスト用タスクを作成
         task = create_test_task()
+        if task.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add(task)
         test_session.commit()
         test_session.refresh(task)
@@ -285,19 +301,21 @@ class TestMemoRepository:
         # Assert
         assert len(python_memos) == 1
         assert python_memos[0].content == "Pythonのプログラミング学習"
-        
+
         assert len(programming_memos) == 1
         assert programming_memos[0].content == "Pythonのプログラミング学習"
-        
+
         assert len(development_memos) == 1
         assert development_memos[0].content == "JavaScriptとReactの開発"
-        
+
         assert len(empty_result) == 0
 
     def test_search_by_content_case_insensitive(self, test_session: Session) -> None:
         """内容で検索のテスト（大文字小文字を区別しない）"""
         # [AI GENERATED] テスト用タスクとメモを作成
         task = create_test_task()
+        if task.id is None:
+            pytest.fail("Task ID should not be None after creation")
         test_session.add(task)
         test_session.commit()
         test_session.refresh(task)
@@ -321,7 +339,7 @@ class TestMemoRepository:
         assert len(lowercase_search) == 1
         assert len(uppercase_search) == 1
         assert len(mixed_case_search) == 1
-        
+
         assert lowercase_search[0].content == "Python Programming Tutorial"
         assert uppercase_search[0].content == "Python Programming Tutorial"
         assert mixed_case_search[0].content == "Python Programming Tutorial"

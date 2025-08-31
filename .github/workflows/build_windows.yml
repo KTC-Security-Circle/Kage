@@ -28,13 +28,17 @@ env:
 
 # Releaseの作成
 jobs:
-  ruff-check:
-    uses: ./.github/workflows/ruff_check.yml
-  pyright-check:
-    uses: ./.github/workflows/pyright_check.yml
+  format:
+    uses: ./.github/workflows/format.yml
+
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  test:
+    uses: ./.github/workflows/test.yml
 
   create-release:
-    needs: ruff-check
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -62,10 +66,8 @@ jobs:
       - name: Set environment variable for UTF-8
         run: echo "PYTHONUTF8=1" >> $env:GITHUB_ENV
 
-      - name: Install Python Dependencies
-        run: |
-          python -m pip install --upgrade pip  
-          pip install .
+      - name: Set up Python with uv
+        uses: ./.github/actions/setup-python-with-uv
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -77,7 +79,7 @@ jobs:
         run: |
           chcp 65001
           flutter config --no-analytics
-          flet build windows --verbose --no-rich-output --build-number=${{ env.BUILD_NUMBER }} --build-version=${{ env.BUILD_VERSION }}
+          uv run flet build windows --verbose --no-rich-output --build-number=${{ env.BUILD_NUMBER }} --build-version=${{ env.BUILD_VERSION }}
           Compress-Archive -Path ./build/windows/* -DestinationPath ./build/windows/${{ vars.APP_NAME }}_windows.zip
 
       - name: Upload Windows Artifact

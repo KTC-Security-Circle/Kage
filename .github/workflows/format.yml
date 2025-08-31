@@ -1,0 +1,39 @@
+name: Format
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/format.yml"
+      - "**.py"
+      - ".python-version"
+      - "pyproject.toml"
+      - "ruff.toml"
+      - "uv.lock"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/format.yml"
+      - "**.py"
+      - ".python-version"
+      - "pyproject.toml"
+      - "ruff.toml"
+      - "uv.lock"
+
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-with-uv
+
+      - name: Format by Ruff
+        run: uv run ruff format src tests

@@ -12,7 +12,7 @@ class TestCIConfiguration:
     """CI設定のテストクラス。"""
 
     def test_ruff_check_workflow_has_path_filters(self) -> None:
-        """ruff_check.ymlワークフローがpath-ignoreフィルタを持つことを確認。"""
+        """ruff_check.ymlワークフローがpathsフィルタを持つことを確認。"""
         ruff_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "ruff_check.yml"
 
         with ruff_workflow_path.open(encoding="utf-8") as f:
@@ -23,32 +23,13 @@ class TestCIConfiguration:
         assert on_config is not None, "ruff_check.ymlにon設定が見つかりません"
 
         pull_request_config = on_config["pull_request"]
-        assert "paths-ignore" in pull_request_config, "ruff_check.ymlにpaths-ignoreが設定されていません"
-
-        # 期待されるパス無視設定を確認
-        expected_ignores = [
-            "docs/**",
-            "*.md",
-            "README.md",
-            "CONTRIBUTING.md",
-            ".github/ISSUE_TEMPLATE/**",
-            ".github/PULL_REQUEST_TEMPLATE.md",
-            ".github/copilot-instructions.md",
-            ".github/workflows/**",
-            ".pre-commit-config.yaml",
-            "pyproject.toml",
-            ".vscode/**",
-            ".gitignore",
-            "uv.lock",
-            ".python-version",
-        ]
-
-        paths_ignore = pull_request_config["paths-ignore"]
-        for expected_ignore in expected_ignores:
-            assert expected_ignore in paths_ignore, f"ruff_check.ymlのpaths-ignoreに{expected_ignore}が含まれていません"
+        assert "paths" in pull_request_config, "ruff_check.ymlにpathsが設定されていません"
+        expected_paths = ["src/**", "tests/**"]
+        for p in expected_paths:
+            assert p in pull_request_config["paths"], f"ruff_check.ymlのpathsに{p}が含まれていません"
 
     def test_pyright_check_workflow_has_path_filters(self) -> None:
-        """pyright_check.ymlワークフローがpath-ignoreフィルタを持つことを確認。"""
+        """pyright_check.ymlワークフローがpathsフィルタを持つことを確認。"""
         pyright_workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "pyright_check.yml"
 
         with pyright_workflow_path.open(encoding="utf-8") as f:
@@ -59,31 +40,10 @@ class TestCIConfiguration:
         assert on_config is not None, "pyright_check.ymlにon設定が見つかりません"
 
         pull_request_config = on_config["pull_request"]
-        assert "paths-ignore" in pull_request_config, "pyright_check.ymlにpaths-ignoreが設定されていません"
-
-        # 期待されるパス無視設定を確認
-        expected_ignores = [
-            "docs/**",
-            "*.md",
-            "README.md",
-            "CONTRIBUTING.md",
-            ".github/ISSUE_TEMPLATE/**",
-            ".github/PULL_REQUEST_TEMPLATE.md",
-            ".github/copilot-instructions.md",
-            ".github/workflows/**",
-            ".pre-commit-config.yaml",
-            "pyproject.toml",
-            ".vscode/**",
-            ".gitignore",
-            "uv.lock",
-            ".python-version",
-        ]
-
-        paths_ignore = pull_request_config["paths-ignore"]
-        for expected_ignore in expected_ignores:
-            assert expected_ignore in paths_ignore, (
-                f"pyright_check.ymlのpaths-ignoreに{expected_ignore}が含まれていません"
-            )
+        assert "paths" in pull_request_config, "pyright_check.ymlにpathsが設定されていません"
+        expected_paths = ["src/**", "tests/**"]
+        for p in expected_paths:
+            assert p in pull_request_config["paths"], f"pyright_check.ymlのpathsに{p}が含まれていません"
 
     def test_assign_label_workflow_has_no_path_filters(self) -> None:
         """assgin_label.ymlワークフローがpath-ignoreフィルタを持たないことを確認。
@@ -117,12 +77,11 @@ class TestCIConfiguration:
                     msg = f"ワークフローファイル {workflow_file.name} が有効なYAMLではありません: {e}"
                     raise AssertionError(msg) from e
 
-    def test_ci_workflows_have_consistent_path_ignores(self) -> None:
-        """CI実行ワークフローが一貫したpath-ignoreを持つことを確認。"""
-        ci_workflows = ["ruff_check.yml", "pyright_check.yml"]
+    def test_ci_workflows_have_consistent_paths(self) -> None:
+        """CI実行ワークフロー(ruff/pyright/tests)が一貫したpathsを持つことを確認。"""
+        ci_workflows = ["ruff_check.yml", "pyright_check.yml", "test.yml"]
         workflows_dir = Path(__file__).parent.parent / ".github" / "workflows"
-
-        path_ignores_by_workflow: dict[str, list[str]] = {}
+        paths_by_workflow: dict[str, list[str]] = {}
 
         for workflow_name in ci_workflows:
             workflow_path = workflows_dir / workflow_name
@@ -134,17 +93,17 @@ class TestCIConfiguration:
             assert on_config is not None, f"{workflow_name}にon設定が見つかりません"
 
             pull_request_config = on_config["pull_request"]
-            if "paths-ignore" in pull_request_config:
-                path_ignores_by_workflow[workflow_name] = pull_request_config["paths-ignore"]
+            if "paths" in pull_request_config:
+                paths_by_workflow[workflow_name] = pull_request_config["paths"]
 
-        # すべてのワークフローが同じpath-ignoreを持つことを確認
-        if len(path_ignores_by_workflow) > 1:
-            first_workflow = next(iter(path_ignores_by_workflow.keys()))
-            first_ignores = set(path_ignores_by_workflow[first_workflow])
+        # すべてのワークフローが同じpathsを持つことを確認
+        if len(paths_by_workflow) > 1:
+            first_workflow = next(iter(paths_by_workflow.keys()))
+            first_paths = set(paths_by_workflow[first_workflow])
 
-            for workflow_name, ignores in path_ignores_by_workflow.items():
+            for workflow_name, p_list in paths_by_workflow.items():
                 if workflow_name != first_workflow:
-                    current_ignores = set(ignores)
-                    assert first_ignores == current_ignores, (
-                        f"ワークフロー {workflow_name} と {first_workflow} のpath-ignoreが一致しません"
+                    current_paths = set(p_list)
+                    assert first_paths == current_paths, (
+                        f"ワークフロー {workflow_name} と {first_workflow} のpathsが一致しません"
                     )

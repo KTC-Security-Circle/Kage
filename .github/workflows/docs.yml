@@ -8,6 +8,8 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "pyproject.toml"
+      - "uv.lock"
+      - "scripts/generate_env_docs.py"
   workflow_dispatch:
 
 permissions:
@@ -20,21 +22,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-with-uv
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Install dependencies
-        run: uv sync
+      - name: Run Scripts # generate env docs
+        run: uv run python -m scripts.generate_env_docs
 
       - name: Build site
         run: uv run mkdocs build
         env:
           MKDOCS_GIT_COMMITTERS_ENABLED: false
+
+      - name: Check for broken links
+        run: |
+          # Basic check for obviously broken internal links
+          find site -name "*.html" -exec grep -l "href=\"#\"" {} \; || true
+          find site -name "*.html" -exec grep -l "src=\"\"" {} \; || true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

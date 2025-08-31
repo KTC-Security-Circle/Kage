@@ -1,0 +1,22 @@
+name: Install Python with uv
+description: |
+  This GitHub Action installs Python using the uv tool.
+  It caches uv files, and installs dependencies.
+
+runs:
+  using: composite
+
+  steps:
+    - name: Extract Python Version
+      run: echo "PYTHON_VERSION=$(cat .python-version)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Dependencies
+      run: uv sync --frozen
+      shell: bash

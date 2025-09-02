@@ -4,7 +4,7 @@
 サービスはビジネスロジックを実装するためのクラスで、リポジトリを利用してデータ操作を行います。
 """
 
-from typing import Generic, NoReturn, TypeVar
+from typing import NoReturn
 
 from loguru import logger
 
@@ -16,10 +16,7 @@ class MyBaseError(Exception):
         self.arg = arg
 
 
-T = TypeVar("T", bound=MyBaseError)
-
-
-class ServiceBase(Generic[T]):
+class ServiceBase[T: MyBaseError]:
     """サービスの基底クラス
 
     サービスはビジネスロジックを実装するためのクラスで、リポジトリを利用してデータ操作を行います。

@@ -1,17 +1,12 @@
 """リポジトリの基底クラス"""
 
 import uuid
-from typing import Generic, TypeVar
 
 from loguru import logger
 from sqlmodel import Session, SQLModel, select
 
-T = TypeVar("T", bound=SQLModel)
-CreateT = TypeVar("CreateT", bound=SQLModel)
-UpdateT = TypeVar("UpdateT", bound=SQLModel)
 
-
-class BaseRepository(Generic[T, CreateT, UpdateT]):
+class BaseRepository[T: SQLModel, CreateT: SQLModel, UpdateT: SQLModel]:
     """リポジトリの基底クラス
 
     依存性注入によりデータベースセッションを受け取り、

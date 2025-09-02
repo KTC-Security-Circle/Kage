@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
 from loguru import logger
 from pydantic import BaseModel
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
     import flet as ft
 
-TSettings = TypeVar("TSettings", bound=BaseModel)
 
 _FROZEN_TO_EDITABLE: dict[type[BaseModel], type[BaseModel]] = {
     WindowSettings: EditableWindowSettings,
@@ -53,7 +52,7 @@ def _convert_model(obj: BaseModel, mapping: dict[type[BaseModel], type[BaseModel
     return target_cls.model_validate(values)
 
 
-class ConfigManager(Generic[TSettings]):
+class ConfigManager[TSettings: BaseModel]:
     def __init__(self, path: str | Path, model_type: type[TSettings] = AppSettings) -> None:
         self._path = Path(path)
         self._model_type = model_type

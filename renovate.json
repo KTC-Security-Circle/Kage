@@ -1,15 +1,18 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":disableRateLimiting"
   ],
-  "lockFileMaintenance": {
-    "enabled": true
-  },
   "dependencyDashboard": false,
   "branchPrefix": "renovate/",
   "timezone": "Asia/Tokyo",
   "rebaseWhen": "behind-base-branch",
+  "automerge": true,
+  "assignees": ["snow7y"],
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "schedule": [
     "* 0-23 * * *"
   ],

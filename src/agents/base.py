@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
 from loguru import logger
@@ -48,11 +48,11 @@ class BaseAgentState(TypedDict):
 
 
 # 型変数を定義
-StateType = TypeVar("StateType")
-ReturnType = TypeVar("ReturnType")
+# StateType = TypeVar("StateType")
+# ReturnType = TypeVar("ReturnType")
 
 
-class BaseAgent(ABC, Generic[StateType, ReturnType]):
+class BaseAgent[StateType, ReturnType](ABC):
     """LangGraphエージェントのベースクラス.
 
     このクラスを継承して具体的なエージェントを実装します。

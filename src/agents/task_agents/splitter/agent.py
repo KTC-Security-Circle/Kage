@@ -34,8 +34,10 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     def _create_agent(self) -> RunnableSerializable:
         """エージェントのインスタンスを作成."""
         self._model = self.get_model()
-        llm_with_tools = self._model.bind_tools([TaskSplitterOutput])
-        self._agent = splitter_agent_prompt | llm_with_tools
+        # llm_with_tools = self._model.bind_tools([TaskSplitterOutput])
+        # self._agent = splitter_agent_prompt | llm_with_tools
+        structured_llm = self._model.with_structured_output(TaskSplitterOutput)
+        self._agent = splitter_agent_prompt | structured_llm
         return self._agent
 
     def chatbot(self, state: TaskSplitterState) -> dict[str, TaskSplitterOutput]:
@@ -48,7 +50,7 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
             },
         )
         try:
-            output_obj = TaskSplitterOutput.model_validate(response.tool_calls[0]["args"])
+            output_obj = TaskSplitterOutput.model_validate(response)
             agents_logger.debug(f"Output object: {output_obj}")
         except Exception as e:
             agents_logger.error(f"Error validating output: {e}")
@@ -65,7 +67,7 @@ if __name__ == "__main__":
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = TaskSplitterAgent()
+    agent = TaskSplitterAgent(LLMProvider.FAKE)
 
     thread_id = str(uuid4())
     # thread_id = "649869e4-0782-4683-98d6-9dd3fda02133"  # Example thread ID for testing

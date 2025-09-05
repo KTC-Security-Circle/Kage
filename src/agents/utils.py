@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 from langgraph.checkpoint.sqlite import SqliteSaver
 from loguru import logger
 from pydantic import BaseModel
@@ -108,13 +109,13 @@ class FakeListChatModelWithBindTools(FakeListChatModel):
 
 
 def get_model(
-    provider: LLMProvider, model: str | None = None, fake_responses: list[BaseModel] | None = None
+    provider: LLMProvider, model_name: str | None = None, fake_responses: list[BaseModel] | None = None
 ) -> BaseChatModel:
     """指定されたプロバイダに基づいてLLMを取得する関数。
 
     Args:
         provider (LLMProvider): 使用するLLMプロバイダ。
-        model (str | None): 使用するモデルの名前。デフォルトはNone。
+        model_name (str | None): 使用するモデルの名前。デフォルトはNone。
         fake_responses (list[str] | None): FAKEプロバイダ用のダミー応答リスト。デフォルトはNone。
 
     Raises:
@@ -129,16 +130,25 @@ def get_model(
             agents_logger.error(err_msg)
             raise OSError(err_msg)
 
-        gemini_model = model if model else "gemini-2.0-flash"
+        gemini_model = model_name if model_name else "gemini-2.0-flash"
         llm = ChatGoogleGenerativeAI(
             model=gemini_model,
             temperature=0.2,
             max_retries=3,
         )
     elif provider == LLMProvider.HUGGINGFACE:
-        err_msg = "Hugging Face LLM is not implemented yet."
-        agents_logger.error(err_msg)
-        raise NotImplementedError(err_msg)
+        ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+
+        ov_llm = HuggingFacePipeline.from_model_id(
+            model_id=model_name
+            if model_name
+            else "OpenVINO/phi-2-fp16-ov",  # https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd
+            task="text-generation",
+            backend="openvino",
+            model_kwargs={"device": "CPU", "ov_config": ov_config},
+            pipeline_kwargs={"max_new_tokens": 100},
+        )
+        llm = ChatHuggingFace(llm=ov_llm)
     elif provider == LLMProvider.FAKE:
         # FAKEプロバイダ用のダミー応答を設定
         # もし指定されていない場合はデフォルトの応答を使用

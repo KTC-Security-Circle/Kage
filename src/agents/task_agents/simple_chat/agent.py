@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if __package__ is None:  # pragma: no cover - defensive
+if __package__ is None:
     import sys
     from pathlib import Path
 
@@ -16,7 +16,7 @@ from agents.task_agents.simple_chat.prompt import SIMPLE_CHAT_SYSTEM_PROMPT, sim
 from agents.task_agents.simple_chat.state import SimpleChatOutput, SimpleChatState
 from agents.utils import agents_logger
 
-if TYPE_CHECKING:  # import for type hints only
+if TYPE_CHECKING:
     from langchain_core.runnables import RunnableSerializable
 
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":  # 単体テスト用簡易実行
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = SimpleChatAgent()
+    agent = SimpleChatAgent(LLMProvider.HUGGINGFACE)
     thread_id = str(uuid4())
 
     state: SimpleChatState = {

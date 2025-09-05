@@ -81,7 +81,7 @@ if __name__ == "__main__":
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = TaskSplitterAgent(LLMProvider.FAKE)
+    agent = TaskSplitterAgent(LLMProvider.HUGGINGFACE)
 
     thread_id = str(uuid4())
     # thread_id = "649869e4-0782-4683-98d6-9dd3fda02133"  # Example thread ID for testing

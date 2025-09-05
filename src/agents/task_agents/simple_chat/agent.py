@@ -9,12 +9,12 @@ if __package__ is None:  # pragma: no cover - defensive
     sys.path.append(str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from langgraph.graph import START, StateGraph
-from loguru import logger
 
 from agents.agent_conf import LLMProvider
 from agents.base import BaseAgent
 from agents.task_agents.simple_chat.prompt import SIMPLE_CHAT_SYSTEM_PROMPT, simple_chat_prompt
 from agents.task_agents.simple_chat.state import SimpleChatOutput, SimpleChatState
+from agents.utils import agents_logger
 
 if TYPE_CHECKING:  # import for type hints only
     from langchain_core.runnables import RunnableSerializable
@@ -51,7 +51,7 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
         self._agent = self._create_agent()
         system_prompt = state.get("system_prompt") or SIMPLE_CHAT_SYSTEM_PROMPT
         user_message = state["user_message"]
-        logger.bind(agents=True).debug(f"SimpleChatAgent input: {user_message}")
+        agents_logger.debug(f"SimpleChatAgent input: {user_message}")
         response = self._agent.invoke({"system_prompt": system_prompt, "user_message": user_message})
         # response は AIMessage か str を想定
         content = response.content if hasattr(response, "content") else str(response)
@@ -78,4 +78,4 @@ if __name__ == "__main__":  # 単体テスト用簡易実行
     }
     result = agent.invoke(state, thread_id)
     if result:
-        logger.bind(agents=True).debug("Assistant: " + result.model_dump_json())
+        agents_logger.debug("Assistant: " + result.model_dump_json())

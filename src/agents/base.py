@@ -6,11 +6,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
-from loguru import logger
 from typing_extensions import TypedDict
 
 from agents.agent_conf import LLMProvider
-from agents.utils import get_memory, get_model
+from agents.utils import agents_logger, get_memory, get_model
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -159,19 +158,19 @@ class BaseAgent[StateType, ReturnType](ABC):
         # グラフの初期化がされているかを確認
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before invoking."
-            logger.bind(agents=True).error(err_msg)
+            agents_logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.bind(agents=True).debug(f"Invoking agent with input: {state} in thread: {thread_id}")
+        agents_logger.debug(f"Invoking agent with input: {state} in thread: {thread_id}")
         response = self._graph.invoke(
             state,
             self.get_config(thread_id),
         )
-        logger.bind(agents=True).debug(f"Graph invoke response: {response}")
+        agents_logger.debug(f"Graph invoke response: {response}")
         if isinstance(response, dict) and "final_response" in response:
             return response["final_response"]
 
-        logger.error("Invalid response format from graph invoke.")
+        agents_logger.error("Invalid response format from graph invoke.")
         return None
 
     def stream(self, state: StateType, thread_id: str) -> Iterator[dict[str, Any] | Any]:
@@ -186,10 +185,10 @@ class BaseAgent[StateType, ReturnType](ABC):
         """
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before streaming."
-            logger.bind(agents=True).error(err_msg)
+            agents_logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.bind(agents=True).debug(f"Streaming agent with input: {state} in thread: {thread_id}")
+        agents_logger.debug(f"Streaming agent with input: {state} in thread: {thread_id}")
 
         yield from self._graph.stream(
             state,

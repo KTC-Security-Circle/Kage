@@ -9,6 +9,8 @@ from loguru import logger
 
 from agents.agent_conf import SQLITE_DB_PATH, LLMProvider
 
+agents_logger = logger.bind(agents=True)
+
 
 def get_sqlite_conn() -> sqlite3.Connection:
     """SQLiteデータベースへの接続を取得する関数。
@@ -44,7 +46,7 @@ def get_model(provider: LLMProvider, model: str = "") -> BaseChatModel:
     if provider == LLMProvider.GOOGLE:
         if "GOOGLE_API_KEY" not in os.environ:
             err_msg = "GOOGLE_API_KEY is not set in environment variables."
-            logger.bind(agents=True).error(err_msg)
+            agents_logger.error(err_msg)
             raise OSError(err_msg)
 
         gemini_model = model if model else "gemini-2.0-flash"
@@ -55,7 +57,7 @@ def get_model(provider: LLMProvider, model: str = "") -> BaseChatModel:
         )
     elif provider == LLMProvider.HUGGINGFACE:
         err_msg = "Hugging Face LLM is not implemented yet."
-        logger.bind(agents=True).error(err_msg)
+        agents_logger.error(err_msg)
         raise NotImplementedError(err_msg)
     elif provider == LLMProvider.FAKE:
         responses = [
@@ -65,7 +67,7 @@ def get_model(provider: LLMProvider, model: str = "") -> BaseChatModel:
         llm = FakeListChatModel(responses=responses)
     else:
         err_msg = f"Unsupported LLM provider: {provider}"
-        logger.bind(agents=True).error(err_msg)
+        agents_logger.error(err_msg)
         raise NotImplementedError(err_msg)
 
     return llm

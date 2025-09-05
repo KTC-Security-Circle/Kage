@@ -2,8 +2,8 @@ name: Assign Label
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-    branches:
-      - main
+  issues:
+    types: [opened, reopened]
 jobs:
   assign-label:
     permissions:

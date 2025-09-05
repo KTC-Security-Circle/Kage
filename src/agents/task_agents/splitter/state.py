@@ -19,7 +19,7 @@ class TaskSplitterState(BaseAgentState):
 
 
 class TaskSplitterOutput(BaseModel):
-    """Always use this tool to structure your response to the user."""
+    """response to the user."""
 
     task_titles: list[str] = Field(description="分割されたタスクのタイトルのリスト")
     task_descriptions: list[str] = Field(description="分割されたタスクの説明のリスト")

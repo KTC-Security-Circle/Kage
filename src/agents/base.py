@@ -6,11 +6,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
-from loguru import logger
 from typing_extensions import TypedDict
 
 from agents.agent_conf import LLMProvider
-from agents.utils import get_memory, get_model
+from agents.utils import agents_logger, get_memory, get_model
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
     from langchain_core.runnables.config import RunnableConfig
     from langgraph.graph.state import CompiledStateGraph
+    from pydantic import BaseModel
 
 
 class AgentStatus(Enum):
@@ -56,6 +56,18 @@ class BaseAgent[StateType, ReturnType](ABC):
     """LangGraphエージェントのベースクラス.
 
     このクラスを継承して具体的なエージェントを実装します。
+
+    Attributes:
+        -- 必須項目 --
+        _name (str): エージェントの名前
+        _description (str): エージェントの説明
+        _state (type[Any]): エージェントの状態の型
+        -- オプション項目 --
+        _status (AgentStatus): エージェントの実行状態 (デフォルトはIDLE)
+        _model (BaseChatModel | None): 使用するLLMモデル (デフォルトはNone、_get_modelで初期化)
+        _model_name (str | None): 使用するモデルの名前 (デフォルトはNone)
+        _fake_responses (list[str] | None): FAKEプロバイダ用のダミー応答リスト (デフォルトはNone)
+        _graph (CompiledStateGraph | None): エージェントのグラフ (デフォルトはNone、_create_graphで初期化)
     """
 
     # 必須
@@ -66,16 +78,18 @@ class BaseAgent[StateType, ReturnType](ABC):
     # オプションまたはデフォルト値あり
     _status: AgentStatus = AgentStatus.IDLE
     _model: BaseChatModel | None = None
+    _model_name: str | None = None
+    _fake_responses: list[BaseModel] | None = None
     _graph: CompiledStateGraph | None = None
 
     def __init__(
         self,
-        provider: LLMProvider = LLMProvider.GOOGLE,
+        provider: LLMProvider = LLMProvider.FAKE,
     ) -> None:
         """初期化.
 
         Args:
-            provider (LLMProvider): LLMプロバイダ (デフォルトはGOOGLE)
+            provider (LLMProvider): LLMプロバイダ (デフォルトはFAKE)
         """
         self.provider = provider
         self._memory = get_memory()
@@ -140,7 +154,7 @@ class BaseAgent[StateType, ReturnType](ABC):
             BaseChatModel: 使用するLLMモデル
         """
         if not self._model:
-            self._model = get_model(self.provider)
+            self._model = get_model(self.provider, self._model_name, self._fake_responses)
         return self._model
 
     def get_config(self, thread_id: str) -> RunnableConfig:
@@ -159,19 +173,19 @@ class BaseAgent[StateType, ReturnType](ABC):
         # グラフの初期化がされているかを確認
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before invoking."
-            logger.bind(agents=True).error(err_msg)
+            agents_logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.bind(agents=True).debug(f"Invoking agent with input: {state} in thread: {thread_id}")
+        agents_logger.debug(f"Invoking agent with input: {state} in thread: {thread_id}")
         response = self._graph.invoke(
             state,
             self.get_config(thread_id),
         )
-        logger.bind(agents=True).debug(f"Graph invoke response: {response}")
+        agents_logger.debug(f"Graph invoke response: {response}")
         if isinstance(response, dict) and "final_response" in response:
             return response["final_response"]
 
-        logger.error("Invalid response format from graph invoke.")
+        agents_logger.error("Invalid response format from graph invoke.")
         return None
 
     def stream(self, state: StateType, thread_id: str) -> Iterator[dict[str, Any] | Any]:
@@ -186,10 +200,10 @@ class BaseAgent[StateType, ReturnType](ABC):
         """
         if not self._graph:
             err_msg = "Graph is not initialized. Please create the graph before streaming."
-            logger.bind(agents=True).error(err_msg)
+            agents_logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        logger.bind(agents=True).debug(f"Streaming agent with input: {state} in thread: {thread_id}")
+        agents_logger.debug(f"Streaming agent with input: {state} in thread: {thread_id}")
 
         yield from self._graph.stream(
             state,

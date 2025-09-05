@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
 
-from logic.commands.memo_commands import CreateMemoCommand, DeleteMemoCommand
+from logic.commands.memo_commands import DeleteMemoCommand
 from logic.queries.memo_queries import GetAllMemosQuery, SearchMemosQuery
-from views.memo.components import MemoListSection, MemoSearchSection, NewMemoSection
+from views.memo.components import MemoListSection, MemoSearchSection
 from views.shared import BaseView, ErrorHandlingMixin
 
 if TYPE_CHECKING:
@@ -42,27 +43,58 @@ class MemoView(BaseView, ErrorHandlingMixin):
         self.search_section: MemoSearchSection | None = None
         self.memo_list_section: MemoListSection | None = None
 
+    def mount(self) -> None:
+        """コンポーネントのマウント処理をオーバーライド"""
+        # [AI GENERATED] 親クラスのマウント処理を実行
+        super().mount()
+
+        # [AI GENERATED] マウント完了後にメモデータを読み込み
+        self._load_memos()
+
     def build_content(self) -> ft.Control:
         """メモ画面のコンテンツを構築
 
         Returns:
             ft.Control: 構築されたコンテンツ
         """
-        # 新規追加セクション
-        new_memo_section = NewMemoSection(on_create_memo=self._handle_create_memo)
+        # コンポーネント初期化
+        self.search_section = MemoSearchSection(
+            on_search=self._handle_search,
+        )
 
-        # 検索セクション
-        self.search_section = MemoSearchSection(on_search=self._handle_search)
+        self.memo_list_section = MemoListSection(
+            memos=[],  # [AI GENERATED] 初期は空のリスト
+            on_delete_memo=self._handle_delete_memo,
+        )
 
-        # メモ一覧セクション
-        self.memo_list_section = MemoListSection(memos=self.filtered_memos, on_delete_memo=self._handle_delete_memo)
+        # [AI GENERATED] データ読み込みはmount()で実行するため、ここでは呼ばない
 
-        # 初期データを読み込み
-        self._load_memos()
-
+        # レイアウト構築
         return ft.Column(
             [
-                new_memo_section,
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text(
+                                "メモ",
+                                size=24,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.PRIMARY,
+                            ),
+                            ft.ElevatedButton(
+                                text="新規作成",
+                                icon=ft.Icons.ADD,
+                                on_click=self._handle_navigate_to_create,
+                                style=ft.ButtonStyle(
+                                    color=ft.Colors.WHITE,
+                                    bgcolor=ft.Colors.BLUE_600,
+                                ),
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    padding=ft.padding.symmetric(vertical=10),
+                ),
                 ft.Divider(),
                 self.search_section,
                 ft.Divider(),
@@ -88,31 +120,13 @@ class MemoView(BaseView, ErrorHandlingMixin):
             logger.exception("メモの読み込みに失敗しました")
             self.show_error("メモの読み込みに失敗しました", str(e))
 
-    def _handle_create_memo(self, content: str) -> None:
-        """メモ作成処理
+    def _handle_navigate_to_create(self, _: ft.ControlEvent) -> None:
+        """新規作成画面への遷移処理
 
         Args:
-            content: メモ内容
+            _: イベントオブジェクト
         """
-        try:
-            # [AI GENERATED] 現在はダミーのタスクIDを使用（将来的にはオプションに変更予定）
-            import uuid
-
-            dummy_task_id = uuid.uuid4()
-
-            command = CreateMemoCommand(
-                content=content,
-                task_id=dummy_task_id,
-            )
-            self.memo_app_service.create_memo(command)
-
-            # [AI GENERATED] リストを再読み込み
-            self._load_memos()
-            self.show_success("メモを作成しました")
-
-        except Exception as e:
-            logger.exception("メモの作成に失敗しました")
-            self.show_error("メモの作成に失敗しました", str(e))
+        self.page.go("/memo/create")
 
     def _handle_delete_memo(self, memo_id: str) -> None:
         """メモ削除処理
@@ -121,8 +135,6 @@ class MemoView(BaseView, ErrorHandlingMixin):
             memo_id: 削除するメモのID
         """
         try:
-            import uuid
-
             command = DeleteMemoCommand(memo_id=uuid.UUID(memo_id))
             self.memo_app_service.delete_memo(command)
 

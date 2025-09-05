@@ -313,7 +313,11 @@ class MemoListSection(ft.Column):
         """
         self._memos = memos
         self._build_components()
-        self.update()
+        # [AI GENERATED] 安全にupdateを実行
+        import contextlib
+
+        with contextlib.suppress(Exception):
+            self.update()
 
 
 class MemoActionCard(ft.Container):

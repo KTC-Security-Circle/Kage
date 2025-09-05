@@ -45,11 +45,35 @@ class MemoView(BaseView, ErrorHandlingMixin):
 
     def mount(self) -> None:
         """コンポーネントのマウント処理をオーバーライド"""
-        # [AI GENERATED] 親クラスのマウント処理を実行
+        # [AI GENERATED] 親クラスのマウント処理を実行（build_contentが呼ばれる）
         super().mount()
 
         # [AI GENERATED] マウント完了後にメモデータを読み込み
         self._load_memos()
+
+        # [AI GENERATED] ページに追加された後で初期表示を実行
+        if self.memo_list_section and self.filtered_memos:
+            # [AI GENERATED] コンポーネントが確実にページに追加されてから更新
+            self.page.update()  # ページの状態を同期
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                self.memo_list_section.update_memos(self.filtered_memos)
+
+    def refresh(self) -> None:
+        """ビューの再読み込み
+
+        メモデータを再読み込みして一覧を更新する。
+        """
+        logger.info("MemoView リフレッシュ - データを再読み込み")
+        self._load_memos()
+
+        # [AI GENERATED] データ読み込み後に表示を更新
+        if self.memo_list_section and self.filtered_memos:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                self.memo_list_section.update_memos(self.filtered_memos)
 
     def build_content(self) -> ft.Control:
         """メモ画面のコンテンツを構築
@@ -63,7 +87,7 @@ class MemoView(BaseView, ErrorHandlingMixin):
         )
 
         self.memo_list_section = MemoListSection(
-            memos=[],  # [AI GENERATED] 初期は空のリスト
+            memos=[],  # [AI GENERATED] 初期は空のリスト（後でmountで更新）
             on_delete_memo=self._handle_delete_memo,
         )
 
@@ -112,9 +136,7 @@ class MemoView(BaseView, ErrorHandlingMixin):
             self.memos = self.memo_app_service.get_all_memos(query)
             self.filtered_memos = self.memos.copy()
 
-            # [AI GENERATED] UI更新
-            if self.memo_list_section:
-                self.memo_list_section.update_memos(self.filtered_memos)
+            # [AI GENERATED] UI更新は_handle_searchで行うため、ここでは実行しない
 
         except Exception as e:
             logger.exception("メモの読み込みに失敗しました")
@@ -138,8 +160,13 @@ class MemoView(BaseView, ErrorHandlingMixin):
             command = DeleteMemoCommand(memo_id=uuid.UUID(memo_id))
             self.memo_app_service.delete_memo(command)
 
-            # [AI GENERATED] リストを再読み込み
+            # [AI GENERATED] リストを再読み込みして表示を更新
             self._load_memos()
+            if self.memo_list_section:
+                import contextlib
+
+                with contextlib.suppress(Exception):
+                    self.memo_list_section.update_memos(self.filtered_memos)
             self.show_success("メモを削除しました")
 
         except Exception as e:
@@ -154,6 +181,7 @@ class MemoView(BaseView, ErrorHandlingMixin):
         """
         try:
             if query.strip():
+                # [AI GENERATED] 検索クエリがある場合は検索を実行
                 search_query = SearchMemosQuery(query=query)
                 self.filtered_memos = self.memo_app_service.search_memos(search_query)
             else:
@@ -162,7 +190,10 @@ class MemoView(BaseView, ErrorHandlingMixin):
 
             # [AI GENERATED] UI更新
             if self.memo_list_section:
-                self.memo_list_section.update_memos(self.filtered_memos)
+                import contextlib
+
+                with contextlib.suppress(Exception):
+                    self.memo_list_section.update_memos(self.filtered_memos)
 
         except Exception as e:
             logger.exception("メモの検索に失敗しました")

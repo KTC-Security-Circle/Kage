@@ -22,7 +22,7 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     _description = "タスクを分割して処理するエージェント"
     _state = TaskSplitterState
 
-    def __init__(self, provider: LLMProvider = LLMProvider.GOOGLE) -> None:
+    def __init__(self, provider: LLMProvider = LLMProvider.FAKE) -> None:
         """初期化."""
         super().__init__(provider)
 

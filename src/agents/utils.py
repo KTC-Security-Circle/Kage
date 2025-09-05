@@ -2,6 +2,7 @@ import os
 import sqlite3
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.sqlite import SqliteSaver
 from loguru import logger
@@ -54,6 +55,16 @@ def get_model(provider: LLMProvider, model: str = "") -> BaseChatModel:
         )
     elif provider == LLMProvider.HUGGINGFACE:
         err_msg = "Hugging Face LLM is not implemented yet."
+        logger.bind(agents=True).error(err_msg)
+        raise NotImplementedError(err_msg)
+    elif provider == LLMProvider.FAKE:
+        responses = [
+            "これはテスト用のダミー応答です。",
+            "AIを使用しない場合の応答です。",
+        ]
+        llm = FakeListChatModel(responses=responses)
+    else:
+        err_msg = f"Unsupported LLM provider: {provider}"
         logger.bind(agents=True).error(err_msg)
         raise NotImplementedError(err_msg)
 

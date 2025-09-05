@@ -70,12 +70,12 @@ class BaseAgent[StateType, ReturnType](ABC):
 
     def __init__(
         self,
-        provider: LLMProvider = LLMProvider.GOOGLE,
+        provider: LLMProvider = LLMProvider.FAKE,
     ) -> None:
         """初期化.
 
         Args:
-            provider (LLMProvider): LLMプロバイダ (デフォルトはGOOGLE)
+            provider (LLMProvider): LLMプロバイダ (デフォルトはFAKE)
         """
         self.provider = provider
         self._memory = get_memory()

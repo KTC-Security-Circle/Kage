@@ -7,11 +7,23 @@ if __package__ is None:
 
 from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import START, StateGraph
+from pydantic import BaseModel
 
 from agents.base import BaseAgent
 from agents.task_agents.splitter.prompt import splitter_agent_prompt
 from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterState
 from agents.utils import LLMProvider, agents_logger
+
+_fake_responses: list[BaseModel] = [
+    TaskSplitterOutput(
+        task_titles=["A", "B"],
+        task_descriptions=["A説明", "B説明"],
+    ),
+    TaskSplitterOutput(
+        task_titles=["C", "D"],
+        task_descriptions=["C説明", "D説明"],
+    ),
+]
 
 
 class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
@@ -20,6 +32,8 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     _name = "TaskSplitterAgent"
     _description = "タスクを分割して処理するエージェント"
     _state = TaskSplitterState
+
+    _fake_responses = _fake_responses
 
     def __init__(self, provider: LLMProvider = LLMProvider.FAKE) -> None:
         """初期化."""

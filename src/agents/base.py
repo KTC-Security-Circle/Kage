@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
     from langchain_core.runnables.config import RunnableConfig
     from langgraph.graph.state import CompiledStateGraph
+    from pydantic import BaseModel
 
 
 class AgentStatus(Enum):
@@ -55,6 +56,18 @@ class BaseAgent[StateType, ReturnType](ABC):
     """LangGraphエージェントのベースクラス.
 
     このクラスを継承して具体的なエージェントを実装します。
+
+    Attributes:
+        -- 必須項目 --
+        _name (str): エージェントの名前
+        _description (str): エージェントの説明
+        _state (type[Any]): エージェントの状態の型
+        -- オプション項目 --
+        _status (AgentStatus): エージェントの実行状態 (デフォルトはIDLE)
+        _model (BaseChatModel | None): 使用するLLMモデル (デフォルトはNone、_get_modelで初期化)
+        _model_name (str | None): 使用するモデルの名前 (デフォルトはNone)
+        _fake_responses (list[str] | None): FAKEプロバイダ用のダミー応答リスト (デフォルトはNone)
+        _graph (CompiledStateGraph | None): エージェントのグラフ (デフォルトはNone、_create_graphで初期化)
     """
 
     # 必須
@@ -65,6 +78,8 @@ class BaseAgent[StateType, ReturnType](ABC):
     # オプションまたはデフォルト値あり
     _status: AgentStatus = AgentStatus.IDLE
     _model: BaseChatModel | None = None
+    _model_name: str | None = None
+    _fake_responses: list[BaseModel] | None = None
     _graph: CompiledStateGraph | None = None
 
     def __init__(
@@ -139,7 +154,7 @@ class BaseAgent[StateType, ReturnType](ABC):
             BaseChatModel: 使用するLLMモデル
         """
         if not self._model:
-            self._model = get_model(self.provider)
+            self._model = get_model(self.provider, self._model_name, self._fake_responses)
         return self._model
 
     def get_config(self, thread_id: str) -> RunnableConfig:

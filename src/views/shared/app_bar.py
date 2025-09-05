@@ -18,6 +18,10 @@ def app_bar(page: ft.Page, page_name: str | None = None) -> ft.AppBar:
                         text="タスク",
                         on_click=lambda _: page.go("/task"),
                     ),
+                    ft.PopupMenuItem(
+                        text="メモ",
+                        on_click=lambda _: page.go("/memo"),
+                    ),
                     # ft.PopupMenuItem(
                     #     text="ログアウト",
                     #     on_click=lambda _: page.go("/logout"),

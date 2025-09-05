@@ -105,8 +105,11 @@ class BaseView(ft.Container, ABC):
         サブクラスでオーバーライドして具体的な更新処理を実装する。
         """
         logger.info(f"{self._view_name} リフレッシュ")
-        if self._page:
-            self.update()
+        if self._page and self._is_mounted:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                self.update()
 
     @property
     def is_mounted(self) -> bool:

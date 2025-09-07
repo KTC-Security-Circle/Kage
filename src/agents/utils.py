@@ -116,7 +116,7 @@ def get_model(
     Args:
         provider (LLMProvider): 使用するLLMプロバイダ。
         model_name (str | None): 使用するモデルの名前。デフォルトはNone。
-        fake_responses (list[str] | None): FAKEプロバイダ用のダミー応答リスト。デフォルトはNone。
+        fake_responses (list[BaseModel] | None): FAKEプロバイダ用のダミー応答リスト。デフォルトはNone。
 
     Raises:
         NotImplementedError: 指定されたプロバイダがサポートされていない場合に発生します。

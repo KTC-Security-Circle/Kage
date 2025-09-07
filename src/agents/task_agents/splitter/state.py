@@ -1,3 +1,5 @@
+from typing import Annotated, TypedDict
+
 from pydantic import BaseModel, Field
 
 from agents.base import BaseAgentState
@@ -23,3 +25,11 @@ class TaskSplitterOutput(BaseModel):
 
     task_titles: list[str] = Field(description="分割されたタスクのタイトルのリスト")
     task_descriptions: list[str] = Field(description="分割されたタスクの説明のリスト")
+
+
+# TaskSplitterOutput の TypedDict 定義
+class TaskSplitterOutputDict(TypedDict):
+    """response to the user."""
+
+    task_titles: Annotated[list[str], ..., "分割されたタスクのタイトルのリスト"]
+    task_descriptions: Annotated[list[str], ..., "分割されたタスクの説明のリスト"]

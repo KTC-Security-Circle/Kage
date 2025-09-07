@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from agents.base import BaseAgent
 from agents.task_agents.splitter.prompt import splitter_agent_prompt
-from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterState
+from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterOutputDict, TaskSplitterState
 from agents.utils import LLMProvider, agents_logger
 
 _fake_responses: list[BaseModel] = [
@@ -50,7 +50,7 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
         self._model = self.get_model()
         # llm_with_tools = self._model.bind_tools([TaskSplitterOutput])
         # self._agent = splitter_agent_prompt | llm_with_tools
-        structured_llm = self._model.with_structured_output(TaskSplitterOutput)
+        structured_llm = self._model.with_structured_output(TaskSplitterOutputDict)
         self._agent = splitter_agent_prompt | structured_llm
         return self._agent
 
@@ -63,6 +63,7 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
                 "task_description": state["task_description"],
             },
         )
+        agents_logger.debug(f"Raw response: {response}")
         try:
             output_obj = TaskSplitterOutput.model_validate(response)
             agents_logger.debug(f"Output object: {output_obj}")

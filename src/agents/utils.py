@@ -145,8 +145,8 @@ def get_model(
             else "OpenVINO/Qwen3-8B-int4-cw-ov",  # https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd
             task="text-generation",
             backend="openvino",
-            model_kwargs={"device": "CPU", "ov_config": ov_config},
-            pipeline_kwargs={"max_new_tokens": 100},
+            model_kwargs={"device": "CPU", "ov_config": ov_config, "enable_thinking": False},
+            pipeline_kwargs={"max_new_tokens": 32768},
         )
         llm = ChatHuggingFace(llm=ov_llm)
     elif provider == LLMProvider.FAKE:

@@ -21,8 +21,8 @@ ov_llm = HuggingFacePipeline.from_model_id(
     model_id="OpenVINO/Qwen3-8B-int4-cw-ov",
     task="text-generation",
     backend="openvino",
-    model_kwargs={"device": "CPU", "ov_config": ov_config},
-    # pipeline_kwargs={"max_new_tokens": 10},
+    model_kwargs={"device": "CPU", "ov_config": ov_config, "enable_thinking": False},
+    pipeline_kwargs={"max_new_tokens": 32768},
 )
 
 user_message = "ウミガメのスープ問題について解説して、例を挙げてください。"

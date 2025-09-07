@@ -55,7 +55,7 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
         response = self._agent.invoke({"system_prompt": system_prompt, "user_message": user_message})
         # response は AIMessage か str を想定
         content = response.content if hasattr(response, "content") else str(response)
-        output = SimpleChatOutput(reply=content)
+        output = SimpleChatOutput(response=content)
         return {"final_response": output}
 
 

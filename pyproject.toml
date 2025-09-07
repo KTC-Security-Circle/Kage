@@ -116,7 +116,7 @@ docs-serve = ["gen-env-docs", "docs-serve-dev"]
 docs-serve-dev = "uv run mkdocs serve -a 127.0.0.1:8000"
 docs-build = "uv run mkdocs build"
 docs-deploy = "uv run mkdocs gh-deploy --force --no-history"
-gen-env-docs = "uv run python -m scripts.generate_env_docs"
+gen-env-docs = "uv run scripts/generate_env_docs.py"
 
 # == Windows specific utilities ==
 open-storage = { shell = "Invoke-Item storage" }

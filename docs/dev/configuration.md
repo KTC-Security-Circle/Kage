@@ -72,6 +72,7 @@ EnvVarDef(name="OPENAI_API_KEY", category="ai", required=False, description="Ope
 | LANGSMITH_API_KEY | str | ai |  |  |
 | LANGSMITH_TRACING | bool | ai | false | false/true |
 | KAGE_USE_LLM_ONE_LINER | bool | ai | false | false/true |
+| HUGGINGFACEHUB_API_TOKEN | str | ai |  |  |
 | DATABASE_URL | str | db |  |  |
 
 <!-- END:ENV_VARS_TABLE -->

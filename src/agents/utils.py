@@ -142,7 +142,7 @@ def get_model(
         ov_llm = HuggingFacePipeline.from_model_id(
             model_id=model_name
             if model_name
-            else "OpenVINO/phi-2-fp16-ov",  # https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd
+            else "OpenVINO/Qwen3-8B-int4-cw-ov",  # https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd
             task="text-generation",
             backend="openvino",
             model_kwargs={"device": "CPU", "ov_config": ov_config},

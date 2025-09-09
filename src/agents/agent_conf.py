@@ -23,5 +23,20 @@ class LLMProvider(Enum):
     GOOGLE = "google"
     HUGGINGFACE = "huggingface"
 
+class HuggingFaceModel(Enum):
+    """Hugging Faceで利用可能なモデルタイプを指定するHuggingFaceModelType列挙型。
+
+    Attributes:
+        QWEN_3_8B_INT4 (str): Qwen3-8Bモデル（INT4量子化）
+        MISTRAL_7B_INS_V03_INT4 (str): Mistral-7Bモデル（INT4量子化）
+
+    Note:
+        各モデルは、Hugging Faceのモデルリポジトリから取得され、対応するタスクに使用されます。
+        追加のモデルをサポートする場合は、この列挙型に新しいメンバーを追加し、対応する実装を提供してください。
+        この列挙型にあるモデルは必ず動くことを保証するものではありません。
+    """
+
+    QWEN_3_8B_INT4 = "OpenVINO/Qwen3-8B-int4-cw-ov"
+    MISTRAL_7B_INS_V03_INT4 = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
 
 SQLITE_DB_PATH = f"{STORAGE_DIR}/agents.db"

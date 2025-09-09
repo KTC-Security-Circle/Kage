@@ -1,9 +1,9 @@
-# ruff: noqa: T201, E501
+# ruff: noqa: T201, E501, E402
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 
-from logging_conf import setup_logger
 from agents.agent_conf import HuggingFaceModel
+from logging_conf import setup_logger
 
 setup_logger()
 
@@ -55,14 +55,19 @@ chat_chain = simple_chat_prompt | llm.bind(skip_prompt=True)
 
 
 # -- structured output test --
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.messages import AIMessage, AIMessageChunk
-from pydantic import BaseModel, Field
 from dataclasses import dataclass
+
+from langchain_core.messages import AIMessage
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+
 
 class ResponseModel(BaseModel):
     conclusion: str = Field(description="Conclusion of the response to the user. Keep it concise.")
-    detail: str = Field(description="The body of the text to be returned to the user. Provide it appropriately according to the instructions.")
+    detail: str = Field(
+        description="The body of the text to be returned to the user. Provide it appropriately according to the instructions."
+    )
+
 
 @dataclass
 class ResponseModelWithThinking:
@@ -70,7 +75,9 @@ class ResponseModelWithThinking:
     contents: ResponseModel | None = None
     response_text: str | None = None
 
+
 parser = PydanticOutputParser(pydantic_object=ResponseModel)
+
 
 def parse_think(ai_message: AIMessage) -> ResponseModelWithThinking:
     """AIMessageから<think>タグ以降のテキストを抽出し、ResponseModelとしてパースして返す関数
@@ -83,6 +90,7 @@ def parse_think(ai_message: AIMessage) -> ResponseModelWithThinking:
     """
     # [AI GENERATED] <think>タグ以降のテキストを抽出
     import re
+
     # contentがstr型でなければstrに変換
     content = ai_message.content if hasattr(ai_message, "content") else str(ai_message)
     if not isinstance(content, str):
@@ -104,6 +112,7 @@ def parse_think(ai_message: AIMessage) -> ResponseModelWithThinking:
     # PydanticOutputParserでResponseModelとしてパース
     return ResponseModelWithThinking(thinking=thinking_text, contents=parser_content, response_text=response_text)
 
+
 parser_prompt = PromptTemplate(
     template="Answer the user query.\n{format_instructions}\n{user_message}\n",
     input_variables=["user_message"],
@@ -117,4 +126,3 @@ print(f"Conclusion: {res.contents.conclusion if res.contents else 'N/A'}")
 print(f"Detail: {res.contents.detail if res.contents else 'N/A'}")
 print(f"Thinking: {res.thinking if res.thinking else 'N/A'}")
 print(f"Raw Response: {res.response_text if res.response_text else 'N/A'}")
-

@@ -60,6 +60,7 @@ dev-dependencies = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.11, <0.13",
 ]
+package = true
 
 # Poe the Poet
 [tool.poe]

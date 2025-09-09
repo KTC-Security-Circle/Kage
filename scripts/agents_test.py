@@ -1,24 +1,16 @@
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "kage",
-# ]
-#
-# [tool.uv.sources]
-# kage = { path = "../" }
-# ///
 # ruff: noqa: T201, E501
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 
 from logging_conf import setup_logger
+from agents.agent_conf import HuggingFaceModel
 
 setup_logger()
 
 ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
 
 ov_llm = HuggingFacePipeline.from_model_id(
-    model_id="OpenVINO/Qwen3-8B-int4-cw-ov",
+    model_id=HuggingFaceModel.QWEN_3_8B_INT4.value,
     task="text-generation",
     backend="openvino",
     model_kwargs={"device": "CPU", "ov_config": ov_config, "enable_thinking": False},

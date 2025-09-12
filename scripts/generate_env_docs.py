@@ -1,3 +1,12 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "kage",
+# ]
+#
+# [tool.uv.sources]
+# kage = { path = "../" }
+# ///
 """環境変数レジストリと初期設定YAMLをドキュメントへ反映するスクリプト。
 
 [AI GENERATED] `ENV_VARS` 定義と `AppSettings` のデフォルトインスタンスを用いて
@@ -16,9 +25,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from loguru import logger
 from ruamel.yaml import YAML
 
-from src.settings.models import ENV_VARS, AppSettings
+from logging_conf import setup_logger
+from settings.models import ENV_VARS, AppSettings
+
+setup_logger()
 
 DOC_PATH = Path("docs/dev/configuration.md")
 
@@ -100,4 +113,4 @@ def generate() -> None:
 
 if __name__ == "__main__":  # スクリプト実行入口
     generate()
-    print("ドキュメントを更新しました:", DOC_PATH)  # noqa: T201
+    logger.info(f"ドキュメントを更新しました: {DOC_PATH}")

@@ -9,7 +9,9 @@
   "timezone": "Asia/Tokyo",
   "rebaseWhen": "behind-base-branch",
   "automerge": true,
-  "assignees": ["snow7y"],
+  "assignees": [
+    "snow7y"
+  ],
   "lockFileMaintenance": {
     "enabled": true
   },
@@ -37,6 +39,19 @@
         "minor"
       ],
       "automerge": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "*.toml"
+      ],
+      "matchStrings": [
+        "TFCMT_VERSION: (?<currentValue>.*?)\\n"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "KTC-Security-Circle/langchain-openvino-genai"
     }
   ]
 }

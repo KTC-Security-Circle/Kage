@@ -13,10 +13,13 @@ dependencies = [
     "flet==0.27.6",
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",
+    "langchain-huggingface>=0.3.1",
+    "langchain-openvino-genai",
     "langgraph>=0.4.8",
     "langgraph-checkpoint-sqlite>=2.0.10",
     "langsmith>=0.3.45",
     "loguru>=0.7.3",
+    "optimum[nncf,openvino]>=1.27.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "python-dotenv>=1.1.0",
@@ -45,6 +48,7 @@ path = "src"
 [tool.uv]
 dev-dependencies = [
     "flet[all]==0.27.6",
+    "langchain-tests>=0.3.21",
     "mkdocs>=1.6.1",
     "mkdocs-git-committers-plugin-2>=2.5.0",
     "mkdocs-git-revision-date-localized-plugin>=1.4.7",
@@ -58,6 +62,11 @@ dev-dependencies = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.11, <0.13",
 ]
+package = true
+
+[tool.uv.sources]
+langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git", tag = "v0.0.2.dev0" }
+# langchain-openvino-genai = { path = "../langchain-openvino-genai", editable = true }
 
 # Poe the Poet
 [tool.poe]
@@ -114,7 +123,7 @@ docs-serve = ["gen-env-docs", "docs-serve-dev"]
 docs-serve-dev = "uv run mkdocs serve -a 127.0.0.1:8000"
 docs-build = "uv run mkdocs build"
 docs-deploy = "uv run mkdocs gh-deploy --force --no-history"
-gen-env-docs = "uv run python -m scripts.generate_env_docs"
+gen-env-docs = "uv run scripts/generate_env_docs.py"
 
 # == Windows specific utilities ==
 open-storage = { shell = "Invoke-Item storage" }

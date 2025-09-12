@@ -159,6 +159,7 @@ ENV_VARS: Final[list[EnvVarDef]] = [
     EnvVarDef("LANGSMITH_API_KEY", "str", "ai"),
     EnvVarDef("LANGSMITH_TRACING", "bool", "ai", default="false", comment="false/true"),
     EnvVarDef("KAGE_USE_LLM_ONE_LINER", "bool", "ai", default="false", comment="false/true"),
+    EnvVarDef("HUGGINGFACEHUB_API_TOKEN", "str", "ai"),
     EnvVarDef("DATABASE_URL", "str", "db"),
 ]
 

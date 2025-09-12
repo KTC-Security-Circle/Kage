@@ -19,7 +19,12 @@ class TaskSplitterState(BaseAgentState):
 
 
 class TaskSplitterOutput(BaseModel):
-    """Always use this tool to structure your response to the user."""
+    """
+    Output model for task splitting operations containing divided task titles and descriptions.
 
+    Attributes:
+        task_titles (list[str]): List of titles for the split tasks.
+        task_descriptions (list[str]): List of descriptions corresponding to each split task.
+    """
     task_titles: list[str] = Field(description="分割されたタスクのタイトルのリスト")
     task_descriptions: list[str] = Field(description="分割されたタスクの説明のリスト")

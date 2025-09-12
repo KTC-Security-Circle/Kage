@@ -5,6 +5,7 @@ from collections.abc import Sequence
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from langchain_core.runnables import RunnableBinding
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openvino_genai import ChatOpenVINO, OpenVINOLLM, load_model
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -68,7 +69,7 @@ class FakeListChatModelWithBindTools(FakeListChatModel):
         *,
         tool_choice: object | None = None,
         **_unused: object,
-    ) -> "FakeListChatModelWithBindTools":
+    ) -> RunnableBinding[str, str]:  # [AI GENERATED] RunnableBinding を返却し標準テスト互換
         from langchain_core.messages import AIMessage
 
         parent = self
@@ -105,7 +106,20 @@ class FakeListChatModelWithBindTools(FakeListChatModel):
                     ],
                 )
 
-        return _BoundFakeListChatModel()
+        # RunnableBinding 互換を返すために .bind() を呼び出す
+        return _BoundFakeListChatModel().bind()  # type: ignore[return-value]
+
+    # LangChain 標準テスト (ls params) 用の最小実装
+    def _get_ls_params(self) -> dict[str, object]:  # [AI GENERATED] 標準パラメータ返却
+        return {
+            "ls_provider": self.__class__.__name__.lower(),
+            # Fake モデルは明示的な model 名を持たないのでクラス名流用
+            "ls_model_name": self.__class__.__name__,
+            "ls_model_type": "chat",
+            "ls_temperature": None,
+            "ls_max_tokens": None,
+            "ls_stop": None,
+        }
 
 
 def get_model(

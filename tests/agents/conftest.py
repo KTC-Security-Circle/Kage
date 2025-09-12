@@ -1,22 +1,21 @@
 import os
+import tempfile
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
+# ---- 早期にストレージディレクトリを確定させ agent_conf の定数評価前に環境を整える ----
+if "FLET_APP_STORAGE_DATA" not in os.environ:  # [AI GENERATED] CI 環境で未設定の場合
+    os.environ["FLET_APP_STORAGE_DATA"] = tempfile.mkdtemp(prefix="storage_")
+
 from agents.agent_conf import SQLITE_DB_PATH, LLMProvider
 from agents.task_agents.simple_chat.agent import SimpleChatAgent
 from agents.task_agents.splitter.agent import TaskSplitterAgent
 
-
-@pytest.fixture(scope="session", autouse=True)
-def _set_storage_tmp(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """FLET_APP_STORAGE_DATA をテスト用一時ディレクトリに設定。[AI GENERATED]
-
-    agents.db / llms などの副作用を隔離する。
-    """
-    tmp_dir = tmp_path_factory.mktemp("storage")
-    os.environ["FLET_APP_STORAGE_DATA"] = str(tmp_dir)
+# ディレクトリ安全確保
+db_parent = Path(SQLITE_DB_PATH).parent
+db_parent.mkdir(parents=True, exist_ok=True)
 
 
 @pytest.fixture

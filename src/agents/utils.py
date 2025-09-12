@@ -23,6 +23,13 @@ def get_sqlite_conn() -> sqlite3.Connection:
     Returns:
         sqlite3.Connection: SQLiteデータベースへの接続オブジェクト。
     """
+    from pathlib import Path
+
+    db_path = Path(SQLITE_DB_PATH)
+    db_dir = db_path.parent
+    if not db_dir.exists():  # [AI GENERATED] CI 環境などで未作成の場合に対応
+        db_dir.mkdir(parents=True, exist_ok=True)
+        agents_logger.debug("Created sqlite directory", dir=str(db_dir))
     return sqlite3.connect(SQLITE_DB_PATH, check_same_thread=False)
 
 

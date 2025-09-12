@@ -57,6 +57,7 @@ class ErrorAgentOutput(BaseModel):
 
 # 型変数を定義
 ValidateType = TypeVar("ValidateType", bound=BaseModel)
+KwargsAny = Any
 
 
 class BaseAgent[StateType, ReturnType](ABC):
@@ -93,6 +94,7 @@ class BaseAgent[StateType, ReturnType](ABC):
         self,
         provider: LLMProvider = LLMProvider.FAKE,
         *,
+        model_name: str | None = None,
         verbose: bool = False,
         error_response: bool = False,
     ) -> None:
@@ -100,14 +102,16 @@ class BaseAgent[StateType, ReturnType](ABC):
 
         Args:
             provider (LLMProvider): LLMプロバイダ (デフォルトはFAKE)
+            model_name (str | None): 使用するモデルの名前 (デフォルトはNone)
             verbose (bool): 詳細ログを有効にするかどうか (デフォルトはFalse)
             error_response (bool): 強制的にエラー応答を生成するかどうか (デフォルトはFalse)
         """
-        self.provider = provider
+        self._model_name = model_name
         self._memory = get_memory()
         self._verbose = verbose
         self._error_response = error_response
 
+        self.provider = provider
         self._graph = self._create_graph()
 
     @property

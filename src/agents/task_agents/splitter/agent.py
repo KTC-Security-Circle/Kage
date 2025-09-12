@@ -5,12 +5,11 @@ if __package__ is None:
     # Set the package path to the parent directory of this script
     sys.path.append(str(Path(__file__).resolve().parent.parent.parent.parent))
 
-
 from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import START, StateGraph
 from pydantic import BaseModel
 
-from agents.base import BaseAgent, ErrorAgentOutput
+from agents.base import BaseAgent, ErrorAgentOutput, KwargsAny
 from agents.task_agents.splitter.prompt import splitter_agent_prompt
 from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterState
 from agents.utils import LLMProvider, agents_logger
@@ -36,7 +35,7 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
 
     _fake_responses = _fake_responses
 
-    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: bool) -> None:
+    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: KwargsAny) -> None:
         """初期化."""
         super().__init__(provider, **kwargs)
 

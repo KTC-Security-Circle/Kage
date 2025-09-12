@@ -11,7 +11,7 @@ if __package__ is None:
 from langgraph.graph import START, StateGraph
 
 from agents.agent_conf import LLMProvider
-from agents.base import BaseAgent
+from agents.base import BaseAgent, KwargsAny
 from agents.task_agents.simple_chat.prompt import simple_chat_prompt
 from agents.task_agents.simple_chat.state import SimpleChatOutput, SimpleChatState
 from agents.utils import agents_logger
@@ -41,7 +41,7 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
 
     _fake_responses = _fake_responses
 
-    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: bool) -> None:
+    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: KwargsAny) -> None:
         super().__init__(provider, **kwargs)
 
     # グラフ構築
@@ -67,13 +67,16 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
 if __name__ == "__main__":  # 単体テスト用簡易実行
     from uuid import uuid4
 
+    from agents.agent_conf import HuggingFaceModel
     from logging_conf import setup_logger
     from settings.models import EnvSettings
 
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = SimpleChatAgent(LLMProvider.FAKE, verbose=True, error_response=False)
+    agent = SimpleChatAgent(
+        LLMProvider.OPENVINO, model_name=HuggingFaceModel.QWEN_3_8B_INT4, verbose=True, error_response=False
+    )
     thread_id = str(uuid4())
 
     state: SimpleChatState = {

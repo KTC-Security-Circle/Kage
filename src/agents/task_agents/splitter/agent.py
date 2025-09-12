@@ -5,13 +5,14 @@ if __package__ is None:
     # Set the package path to the parent directory of this script
     sys.path.append(str(Path(__file__).resolve().parent.parent.parent.parent))
 
+
 from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import START, StateGraph
 from pydantic import BaseModel
 
-from agents.base import BaseAgent
+from agents.base import BaseAgent, ErrorAgentOutput
 from agents.task_agents.splitter.prompt import splitter_agent_prompt
-from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterOutputDict, TaskSplitterState
+from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterState
 from agents.utils import LLMProvider, agents_logger
 
 _fake_responses: list[BaseModel] = [
@@ -35,9 +36,9 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
 
     _fake_responses = _fake_responses
 
-    def __init__(self, provider: LLMProvider = LLMProvider.FAKE) -> None:
+    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: bool) -> None:
         """初期化."""
-        super().__init__(provider)
+        super().__init__(provider, **kwargs)
 
     def create_graph(self, graph_builder: StateGraph) -> StateGraph:
         """グラフを作成."""
@@ -48,13 +49,11 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     def _create_agent(self) -> RunnableSerializable:
         """エージェントのインスタンスを作成."""
         self._model = self.get_model()
-        # llm_with_tools = self._model.bind_tools([TaskSplitterOutput])
-        # self._agent = splitter_agent_prompt | llm_with_tools
-        structured_llm = self._model.with_structured_output(TaskSplitterOutputDict)
+        structured_llm = self._model.with_structured_output(TaskSplitterOutput)
         self._agent = splitter_agent_prompt | structured_llm
         return self._agent
 
-    def chatbot(self, state: TaskSplitterState) -> dict[str, TaskSplitterOutput]:
+    def chatbot(self, state: TaskSplitterState) -> dict[str, TaskSplitterOutput | ErrorAgentOutput]:
         """チャットボットノードの処理."""
         self._agent = self._create_agent()
         response = self._agent.invoke(
@@ -63,14 +62,8 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
                 "task_description": state["task_description"],
             },
         )
-        agents_logger.debug(f"Raw response: {response}")
-        try:
-            output_obj = TaskSplitterOutput.model_validate(response)
-            agents_logger.debug(f"Output object: {output_obj}")
-        except Exception as e:
-            agents_logger.error(f"Error validating output: {e}")
-            output_obj = TaskSplitterOutput(task_titles=[], task_descriptions=[])
-        return {"final_response": output_obj}
+        output = self.validate_output(response, TaskSplitterOutput)
+        return {"final_response": output}
 
 
 if __name__ == "__main__":
@@ -82,7 +75,7 @@ if __name__ == "__main__":
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = TaskSplitterAgent(LLMProvider.HUGGINGFACE)
+    agent = TaskSplitterAgent(LLMProvider.FAKE, verbose=True)
 
     thread_id = str(uuid4())
     # thread_id = "649869e4-0782-4683-98d6-9dd3fda02133"  # Example thread ID for testing

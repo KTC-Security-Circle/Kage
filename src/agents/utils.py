@@ -6,12 +6,12 @@ from collections.abc import Sequence
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
+from langchain_openvino_genai import ChatOpenVINO, OpenVINOLLM, load_model
 from langgraph.checkpoint.sqlite import SqliteSaver
 from loguru import logger
 from pydantic import BaseModel
 
-from agents.agent_conf import SQLITE_DB_PATH, LLMProvider
+from agents.agent_conf import LLM_MODEL_DIR, SQLITE_DB_PATH, HuggingFaceModel, LLMProvider
 
 agents_logger = logger.bind(agents=True)
 
@@ -109,7 +109,9 @@ class FakeListChatModelWithBindTools(FakeListChatModel):
 
 
 def get_model(
-    provider: LLMProvider, model_name: str | None = None, fake_responses: list[BaseModel] | None = None
+    provider: LLMProvider,
+    model_name: HuggingFaceModel | str | None = None,
+    fake_responses: list[BaseModel] | None = None,
 ) -> BaseChatModel:
     """指定されたプロバイダに基づいてLLMを取得する関数。
 
@@ -136,19 +138,27 @@ def get_model(
             temperature=0.2,
             max_retries=3,
         )
-    elif provider == LLMProvider.HUGGINGFACE:
-        ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+    elif provider == LLMProvider.OPENVINO:
+        if model_name is None:
+            warning_msg = "Model name is not specified. Using default model."
+            agents_logger.warning(warning_msg)
+            model_name = HuggingFaceModel.QWEN_3_8B_INT4
 
-        ov_llm = HuggingFacePipeline.from_model_id(
-            model_id=model_name
-            if model_name
-            else "OpenVINO/Qwen3-8B-int4-cw-ov",  # https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd
-            task="text-generation",
-            backend="openvino",
-            model_kwargs={"device": "CPU", "ov_config": ov_config, "enable_thinking": False},
-            pipeline_kwargs={"max_new_tokens": 32768},
+        if not isinstance(model_name, HuggingFaceModel):
+            err_msg = f"Invalid model name for OPENVINO provider: {model_name}. Must be a HuggingFaceModel enum."
+            agents_logger.error(err_msg)
+            raise ValueError(err_msg)
+
+        # モデルのロード
+        model_path = load_model(
+            model_name.value,
+            download_path=LLM_MODEL_DIR,
         )
-        llm = ChatHuggingFace(llm=ov_llm)
+        ov_llm = OpenVINOLLM.from_model_path(
+            model_path=model_path,
+            device="CPU",
+        )
+        llm = ChatOpenVINO(llm=ov_llm)
     elif provider == LLMProvider.FAKE:
         # FAKEプロバイダ用のダミー応答を設定
         # もし指定されていない場合はデフォルトの応答を使用

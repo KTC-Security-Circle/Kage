@@ -1,5 +1,3 @@
-from typing import Annotated, TypedDict
-
 from pydantic import BaseModel, Field
 
 from agents.base import BaseAgentState
@@ -19,9 +17,3 @@ class SimpleChatOutput(BaseModel):
     """SimpleChatAgent の出力ツール"""
 
     response: str = Field(description="ユーザー入力に対するアシスタントの応答テキスト")
-
-
-class SimpleChatOutputDict(TypedDict):
-    """SimpleChatAgent の出力ツール"""
-
-    response: Annotated[str, ..., "ユーザー入力に対するアシスタントの応答テキスト"]

@@ -12,12 +12,20 @@ from langgraph.graph import START, StateGraph
 
 from agents.agent_conf import LLMProvider
 from agents.base import BaseAgent
-from agents.task_agents.simple_chat.prompt import SIMPLE_CHAT_SYSTEM_PROMPT, simple_chat_prompt
+from agents.task_agents.simple_chat.prompt import simple_chat_prompt
 from agents.task_agents.simple_chat.state import SimpleChatOutput, SimpleChatState
 from agents.utils import agents_logger
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableSerializable
+    from pydantic import BaseModel
+
+    from agents.base import ErrorAgentOutput
+
+_fake_responses: list[BaseModel] = [
+    SimpleChatOutput(response="こんにちは！私はあなたのアシスタントです。"),
+    SimpleChatOutput(response="ご質問ありがとうございます。お手伝いできることがあれば教えてください。"),
+]
 
 
 class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
@@ -31,8 +39,10 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
     _description = "ユーザーメッセージに素早く応答するシンプルチャットエージェント"
     _state = SimpleChatState
 
-    def __init__(self, provider: LLMProvider = LLMProvider.FAKE) -> None:
-        super().__init__(provider)
+    _fake_responses = _fake_responses
+
+    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: bool) -> None:
+        super().__init__(provider, **kwargs)
 
     # グラフ構築
     def create_graph(self, graph_builder: StateGraph) -> StateGraph:
@@ -43,19 +53,14 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
     def _create_agent(self) -> RunnableSerializable:
         # モデル取得 & シンプルチェーン作成
         self._model = self.get_model()
-        # bind_tools を現状使わず素の出力をそのまま reply に格納
-        self._agent = simple_chat_prompt | self._model
-        return self._agent
+        structured_llm = self._model.with_structured_output(SimpleChatOutput)
+        return simple_chat_prompt | structured_llm
 
-    def chatbot(self, state: SimpleChatState) -> dict[str, SimpleChatOutput]:
+    def chatbot(self, state: SimpleChatState) -> dict[str, SimpleChatOutput | ErrorAgentOutput]:
+        """チャットボットノードの処理."""
         self._agent = self._create_agent()
-        system_prompt = state.get("system_prompt") or SIMPLE_CHAT_SYSTEM_PROMPT
-        user_message = state["user_message"]
-        agents_logger.debug(f"SimpleChatAgent input: {user_message}")
-        response = self._agent.invoke({"system_prompt": system_prompt, "user_message": user_message})
-        # response は AIMessage か str を想定
-        content = response.content if hasattr(response, "content") else str(response)
-        output = SimpleChatOutput(response=content)
+        response = self._agent.invoke({"user_message": state["user_message"]})
+        output = self.validate_output(response, SimpleChatOutput)
         return {"final_response": output}
 
 
@@ -68,7 +73,7 @@ if __name__ == "__main__":  # 単体テスト用簡易実行
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = SimpleChatAgent(LLMProvider.HUGGINGFACE)
+    agent = SimpleChatAgent(LLMProvider.FAKE, verbose=True, error_response=False)
     thread_id = str(uuid4())
 
     state: SimpleChatState = {

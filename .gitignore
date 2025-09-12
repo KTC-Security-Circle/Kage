@@ -164,6 +164,7 @@ storage/
 
 # tests
 tests/migrations/test.db
+llms/
 
 # github copilot
 copilot/

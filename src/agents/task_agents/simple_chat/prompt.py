@@ -10,7 +10,7 @@ SIMPLE_CHAT_HUMAN_PROMPT = """ユーザー入力: {user_message}
 
 simple_chat_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "{system_prompt}"),
+        ("system", SIMPLE_CHAT_SYSTEM_PROMPT),
         ("human", SIMPLE_CHAT_HUMAN_PROMPT),
     ]
 )

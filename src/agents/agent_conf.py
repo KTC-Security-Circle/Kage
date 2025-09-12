@@ -21,7 +21,8 @@ class LLMProvider(Enum):
 
     FAKE = "fake"
     GOOGLE = "google"
-    HUGGINGFACE = "huggingface"
+    OPENVINO = "openvino"
+
 
 class HuggingFaceModel(Enum):
     """Hugging Faceで利用可能なモデルタイプを指定するHuggingFaceModelType列挙型。
@@ -39,4 +40,6 @@ class HuggingFaceModel(Enum):
     QWEN_3_8B_INT4 = "OpenVINO/Qwen3-8B-int4-cw-ov"
     MISTRAL_7B_INS_V03_INT4 = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
 
+
 SQLITE_DB_PATH = f"{STORAGE_DIR}/agents.db"
+LLM_MODEL_DIR = f"{STORAGE_DIR}/llms"

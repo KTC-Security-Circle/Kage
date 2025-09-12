@@ -60,7 +60,7 @@ dev-dependencies = [
     "pyright>=1.1.400",
     "pytest>=8.4.0",
     "pytest-cov>=6.2.1",
-    "ruff>=0.12.11, <0.13",
+    "ruff>=0.13, <0.14",
 ]
 package = true
 

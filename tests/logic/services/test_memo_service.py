@@ -85,7 +85,7 @@ class TestMemoService:
         mock_task_repo.get_by_id.return_value = None
 
         # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match="タスクID .* が見つかりません"):
+        with pytest.raises(MemoServiceCheckError, match=r"タスクID .* が見つかりません"):
             memo_service.create_memo(memo_data)
 
         mock_task_repo.get_by_id.assert_called_once_with(task_id)
@@ -162,7 +162,7 @@ class TestMemoService:
         mock_memo_repo.get_by_id.return_value = None
 
         # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match="メモID .* が見つかりません"):
+        with pytest.raises(MemoServiceCheckError, match=r"メモID .* が見つかりません"):
             memo_service.update_memo(memo_id, memo_data)
 
         mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
@@ -209,7 +209,7 @@ class TestMemoService:
         mock_memo_repo.get_by_id.return_value = None
 
         # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match="メモID .* が見つかりません"):
+        with pytest.raises(MemoServiceCheckError, match=r"メモID .* が見つかりません"):
             memo_service.delete_memo(memo_id)
 
         mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
@@ -332,7 +332,7 @@ class TestMemoService:
         mock_task_repo.get_by_id.return_value = None
 
         # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match="タスクID .* が見つかりません"):
+        with pytest.raises(MemoServiceCheckError, match=r"タスクID .* が見つかりません"):
             memo_service.get_memos_by_task_id(task_id)
 
         mock_task_repo.get_by_id.assert_called_once_with(task_id)

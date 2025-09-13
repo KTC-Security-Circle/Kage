@@ -1,4 +1,4 @@
-if __package__ is None:
+if __package__ is None:  # pragma: no cover
     import sys
     from pathlib import Path
 
@@ -65,7 +65,7 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
         return {"final_response": output}
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     from uuid import uuid4
 
     from logging_conf import setup_logger

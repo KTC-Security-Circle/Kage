@@ -12,8 +12,8 @@ from langgraph.graph import START, StateGraph
 
 from agents.agent_conf import LLMProvider
 from agents.base import BaseAgent, KwargsAny
-from agents.task_agents.simple_chat.prompt import simple_chat_prompt
-from agents.task_agents.simple_chat.state import SimpleChatOutput, SimpleChatState
+from agents.task_agents.one_liner.prompt import one_liner_prompt
+from agents.task_agents.one_liner.state import OneLinerOutput, OneLinerState
 from agents.utils import agents_logger
 
 if TYPE_CHECKING:
@@ -23,21 +23,21 @@ if TYPE_CHECKING:
     from agents.base import ErrorAgentOutput
 
 _fake_responses: list[BaseModel] = [
-    SimpleChatOutput(response="こんにちは！私はあなたのアシスタントです。"),
-    SimpleChatOutput(response="ご質問ありがとうございます。お手伝いできることがあれば教えてください。"),
+    OneLinerOutput(response="こんにちは！私は Kage AI です。"),
+    OneLinerOutput(response="今日も一日頑張りましょう！"),
 ]
 
 
-class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
+class OneLinerAgent(BaseAgent[OneLinerState, OneLinerOutput]):
     """シンプルな1ターン/メモリ付きチャットエージェント.
 
-    現状は1ノード構成で user_message を受け取り reply を返す。
-    system_prompt が state で指定されない場合はデフォルトを適用。
+    現状は1ノード構成でタスク統計 (today / completed / overdue 等) を受け取り
+    ホーム画面向けの短い励ましメッセージを返す。
     """
 
-    _name = "SimpleChatAgent"
-    _description = "ユーザーメッセージに素早く応答するシンプルチャットエージェント"
-    _state = SimpleChatState
+    _name = "OneLinerAgent"
+    _description = "ユーザーメッセージに素早く応答するワンライナーエージェント"
+    _state = OneLinerState
 
     _fake_responses = _fake_responses
 
@@ -53,14 +53,22 @@ class SimpleChatAgent(BaseAgent[SimpleChatState, SimpleChatOutput]):
     def _create_agent(self) -> RunnableSerializable:
         # モデル取得 & シンプルチェーン作成
         self._model = self.get_model()
-        structured_llm = self._model.with_structured_output(SimpleChatOutput)
-        return simple_chat_prompt | structured_llm
+        structured_llm = self._model.with_structured_output(OneLinerOutput)
+        return one_liner_prompt | structured_llm
 
-    def chatbot(self, state: SimpleChatState) -> dict[str, SimpleChatOutput | ErrorAgentOutput]:
+    def chatbot(self, state: OneLinerState) -> dict[str, OneLinerOutput | ErrorAgentOutput]:
         """チャットボットノードの処理."""
         self._agent = self._create_agent()
-        response = self._agent.invoke({"user_message": state["user_message"]})
-        output = self.validate_output(response, SimpleChatOutput)
+        response = self._agent.invoke(
+            {
+                "today_task_count": state["today_task_count"],
+                "completed_task_count": state["completed_task_count"],
+                "overdue_task_count": state["overdue_task_count"],
+                "progress_summary": state["progress_summary"],
+                "user_name": state["user_name"],
+            }
+        )
+        output = self.validate_output(response, OneLinerOutput)
         return {"final_response": output}
 
 
@@ -74,14 +82,17 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = SimpleChatAgent(
+    agent = OneLinerAgent(
         LLMProvider.OPENVINO, model_name=HuggingFaceModel.QWEN_3_8B_INT4, verbose=True, error_response=False
     )
     thread_id = str(uuid4())
 
-    state: SimpleChatState = {
-        "user_message": "こんにちは！自己紹介して。",
-        "system_prompt": None,
+    state: OneLinerState = {
+        "today_task_count": 5,
+        "completed_task_count": 2,
+        "overdue_task_count": 0,
+        "progress_summary": "午前中に主要タスクを進行",
+        "user_name": "ユーザー",
         "final_response": "",
     }
     result = agent.invoke(state, thread_id)

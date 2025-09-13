@@ -179,6 +179,7 @@ ignore = [
     "DTZ005",
     "BLE001",
     "PLC0415",
+    "FIX002",
 ]
 unfixable = [
     "F401", # unused import
@@ -225,6 +226,7 @@ addopts = [
     "--strict-markers",
     "--disable-warnings",
     "--verbose",
+    "-s",
 ]
 
 markers = [

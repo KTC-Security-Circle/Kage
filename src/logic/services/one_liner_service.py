@@ -48,10 +48,13 @@ class OneLinerService(ServiceBase[OneLinerServiceError]):
 
         # OPENVINO(HuggingFaceModel) の場合は Enum、Gemini は str、それ以外 None
         if provider == LLMProvider.OPENVINO and raw_model is not None:
-            if isinstance(raw_model, str):
-                logger.warning("OneLinerService: OPENVINO でモデル名が文字列として設定されています。")
+            if hasattr(raw_model, "value"):
+                model_name = raw_model.value
+            elif isinstance(raw_model, str):
+                # 型安全性のため、OPENVINO で文字列モデル名は許容しない
+                raise OneLinerServiceError("OneLinerService: OPENVINO でモデル名が文字列として設定されています。Enum 型で指定してください。")
             else:
-                model_name = raw_model.value if hasattr(raw_model, "value") else raw_model
+                raise OneLinerServiceError(f"OneLinerService: OPENVINO で不明な型のモデル名が設定されています: {type(raw_model)}")
         elif provider == LLMProvider.GOOGLE:
             model_name = raw_model
         else:

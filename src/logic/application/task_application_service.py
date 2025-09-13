@@ -192,6 +192,28 @@ class TaskApplicationService(BaseApplicationService):
             task_service = uow.service_factory.create_task_service()
             return task_service.get_today_tasks_count()
 
+    # [AI GENERATED] 追加: 完了タスク件数取得
+    def get_completed_tasks_count(self) -> int:
+        """完了タスク件数取得
+
+        Returns:
+            int: 完了タスク件数
+        """
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.create_task_service()
+            return task_service.get_completed_tasks_count()
+
+    # [AI GENERATED] 追加: 期限超過タスク件数取得
+    def get_overdue_tasks_count(self) -> int:
+        """期限超過タスク件数取得
+
+        Returns:
+            int: 期限超過タスク件数
+        """
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.create_task_service()
+            return task_service.get_overdue_tasks_count()
+
     def get_task_by_id(self, query: GetTaskByIdQuery) -> TaskRead | None:
         """ID指定タスク取得
 

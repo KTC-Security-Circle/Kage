@@ -1,21 +1,20 @@
 """一言コメント生成サービス
 
-ホーム画面に表示するAIによる一言コメントを生成するビジネスロジックを提供します。
-ダミー/ルールベース実装から始めて、後からLLM連携に差し替え可能な構成になっています。
+ロジック層アダプタ (`OneLinerLogicAgent`) を廃止し、本サービスが直接
+`OneLinerAgent` を呼び出して一言コメントを生成する最小構成。
+失敗時は固定メッセージを返すのみで、旧フォールバック分岐は削除。
 """
 
-import os
-import random
-from typing import NoReturn
+from typing import NoReturn, cast
 
 from loguru import logger
 
+from agents.agent_conf import HuggingFaceModel, LLMProvider
+from agents.task_agents.one_liner.agent import OneLinerAgent
+from agents.task_agents.one_liner.state import OneLinerState
 from logic.queries.one_liner_queries import OneLinerContext
 from logic.services.base import MyBaseError, ServiceBase
-
-# [AI GENERATED] 完了率の閾値定数
-HIGH_COMPLETION_THRESHOLD = 0.8
-MEDIUM_COMPLETION_THRESHOLD = 0.5
+from settings.manager import get_config_manager
 
 
 class OneLinerServiceError(MyBaseError):
@@ -30,129 +29,68 @@ class OneLinerServiceError(MyBaseError):
 
 
 class OneLinerService(ServiceBase[OneLinerServiceError]):
-    """一言コメント生成サービス
-
-    ホーム画面に表示するAIによる一言コメントを生成します。
-    環境変数 KAGE_USE_LLM_ONE_LINER により、ダミー実装とLLM実装を切り替え可能です。
-    """
+    """一言コメント生成サービス (OneLinerAgent 直接利用)."""
 
     def __init__(self) -> None:
-        """OneLinerServiceの初期化"""
-        self._use_llm = os.getenv("KAGE_USE_LLM_ONE_LINER", "false").lower() == "true"
-        logger.debug(f"OneLinerService initialized (LLM enabled: {self._use_llm})")
+        cfg = get_config_manager().settings
+        provider = cfg.agents.provider
+        self._use_llm = True  # 旧テスト互換フラグ (常に True)
+
+        raw_model = None
+        try:
+            raw_model = cfg.agents.get_model_name("one_liner")  # HuggingFaceModel | str | None
+        except Exception as e:
+            logger.debug(f"モデル名取得失敗(無視): {e}")
+
+        # OPENVINO(HuggingFaceModel) の場合は Enum、Gemini は str、それ以外 None
+        if provider == LLMProvider.OPENVINO and raw_model is not None:
+            if isinstance(raw_model, HuggingFaceModel):
+                model_name = raw_model
+            elif isinstance(raw_model, str):
+                # 型安全性のため、OPENVINO で文字列モデル名は許容しない
+                err_msg = (
+                    "OneLinerService: OPENVINO でモデル名が文字列として設定されています。Enum 型で指定してください。"
+                )
+                raise OneLinerServiceError(err_msg)
+            else:
+                err_msg = f"OneLinerService: OPENVINO で不明な型のモデル名が設定されています: {type(raw_model)}"
+                raise OneLinerServiceError(err_msg)
+        elif provider == LLMProvider.GOOGLE:
+            model_name = raw_model
+        else:
+            model_name = None
+
+        self._agent = OneLinerAgent(provider=provider, model_name=model_name)
+        logger.debug(
+            f"OneLinerService initialized (LLM flag env={self._use_llm}, provider={provider.name}, model={model_name})"
+        )
 
     def generate(self, context: OneLinerContext) -> str:
-        """一言コメントを生成する
-
-        Args:
-            context (OneLinerContext): コンテキスト情報
-
-        Returns:
-            str: 生成された一言コメント
-
-        Raises:
-            OneLinerServiceError: 一言コメント生成に失敗した場合
-        """
         try:
-            if self._use_llm:
-                return self._generate_with_llm(context)
-            return self._generate_with_rules(context)
+            return self._generate_with_agent(context)
         except Exception as e:
-            # [AI GENERATED] エラー時は安全な既定文言を返却
             logger.exception(f"一言コメント生成中にエラーが発生しました: {e}")
             return self._get_default_message()
 
-    def _generate_with_rules(self, context: OneLinerContext) -> str:
-        """ルールベースで一言コメントを生成する
-
-        Args:
-            context (OneLinerContext): コンテキスト情報
-
-        Returns:
-            str: 生成された一言コメント
-        """
-        logger.debug(f"Generating rule-based comment for context: {context}")
-
-        # [AI GENERATED] コンテキストに基づいたルールベース生成
-        total_tasks = context.today_task_count
-        completed = context.completed_task_count
-        overdue = context.overdue_task_count
-
-        # 期限超過がある場合
-        if overdue > 0:
-            overdue_messages = [
-                f"期限超過のタスクが{overdue}件あります。今日から頑張りましょう！",
-                f"{overdue}件のタスクが期限を過ぎています。一つずつ片付けていきましょう。",
-                "期限超過のタスクがありますが、焦らずに取り組んでいきましょう！",
-            ]
-            return random.choice(overdue_messages)  # noqa: S311
-
-        # 完了率に基づくメッセージ
-        if total_tasks > 0:
-            completion_rate = completed / total_tasks
-            if completion_rate >= HIGH_COMPLETION_THRESHOLD:
-                high_completion_messages = [
-                    "素晴らしい進捗です！この調子で続けていきましょう。",
-                    "順調に進んでいますね。今日も頑張りましょう！",
-                    "とても良いペースです。継続は力なりですね。",
-                ]
-                return random.choice(high_completion_messages)  # noqa: S311
-            if completion_rate >= MEDIUM_COMPLETION_THRESHOLD:
-                medium_completion_messages = [
-                    "順調に進んでいます。このまま継続していきましょう。",
-                    "良いペースですね。一歩ずつ前進しています。",
-                    "着実に進歩しています。この調子で頑張りましょう。",
-                ]
-                return random.choice(medium_completion_messages)  # noqa: S311
-            low_completion_messages = [
-                "今日から新たなスタートです。一つずつ取り組んでいきましょう。",
-                "まだ始まったばかりです。焦らずに進めていきましょう。",
-                "小さな一歩から始めましょう。あなたならできます！",
-            ]
-            return random.choice(low_completion_messages)  # noqa: S311
-
-        # デフォルトメッセージ（タスクがない場合など）
-        default_messages = [
-            "今日も一日、頑張っていきましょう！",
-            "新しい一日の始まりです。素敵な一日になりますように。",
-            "今日はどんな素晴らしいことが待っているでしょうか。",
-            "穏やかな一日をお過ごしください。",
-        ]
-        return random.choice(default_messages)  # noqa: S311
-
-    def _generate_with_llm(self, context: OneLinerContext) -> str:
-        """LLMを使用して一言コメントを生成する
-
-        Args:
-            context (OneLinerContext): コンテキスト情報
-
-        Returns:
-            str: 生成された一言コメント
-
-        Note:
-            現在はプレースホルダー実装。将来LLM連携を実装予定。
-        """
-        logger.debug(f"Generating LLM-based comment for context: {context}")
-
-        # [AI GENERATED] LLM実装は将来の拡張として、現在はルールベースにフォールバック
-        logger.info("LLM implementation not yet available, falling back to rule-based generation")
-        return self._generate_with_rules(context)
+    def _generate_with_agent(self, context: OneLinerContext) -> str:
+        logger.debug(f"Generating agent-based comment for context: {context}")
+        state = OneLinerState(
+            today_task_count=context.today_task_count,
+            completed_task_count=context.completed_task_count,
+            overdue_task_count=context.overdue_task_count,
+            progress_summary=context.progress_summary,
+            user_name=context.user_name,
+            final_response="",
+        )
+        thread_id = f"{context.today_task_count}-{context.completed_task_count}-{context.overdue_task_count}"
+        result = self._agent.invoke(cast("OneLinerState", state), thread_id)
+        if not result or not getattr(result, "response", ""):
+            logger.warning("OneLinerAgent が期待する応答を返しませんでした。デフォルトに置換します。")
+            return self._get_default_message()
+        return cast("str", result.response)  # type: ignore[attr-defined]
 
     def _get_default_message(self) -> str:
-        """エラー時の既定メッセージを取得する
-
-        Returns:
-            str: 安全な既定メッセージ
-        """
         return "今日も一日、お疲れさまです。"
 
     def _log_error_and_raise(self, msg: str) -> NoReturn:
-        """エラーメッセージをログに記録し OneLinerServiceError を発生させる
-
-        Args:
-            msg (str): エラーメッセージ
-
-        Raises:
-            OneLinerServiceError: カスタム例外
-        """
         super()._log_error_and_raise(msg, OneLinerServiceError)

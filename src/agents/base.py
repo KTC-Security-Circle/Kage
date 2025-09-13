@@ -9,7 +9,7 @@ from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import HuggingFaceModel, LLMProvider
 from agents.utils import agents_logger, get_memory, get_model
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ class BaseAgent[StateType, ReturnType](ABC):
     # オプションまたはデフォルト値あり
     _status: AgentStatus = AgentStatus.IDLE
     _model: BaseChatModel | None = None
-    _model_name: str | None = None
+    _model_name: HuggingFaceModel | str | None = None
     _fake_responses: list[BaseModel] | None = None
     _graph: CompiledStateGraph | None = None
 

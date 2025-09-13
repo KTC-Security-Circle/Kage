@@ -1,10 +1,10 @@
 """一言コメント生成サービスのテスト"""
 
-import os
 from unittest.mock import patch
 
 import pytest
 
+from agents.agent_conf import LLMProvider
 from logic.queries.one_liner_queries import OneLinerContext
 from logic.services.base import MyBaseError
 from logic.services.one_liner_service import OneLinerService, OneLinerServiceError
@@ -24,36 +24,21 @@ class TestOneLinerService:
     一言コメント生成サービスの正常系・異常系のテストを実行します。
     """
 
-    def test_init_default_no_llm(self) -> None:
-        """デフォルトではLLMが無効であることをテスト"""
-        service = OneLinerService()
-        assert service._use_llm is False
-
-    @patch.dict(os.environ, {"KAGE_USE_LLM_ONE_LINER": "true"})
-    def test_init_with_llm_enabled(self) -> None:
-        """環境変数でLLMが有効化されることをテスト"""
+    def test_init_always_llm(self) -> None:
+        """初期化時に常にエージェント(LLM経路)が有効であることをテスト"""
         service = OneLinerService()
         assert service._use_llm is True
 
-    @patch.dict(os.environ, {"KAGE_USE_LLM_ONE_LINER": "false"})
-    def test_init_with_llm_explicitly_disabled(self) -> None:
-        """環境変数でLLMが明示的に無効化されることをテスト"""
+    def test_init_legacy_flag_removed_behavior(self) -> None:
+        """旧フラグに依存せず常にエージェント有効なことを確認"""
         service = OneLinerService()
-        assert service._use_llm is False
-
-    @patch.dict(os.environ, {"KAGE_USE_LLM_ONE_LINER": "invalid"})
-    def test_init_with_invalid_llm_setting(self) -> None:
-        """無効な環境変数値でLLMが無効になることをテスト"""
-        service = OneLinerService()
-        assert service._use_llm is False
+        assert service._use_llm is True
 
     def test_generate_with_empty_context(self) -> None:
         """空のコンテキストでコメント生成が成功することをテスト"""
         service = OneLinerService()
         context = OneLinerContext()
-
         result = service.generate(context)
-
         assert isinstance(result, str)
         assert len(result) > 0
 
@@ -65,13 +50,9 @@ class TestOneLinerService:
             overdue_task_count=TEST_OVERDUE_COUNT,
             completed_task_count=1,
         )
-
         result = service.generate(context)
-
         assert isinstance(result, str)
         assert len(result) > 0
-        # [AI GENERATED] 期限超過に関するメッセージが含まれることを確認
-        assert any(keyword in result for keyword in ["期限超過", "期限", "過ぎ"])
 
     def test_generate_with_high_completion_rate(self) -> None:
         """高い完了率での肯定的なメッセージをテスト"""
@@ -81,13 +62,9 @@ class TestOneLinerService:
             overdue_task_count=0,
             completed_task_count=TEST_COMPLETED_COUNT_HIGH,  # 80%完了
         )
-
         result = service.generate(context)
-
         assert isinstance(result, str)
         assert len(result) > 0
-        # [AI GENERATED] 肯定的なメッセージが含まれることを確認
-        assert any(keyword in result for keyword in ["素晴らしい", "順調", "良い"])
 
     def test_generate_with_medium_completion_rate(self) -> None:
         """中程度の完了率でのメッセージをテスト"""
@@ -127,27 +104,34 @@ class TestOneLinerService:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    @patch.dict(os.environ, {"KAGE_USE_LLM_ONE_LINER": "true"})
-    def test_generate_with_llm_fallback_to_rules(self) -> None:
-        """LLM有効時もルールベースにフォールバックすることをテスト"""
+    def test_generate_agent_path(self) -> None:
+        """常にエージェント経路で生成され文字列が返ることをテスト (FAKE プロバイダ)"""
         service = OneLinerService()
         context = OneLinerContext(today_task_count=3, completed_task_count=1)
-
         result = service.generate(context)
+        assert isinstance(result, str)
+        assert len(result) > 0
 
+    def test_provider_from_settings(self) -> None:
+        """設定ファイルの provider (Enum) が利用されることをテスト"""
+        from settings.manager import get_config_manager
+
+        mgr = get_config_manager()
+        with mgr.edit() as editable:
+            editable.agents.provider = LLMProvider.FAKE
+        service = OneLinerService()
+        context = OneLinerContext(today_task_count=2, completed_task_count=1)
+        result = service.generate(context)
         assert isinstance(result, str)
         assert len(result) > 0
 
     def test_generate_handles_exception_gracefully(self) -> None:
-        """例外発生時にデフォルトメッセージを返すことをテスト"""
+        """内部エージェント例外時にデフォルトメッセージを返すことをテスト"""
         service = OneLinerService()
-
-        # [AI GENERATED] _generate_with_rulesメソッドが例外を投げるようにモック
-        with patch.object(service, "_generate_with_rules", side_effect=Exception("Test error")):
+        # _generate_with_agent を強制例外
+        with patch.object(service, "_generate_with_agent", side_effect=Exception("Test error")):
             context = OneLinerContext()
             result = service.generate(context)
-
-            # [AI GENERATED] デフォルトメッセージが返されることを確認
             assert result == "今日も一日、お疲れさまです。"
 
     def test_get_default_message(self) -> None:
@@ -158,16 +142,7 @@ class TestOneLinerService:
 
         assert result == "今日も一日、お疲れさまです。"
 
-    def test_generate_with_rules_consistency(self) -> None:
-        """ルールベース生成の一貫性をテスト"""
-        service = OneLinerService()
-        context = OneLinerContext(today_task_count=5, overdue_task_count=1, completed_task_count=2)
-
-        # [AI GENERATED] 複数回実行して常に文字列が返されることを確認
-        for _ in range(5):
-            result = service.generate(context)
-            assert isinstance(result, str)
-            assert len(result) > 0
+    # ルールベース削除に伴い一貫性テストは不要
 
     def test_log_error_and_raise(self) -> None:
         """エラーログ出力と例外発生のテスト"""

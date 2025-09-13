@@ -48,7 +48,7 @@
         ".*\\.toml$"
       ],
       "matchStrings": [
-        "TFCMT_VERSION: (?<currentValue>.*?)\\n"
+        "langchain-openvino-genai = \\{[^}]*tag = \"(?<currentValue>[^\"]+)\"[^}]*\\}"
       ],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "KTC-Security-Circle/langchain-openvino-genai"

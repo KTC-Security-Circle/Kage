@@ -45,7 +45,7 @@
     {
       "customType": "regex",
       "fileMatch": [
-        "*.toml"
+        ".*\\.toml$"
       ],
       "matchStrings": [
         "TFCMT_VERSION: (?<currentValue>.*?)\\n"

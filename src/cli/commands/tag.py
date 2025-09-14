@@ -85,6 +85,7 @@ def _delete_tag(cmd: DeleteTagCommand) -> None:  # [AI GENERATED]
 @app.command("list", help="全タグ一覧")
 @handle_cli_errors()
 def list_tags() -> None:
+    """全タグを一覧表示するコマンド [AI GENERATED]"""
     from logic.queries.tag_queries import GetAllTagsQuery
 
     tags = _get_all_tags(GetAllTagsQuery())
@@ -99,6 +100,11 @@ def list_tags() -> None:
 @app.command("create", help="タグ作成")
 @handle_cli_errors()
 def create_tag(name: str | None = typer.Option(None, "--name", "-n")) -> None:
+    """新しいタグを作成するコマンド [AI GENERATED]
+
+    Args:
+        name: タグ名 (未指定なら対話入力)
+    """
     from logic.commands.tag_commands import CreateTagCommand
 
     if name is None:
@@ -115,6 +121,11 @@ def create_tag(name: str | None = typer.Option(None, "--name", "-n")) -> None:
 @app.command("search", help="名前部分一致")
 @handle_cli_errors()
 def search_tags(query: str) -> None:
+    """タグ名の部分一致検索を行うコマンド [AI GENERATED]
+
+    Args:
+        query: 検索語
+    """
     from logic.queries.tag_queries import SearchTagsByNameQuery
 
     results = _search_tags(SearchTagsByNameQuery(name_query=query))
@@ -136,6 +147,11 @@ def search_tags(query: str) -> None:
 @app.command("get", help="ID取得")
 @handle_cli_errors()
 def get_tag(tag_id: str) -> None:
+    """ID 指定でタグ詳細を取得するコマンド [AI GENERATED]
+
+    Args:
+        tag_id: タグ UUID 文字列
+    """
     from logic.queries.tag_queries import GetTagByIdQuery
 
     tid = uuid.UUID(tag_id)
@@ -154,6 +170,12 @@ def get_tag(tag_id: str) -> None:
 @app.command("update", help="タグ名変更")
 @handle_cli_errors()
 def update_tag(tag_id: str, name: str | None = typer.Option(None, "--name", "-n")) -> None:
+    """タグ名を変更するコマンド [AI GENERATED]
+
+    Args:
+        tag_id: タグ UUID
+        name: 新しいタグ名
+    """
     from logic.commands.tag_commands import UpdateTagCommand
 
     tid = uuid.UUID(tag_id)
@@ -169,6 +191,12 @@ def update_tag(tag_id: str, name: str | None = typer.Option(None, "--name", "-n"
 @app.command("delete", help="タグ削除")
 @handle_cli_errors()
 def delete_tag(tag_id: str, force: bool = typer.Option(default=False, help="関連があっても削除")) -> None:
+    """タグを削除するコマンド [AI GENERATED]
+
+    Args:
+        tag_id: 削除対象 UUID
+        force: 確認を省略するか
+    """
     from logic.commands.tag_commands import DeleteTagCommand
 
     tid = uuid.UUID(tag_id)

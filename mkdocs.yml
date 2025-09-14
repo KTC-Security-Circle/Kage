@@ -68,10 +68,13 @@ plugins:
       handlers:
         python:
           options:
+            paths: src
             heading_level: 3
             show_root_heading: true
             docstring_style: google
             show_source: true
+            members_order: source
+            show_if_no_docstring: true
 
   - git-revision-date-localized:
       enable_creation_date: true

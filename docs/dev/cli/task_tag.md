@@ -43,3 +43,9 @@ poe cli task-tag exists 11111111-1111-1111-1111-111111111111 22222222-2222-2222-
 | `_exists`          | 存在確認             | `check_task_tag_exists`        |
 | `_clear_task`      | タスク関連一括削除   | `delete_task_tags_by_task_id`  |
 | `_clear_tag`       | タグ関連一括削除     | `delete_task_tags_by_tag_id`   |
+
+## API リファレンス
+
+::: src.cli.commands.task_tag
+    options:
+        show_root_heading: false

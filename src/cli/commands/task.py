@@ -194,6 +194,12 @@ def list_tasks(
     *,
     all_: bool = typer.Option(None, "--all", "-a", help="flagを付けると全てのタスクを表示"),
 ) -> None:
+    """タスクをステータス指定または全件で一覧表示するコマンド [AI GENERATED]
+
+    Args:
+        status: 単一表示するステータス ( --all 指定時は無視 )
+        all_: 全ステータス横断表示フラグ
+    """
     if all_:
         all_tasks = _list_all_tasks()
         # all_tasksからtaskを取り出して表示
@@ -215,6 +221,16 @@ def create_task(
     status: TaskStatus = TaskStatus.INBOX,
     due: str | None = typer.Option(None, "--due", help="YYYY-MM-DD"),
 ) -> None:
+    """新しいタスクを作成するコマンド [AI GENERATED]
+
+    未指定項目は対話入力されます。
+
+    Args:
+        title: タイトル
+        description: 説明
+        status: 初期ステータス
+        due: 期限 (YYYY-MM-DD)
+    """
     from logic.commands.task_commands import CreateTaskCommand
 
     if title is None:
@@ -238,6 +254,11 @@ def create_task(
 @app.command("get", help="IDで取得")
 @handle_cli_errors()
 def get_task(task_id: str) -> None:
+    """ID 指定でタスク詳細を取得するコマンド [AI GENERATED]
+
+    Args:
+        task_id: 対象タスク UUID 文字列
+    """
     from logic.queries.task_queries import GetTaskByIdQuery
 
     tid = uuid.UUID(task_id)
@@ -267,6 +288,15 @@ def update_task(
     status: TaskStatus | None = None,
     due: str | None = typer.Option(None, "--due"),
 ) -> None:
+    """既存タスクを更新するコマンド [AI GENERATED]
+
+    Args:
+        task_id: 対象タスク UUID
+        title: 新タイトル (None で変更しない)
+        description: 新説明 (None で変更しない)
+        status: 新ステータス (None で変更しない)
+        due: 新期限文字列 (None で変更しない)
+    """
     from logic.commands.task_commands import UpdateTaskCommand
     from logic.queries.task_queries import GetTaskByIdQuery
 
@@ -315,6 +345,12 @@ def update_task(
 @app.command("delete", help="タスク削除")
 @handle_cli_errors()
 def delete_task(task_id: str, force: bool = typer.Option(default=False, help="確認なし")) -> None:
+    """タスクを削除するコマンド [AI GENERATED]
+
+    Args:
+        task_id: 削除対象 UUID
+        force: 確認ダイアログを省略するか
+    """
     from logic.commands.task_commands import DeleteTaskCommand
 
     tid = uuid.UUID(task_id)
@@ -328,6 +364,12 @@ def delete_task(task_id: str, force: bool = typer.Option(default=False, help="�
 @app.command("status", help="ステータス変更")
 @handle_cli_errors()
 def change_status(task_id: str, new_status: TaskStatus) -> None:
+    """タスクのステータスを変更するコマンド [AI GENERATED]
+
+    Args:
+        task_id: 対象タスク UUID
+        new_status: 新しいステータス
+    """
     from logic.commands.task_commands import UpdateTaskCommand
     from logic.queries.task_queries import GetTaskByIdQuery
 
@@ -356,6 +398,11 @@ def task_stats(
         rich_help_panel="Filters",
     ),
 ) -> None:  # [AI GENERATED]
+    """タスク件数の統計 (today/completed/overdue) を表示するコマンド [AI GENERATED]
+
+    Args:
+        show_overdue: 期限超過を表示するかどうか
+    """
     today_res = _get_today_count()
     completed_res = _get_completed_count()
     overdue_res = _get_overdue_count() if show_overdue else None

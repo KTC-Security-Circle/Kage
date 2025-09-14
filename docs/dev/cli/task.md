@@ -71,3 +71,9 @@ poe cli task stats --no-overdue   # overdue を省略
 - Overdue: 期限超過 (未完了) 件数
 
 内部では 3 つのサービスメソッドを個別に計測し、最大 elapsed を代表値として表示。
+
+## API リファレンス
+
+::: src.cli.commands.task
+    options:
+        show_root_heading: false

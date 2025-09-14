@@ -78,6 +78,10 @@ def _delete_project(cmd: DeleteProjectCommand) -> None:  # [AI GENERATED]
 @app.command("list", help="全プロジェクト一覧を表示")
 @handle_cli_errors()
 def list_projects() -> None:
+    """全プロジェクトを一覧表示するコマンド [AI GENERATED]
+
+    ApplicationService から全件取得し Rich Table で出力します。
+    """
     from logic.queries.project_queries import GetAllProjectsQuery
 
     projects = _get_all_projects(GetAllProjectsQuery())
@@ -101,6 +105,13 @@ def create_project(
     description: str | None = typer.Option(None, "--desc", "-d", help="説明"),
     status: ProjectStatus = ProjectStatus.ACTIVE,
 ) -> None:  # [AI GENERATED] CLI create project
+    """新しいプロジェクトを作成するコマンド [AI GENERATED]
+
+    Args:
+        title: プロジェクトタイトル (未指定なら対話入力)
+        description: 説明 (未指定なら対話入力可)
+        status: 初期ステータス
+    """
     from logic.commands.project_commands import CreateProjectCommand
 
     if title is None:
@@ -121,6 +132,11 @@ def create_project(
 @app.command("get", help="ID指定で取得")
 @handle_cli_errors()
 def get_project(project_id: str) -> None:
+    """ID を指定してプロジェクトの詳細を取得するコマンド [AI GENERATED]
+
+    Args:
+        project_id: 取得対象プロジェクト UUID 文字列
+    """
     from logic.queries.project_queries import GetProjectByIdQuery
 
     pid = uuid.UUID(project_id)
@@ -141,6 +157,11 @@ def get_project(project_id: str) -> None:
 @app.command("search", help="タイトル部分一致検索")
 @handle_cli_errors()
 def search_projects(query: str) -> None:
+    """タイトルの部分一致でプロジェクトを検索するコマンド [AI GENERATED]
+
+    Args:
+        query: 検索語 (部分一致)
+    """
     from logic.queries.project_queries import SearchProjectsByTitleQuery
 
     results = _search_projects(SearchProjectsByTitleQuery(title_query=query))
@@ -168,6 +189,16 @@ def update_project(
     description: str | None = typer.Option(None, "--desc", "-d", help="説明"),
     status: ProjectStatus | None = None,
 ) -> None:  # [AI GENERATED] CLI update project
+    """既存プロジェクトのタイトル/説明/ステータスを更新するコマンド [AI GENERATED]
+
+    未指定の場合は対話入力モードに入ります。
+
+    Args:
+        project_id: 対象プロジェクト UUID
+        title: 新タイトル
+        description: 新説明
+        status: 新ステータス
+    """
     from logic.commands.project_commands import UpdateProjectCommand
 
     pid = uuid.UUID(project_id)
@@ -197,6 +228,14 @@ def delete_project(
         rich_help_panel="Danger",
     ),
 ) -> None:
+    """プロジェクトを削除するコマンド [AI GENERATED]
+
+    force 指定が無い場合は確認プロンプトを表示します。
+
+    Args:
+        project_id: 削除対象 UUID
+        force: 確認無しで削除するか
+    """
     from logic.commands.project_commands import DeleteProjectCommand
 
     pid = uuid.UUID(project_id)

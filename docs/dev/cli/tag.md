@@ -49,3 +49,9 @@ poe cli tag delete <TAG_ID> --force
 | `_get_tag`      | 単体取得         | `get_tag_by_id`       |
 | `_update_tag`   | 更新             | `update_tag`          |
 | `_delete_tag`   | 削除             | `delete_tag`          |
+
+## API リファレンス
+
+::: src.cli.commands.tag
+    options:
+        show_root_heading: false

@@ -41,3 +41,9 @@ poe cli memo search meeting
 | `_list_all`     | 全件一覧     | `get_all_memos`        |
 | `_list_by_task` | タスク別取得 | `get_memos_by_task_id` |
 | `_search_memos` | 部分一致検索 | `search_memos`         |
+
+## API リファレンス
+
+::: src.cli.commands.memo
+    options:
+        show_root_heading: false

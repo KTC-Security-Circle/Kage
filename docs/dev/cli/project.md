@@ -49,3 +49,9 @@ poe cli project delete <PROJECT_ID> --force
 | `_search_projects`  | タイトル検索 | `search_projects_by_title` |
 | `_update_project`   | 更新         | `update_project`           |
 | `_delete_project`   | 削除         | `delete_project`           |
+
+## API リファレンス
+
+::: src.cli.commands.project
+    options:
+        show_root_heading: false

@@ -114,6 +114,12 @@ def create(
     task_id: str = typer.Option(..., "--task", help="対象タスクID"),
     content: str | None = typer.Option(None, "--content", "-c", help="メモ内容"),
 ) -> None:  # [AI GENERATED]
+    """新しいメモを作成するコマンド [AI GENERATED]
+
+    Args:
+        task_id: 紐づけるタスク UUID
+        content: メモ本文 (未指定で対話入力)
+    """
     from logic.commands.memo_commands import CreateMemoCommand
 
     t_uuid = uuid.UUID(task_id)
@@ -134,6 +140,12 @@ def update(
     memo_id: str = typer.Argument(...),
     content: str | None = typer.Option(None, "--content", "-c", help="新しい内容"),
 ) -> None:  # [AI GENERATED]
+    """既存メモの内容を更新するコマンド [AI GENERATED]
+
+    Args:
+        memo_id: 対象メモ UUID
+        content: 新しい本文 (未指定で対話入力)
+    """
     from logic.commands.memo_commands import UpdateMemoCommand
 
     m_uuid = uuid.UUID(memo_id)
@@ -156,6 +168,12 @@ def delete(
         rich_help_panel="Danger",
     ),
 ) -> None:  # [AI GENERATED]
+    """メモを削除するコマンド [AI GENERATED]
+
+    Args:
+        memo_id: 対象メモ UUID
+        force: 確認を省略するか
+    """
     from logic.commands.memo_commands import DeleteMemoCommand
 
     m_uuid = uuid.UUID(memo_id)
@@ -169,6 +187,11 @@ def delete(
 @app.command("get", help="IDで取得")
 @handle_cli_errors()
 def get_memo(memo_id: str) -> None:  # [AI GENERATED]
+    """ID 指定でメモ詳細 (Markdown レンダリング含む) を取得するコマンド [AI GENERATED]
+
+    Args:
+        memo_id: メモ UUID
+    """
     from logic.queries.memo_queries import GetMemoByIdQuery
 
     m_uuid = uuid.UUID(memo_id)
@@ -195,6 +218,11 @@ def get_memo(memo_id: str) -> None:  # [AI GENERATED]
 def list_memos(
     task: str | None = typer.Option(None, "--task", help="特定タスクIDで絞り込み"),
 ) -> None:  # [AI GENERATED]
+    """メモ一覧を表示 (タスクIDフィルタ対応) するコマンド [AI GENERATED]
+
+    Args:
+        task: タスク UUID フィルタ
+    """
     from logic.queries.memo_queries import GetAllMemosQuery, GetMemosByTaskIdQuery
 
     if task:
@@ -208,6 +236,11 @@ def list_memos(
 @app.command("search", help="メモ全文検索 (部分一致)")
 @handle_cli_errors()
 def search(query: str) -> None:  # [AI GENERATED]
+    """メモ本文の部分一致検索を行うコマンド [AI GENERATED]
+
+    Args:
+        query: 検索語
+    """
     from logic.queries.memo_queries import SearchMemosQuery
 
     results = _search_memos(SearchMemosQuery(query=query))

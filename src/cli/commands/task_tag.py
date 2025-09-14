@@ -123,6 +123,12 @@ def _print_relations(rows: list[TaskTagRead], title: str, elapsed: float) -> Non
 @app.command("add", help="タスクへタグ付与")
 @handle_cli_errors()
 def add(task_id: str, tag_id: str) -> None:  # [AI GENERATED]
+    """タスクにタグを関連付けるコマンド [AI GENERATED]
+
+    Args:
+        task_id: タスク UUID
+        tag_id: タグ UUID
+    """
     from logic.commands.task_tag_commands import CreateTaskTagCommand
 
     t_uuid = uuid.UUID(task_id)
@@ -137,6 +143,12 @@ def add(task_id: str, tag_id: str) -> None:  # [AI GENERATED]
 @app.command("remove", help="タスクの特定タグ解除")
 @handle_cli_errors()
 def remove(task_id: str, tag_id: str) -> None:  # [AI GENERATED]
+    """タスクから指定タグ関連を削除するコマンド [AI GENERATED]
+
+    Args:
+        task_id: タスク UUID
+        tag_id: タグ UUID
+    """
     from logic.commands.task_tag_commands import DeleteTaskTagCommand
 
     t_uuid = uuid.UUID(task_id)
@@ -151,6 +163,12 @@ def list_relations(
     task: str | None = typer.Option(None, "--task", help="特定タスクIDで絞り込み"),
     tag: str | None = typer.Option(None, "--tag", help="特定タグIDで絞り込み"),
 ) -> None:  # [AI GENERATED]
+    """タスク-タグ関連を一覧表示 (タスク or タグでフィルタ可) するコマンド [AI GENERATED]
+
+    Args:
+        task: タスク UUID (フィルタ)
+        tag: タグ UUID (フィルタ)
+    """
     from logic.queries.task_tag_queries import (
         GetAllTaskTagsQuery,
         GetTaskTagsByTagIdQuery,
@@ -177,6 +195,11 @@ def list_relations(
 @app.command("clear-task", help="タスクの全タグ関連削除")
 @handle_cli_errors()
 def clear_task(task_id: str) -> None:  # [AI GENERATED]
+    """指定タスクに紐づく全てのタグ関連を削除するコマンド [AI GENERATED]
+
+    Args:
+        task_id: タスク UUID
+    """
     from logic.commands.task_tag_commands import DeleteTaskTagsByTaskCommand
 
     t_uuid = uuid.UUID(task_id)
@@ -187,6 +210,11 @@ def clear_task(task_id: str) -> None:  # [AI GENERATED]
 @app.command("clear-tag", help="タグの全タスク関連削除")
 @handle_cli_errors()
 def clear_tag(tag_id: str) -> None:  # [AI GENERATED]
+    """指定タグが付与された全タスクとの関連を削除するコマンド [AI GENERATED]
+
+    Args:
+        tag_id: タグ UUID
+    """
     from logic.commands.task_tag_commands import DeleteTaskTagsByTagCommand
 
     tag_uuid = uuid.UUID(tag_id)
@@ -197,6 +225,12 @@ def clear_tag(tag_id: str) -> None:  # [AI GENERATED]
 @app.command("exists", help="特定タスク-タグ関連が存在するか (exit code 0/1)")
 @handle_cli_errors()
 def exists(task_id: str, tag_id: str) -> None:  # [AI GENERATED]
+    """タスク-タグ関連の存在を確認し exit code を返すコマンド [AI GENERATED]
+
+    Args:
+        task_id: タスク UUID
+        tag_id: タグ UUID
+    """
     from logic.queries.task_tag_queries import CheckTaskTagExistsQuery
 
     t_uuid = uuid.UUID(task_id)

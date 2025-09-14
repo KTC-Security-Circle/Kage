@@ -1,0 +1,32 @@
+# CLI クイックリファレンス
+
+Kage の CLI は Typer ベースで `poe cli <group> <command>` 形式で利用します。以下は主要なサブコマンドの概要です。
+
+## グループ一覧
+
+| グループ  | 目的             | 主な操作                                          |
+| --------- | ---------------- | ------------------------------------------------- |
+| `task`    | タスク管理       | 作成 / 一覧 / 取得 / 更新 / ステータス変更 / 削除 |
+| `tag`     | タグ管理         | 作成 / 一覧 / 取得 / 検索 / 更新 / 削除           |
+| `project` | プロジェクト管理 | 作成 / 一覧 / 取得 / 検索 / 更新 / 削除           |
+
+## よく使う例
+
+```bash
+# タスク一覧 (INBOX)
+poe cli task list
+
+# すべてのタスク一覧
+poe cli task list --all
+
+# タスク作成
+poe cli task create --title "Write docs" --desc "CLI pages" --due 2025-09-30
+
+# プロジェクト検索
+poe cli project search refactor
+
+# タグ検索
+poe cli tag search urgent
+```
+
+詳細: [Task コマンド](task.md) / [Tag コマンド](tag.md) / [Project コマンド](project.md) / [開発者向け](dev.md)

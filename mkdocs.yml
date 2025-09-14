@@ -52,6 +52,12 @@ nav:
       - ブランチ命名: dev/branch_naming.md
       - コントリビューション: dev/contributing_docs.md
       - 設定と環境変数: dev/configuration.md
+      - CLI:
+        - クイックリファレンス: dev/cli/index.md
+        - Task コマンド: dev/cli/task.md
+        - Tag コマンド: dev/cli/tag.md
+        - Project コマンド: dev/cli/project.md
+        - 開発者向け: dev/cli/dev.md
   - APIリファレンス:
       - モデル: dev/reference/models.md
       - コマンドとクエリ: dev/reference/commands_queries.md

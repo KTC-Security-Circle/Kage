@@ -10,7 +10,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from cli.commands import project, tag, task
+from cli.commands import memo, project, tag, task, task_tag
 
 app = typer.Typer(help="Kage project command line interface", invoke_without_command=True)
 console = Console()
@@ -40,6 +40,8 @@ def top_level_default(ctx: typer.Context) -> None:
 app.add_typer(project.app, name="project")
 app.add_typer(task.app, name="task")
 app.add_typer(tag.app, name="tag")
+app.add_typer(task_tag.app, name="task-tag")
+app.add_typer(memo.app, name="memo")
 
 if __name__ == "__main__":
     app()

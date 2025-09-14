@@ -54,3 +54,20 @@ poe cli task delete <TASK_ID> --force  # 確認なし
 | `_update_task`    | 更新                   | `update_task`                  |
 | `_change_status`  | ステータス変更         | `update_task`                  |
 | `_delete_task`    | 削除                   | `delete_task`                  |
+
+## 統計表示 (stats)
+
+タスク件数の簡易統計を表示。
+
+```bash
+poe cli task stats                # today/completed/overdue を表示
+poe cli task stats --no-overdue   # overdue を省略
+```
+
+メトリクス:
+
+- Today: 期限日が今日のタスク件数
+- Completed: 完了済件数
+- Overdue: 期限超過 (未完了) 件数
+
+内部では 3 つのサービスメソッドを個別に計測し、最大 elapsed を代表値として表示。

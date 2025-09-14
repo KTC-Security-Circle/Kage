@@ -3,7 +3,6 @@
 GUI層の代替として Application Service を呼び出す Typer サブコマンド群。
 """
 
-# ruff: noqa: FBT001  # boolean flag使用を許容
 from __future__ import annotations
 
 import uuid
@@ -15,7 +14,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-from cli.utils import elapsed_time, with_spinner
+from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 from models import ProjectStatus
 
 if TYPE_CHECKING:
@@ -77,6 +76,7 @@ def _delete_project(cmd: DeleteProjectCommand) -> None:  # [AI GENERATED]
 
 
 @app.command("list", help="全プロジェクト一覧を表示")
+@handle_cli_errors()
 def list_projects() -> None:
     from logic.queries.project_queries import GetAllProjectsQuery
 
@@ -95,6 +95,7 @@ def list_projects() -> None:
 
 
 @app.command("create", help="新しいプロジェクトを作成")
+@handle_cli_errors()
 def create_project(
     title: str | None = typer.Option(None, "--title", "-t", help="プロジェクトタイトル"),
     description: str | None = typer.Option(None, "--desc", "-d", help="説明"),
@@ -118,6 +119,7 @@ def create_project(
 
 
 @app.command("get", help="ID指定で取得")
+@handle_cli_errors()
 def get_project(project_id: str) -> None:
     from logic.queries.project_queries import GetProjectByIdQuery
 
@@ -137,6 +139,7 @@ def get_project(project_id: str) -> None:
 
 
 @app.command("search", help="タイトル部分一致検索")
+@handle_cli_errors()
 def search_projects(query: str) -> None:
     from logic.queries.project_queries import SearchProjectsByTitleQuery
 
@@ -158,6 +161,7 @@ def search_projects(query: str) -> None:
 
 
 @app.command("update", help="既存プロジェクトを更新")
+@handle_cli_errors()
 def update_project(
     project_id: str = typer.Argument(..., help="対象プロジェクトID"),
     title: str | None = typer.Option(None, "--title", "-t", help="新しいタイトル"),
@@ -184,6 +188,7 @@ def update_project(
 
 
 @app.command("delete", help="プロジェクト削除")
+@handle_cli_errors()
 def delete_project(
     project_id: str,
     force: bool = typer.Option(

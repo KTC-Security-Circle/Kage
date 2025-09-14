@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from logic.queries.tag_queries import GetAllTagsQuery, GetTagByIdQuery, SearchTagsByNameQuery
     from models import TagRead
 
-from cli.utils import elapsed_time, with_spinner
+from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 
 app = typer.Typer(help="タグ CRUD / 検索")
 console = Console()
@@ -83,6 +83,7 @@ def _delete_tag(cmd: DeleteTagCommand) -> None:  # [AI GENERATED]
 
 
 @app.command("list", help="全タグ一覧")
+@handle_cli_errors()
 def list_tags() -> None:
     from logic.queries.tag_queries import GetAllTagsQuery
 
@@ -96,6 +97,7 @@ def list_tags() -> None:
 
 
 @app.command("create", help="タグ作成")
+@handle_cli_errors()
 def create_tag(name: str | None = typer.Option(None, "--name", "-n")) -> None:
     from logic.commands.tag_commands import CreateTagCommand
 
@@ -111,6 +113,7 @@ def create_tag(name: str | None = typer.Option(None, "--name", "-n")) -> None:
 
 
 @app.command("search", help="名前部分一致")
+@handle_cli_errors()
 def search_tags(query: str) -> None:
     from logic.queries.tag_queries import SearchTagsByNameQuery
 
@@ -131,6 +134,7 @@ def search_tags(query: str) -> None:
 
 
 @app.command("get", help="ID取得")
+@handle_cli_errors()
 def get_tag(tag_id: str) -> None:
     from logic.queries.tag_queries import GetTagByIdQuery
 
@@ -148,6 +152,7 @@ def get_tag(tag_id: str) -> None:
 
 
 @app.command("update", help="タグ名変更")
+@handle_cli_errors()
 def update_tag(tag_id: str, name: str | None = typer.Option(None, "--name", "-n")) -> None:
     from logic.commands.tag_commands import UpdateTagCommand
 
@@ -162,7 +167,8 @@ def update_tag(tag_id: str, name: str | None = typer.Option(None, "--name", "-n"
 
 
 @app.command("delete", help="タグ削除")
-def delete_tag(tag_id: str, force: bool = typer.Option(default=False, help="関連があっても削除")) -> None:  # noqa: FBT001
+@handle_cli_errors()
+def delete_tag(tag_id: str, force: bool = typer.Option(default=False, help="関連があっても削除")) -> None:
     from logic.commands.tag_commands import DeleteTagCommand
 
     tid = uuid.UUID(tag_id)

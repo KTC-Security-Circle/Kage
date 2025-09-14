@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import functools
+import sys
 import time
+import traceback
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.status import Status
+from rich.text import Text
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -76,6 +80,46 @@ def elapsed_time() -> Callable[[Callable[P, T]], Callable[P, TimingResult[T]]]:
             result = func(*args, **kwargs)
             elapsed = time.perf_counter() - start
             return TimingResult(result=result, elapsed=elapsed)
+
+        return wrapped
+
+    return decorator
+
+
+def handle_cli_errors() -> Callable[[Callable[P, T]], Callable[P, T | None]]:  # [AI GENERATED]
+    """CLI 向けの一元的な例外表示デコレータ
+
+    ポリシー:
+        * ValueError: 警告 (黄色) として短いメッセージのみ表示
+        * RuntimeError: エラー (赤) として短いメッセージのみ表示
+        * その他の例外: "Unexpected error" 見出し + メッセージ (赤) を表示し終了コード 1
+
+    Traceback はデフォルト非表示 (将来的に --debug/-d で制御予定)。
+
+    Returns:
+        Callable: ラップされた関数。例外発生時は None を返す (終了コードは 0 継続; 呼び出し側で制御可)
+    """
+
+    def decorator(func: Callable[P, T]) -> Callable[P, T | None]:  # [AI GENERATED]
+        @functools.wraps(func)
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> T | None:  # [AI GENERATED]
+            try:
+                return func(*args, **kwargs)
+            except ValueError as exc:  # [AI GENERATED]
+                text = Text(str(exc), style="yellow")
+                console.print(Panel(text, title="Warning", border_style="yellow"))
+                return None
+            except RuntimeError as exc:  # [AI GENERATED]
+                text = Text(str(exc), style="red")
+                console.print(Panel(text, title="Error", border_style="red"))
+                return None
+            except Exception as exc:  # [AI GENERATED]
+                # 予期しない例外。将来的に --debug で traceback 表示切替予定。
+                err_text = Text(str(exc), style="bold red")
+                console.print(Panel(err_text, title="Unexpected error", border_style="red"))
+                # 内部用に標準エラーへ traceback を落としておく (静かに)  [AI GENERATED]
+                traceback.print_exception(exc.__class__, exc, exc.__traceback__, file=sys.stderr)
+                return None
 
         return wrapped
 

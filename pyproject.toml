@@ -207,6 +207,9 @@ unfixable = [
     "ARG",
     "SLF001",
 ]
+"src/cli/**/*.py" = [
+    "FBT001",
+]
 
 # logger-objects = ["src.library.logger.LOGGER"]
 

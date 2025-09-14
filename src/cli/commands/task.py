@@ -15,7 +15,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-from cli.utils import elapsed_time, with_spinner
+from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 from models import TaskRead, TaskStatus
 
 if TYPE_CHECKING:
@@ -123,6 +123,43 @@ def _change_status(cmd: UpdateTaskCommand) -> TaskRead:
     return service.update_task(cmd)
 
 
+# ==== Stats Helpers ====
+
+
+@elapsed_time()
+@with_spinner("Collecting task stats...")
+def _get_today_count() -> int:  # [AI GENERATED]
+    from logic.queries.task_queries import GetTodayTasksCountQuery
+
+    service = _get_service()
+    return service.get_today_tasks_count(GetTodayTasksCountQuery())
+
+
+@elapsed_time()
+@with_spinner("Collecting task stats...")
+def _get_completed_count() -> int:  # [AI GENERATED]
+    service = _get_service()
+    return service.get_completed_tasks_count()
+
+
+@elapsed_time()
+@with_spinner("Collecting task stats...")
+def _get_overdue_count() -> int:  # [AI GENERATED]
+    service = _get_service()
+    return service.get_overdue_tasks_count()
+
+
+def _print_stats(today: int, completed: int, overdue: int, elapsed: float) -> None:  # [AI GENERATED]
+    table = Table(title="Task Stats", box=box.SIMPLE_HEAVY, caption=f"Elapsed: {elapsed:.2f}s")
+    table.add_column("Metric")
+    table.add_column("Count", justify="right")
+    table.add_row("Today", str(today))
+    table.add_row("Completed", str(completed))
+    table.add_row("Overdue", str(overdue))
+    table.add_row("Total (Today+Overdue)", str(today + overdue))
+    console.print(table)
+
+
 def _print_tasks_table(tasks: list[TaskRead], title: str, elapsed: float, add_caption: str | None = None) -> None:
     title = f" Tasks - {title} "
     caption = f"Total: {len(tasks)}, Elapsed: {elapsed:.2f}s" + (f" | {add_caption}" if add_caption else "")
@@ -151,6 +188,7 @@ def _print_tasks_table(tasks: list[TaskRead], title: str, elapsed: float, add_ca
 
 
 @app.command("list", help="ステータスで一覧表示")
+@handle_cli_errors()
 def list_tasks(
     status: TaskStatus = TaskStatus.INBOX,
     *,
@@ -170,6 +208,7 @@ def list_tasks(
 
 
 @app.command("create", help="タスク作成")
+@handle_cli_errors()
 def create_task(
     title: str | None = typer.Option(None, "--title", "-t"),
     description: str | None = typer.Option(None, "--desc", "-d"),
@@ -197,6 +236,7 @@ def create_task(
 
 
 @app.command("get", help="IDで取得")
+@handle_cli_errors()
 def get_task(task_id: str) -> None:
     from logic.queries.task_queries import GetTaskByIdQuery
 
@@ -219,6 +259,7 @@ def get_task(task_id: str) -> None:
 
 
 @app.command("update", help="タスク更新")
+@handle_cli_errors()
 def update_task(
     task_id: str = typer.Argument(...),
     title: str | None = typer.Option(None, "--title", "-t"),
@@ -272,7 +313,8 @@ def update_task(
 
 
 @app.command("delete", help="タスク削除")
-def delete_task(task_id: str, force: bool = typer.Option(default=False, help="確認なし")) -> None:  # noqa: FBT001
+@handle_cli_errors()
+def delete_task(task_id: str, force: bool = typer.Option(default=False, help="確認なし")) -> None:
     from logic.commands.task_commands import DeleteTaskCommand
 
     tid = uuid.UUID(task_id)
@@ -284,6 +326,7 @@ def delete_task(task_id: str, force: bool = typer.Option(default=False, help="�
 
 
 @app.command("status", help="ステータス変更")
+@handle_cli_errors()
 def change_status(task_id: str, new_status: TaskStatus) -> None:
     from logic.commands.task_commands import UpdateTaskCommand
     from logic.queries.task_queries import GetTaskByIdQuery
@@ -302,3 +345,30 @@ def change_status(task_id: str, new_status: TaskStatus) -> None:
     )
     updated = _change_status(cmd)
     console.print(f"[green]Status -> {updated.result.status.value}[/green] Elapsed: {updated.elapsed:.2f}s")
+
+
+@app.command("stats", help="タスク件数統計表示 (today/completed/overdue)")
+@handle_cli_errors()
+def task_stats(
+    show_overdue: bool = typer.Option(
+        default=True,
+        help="期限超過件数を表示するか",
+        rich_help_panel="Filters",
+    ),
+) -> None:  # [AI GENERATED]
+    today_res = _get_today_count()
+    completed_res = _get_completed_count()
+    overdue_res = _get_overdue_count() if show_overdue else None
+
+    # 最大のelapsedを代表値とする（3回計測されるため）
+    elapsed = max(
+        today_res.elapsed,
+        completed_res.elapsed,
+        overdue_res.elapsed if overdue_res is not None else 0.0,
+    )
+    _print_stats(
+        today=today_res.result,
+        completed=completed_res.result,
+        overdue=overdue_res.result if overdue_res is not None else 0,
+        elapsed=elapsed,
+    )

@@ -15,6 +15,12 @@ from cli.commands import memo, project, tag, task, task_tag
 app = typer.Typer(help="Kage project command line interface", invoke_without_command=True)
 console = Console()
 
+app.add_typer(project.app, name="project")
+app.add_typer(task.app, name="task")
+app.add_typer(tag.app, name="tag")
+app.add_typer(task_tag.app, name="task-tag")
+app.add_typer(memo.app, name="memo")
+
 
 @app.callback()
 def top_level_default(ctx: typer.Context) -> None:
@@ -23,25 +29,24 @@ def top_level_default(ctx: typer.Context) -> None:
     サブコマンドが指定されない場合は、デフォルトのトップアクセス（例：ヘルプ表示）を実行します。
     """
     if ctx.invoked_subcommand is None:
+        # Display welcome message and basic help
+        # 使用できるコマンドの一覧を表示する
+        commands = [f"- {cmd.name}" for cmd in app.registered_groups]
+
         console.print(
             Panel.fit(
                 (
-                    "\n\n[bold green]🚀 Welcome to kage-cli! 🚀[/bold green]\n"
-                    "[dim]Welcome to the Kage CLI prototype.[/dim]\n\n\n"
-                    "Try 'kage-cli --help' to see available commands."
+                    "\n[bold green]🚀 Welcome to kage-cli! 🚀[/bold green]\n"
+                    "[dim]Welcome to the Kage CLI prototype.[/dim]\n\n"
+                    "Try 'kage-cli --help' to see available commands.\n\n\n"
+                    "Available commands:\n" + "\n".join(commands) + "\n\n"
+                    "[dim]Use 'kage-cli <command> --help' for more information on a command.[/dim]\n"
                 ),
                 title="kage-cli",
                 border_style="cyan",
             )
         )
 
-
-# app.add_typer(hello.app, name="hello", help="Print a friendly greeting")
-app.add_typer(project.app, name="project")
-app.add_typer(task.app, name="task")
-app.add_typer(tag.app, name="tag")
-app.add_typer(task_tag.app, name="task-tag")
-app.add_typer(memo.app, name="memo")
 
 if __name__ == "__main__":
     app()

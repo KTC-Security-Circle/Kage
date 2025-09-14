@@ -31,14 +31,20 @@ class OneLinerServiceError(MyBaseError):
 class OneLinerService(ServiceBase[OneLinerServiceError]):
     """一言コメント生成サービス (OneLinerAgent 直接利用)."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, *, provider: LLMProvider | None = None, model_name: HuggingFaceModel | str | None = None
+    ) -> None:
         cfg = get_config_manager().settings
-        provider = cfg.agents.provider
+        # provider = cfg.agents.provider
+        provider = provider if provider else cfg.agents.provider
         self._use_llm = True  # 旧テスト互換フラグ (常に True)
 
         raw_model = None
         try:
-            raw_model = cfg.agents.get_model_name("one_liner")  # HuggingFaceModel | str | None
+            # raw_model = cfg.agents.get_model_name("one_liner")  # HuggingFaceModel | str | None
+            raw_model = (
+                model_name if model_name else cfg.agents.get_model_name("one_liner")
+            )  # HuggingFaceModel | str | None
         except Exception as e:
             logger.debug(f"モデル名取得失敗(無視): {e}")
 

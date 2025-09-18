@@ -80,6 +80,7 @@ class ViewFactory:
             # [AI GENERATED] ページオブジェクトが変更されている場合は更新
             if view.page != page:
                 view.page = page
+            # [AI GENERATED] refresh()はビューがページに追加された後で呼び出す
             return view
 
         # [AI GENERATED] 新しいビューインスタンスを作成
@@ -105,6 +106,19 @@ class ViewFactory:
             BaseView | None: キャッシュされたビューまたはNone
         """
         return self._view_instances.get(view_class)
+
+    def is_view_cached(self, view_class: type[BaseView], route_path: str) -> bool:
+        """ビューがキャッシュされているかを確認する。
+
+        Args:
+            view_class: ビュークラス
+            route_path: ルートパス
+
+        Returns:
+            bool: キャッシュされている場合True
+        """
+        cache_key = f"{view_class.__name__}:{route_path}"
+        return cache_key in self._view_cache
 
     def clear_cache(self, view_class: type[BaseView] | None = None) -> None:
         """ビューキャッシュをクリアする。
@@ -249,6 +263,10 @@ class FletNativeRouter:
 
             self.page.views.append(flet_view)
             self.page.update()
+
+            # [AI GENERATED] ビューがページに追加された後でrefreshを呼び出し（キャッシュされたビューの場合）
+            if self._view_factory.is_view_cached(route_config.view_class, route_config.path):
+                view.refresh()
 
             # [AI GENERATED] 現在のビューを更新
             self._current_view = view

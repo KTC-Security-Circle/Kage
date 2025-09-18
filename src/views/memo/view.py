@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from typing import TYPE_CHECKING
 
@@ -55,7 +56,6 @@ class MemoView(BaseView, ErrorHandlingMixin):
         if self.memo_list_section and self.filtered_memos:
             # [AI GENERATED] コンポーネントが確実にページに追加されてから更新
             self.page.update()  # ページの状態を同期
-            import contextlib
 
             with contextlib.suppress(Exception):
                 self.memo_list_section.update_memos(self.filtered_memos)

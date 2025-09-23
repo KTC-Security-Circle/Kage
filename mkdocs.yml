@@ -52,6 +52,15 @@ nav:
       - ブランチ命名: dev/branch_naming.md
       - コントリビューション: dev/contributing_docs.md
       - 設定と環境変数: dev/configuration.md
+      - CLI:
+          - クイックリファレンス: dev/cli/index.md
+          - Task コマンド: dev/cli/task.md
+          - Tag コマンド: dev/cli/tag.md
+          - Project コマンド: dev/cli/project.md
+          - Task Quick Actions: dev/cli/task_qa.md
+          - Task Status / Board: dev/cli/task_status.md
+          - Agent コマンド: dev/cli/agent.md
+          - 開発者向け: dev/cli/dev.md
   - APIリファレンス:
       - モデル: dev/reference/models.md
       - コマンドとクエリ: dev/reference/commands_queries.md
@@ -62,10 +71,13 @@ plugins:
       handlers:
         python:
           options:
+            paths: src
             heading_level: 3
             show_root_heading: true
             docstring_style: google
             show_source: true
+            members_order: source
+            show_if_no_docstring: true
 
   - git-revision-date-localized:
       enable_creation_date: true

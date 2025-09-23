@@ -24,7 +24,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "python-dotenv>=1.1.0",
     "ruamel-yaml>=0.18.15",
-    "sqlmodel>=0.0.24",
+    "sqlmodel>=0.0.24"
 ]
 
 [tool.flet]
@@ -45,24 +45,36 @@ copyright = "Copyright (C) 2025 by Flet"
 [tool.flet.app]
 path = "src"
 
+[project.scripts]
+kage-cli = "cli.main:app"
+
 [tool.uv]
-dev-dependencies = [
+package = true
+
+[dependency-groups]
+dev = [
     "flet[all]==0.27.6",
+    "poethepoet>=0.36.0",
+    "pre-commit>=4.2.0",
+    # test
     "langchain-tests>=0.3.21",
+    "pytest>=8.4.0",
+    "pytest-cov>=6.2.1",
+    # lint
+    "pyright>=1.1.400",
+    "ruff>=0.13,<0.14",
+    # docs
     "mkdocs>=1.6.1",
     "mkdocs-git-committers-plugin-2>=2.5.0",
     "mkdocs-git-revision-date-localized-plugin>=1.4.7",
     "mkdocs-material>=9.6.16",
     "mkdocstrings>=0.30.0",
     "mkdocstrings-python>=1.17.0",
-    "poethepoet>=0.36.0",
-    "pre-commit>=4.2.0",
-    "pyright>=1.1.400",
-    "pytest>=8.4.0",
-    "pytest-cov>=6.2.1",
-    "ruff>=0.13, <0.14",
+    # cli
+    "questionary>=2.1.1",
+    "rich>=14.1.0",
+    "typer>=0.17.4",
 ]
-package = true
 
 [tool.uv.sources]
 langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git", tag = "v0.0.2.dev0" }
@@ -80,6 +92,7 @@ app-dev = "flet run -dr"
 app-web = "flet run --web"
 app-web-dev = "flet run --web -dr"
 app-debug = "flet run -v"
+cli = "kage-cli"
 
 # == Development environment setup ==
 setup = ["sync", "db-upgrade"]
@@ -193,6 +206,9 @@ unfixable = [
     "N802",
     "ARG",
     "SLF001",
+]
+"src/cli/**/*.py" = [
+    "FBT001",
 ]
 
 # logger-objects = ["src.library.logger.LOGGER"]

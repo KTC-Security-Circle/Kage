@@ -11,13 +11,26 @@ Application Service層への移行をサポートするため、
 """
 
 import warnings
-from typing import Any, TypeVar
+from typing import Any, TypeVar, overload, Literal, TYPE_CHECKING
 
 from sqlmodel import Session
 
 from logic.auto_discovery import initialize_auto_discovery
 from logic.container import ServiceContainer
 from logic.registry import get_repository_registry, get_service_registry
+
+if TYPE_CHECKING:
+    from logic.repositories.memo import MemoRepository
+    from logic.repositories.task import TaskRepository
+    from logic.repositories.project import ProjectRepository
+    from logic.repositories.tag import TagRepository
+    from logic.repositories.task_tag import TaskTagRepository
+    from logic.services.memo_service import MemoService
+    from logic.services.task_service import TaskService
+    from logic.services.project_service import ProjectService
+    from logic.services.tag_service import TagService
+    from logic.services.task_tag_service import TaskTagService
+    from logic.services.one_liner_service import OneLinerService
 
 T = TypeVar("T")
 
@@ -49,6 +62,24 @@ class RepositoryFactory:
             # [AI GENERATED] 既に初期化済みの場合はエラーを無視
             pass
 
+    @overload
+    def create(self, repository_name: Literal["memo"]) -> "MemoRepository": ...
+
+    @overload
+    def create(self, repository_name: Literal["task"]) -> "TaskRepository": ...
+
+    @overload
+    def create(self, repository_name: Literal["project"]) -> "ProjectRepository": ...
+
+    @overload
+    def create(self, repository_name: Literal["tag"]) -> "TagRepository": ...
+
+    @overload
+    def create(self, repository_name: Literal["task_tag"]) -> "TaskTagRepository": ...
+
+    @overload
+    def create(self, repository_name: str) -> Any: ...
+
     def create(self, repository_name: str) -> Any:
         """レジストリを使用してリポジトリを作成する
 
@@ -63,8 +94,32 @@ class RepositoryFactory:
 
         Example:
             >>> factory = RepositoryFactory(session)
-            >>> memo_repo = factory.create("memo")
-            >>> task_repo = factory.create("task")
+            >>> memo_repo = factory.create("memo")  # Type inferred as MemoRepository
+            >>> task_repo = factory.create("task")  # Type inferred as TaskRepository
+        """
+        registry = get_repository_registry()
+        if not registry.is_registered(repository_name):
+            raise ValueError(f"Repository '{repository_name}' is not registered")
+
+        return registry.create(repository_name, self.session)
+
+    def create_typed(self, repository_type: type[T], repository_name: str) -> T:
+        """型を明示してレジストリからリポジトリを作成する
+
+        Args:
+            repository_type: 期待するリポジトリの型
+            repository_name: リポジトリ名（例: "memo", "task"）
+
+        Returns:
+            T: 指定された型のリポジトリインスタンス
+
+        Raises:
+            ValueError: 登録されていないリポジトリ名の場合
+
+        Example:
+            >>> from logic.repositories.memo import MemoRepository
+            >>> factory = RepositoryFactory(session)
+            >>> memo_repo = factory.create_typed(MemoRepository, "memo")  # Type: MemoRepository
         """
         registry = get_repository_registry()
         if not registry.is_registered(repository_name):
@@ -189,6 +244,27 @@ class ServiceFactory:
         """
         self.repository_factory = repository_factory
 
+    @overload
+    def create(self, service_name: Literal["memo"]) -> "MemoService": ...
+
+    @overload
+    def create(self, service_name: Literal["task"]) -> "TaskService": ...
+
+    @overload
+    def create(self, service_name: Literal["project"]) -> "ProjectService": ...
+
+    @overload
+    def create(self, service_name: Literal["tag"]) -> "TagService": ...
+
+    @overload
+    def create(self, service_name: Literal["task_tag"]) -> "TaskTagService": ...
+
+    @overload
+    def create(self, service_name: Literal["one_liner"]) -> "OneLinerService": ...
+
+    @overload
+    def create(self, service_name: str) -> Any: ...
+
     def create(self, service_name: str) -> Any:
         """レジストリを使用してサービスを作成する
 
@@ -203,8 +279,32 @@ class ServiceFactory:
 
         Example:
             >>> factory = ServiceFactory(repository_factory)
-            >>> memo_service = factory.create("memo")
-            >>> task_service = factory.create("task")
+            >>> memo_service = factory.create("memo")  # Type inferred as MemoService
+            >>> task_service = factory.create("task")  # Type inferred as TaskService
+        """
+        registry = get_service_registry()
+        if not registry.is_registered(service_name):
+            raise ValueError(f"Service '{service_name}' is not registered")
+
+        return registry.create(service_name, self.repository_factory.session)
+
+    def create_typed(self, service_type: type[T], service_name: str) -> T:
+        """型を明示してレジストリからサービスを作成する
+
+        Args:
+            service_type: 期待するサービスの型
+            service_name: サービス名（例: "memo", "task"）
+
+        Returns:
+            T: 指定された型のサービスインスタンス
+
+        Raises:
+            ValueError: 登録されていないサービス名の場合
+
+        Example:
+            >>> from logic.services.memo_service import MemoService
+            >>> factory = ServiceFactory(repository_factory)
+            >>> memo_service = factory.create_typed(MemoService, "memo")  # Type: MemoService
         """
         registry = get_service_registry()
         if not registry.is_registered(service_name):

@@ -6,29 +6,30 @@
 
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar, get_type_hints
+from typing import Any, TypeVar, get_type_hints, Generic, cast
 
 from loguru import logger
 from sqlmodel import Session
 
 T = TypeVar("T")
+RepositoryT = TypeVar("RepositoryT")
+ServiceT = TypeVar("ServiceT")
 
 
 class RegistryError(Exception):
     """レジストリ操作時のエラー"""
 
 
-
-class BaseRegistry(ABC):
+class BaseRegistry(ABC, Generic[T]):
     """レジストリの基底クラス"""
 
     def __init__(self) -> None:
         """レジストリを初期化する"""
-        self._registry: dict[str, type] = {}
+        self._registry: dict[str, type[T]] = {}
         self._instances: dict[str, Any] = {}
 
     @abstractmethod
-    def register(self, name: str, cls: type) -> None:
+    def register(self, name: str, cls: type[T]) -> None:
         """クラスをレジストリに登録する
 
         Args:
@@ -37,7 +38,7 @@ class BaseRegistry(ABC):
         """
 
     @abstractmethod
-    def create(self, name: str, *args: Any, **kwargs: Any) -> Any:
+    def create(self, name: str, *args: Any, **kwargs: Any) -> T:
         """登録されたクラスのインスタンスを作成する
 
         Args:
@@ -46,7 +47,7 @@ class BaseRegistry(ABC):
             **kwargs: キーワード引数
 
         Returns:
-            Any: 作成されたインスタンス
+            T: 作成されたインスタンス
         """
 
     def is_registered(self, name: str) -> bool:
@@ -69,14 +70,14 @@ class BaseRegistry(ABC):
         return list(self._registry.keys())
 
 
-class RepositoryRegistry(BaseRegistry):
+class RepositoryRegistry(BaseRegistry[RepositoryT]):
     """リポジトリレジストリ
 
     リポジトリクラスの登録と作成を管理します。
     全てのリポジトリはSessionを第一引数として受け取る必要があります。
     """
 
-    def register(self, name: str, cls: type) -> None:
+    def register(self, name: str, cls: type[RepositoryT]) -> None:
         """リポジトリクラスをレジストリに登録する
 
         Args:
@@ -93,7 +94,7 @@ class RepositoryRegistry(BaseRegistry):
         self._registry[name] = cls
         logger.debug(f"Registered repository: {name} -> {cls}")
 
-    def create(self, name: str, session: Session) -> Any:
+    def create(self, name: str, session: Session) -> RepositoryT:
         """リポジトリインスタンスを作成する
 
         Args:
@@ -101,7 +102,7 @@ class RepositoryRegistry(BaseRegistry):
             session: データベースセッション
 
         Returns:
-            Any: リポジトリインスタンス
+            RepositoryT: リポジトリインスタンス
 
         Raises:
             RegistryError: 登録されていない名前の場合
@@ -113,7 +114,7 @@ class RepositoryRegistry(BaseRegistry):
         try:
             instance = cls(session)
             logger.debug(f"Created repository instance: {name}")
-            return instance
+            return cast(RepositoryT, instance)
         except Exception as e:
             logger.exception(f"Failed to create repository {name}: {e}")
             raise RegistryError(f"Failed to create repository {name}: {e}") from e
@@ -145,14 +146,14 @@ class RepositoryRegistry(BaseRegistry):
             return False
 
 
-class ServiceRegistry(BaseRegistry):
+class ServiceRegistry(BaseRegistry[ServiceT]):
     """サービスレジストリ
 
     サービスクラスの登録と依存性解決を管理します。
     依存性は型ヒントから自動解決されます。
     """
 
-    def __init__(self, repository_registry: RepositoryRegistry) -> None:
+    def __init__(self, repository_registry: RepositoryRegistry[Any]) -> None:
         """サービスレジストリを初期化する
 
         Args:
@@ -161,7 +162,7 @@ class ServiceRegistry(BaseRegistry):
         super().__init__()
         self.repository_registry = repository_registry
 
-    def register(self, name: str, cls: type) -> None:
+    def register(self, name: str, cls: type[ServiceT]) -> None:
         """サービスクラスをレジストリに登録する
 
         Args:
@@ -171,7 +172,7 @@ class ServiceRegistry(BaseRegistry):
         self._registry[name] = cls
         logger.debug(f"Registered service: {name} -> {cls}")
 
-    def create(self, name: str, session: Session) -> Any:
+    def create(self, name: str, session: Session) -> ServiceT:
         """サービスインスタンスを作成する
 
         依存性は型ヒントから自動解決されます。
@@ -181,7 +182,7 @@ class ServiceRegistry(BaseRegistry):
             session: データベースセッション
 
         Returns:
-            Any: サービスインスタンス
+            ServiceT: サービスインスタンス
 
         Raises:
             RegistryError: 登録されていない名前や依存性解決エラーの場合
@@ -194,7 +195,7 @@ class ServiceRegistry(BaseRegistry):
             dependencies = self._resolve_dependencies(cls, session)
             instance = cls(**dependencies)
             logger.debug(f"Created service instance: {name}")
-            return instance
+            return cast(ServiceT, instance)
         except Exception as e:
             logger.exception(f"Failed to create service {name}: {e}")
             raise RegistryError(f"Failed to create service {name}: {e}") from e
@@ -259,23 +260,23 @@ class ServiceRegistry(BaseRegistry):
 
 
 # [AI GENERATED] グローバルレジストリインスタンス
-_repository_registry = RepositoryRegistry()
-_service_registry = ServiceRegistry(_repository_registry)
+_repository_registry: RepositoryRegistry[Any] = RepositoryRegistry()
+_service_registry: ServiceRegistry[Any] = ServiceRegistry(_repository_registry)
 
 
-def get_repository_registry() -> RepositoryRegistry:
+def get_repository_registry() -> RepositoryRegistry[Any]:
     """リポジトリレジストリを取得
 
     Returns:
-        RepositoryRegistry: リポジトリレジストリインスタンス
+        RepositoryRegistry[Any]: リポジトリレジストリインスタンス
     """
     return _repository_registry
 
 
-def get_service_registry() -> ServiceRegistry:
+def get_service_registry() -> ServiceRegistry[Any]:
     """サービスレジストリを取得
 
     Returns:
-        ServiceRegistry: サービスレジストリインスタンス
+        ServiceRegistry[Any]: サービスレジストリインスタンス
     """
     return _service_registry

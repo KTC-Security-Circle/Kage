@@ -151,7 +151,7 @@ class AutoDiscovery:
             str: 登録名（例：memo）
         """
         # [AI GENERATED] Repositoryサフィックスを削除し、小文字に変換
-        name = class_name[:-len("Repository")]
+        name = class_name[: -len("Repository")]
         return self._convert_to_snake_case(name)
 
     def _generate_service_name(self, class_name: str) -> str:
@@ -164,7 +164,7 @@ class AutoDiscovery:
             str: 登録名（例：memo）
         """
         # [AI GENERATED] Serviceサフィックスを削除し、小文書に変換
-        name = class_name[:-len("Service")]
+        name = class_name[: -len("Service")]
         return self._convert_to_snake_case(name)
 
     def _convert_to_snake_case(self, name: str) -> str:

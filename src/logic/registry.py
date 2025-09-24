@@ -17,7 +17,6 @@ T = TypeVar("T")
 class RegistryError(Exception):
     """レジストリ操作時のエラー"""
 
-    pass
 
 
 class BaseRegistry(ABC):
@@ -36,7 +35,6 @@ class BaseRegistry(ABC):
             name: 登録名
             cls: 登録するクラス
         """
-        pass
 
     @abstractmethod
     def create(self, name: str, *args: Any, **kwargs: Any) -> Any:
@@ -50,7 +48,6 @@ class BaseRegistry(ABC):
         Returns:
             Any: 作成されたインスタンス
         """
-        pass
 
     def is_registered(self, name: str) -> bool:
         """指定された名前がレジストリに登録されているかチェック

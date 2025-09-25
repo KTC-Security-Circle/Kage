@@ -111,9 +111,16 @@ format = "uv run ruff format src"
 format-check = "uv run ruff format src --check"
 type-check = "uv run pyright src"
 
+# == Code quality for tests ==
+lint-tests = "uv run ruff check tests"
+lint-tests-fix = "uv run ruff check tests --fix"
+format-tests = "uv run ruff format tests"
+format-tests-check = "uv run ruff format tests --check"
+
 # == Composite commands ==
-check = ["lint", "format-check", "type-check"]
-fix = ["lint-fix", "format"]
+check = ["lint", "format-check", "type-check", "lint-tests", "format-tests-check"]
+check-all = ["lint", "format-check", "type-check", "lint-tests", "format-tests-check", "test"]
+fix = ["lint-fix", "format", "lint-tests-fix", "format-tests"]
 
 # == Test execution ==
 test = "uv run pytest"
@@ -193,6 +200,8 @@ ignore = [
     "BLE001",
     "PLC0415",
     "FIX002",
+    "ANN401", # Allow Any types for factory methods by design
+    "UP046",  # Allow Generic subclass for compatibility
 ]
 unfixable = [
     "F401", # unused import
@@ -206,9 +215,13 @@ unfixable = [
     "N802",
     "ARG",
     "SLF001",
+    "T201",
 ]
 "src/cli/**/*.py" = [
     "FBT001",
+]
+"src/logic/registry.py" = [
+    "SLF001",  # Private member access needed for registry internals
 ]
 
 # logger-objects = ["src.library.logger.LOGGER"]

@@ -11,7 +11,7 @@ Application Service層への移行をサポートするため、
 """
 
 import warnings
-from typing import Any, TypeVar, overload, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from sqlmodel import Session
 
@@ -21,16 +21,16 @@ from logic.registry import get_repository_registry, get_service_registry
 
 if TYPE_CHECKING:
     from logic.repositories.memo import MemoRepository
-    from logic.repositories.task import TaskRepository
     from logic.repositories.project import ProjectRepository
     from logic.repositories.tag import TagRepository
+    from logic.repositories.task import TaskRepository
     from logic.repositories.task_tag import TaskTagRepository
     from logic.services.memo_service import MemoService
-    from logic.services.task_service import TaskService
+    from logic.services.one_liner_service import OneLinerService
     from logic.services.project_service import ProjectService
     from logic.services.tag_service import TagService
+    from logic.services.task_service import TaskService
     from logic.services.task_tag_service import TaskTagService
-    from logic.services.one_liner_service import OneLinerService
 
 T = TypeVar("T")
 

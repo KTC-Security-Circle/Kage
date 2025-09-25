@@ -206,6 +206,7 @@ unfixable = [
     "N802",
     "ARG",
     "SLF001",
+    "T201",
 ]
 "src/cli/**/*.py" = [
     "FBT001",

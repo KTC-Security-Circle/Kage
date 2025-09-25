@@ -6,7 +6,7 @@
 
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar, get_type_hints, Generic, cast
+from typing import Any, Generic, TypeVar, cast, get_type_hints
 
 from loguru import logger
 from sqlmodel import Session
@@ -114,7 +114,7 @@ class RepositoryRegistry(BaseRegistry[RepositoryT]):
         try:
             instance = cls(session)
             logger.debug(f"Created repository instance: {name}")
-            return cast(RepositoryT, instance)
+            return cast("RepositoryT", instance)
         except Exception as e:
             logger.exception(f"Failed to create repository {name}: {e}")
             raise RegistryError(f"Failed to create repository {name}: {e}") from e
@@ -195,7 +195,7 @@ class ServiceRegistry(BaseRegistry[ServiceT]):
             dependencies = self._resolve_dependencies(cls, session)
             instance = cls(**dependencies)
             logger.debug(f"Created service instance: {name}")
-            return cast(ServiceT, instance)
+            return cast("ServiceT", instance)
         except Exception as e:
             logger.exception(f"Failed to create service {name}: {e}")
             raise RegistryError(f"Failed to create service {name}: {e}") from e

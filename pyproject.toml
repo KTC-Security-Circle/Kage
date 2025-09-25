@@ -81,9 +81,6 @@ langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langc
 # langchain-openvino-genai = { path = "../langchain-openvino-genai", editable = true }
 
 # Poe the Poet
-[tool.poe]
-shell_interpreter = ["powershell", "posix"]
-
 [tool.poe.tasks]
 
 # == Essential Commands ==
@@ -105,8 +102,8 @@ test = "uv run pytest"
 test-cov = "uv run pytest --cov=src --cov-report=html"
 
 # == Database ==
-migrate = { shell = "cd src/models && uv run alembic upgrade head" }
-db-status = { shell = "cd src/models && uv run alembic current" }
+migrate = "uv run alembic upgrade head"
+db-status = "uv run alembic current"
 
 # == Documentation ==
 docs = ["_gen-env-docs", "_docs-serve"]

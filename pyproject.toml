@@ -86,75 +86,47 @@ shell_interpreter = ["powershell", "posix"]
 
 [tool.poe.tasks]
 
-# == Application execution ==
-app-run = "flet run"
-app-dev = "flet run -dr"
-app-web = "flet run --web"
-app-web-dev = "flet run --web -dr"
-app-debug = "flet run -v"
-cli = "kage-cli"
-
-# == Development environment setup ==
-setup = ["sync", "db-upgrade"]
+# == Essential Commands ==
+setup = ["sync", "migrate"]
 sync = "uv sync"
 
-# == Database operations ==
-db-upgrade = { shell = "Set-Location src/models; uv run alembic upgrade head" }
-db-downgrade = { shell = "Set-Location src/models; uv run alembic downgrade -1" }
-db-history = { shell = "Set-Location src/models; uv run alembic history" }
-db-current = { shell = "Set-Location src/models; uv run alembic current" }
+# == Application Execution ==
+run = "flet run"
+dev = "flet run -dr"
+web = "flet run --web"
+cli = "kage-cli"
 
-# == Code quality and formatting ==
-lint = "uv run ruff check src"
-lint-fix = "uv run ruff check src --fix"
-format = "uv run ruff format src"
-format-check = "uv run ruff format src --check"
-type-check = "uv run pyright src"
+# == Code Quality ==
+check = ["_lint", "_format-check", "_type-check"]
+fix = ["_lint-fix", "_format"]
 
-# == Composite commands ==
-check = ["lint", "format-check", "type-check"]
-fix = ["lint-fix", "format"]
-
-# == Test execution ==
+# == Testing ==
 test = "uv run pytest"
-test-unit = "uv run pytest -m unit"
-test-integration = "uv run pytest -m integration"
 test-cov = "uv run pytest --cov=src --cov-report=html"
 
-# == Dependency management ==
-deps-list = "uv pip list"
-deps-tree = { shell = "uv pip list | Format-Table" }
-deps-outdated = "uv pip list --outdated"
+# == Database ==
+migrate = { shell = "cd src/models && uv run alembic upgrade head" }
+db-status = { shell = "cd src/models && uv run alembic current" }
 
-# == Build and packaging ==
-build-web = "flet build web"
-build-desktop = "flet build windows"
-pack-desktop = "flet pack"
-
-# == Documentation (MkDocs) ==
-docs-serve = ["gen-env-docs", "docs-serve-dev"]
-docs-serve-dev = "uv run mkdocs serve -a 127.0.0.1:8000"
+# == Documentation ==
+docs = ["_gen-env-docs", "_docs-serve"]
 docs-build = "uv run mkdocs build"
 docs-deploy = "uv run mkdocs gh-deploy --force --no-history"
-gen-env-docs = "uv run scripts/generate_env_docs.py"
 
-# == Windows specific utilities ==
-open-storage = { shell = "Invoke-Item storage" }
-open-logs = { shell = "Invoke-Item storage/data/logs" }
-open-data = { shell = "Invoke-Item storage/data" }
+# == Build ==
+build = "flet build web"
 
-# == Cleanup ==
+# == Utility ==
 clean = "uv cache clean"
-clean-pyc = { shell = "Get-ChildItem -Path . -Filter '*.pyc' -Recurse | Remove-Item -Force" }
-clean-pycache = { shell = "Get-ChildItem -Path . -Name '__pycache__' -Recurse -Directory | Remove-Item -Recurse -Force" }
-clean-all = ["clean", "clean-pyc", "clean-pycache"]
 
-# == Log management ==
-logs-app = { shell = "Get-Content storage/data/logs/app.log -Tail 50"}
-logs-agents = { shell = "Get-Content storage/data/logs/agents.log -Tail 50" }
-logs-clear = { shell = "Remove-Item storage/data/logs/*.log -ErrorAction SilentlyContinue" }
-logs-follow-app = { shell = "Get-Content storage/data/logs/app.log -Wait -Tail 10" }
-logs-follow-agents = { shell = "Get-Content storage/data/logs/agents.log -Wait -Tail 10" }
+# == Internal Commands (prefixed with _) ==
+_lint = "uv run ruff check src"
+_lint-fix = "uv run ruff check src --fix"
+_format = "uv run ruff format src"
+_format-check = "uv run ruff format src --check"
+_type-check = "uv run pyright src"
+_docs-serve = "uv run mkdocs serve -a 127.0.0.1:8000"
+_gen-env-docs = "uv run scripts/generate_env_docs.py"
 
 
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)

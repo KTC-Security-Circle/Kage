@@ -1,30 +1,25 @@
 # Kage プロジェクト タスクランナーガイド
 
-このプロジェクトでは [poethepoet](https://poethepoet.natn.io/) を使用してタスクランナーを実装しています。これにより、開発・テスト・ビルドなどの作業を効率化できます。
+このプロジェクトでは [poethepoet](https://poethepoet.natn.io/) を使用してタスクランナーを実装しています。コマンド数を大幅に削減し、より使いやすく整理されました。
+
+> ⚠️ **重要**: v0.2.0でコマンド構成を大幅に見直しました。従来のコマンドから変更があります。
 
 ## インストール・セットアップ
 
 ### poethepoet のグローバルインストール（推奨）
 
-poethepoet をグローバルにインストールすることで、`uv run`を付けずに直接`poe`コマンドを使用できます：
-
 ```bash
 # poethepoetをグローバルにインストール
 uv tool install poethepoet
 
-# 依存関係の同期とデータベースの初期化
+# 初回セットアップ
 poe setup
 ```
 
-### ローカルプロジェクトでの使用（代替方法）
-
-もしグローバルインストールができない場合は、プロジェクト内でも使用可能です：
+### ローカルプロジェクトでの使用
 
 ```bash
-# プロジェクト内にpoethepoetを追加
-uv add poethepoet --dev
-
-# タスク実行（この場合はuv runが必要）
+# uv run経由で実行
 uv run poe setup
 ```
 
@@ -32,179 +27,190 @@ uv run poe setup
 
 ```bash
 # 利用可能なタスクの一覧表示
-poe --help
+poe -h
 
-# 特定のタスクの実行
-poe <task-name>
+# 特定のタスクのヘルプ
+poe -h <command>
+
+# タスクの実行
+poe <command>
 ```
 
-## 📋 利用可能なタスク一覧
+## 📋 利用可能なタスク一覧（17個）
 
-### 🚀 アプリケーション実行
+### 🚀 必須コマンド
 
-| コマンド          | 説明                                    |
-| ----------------- | --------------------------------------- |
-| `poe app-run`     | 通常のデスクトップアプリとして起動      |
-| `poe app-dev`     | 開発モード（ホットリロード + 再帰監視） |
-| `poe app-web`     | Web ブラウザでアプリを起動              |
-| `poe app-web-dev` | Web ブラウザで開発モード起動            |
-| `poe app-debug`   | 詳細ログ出力モードで起動                |
+#### 環境セットアップ
 
-### ⚙️ 開発環境セットアップ
+| コマンド | 説明 | コマンド例 |
+|---------|------|----------|
+| `setup` | 初回プロジェクトセットアップ | `poe setup` |
+| `sync` | 依存関係の同期 | `poe sync` |
 
-| コマンド    | 説明                                       |
-| ----------- | ------------------------------------------ |
-| `poe setup` | 初回セットアップ（依存関係同期 + DB 更新） |
-| `poe sync`  | 依存関係の同期                             |
+#### アプリケーション実行
 
-### 🗄️ データベース操作
+| コマンド | 説明 | コマンド例 |
+|---------|------|----------|
+| `run` | アプリケーション実行 | `poe run` |
+| `dev` | 開発モード（ホットリロード付き） | `poe dev` |
+| `web` | Web版として実行 | `poe web` |
+| `cli` | CLIツール実行 | `poe cli --help` |
 
-| コマンド           | 説明                                     |
-| ------------------ | ---------------------------------------- |
-| `poe db-upgrade`   | データベースマイグレーションの実行       |
-| `poe db-downgrade` | 1 つ前のマイグレーションにダウングレード |
-| `poe db-history`   | マイグレーション履歴の表示               |
-| `poe db-current`   | 現在のマイグレーション状態確認           |
+#### コード品質管理
 
-### 🔍 コード品質・フォーマット
+| コマンド | 説明 | 実行内容 |
+|---------|------|---------|
+| `check` | 全品質チェック | lint + format-check + type-check |
+| `fix` | コード自動修正 | lint-fix + format |
 
-| コマンド           | 説明                             |
-| ------------------ | -------------------------------- |
-| `poe lint`         | ruff による静的解析              |
-| `poe lint-fix`     | 自動修正可能な問題を修正         |
-| `poe format`       | コードフォーマット               |
-| `poe format-check` | フォーマットチェック（修正なし） |
-| `poe type-check`   | 型チェック（Pyright）            |
+#### テスト実行
 
-### 🎯 複合コマンド
+| コマンド | 説明 | コマンド例 |
+|---------|------|----------|
+| `test` | 全テスト実行 | `poe test` |
+| `test-cov` | カバレッジ付きテスト | `poe test-cov` |
 
-| コマンド    | 説明                                                     |
-| ----------- | -------------------------------------------------------- |
-| `poe check` | 品質チェック一括実行（lint + format-check + type-check） |
-| `poe fix`   | 自動修正一括実行（lint-fix + format）                    |
+### 📚 ドキュメント・ビルド
 
-### 🧪 テスト実行
+| コマンド | 説明 | コマンド例 |
+|---------|------|----------|
+| `docs` | ドキュメントサーバー起動 | `poe docs` |
+| `docs-build` | ドキュメントビルド | `poe docs-build` |
+| `docs-deploy` | GitHub Pagesにデプロイ | `poe docs-deploy` |
+| `build` | Web版ビルド | `poe build` |
 
-| コマンド               | 説明                     |
-| ---------------------- | ------------------------ |
-| `poe test`             | 全テストの実行           |
-| `poe test-unit`        | ユニットテストのみ実行   |
-| `poe test-integration` | 統合テストのみ実行       |
-| `poe test-cov`         | カバレッジ付きテスト実行 |
+### ⚙️ データベース・ユーティリティ
 
-### 📦 依存関係管理
-
-| コマンド            | 説明                             |
-| ------------------- | -------------------------------- |
-| `poe deps-list`     | インストール済みパッケージの一覧 |
-| `poe deps-tree`     | 依存関係ツリーの表示             |
-| `poe deps-outdated` | 古いパッケージの確認             |
-
-### 🏗️ ビルド・パッケージング
-
-| コマンド            | 説明                                     |
-| ------------------- | ---------------------------------------- |
-| `poe build-web`     | 静的 Web サイトとしてビルド              |
-| `poe build-desktop` | Windows デスクトップアプリとしてビルド   |
-| `poe pack-desktop`  | スタンドアロンのデスクトップバンドル作成 |
-
-### 🧹 クリーンアップ
-
-| コマンド        | 説明                   |
-| --------------- | ---------------------- |
-| `poe clean`     | uv キャッシュのクリア  |
-| `poe clean-pyc` | .pyc ファイルの削除    |
-| `poe clean-all` | 全クリーンアップの実行 |
-
-### 📄 ログ管理
-
-| コマンド          | 説明                                 |
-| ----------------- | ------------------------------------ |
-| `poe logs-app`    | アプリケーションログの最新 50 行表示 |
-| `poe logs-agents` | エージェントログの最新 50 行表示     |
-| `poe logs-clear`  | 全ログファイルの削除                 |
+| コマンド | 説明 | コマンド例 |
+|---------|------|----------|
+| `migrate` | データベースマイグレーション | `poe migrate` |
+| `db-status` | マイグレーション状態確認 | `poe db-status` |
+| `clean` | キャッシュクリア | `poe clean` |
 
 ## 💡 開発ワークフローの例
 
 ### 初回セットアップ
-
 ```bash
-# プロジェクトをクローン後
+# プロジェクトクローン後
 poe setup
 ```
 
 ### 日常の開発作業
-
 ```bash
-# 開発モードでアプリ起動
-poe app-dev
+# 開発モードで起動
+poe dev
 
 # コード品質チェック
 poe check
 
-# 問題の自動修正
+# 自動修正
 poe fix
 
 # テスト実行
 poe test
 ```
 
-### データベース操作
-
+### PR提出前
 ```bash
-# マイグレーション実行
-poe db-upgrade
+# 全チェック実行
+poe check && poe test
 
-# 現在の状態確認
-poe db-current
+# カバレッジ確認
+poe test-cov
 ```
 
-### デプロイ前のチェック
-
+### ドキュメント作業
 ```bash
-# 全体的な品質チェック
-poe check
+# ローカル確認
+poe docs
 
-# テスト実行
-poe test
-
-# Webアプリとしてビルド
-poe build-web
+# ビルドテスト
+poe docs-build
 ```
+
+## 🔄 コマンド変更点
+
+### 削除されたコマンドと代替方法
+
+| 旧コマンド | 新コマンド / 代替方法 |
+|----------|---------------------|
+| `app-run` | `poe run` |
+| `app-dev` | `poe dev` |
+| `app-web` | `poe web` |
+| `app-web-dev` | `flet run --web -dr` |
+| `app-debug` | `flet run -v` |
+| `lint` | `poe check` |
+| `lint-fix` | `poe fix` |
+| `format` | `poe fix` |
+| `format-check` | `poe check` |
+| `type-check` | `poe check` |
+| `docs-serve` | `poe docs` |
+| `db-upgrade` | `poe migrate` |
+| `db-current` | `poe db-status` |
+| `build-web` | `poe build` |
+
+### 削除されたコマンド（直接実行推奨）
+
+| 削除されたコマンド | 代替方法 |
+|------------------|---------|
+| `test-unit` | `uv run pytest -m unit` |
+| `test-integration` | `uv run pytest -m integration` |
+| `deps-list` | `uv pip list` |
+| `deps-outdated` | `uv pip list --outdated` |
+| `db-downgrade` | `cd src/models && uv run alembic downgrade -1` |
+| `db-history` | `cd src/models && uv run alembic history` |
+| PowerShell固有コマンド | OS固有のコマンドを直接使用 |
 
 ## ❓ トラブルシューティング
 
-### タスクが見つからない場合
+### よくある問題
 
-```bash
-# 利用可能なタスクを確認
-poe --help
-```
+1. **コマンドが見つからない**
+   ```bash
+   # poethepoetバージョン確認
+   poe --version
+   
+   # 利用可能なタスク確認
+   poe -h
+   ```
 
-### 依存関係の問題
+2. **依存関係エラー**
+   ```bash
+   # 再同期
+   poe sync
+   
+   # キャッシュクリア
+   poe clean
+   ```
 
-```bash
-# 依存関係を再同期
-poe sync
-```
+3. **旧コマンドが使えない**
+   - 上記の「コマンド変更点」を参照
+   - 多くのコマンドは `check` または `fix` に統合されました
 
-### ログの確認
+4. **個別テスト実行**
+   ```bash
+   # 単体テストのみ
+   uv run pytest -m unit
+   
+   # 特定ファイル
+   uv run pytest tests/specific_test.py -v
+   ```
 
-```bash
-# アプリケーションログを確認
-poe logs-app
+## ⚙️ カスタマイズ
 
-# エージェントログを確認
-poe logs-agents
-```
-
-## ⚙️ カスタムタスクの追加
-
-新しいタスクを追加する場合は、`pyproject.toml`の`[tool.poe.tasks]`セクションに追加してください：
+新しいタスクを追加する場合は、`pyproject.toml`の`[tool.poe.tasks]`セクションに追加：
 
 ```toml
 [tool.poe.tasks]
-my-custom-task = "echo 'Hello, World!'"
+# 既存のもの...
+
+# カスタムタスクの例
+my-task = "echo 'Custom task'"
+complex-task = ["sync", "check", "test"]
 ```
 
-詳細な設定方法については [poethepoet 公式ドキュメント](https://poethepoet.natn.io/) を参照してください。
+## 📖 参考資料
+
+- [poethepoet 公式ドキュメント](https://poethepoet.natn.io/)
+- [プロジェクトアーキテクチャ](architecture-design.md)
+- [セットアップガイド](setup.md)

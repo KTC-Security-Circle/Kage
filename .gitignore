@@ -168,3 +168,7 @@ llms/
 
 # github copilot
 copilot/
+
+# other
+.ruff_cache/
+.benchmarks/

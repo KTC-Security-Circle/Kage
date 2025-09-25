@@ -10,6 +10,7 @@ Application Service層への移行をサポートするため、
 サービスとリポジトリを自動発見し、依存性を自動解決します。
 """
 
+import contextlib
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
@@ -56,11 +57,9 @@ class RepositoryFactory:
 
     def _ensure_auto_discovery(self) -> None:
         """自動発見が実行されていることを確認"""
-        try:
-            initialize_auto_discovery()
-        except Exception:
+        with contextlib.suppress(Exception):
             # [AI GENERATED] 既に初期化済みの場合はエラーを無視
-            pass
+            initialize_auto_discovery()
 
     @overload
     def create(self, repository_name: Literal["memo"]) -> "MemoRepository": ...
@@ -99,11 +98,12 @@ class RepositoryFactory:
         """
         registry = get_repository_registry()
         if not registry.is_registered(repository_name):
-            raise ValueError(f"Repository '{repository_name}' is not registered")
+            msg = f"Repository '{repository_name}' is not registered"
+            raise ValueError(msg)
 
         return registry.create(repository_name, self.session)
 
-    def create_typed(self, repository_type: type[T], repository_name: str) -> T:
+    def create_typed(self, _repository_type: type[T], repository_name: str) -> T:
         """型を明示してレジストリからリポジトリを作成する
 
         Args:
@@ -123,7 +123,8 @@ class RepositoryFactory:
         """
         registry = get_repository_registry()
         if not registry.is_registered(repository_name):
-            raise ValueError(f"Repository '{repository_name}' is not registered")
+            msg = f"Repository '{repository_name}' is not registered"
+            raise ValueError(msg)
 
         return registry.create(repository_name, self.session)
 
@@ -284,11 +285,12 @@ class ServiceFactory:
         """
         registry = get_service_registry()
         if not registry.is_registered(service_name):
-            raise ValueError(f"Service '{service_name}' is not registered")
+            msg = f"Service '{service_name}' is not registered"
+            raise ValueError(msg)
 
         return registry.create(service_name, self.repository_factory.session)
 
-    def create_typed(self, service_type: type[T], service_name: str) -> T:
+    def create_typed(self, _service_type: type[T], service_name: str) -> T:
         """型を明示してレジストリからサービスを作成する
 
         Args:
@@ -308,7 +310,8 @@ class ServiceFactory:
         """
         registry = get_service_registry()
         if not registry.is_registered(service_name):
-            raise ValueError(f"Service '{service_name}' is not registered")
+            msg = f"Service '{service_name}' is not registered"
+            raise ValueError(msg)
 
         return registry.create(service_name, self.repository_factory.session)
 

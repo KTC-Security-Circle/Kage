@@ -1,28 +1,23 @@
-#!/usr/bin/env python3
 """Demonstrate type safety improvements in the factory system"""
 
-import os
 import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
+from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from sqlmodel import Session
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Import the factory system
 from logic.factory import RepositoryFactory, ServiceFactory
 
 # Mock repository and service classes for demonstration
 if TYPE_CHECKING:
-    from logic.repositories.memo import MemoRepository
-    from logic.repositories.task import TaskRepository
-    from logic.services.memo_service import MemoService
-    from logic.services.task_service import TaskService
+    pass
 
 
-def demonstrate_type_safety():
+def demonstrate_type_safety() -> None:
     """Demonstrate the type safety improvements"""
     print("🎯 TYPE SAFETY IMPROVEMENTS DEMONSTRATION")
     print("=" * 50)
@@ -86,7 +81,7 @@ def demonstrate_type_safety():
     print("   service = factory.create(user_input)        # Type: Any")
 
 
-def show_overload_methods():
+def show_overload_methods() -> None:
     """Show the overload methods that provide type inference"""
     print("\n" + "=" * 50)
     print("🔧 IMPLEMENTATION DETAILS")
@@ -118,7 +113,7 @@ def show_overload_methods():
     print("✅ Graceful fallback to Any for unknown types")
 
 
-def show_usage_examples():
+def show_usage_examples() -> None:
     """Show practical usage examples"""
     print("\n" + "=" * 50)
     print("📖 PRACTICAL USAGE EXAMPLES")

@@ -1,20 +1,17 @@
-#!/usr/bin/env python3
 """Test for generic factory type inference"""
 
-import os
 import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
+from pathlib import Path
 from unittest.mock import Mock, patch
-
 from sqlmodel import Session
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Import the factory system
 from logic.factory import RepositoryFactory, ServiceFactory
 
 
-def test_repository_factory_type_inference():
+def test_repository_factory_type_inference() -> None:
     """Test that repository factory provides proper type inference"""
     print("Testing RepositoryFactory type inference...")
 
@@ -61,7 +58,7 @@ def test_repository_factory_type_inference():
             print("✓ RepositoryFactory type inference tests passed")
 
 
-def test_service_factory_type_inference():
+def test_service_factory_type_inference() -> None:
     """Test that service factory provides proper type inference"""
     print("Testing ServiceFactory type inference...")
 
@@ -111,7 +108,7 @@ def test_service_factory_type_inference():
             print("✓ ServiceFactory type inference tests passed")
 
 
-def demo_type_inference():
+def demo_type_inference() -> None:
     """Demonstrate type inference in action"""
     print("\n=== Type Inference Demo ===")
 

@@ -193,6 +193,8 @@ ignore = [
     "BLE001",
     "PLC0415",
     "FIX002",
+    "ANN401", # Allow Any types for factory methods by design
+    "UP046",  # Allow Generic subclass for compatibility
 ]
 unfixable = [
     "F401", # unused import
@@ -210,6 +212,9 @@ unfixable = [
 ]
 "src/cli/**/*.py" = [
     "FBT001",
+]
+"src/logic/registry.py" = [
+    "SLF001",  # Private member access needed for registry internals
 ]
 
 # logger-objects = ["src.library.logger.LOGGER"]

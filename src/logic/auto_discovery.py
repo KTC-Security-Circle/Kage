@@ -8,6 +8,7 @@ import importlib
 import inspect
 import pkgutil
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 from loguru import logger
@@ -87,7 +88,7 @@ class AutoDiscovery:
             logger.exception(f"Failed to discover services: {e}")
             raise
 
-    def _register_repositories_from_module(self, module: Any) -> None:
+    def _register_repositories_from_module(self, module: ModuleType) -> None:
         """モジュールからリポジトリクラスを登録する
 
         Args:
@@ -108,7 +109,7 @@ class AutoDiscovery:
                 except Exception as e:
                     logger.warning(f"Failed to register repository {name}: {e}")
 
-    def _register_services_from_module(self, module: Any) -> None:
+    def _register_services_from_module(self, module: ModuleType) -> None:
         """モジュールからサービスクラスを登録する
 
         Args:
@@ -129,7 +130,7 @@ class AutoDiscovery:
                 except Exception as e:
                     logger.warning(f"Failed to register service {name}: {e}")
 
-    def _is_class_defined_in_module(self, cls: type, module: Any) -> bool:
+    def _is_class_defined_in_module(self, cls: type, module: ModuleType) -> bool:
         """クラスがモジュール内で定義されているかチェック
 
         Args:

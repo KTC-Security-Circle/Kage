@@ -89,7 +89,8 @@ class RepositoryRegistry(BaseRegistry[RepositoryT]):
         """
         # [AI GENERATED] リポジトリクラスの検証
         if not self._is_valid_repository_class(cls):
-            raise RegistryError(f"Invalid repository class: {cls}")
+            msg = f"Invalid repository class: {cls}"
+            raise RegistryError(msg)
 
         self._registry[name] = cls
         logger.debug(f"Registered repository: {name} -> {cls}")
@@ -108,7 +109,8 @@ class RepositoryRegistry(BaseRegistry[RepositoryT]):
             RegistryError: 登録されていない名前の場合
         """
         if name not in self._registry:
-            raise RegistryError(f"Repository not registered: {name}")
+            msg = f"Repository not registered: {name}"
+            raise RegistryError(msg)
 
         cls = self._registry[name]
         try:
@@ -117,7 +119,8 @@ class RepositoryRegistry(BaseRegistry[RepositoryT]):
             return cast("RepositoryT", instance)
         except Exception as e:
             logger.exception(f"Failed to create repository {name}: {e}")
-            raise RegistryError(f"Failed to create repository {name}: {e}") from e
+            msg = f"Failed to create repository {name}: {e}"
+            raise RegistryError(msg) from e
 
     def _is_valid_repository_class(self, cls: type) -> bool:
         """リポジトリクラスが有効かチェック
@@ -138,12 +141,10 @@ class RepositoryRegistry(BaseRegistry[RepositoryT]):
                 return False
 
             first_param = params[0]
-            if first_param.annotation != Session:
-                return False
-
-            return True
         except Exception:
             return False
+        else:
+            return first_param.annotation == Session
 
 
 class ServiceRegistry(BaseRegistry[ServiceT]):
@@ -188,7 +189,8 @@ class ServiceRegistry(BaseRegistry[ServiceT]):
             RegistryError: 登録されていない名前や依存性解決エラーの場合
         """
         if name not in self._registry:
-            raise RegistryError(f"Service not registered: {name}")
+            msg = f"Service not registered: {name}"
+            raise RegistryError(msg)
 
         cls = self._registry[name]
         try:
@@ -198,7 +200,8 @@ class ServiceRegistry(BaseRegistry[ServiceT]):
             return cast("ServiceT", instance)
         except Exception as e:
             logger.exception(f"Failed to create service {name}: {e}")
-            raise RegistryError(f"Failed to create service {name}: {e}") from e
+            msg = f"Failed to create service {name}: {e}"
+            raise RegistryError(msg) from e
 
     def _resolve_dependencies(self, cls: type, session: Session) -> dict[str, Any]:
         """サービスクラスの依存性を解決する
@@ -220,7 +223,7 @@ class ServiceRegistry(BaseRegistry[ServiceT]):
             init_sig = inspect.signature(cls.__init__)
             type_hints = get_type_hints(cls.__init__)
 
-            for param_name, param in init_sig.parameters.items():
+            for param_name in init_sig.parameters:
                 if param_name == "self":
                     continue
 
@@ -237,11 +240,12 @@ class ServiceRegistry(BaseRegistry[ServiceT]):
                 # [AI GENERATED] その他の依存性は現在サポートしない
                 logger.warning(f"Unsupported dependency type: {param_type} for {param_name}")
 
-            return dependencies
-
         except Exception as e:
             logger.exception(f"Failed to resolve dependencies for {cls}: {e}")
-            raise RegistryError(f"Failed to resolve dependencies for {cls}: {e}") from e
+            msg = f"Failed to resolve dependencies for {cls}: {e}"
+            raise RegistryError(msg) from e
+        else:
+            return dependencies
 
     def _find_repository_by_type(self, repo_type: type, session: Session) -> Any:
         """指定された型のリポジトリを検索して作成

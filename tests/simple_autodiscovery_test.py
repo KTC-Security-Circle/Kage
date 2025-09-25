@@ -15,7 +15,7 @@ from logic.auto_discovery import AutoDiscovery
 from logic.registry import get_repository_registry, get_service_registry
 
 
-def test_name_conversion():
+def test_name_conversion() -> None:
     """Test name conversion functions"""
     print("Testing name conversion...")
 
@@ -38,7 +38,7 @@ def test_name_conversion():
     print("✓ Name conversion tests passed")
 
 
-def test_class_module_detection():
+def test_class_module_detection() -> None:
     """Test class module detection"""
     print("Testing class module detection...")
 
@@ -64,7 +64,7 @@ def test_class_module_detection():
 @patch("logic.auto_discovery.pkgutil.iter_modules")
 @patch("logic.auto_discovery.importlib.import_module")
 @patch("logic.auto_discovery.inspect.getmembers")
-def test_repository_discovery(mock_getmembers, mock_import_module, mock_iter_modules):
+def test_repository_discovery(mock_getmembers, mock_import_module, mock_iter_modules) -> None:
     """Test repository discovery process"""
     print("Testing repository discovery...")
 
@@ -96,7 +96,7 @@ def test_repository_discovery(mock_getmembers, mock_import_module, mock_iter_mod
 @patch("logic.auto_discovery.pkgutil.iter_modules")
 @patch("logic.auto_discovery.importlib.import_module")
 @patch("logic.auto_discovery.inspect.getmembers")
-def test_service_discovery(mock_getmembers, mock_import_module, mock_iter_modules):
+def test_service_discovery(mock_getmembers, mock_import_module, mock_iter_modules) -> None:
     """Test service discovery process"""
     print("Testing service discovery...")
 
@@ -125,7 +125,7 @@ def test_service_discovery(mock_getmembers, mock_import_module, mock_iter_module
     print("✓ Service discovery tests passed")
 
 
-def test_list_registered_items():
+def test_list_registered_items() -> None:
     """Test listing registered items"""
     print("Testing list registered items...")
 

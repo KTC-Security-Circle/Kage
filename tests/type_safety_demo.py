@@ -2,7 +2,6 @@
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 from sqlmodel import Session
@@ -11,10 +10,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Import the factory system
 from logic.factory import RepositoryFactory, ServiceFactory
-
-# Mock repository and service classes for demonstration
-if TYPE_CHECKING:
-    pass
 
 
 def demonstrate_type_safety() -> None:
@@ -29,11 +24,10 @@ def demonstrate_type_safety() -> None:
     print()
 
     # Mock the factory behavior
-    from unittest.mock import patch
-
+    session = Mock(spec=Session)
     with patch("logic.factory.initialize_auto_discovery"):
-        repo_factory = RepositoryFactory(session)
-        service_factory = ServiceFactory(Mock())
+        _repo_factory = RepositoryFactory(session)
+        _service_factory = ServiceFactory(Mock())
 
         print("   # Repository Factory")
         print("   memo_repo = repo_factory.create('memo')      # Type: MemoRepository")

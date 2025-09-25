@@ -1,17 +1,15 @@
-#!/usr/bin/env python3
 """Integration test demonstrating the new factory system"""
 
 import os
 import sys
 import warnings
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
+from pathlib import Path
 from unittest.mock import Mock
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from sqlmodel import Session
 
-from logic.auto_discovery import get_auto_discovery
 from logic.factory import RepositoryFactory, ServiceFactory
 
 # Import the registry and auto-discovery directly
@@ -51,7 +49,7 @@ class MockSimpleService:
         print("MockSimpleService created with no dependencies")
 
 
-def demonstrate_manual_registration():
+def demonstrate_manual_registration() -> None:
     """Demonstrate manual registration and usage"""
     print("\n=== Manual Registration Demo ===")
 
@@ -78,17 +76,17 @@ def demonstrate_manual_registration():
     session = Mock(spec=Session)
 
     # Test repository creation
-    memo_repo = repo_registry.create("memo", session)
-    task_repo = repo_registry.create("task", session)
+    _memo_repo = repo_registry.create("memo", session)
+    _task_repo = repo_registry.create("task", session)
 
     # Test service creation with dependency injection
-    memo_service = service_registry.create("memo", session)
-    simple_service = service_registry.create("simple", session)
+    _memo_service = service_registry.create("memo", session)
+    _simple_service = service_registry.create("simple", session)
 
     print("✓ Manual registration demo completed successfully")
 
 
-def demonstrate_factory_integration():
+def demonstrate_factory_integration() -> None:
     """Demonstrate integration with factory classes"""
     print("\n=== Factory Integration Demo ===")
 
@@ -130,7 +128,7 @@ def demonstrate_factory_integration():
     print("✓ Factory integration demo completed successfully")
 
 
-def demonstrate_backward_compatibility():
+def demonstrate_backward_compatibility() -> None:
     """Demonstrate that old methods still work"""
     print("\n=== Backward Compatibility Demo ===")
 
@@ -154,7 +152,7 @@ def demonstrate_backward_compatibility():
     print("✓ Backward compatibility demo completed successfully")
 
 
-def demonstrate_error_handling():
+def demonstrate_error_handling() -> None:
     """Demonstrate error handling"""
     print("\n=== Error Handling Demo ===")
 

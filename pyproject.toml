@@ -111,9 +111,16 @@ format = "uv run ruff format src"
 format-check = "uv run ruff format src --check"
 type-check = "uv run pyright src"
 
+# == Code quality for tests ==
+lint-tests = "uv run ruff check tests"
+lint-tests-fix = "uv run ruff check tests --fix"
+format-tests = "uv run ruff format tests"
+format-tests-check = "uv run ruff format tests --check"
+
 # == Composite commands ==
-check = ["lint", "format-check", "type-check"]
-fix = ["lint-fix", "format"]
+check = ["lint", "format-check", "type-check", "lint-tests", "format-tests-check"]
+check-all = ["lint", "format-check", "type-check", "lint-tests", "format-tests-check", "test"]
+fix = ["lint-fix", "format", "lint-tests-fix", "format-tests"]
 
 # == Test execution ==
 test = "uv run pytest"

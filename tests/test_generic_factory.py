@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
+
 from sqlmodel import Session
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -15,32 +16,32 @@ def test_repository_factory_type_inference() -> None:
     """Test that repository factory provides proper type inference"""
     print("Testing RepositoryFactory type inference...")
 
-    session = Mock(spec=Session)
+    with (
+        patch("logic.factory.initialize_auto_discovery"),
+        patch("logic.factory.get_repository_registry") as mock_get_registry,
+    ):
+        # Mock the registry
+        mock_registry = Mock()
+        mock_registry.is_registered.return_value = True
 
-    with patch("logic.factory.initialize_auto_discovery"):
-        with patch("logic.factory.get_repository_registry") as mock_get_registry:
-            # Mock the registry
-            mock_registry = Mock()
-            mock_registry.is_registered.return_value = True
+        # Mock different repository types
+        mock_memo_repo = Mock()
+        mock_memo_repo.__class__.__name__ = "MemoRepository"
+        mock_task_repo = Mock()
+        mock_task_repo.__class__.__name__ = "TaskRepository"
 
-            # Mock different repository types
-            mock_memo_repo = Mock()
-            mock_memo_repo.__class__.__name__ = "MemoRepository"
-            mock_task_repo = Mock()
-            mock_task_repo.__class__.__name__ = "TaskRepository"
-
-            # Set up different returns for different names
-            def mock_create(name, session):
-                if name == "memo":
-                    return mock_memo_repo
-                if name == "task":
-                    return mock_task_repo
-                return Mock()
+        # Set up different returns for different names
+        def mock_create(name: str, session: Session) -> Mock:
+            if name == "memo":
+                return mock_memo_repo
+            if name == "task":
+                return mock_task_repo
+            return Mock()
 
             mock_registry.create = mock_create
             mock_get_registry.return_value = mock_registry
 
-            factory = RepositoryFactory(session)
+            factory = RepositoryFactory(Mock(spec=Session))
 
             # Test type inference with literal strings
             memo_repo = factory.create("memo")  # Should be typed as MemoRepository
@@ -56,6 +57,7 @@ def test_repository_factory_type_inference() -> None:
             assert typed_repo is mock_memo_repo
 
             print("✓ RepositoryFactory type inference tests passed")
+            return None
 
 
 def test_service_factory_type_inference() -> None:
@@ -80,7 +82,7 @@ def test_service_factory_type_inference() -> None:
             mock_task_service.__class__.__name__ = "TaskService"
 
             # Set up different returns for different names
-            def mock_create(name, session):
+            def mock_create(name: str, session: Session) -> Mock:
                 if name == "memo":
                     return mock_memo_service
                 if name == "task":

@@ -15,7 +15,7 @@ from sqlmodel import Session
 from logic.factory import RepositoryFactory, ServiceFactory
 
 
-def test_repository_factory_new_methods():
+def test_repository_factory_new_methods() -> None:
     """Test new repository factory methods"""
     print("Testing new RepositoryFactory methods...")
 
@@ -44,14 +44,15 @@ def test_repository_factory_new_methods():
             mock_registry.is_registered.return_value = False
             try:
                 factory.create("unknown")
-                assert False, "Should have raised ValueError"
+                msg = "Should have raised ValueError"
+                raise AssertionError(msg)
             except ValueError as e:
                 assert "not registered" in str(e)
 
     print("✓ New RepositoryFactory methods tests passed")
 
 
-def test_service_factory_new_methods():
+def test_service_factory_new_methods() -> None:
     """Test new service factory methods"""
     print("Testing new ServiceFactory methods...")
 
@@ -83,14 +84,15 @@ def test_service_factory_new_methods():
             mock_registry.is_registered.return_value = False
             try:
                 factory.create("unknown")
-                assert False, "Should have raised ValueError"
+                msg = "Should have raised ValueError"
+                raise AssertionError(msg)
             except ValueError as e:
                 assert "not registered" in str(e)
 
     print("✓ New ServiceFactory methods tests passed")
 
 
-def test_deprecation_warnings():
+def test_deprecation_warnings() -> None:
     """Test that deprecated methods show warnings"""
     print("Testing deprecation warnings...")
 
@@ -126,7 +128,7 @@ def test_deprecation_warnings():
     print("✓ Deprecation warnings tests passed")
 
 
-def test_backward_compatibility():
+def test_backward_compatibility() -> None:
     """Test that old methods still work"""
     print("Testing backward compatibility...")
 

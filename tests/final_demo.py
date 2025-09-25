@@ -1,13 +1,12 @@
-#!/usr/bin/env python3
 """Final demonstration of the refactored factory system"""
 
 import os
 import sys
 import warnings
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
+from pathlib import Path
 from unittest.mock import Mock, patch
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from sqlmodel import Session
 
@@ -17,7 +16,7 @@ from logic.factory import RepositoryFactory, ServiceFactory
 from logic.registry import get_repository_registry, get_service_registry
 
 
-def demonstrate_key_benefits():
+def demonstrate_key_benefits() -> None:
     """Demonstrate the key benefits of the new system"""
     print("🎯 KEY BENEFITS OF THE NEW FACTORY SYSTEM")
     print("=" * 50)
@@ -118,7 +117,7 @@ def demonstrate_key_benefits():
     print("4. Consider adding configuration files for complex dependencies")
 
 
-def demonstrate_real_world_usage():
+def demonstrate_real_world_usage() -> None:
     """Show what the API looks like in real usage"""
     print("\n" + "=" * 50)
     print("📖 REAL-WORLD USAGE EXAMPLES")

@@ -35,7 +35,7 @@ class MockServiceNoRepo:
         pass
 
 
-def test_repository_registry():
+def test_repository_registry() -> None:
     """Test repository registry functionality"""
     print("Testing RepositoryRegistry...")
 
@@ -55,7 +55,7 @@ def test_repository_registry():
     print("✓ RepositoryRegistry tests passed")
 
 
-def test_service_registry():
+def test_service_registry() -> None:
     """Test service registry functionality"""
     print("Testing ServiceRegistry...")
 
@@ -85,7 +85,7 @@ def test_service_registry():
     print("✓ ServiceRegistry tests passed")
 
 
-def test_error_cases():
+def test_error_cases() -> None:
     """Test error handling"""
     print("Testing error cases...")
 
@@ -96,14 +96,16 @@ def test_error_cases():
     # Test unregistered repository
     try:
         repo_registry.create("unregistered", session)
-        assert False, "Should have raised RegistryError"
+        msg = "Should have raised RegistryError"
+        raise AssertionError(msg)
     except RegistryError:
         pass
 
     # Test unregistered service
     try:
         service_registry.create("unregistered", session)
-        assert False, "Should have raised RegistryError"
+        msg = "Should have raised RegistryError"
+        raise AssertionError(msg)
     except RegistryError:
         pass
 

@@ -121,7 +121,7 @@ _lint = "uv run ruff check ."
 _lint-fix = "uv run ruff check . --fix"
 _format = "uv run ruff format ."
 _format-check = "uv run ruff format . --check"
-_type-check = "uv run pyright ."
+_type-check = "uv run pyright src/ tests/"
 _docs-serve = "uv run mkdocs serve -a 127.0.0.1:8000"
 _gen-env-docs = "uv run scripts/generate_env_docs.py"
 

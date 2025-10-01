@@ -111,7 +111,7 @@ docs-build = "uv run mkdocs build"
 docs-deploy = "uv run mkdocs gh-deploy --force --no-history"
 
 # == Build ==
-build = "flet build web"
+build = "flet build windows"
 
 # == Utility ==
 clean = "uv cache clean"

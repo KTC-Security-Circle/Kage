@@ -33,9 +33,10 @@ console = Console()
 
 
 def _get_service() -> MemoApplicationService:  # type: ignore[name-defined]
+    from logic.application.memo_application_service import MemoApplicationService
     from logic.container import service_container
 
-    return service_container.get_memo_application_service()
+    return service_container.get_service(MemoApplicationService)
 
 
 # ==== Helpers ====

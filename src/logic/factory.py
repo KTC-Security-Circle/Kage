@@ -271,7 +271,8 @@ def get_application_service_container() -> ServiceContainer:
 
     Example:
         >>> container = get_application_service_container()
-        >>> task_app_service = container.get_task_application_service()
+        >>> from logic.application.task_application_service import TaskApplicationService
+        >>> task_app_service = container.get_service(TaskApplicationService)
         >>> command = CreateTaskCommand(title="新しいタスク")
         >>> task = task_app_service.create_task(command)
     """

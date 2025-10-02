@@ -27,9 +27,10 @@ console = Console()
 
 
 def _get_service() -> TagApplicationService:
+    from logic.application.tag_application_service import TagApplicationService
     from logic.container import service_container
 
-    return service_container.get_tag_application_service()
+    return service_container.get_service(TagApplicationService)
 
 
 @elapsed_time()

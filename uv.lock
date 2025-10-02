@@ -1285,7 +1285,7 @@ requires-dist = [
     { name = "langchain", specifier = ">=0.3.25" },
     { name = "langchain-google-genai", specifier = ">=2.1.5" },
     { name = "langchain-huggingface", specifier = ">=0.3.1" },
-    { name = "langchain-openvino-genai", git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git?tag=v0.0.2.dev0" },
+    { name = "langchain-openvino-genai", git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git?tag=v0.0.3" },
     { name = "langgraph", specifier = ">=0.4.8" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0.10" },
     { name = "langsmith", specifier = ">=0.3.45" },
@@ -1458,8 +1458,8 @@ wheels = [
 
 [[package]]
 name = "langchain-openvino-genai"
-version = "0.0.2.dev0"
-source = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git?tag=v0.0.2.dev0#6b586ededb84f0a948d55ec443d5b3609016e170" }
+version = "0.0.3"
+source = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git?tag=v0.0.3#aab0619c925a4bb7c789f1849a30fc983f7ffd06" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "langchain-core" },

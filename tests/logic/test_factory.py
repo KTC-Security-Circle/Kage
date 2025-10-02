@@ -3,17 +3,21 @@
 RepositoryFactory と ServiceFactory の依存性注入動作をテストします。
 """
 
+from typing import Any
+
 import pytest
 from sqlmodel import Session
 
 from logic.container import ServiceContainer
 from logic.factory import (
     RepositoryFactory,
+    RepositoryFactoryError,
     ServiceFactory,
     ServiceFactoryError,
     create_service_factory,
     get_application_service_container,
 )
+from logic.repositories.base import BaseRepository
 from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
@@ -32,48 +36,49 @@ class TestRepositoryFactory:
     リポジトリファクトリの動作を検証します。
     """
 
-    def test_create_task_repository(self, test_session: Session) -> None:
-        """TaskRepository が正しく作成されることをテスト"""
+    @pytest.mark.parametrize(
+        ("repository_type", "expected_class"),
+        [
+            (TaskRepository, TaskRepository),
+            (ProjectRepository, ProjectRepository),
+            (TagRepository, TagRepository),
+            (TaskTagRepository, TaskTagRepository),
+            (MemoRepository, MemoRepository),
+        ],
+    )
+    def test_create_repository(
+        self,
+        test_session: Session,
+        repository_type: type[BaseRepository[Any, Any, Any]],
+        expected_class: type[BaseRepository[Any, Any, Any]],
+    ) -> None:
+        """create_repository が任意のリポジトリを生成することをテスト"""
         factory = RepositoryFactory(test_session)
 
-        repository = factory.create_task_repository()
+        repository = factory.create_repository(repository_type)
 
-        assert isinstance(repository, TaskRepository)
+        assert isinstance(repository, expected_class)
         assert repository.session is test_session
 
-    def test_create_project_repository(self, test_session: Session) -> None:
-        """ProjectRepository が正しく作成されることをテスト"""
+    def test_create_repository_invalid_type(self, test_session: Session) -> None:
+        """create_repository に無効なクラスを渡した場合に例外が発生することをテスト"""
         factory = RepositoryFactory(test_session)
 
-        repository = factory.create_project_repository()
+        class InvalidRepository:
+            """BaseRepository を継承しないクラス"""
 
-        assert isinstance(repository, ProjectRepository)
-        assert repository.session is test_session
+            def __init__(self, session: Session) -> None:
+                self.session = session
 
-    def test_create_tag_repository(self, test_session: Session) -> None:
-        """TagRepository が正しく作成されることをテスト"""
-        factory = RepositoryFactory(test_session)
-
-        repository = factory.create_tag_repository()
-
-        assert isinstance(repository, TagRepository)
-        assert repository.session is test_session
-
-    def test_create_task_tag_repository(self, test_session: Session) -> None:
-        """TaskTagRepository が正しく作成されることをテスト"""
-        factory = RepositoryFactory(test_session)
-
-        repository = factory.create_task_tag_repository()
-
-        assert isinstance(repository, TaskTagRepository)
-        assert repository.session is test_session
+        with pytest.raises(RepositoryFactoryError):
+            factory.create_repository(InvalidRepository)  # type: ignore[arg-type]
 
     def test_repository_factory_creates_different_instances(self, test_session: Session) -> None:
         """RepositoryFactory が呼び出しごとに新しいインスタンスを作成することをテスト"""
         factory = RepositoryFactory(test_session)
 
-        repo1 = factory.create_task_repository()
-        repo2 = factory.create_task_repository()
+        repo1 = factory.create_repository(TaskRepository)
+        repo2 = factory.create_repository(TaskRepository)
 
         # [AI GENERATED] 異なるインスタンスが作成されることを確認
         assert repo1 is not repo2
@@ -92,7 +97,7 @@ class TestServiceFactory:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        service = service_factory.create_task_service()
+        service = service_factory.get_service(TaskService)
 
         assert isinstance(service, TaskService)
         # [AI GENERATED] 依存性が正しく注入されていることを確認
@@ -106,7 +111,7 @@ class TestServiceFactory:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        service = service_factory.create_project_service()
+        service = service_factory.get_service(ProjectService)
 
         assert isinstance(service, ProjectService)
         # [AI GENERATED] 依存性が正しく注入されていることを確認
@@ -118,7 +123,7 @@ class TestServiceFactory:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        service = service_factory.create_tag_service()
+        service = service_factory.get_service(TagService)
 
         assert isinstance(service, TagService)
         # [AI GENERATED] 依存性が正しく注入されていることを確認
@@ -130,7 +135,7 @@ class TestServiceFactory:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        service = service_factory.create_task_tag_service()
+        service = service_factory.get_service(TaskTagService)
 
         assert isinstance(service, TaskTagService)
         # [AI GENERATED] 依存性が正しく注入されていることを確認
@@ -141,7 +146,7 @@ class TestServiceFactory:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        service = service_factory.create_one_liner_service()
+        service = service_factory.get_service(OneLinerService)
 
         assert isinstance(service, OneLinerService)
         # [AI GENERATED] OneLinerServiceはリポジトリに依存しないため、リポジトリのチェックは不要
@@ -158,7 +163,7 @@ class TestServiceFactory:
         service_factory.register_service(
             CustomService,
             lambda repo_factory: CustomService(
-                memo_repo=repo_factory.create_memo_repository(),
+                memo_repo=repo_factory.create_repository(MemoRepository),
             ),
         )
 
@@ -184,8 +189,8 @@ class TestServiceFactory:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        service1 = service_factory.create_task_service()
-        service2 = service_factory.create_task_service()
+        service1 = service_factory.get_service(TaskService)
+        service2 = service_factory.get_service(TaskService)
 
         # [AI GENERATED] 異なるインスタンスが作成されることを確認
         assert service1 is not service2
@@ -211,8 +216,8 @@ class TestFactoryFunctions:
         """create_service_factory で作成されたファクトリが動作するサービスを作成することをテスト"""
         service_factory = create_service_factory(test_session)
 
-        task_service = service_factory.create_task_service()
-        project_service = service_factory.create_project_service()
+        task_service = service_factory.get_service(TaskService)
+        project_service = service_factory.get_service(ProjectService)
 
         assert isinstance(task_service, TaskService)
         assert isinstance(project_service, ProjectService)
@@ -242,10 +247,10 @@ class TestFactoryIntegration:
         """RepositoryFactory で作成された全リポジトリが同じセッションを使用することをテスト"""
         factory = RepositoryFactory(test_session)
 
-        task_repo = factory.create_task_repository()
-        project_repo = factory.create_project_repository()
-        tag_repo = factory.create_tag_repository()
-        task_tag_repo = factory.create_task_tag_repository()
+        task_repo = factory.create_repository(TaskRepository)
+        project_repo = factory.create_repository(ProjectRepository)
+        tag_repo = factory.create_repository(TagRepository)
+        task_tag_repo = factory.create_repository(TaskTagRepository)
 
         # [AI GENERATED] 全てのリポジトリが同じセッションを使用していることを確認
         assert task_repo.session is test_session
@@ -258,8 +263,8 @@ class TestFactoryIntegration:
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 
-        task_service = service_factory.create_task_service()
-        project_service = service_factory.create_project_service()
+        task_service = service_factory.get_service(TaskService)
+        project_service = service_factory.get_service(ProjectService)
 
         # [AI GENERATED] TaskService のリポジトリのセッションを確認
         assert task_service.task_repo.session is test_session

@@ -8,12 +8,13 @@ Application Service層への移行をサポートするため、
 """
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from sqlmodel import Session
 from typing_extensions import deprecated
 
 from logic.container import ServiceContainer
+from logic.repositories.base import BaseRepository
 from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
@@ -27,6 +28,7 @@ from logic.services.task_service import TaskService
 from logic.services.task_tag_service import TaskTagService
 
 _ServiceT = TypeVar("_ServiceT")
+_RepositoryT = TypeVar("_RepositoryT", bound=BaseRepository[Any, Any, Any])
 
 
 class ServiceFactoryError(Exception):
@@ -34,6 +36,18 @@ class ServiceFactoryError(Exception):
 
     def __init__(self, message: str) -> None:
         """ServiceFactoryError を初期化する
+
+        Args:
+            message (str): エラーメッセージ
+        """
+        super().__init__(message)
+
+
+class RepositoryFactoryError(Exception):
+    """リポジトリファクトリ関連の例外"""
+
+    def __init__(self, message: str) -> None:
+        """RepositoryFactoryError を初期化する
 
         Args:
             message (str): エラーメッセージ
@@ -53,47 +67,35 @@ class RepositoryFactory:
         Args:
             session: データベースセッション
         """
-        self.session = session
+        self.session: Session = session
 
-    def create_memo_repository(self) -> MemoRepository:
-        """MemoRepositoryを作成する
+    def create_repository(self, repository_type: type[_RepositoryT]) -> _RepositoryT:
+        """任意のリポジトリを生成する
 
-        Returns:
-            MemoRepository: メモリポジトリインスタンス
-        """
-        return MemoRepository(self.session)
-
-    def create_task_repository(self) -> TaskRepository:
-        """TaskRepositoryを作成する
+        Args:
+            repository_type (type[_RepositoryT]): 生成するリポジトリのクラス
 
         Returns:
-            TaskRepository: タスクリポジトリインスタンス
+            _RepositoryT: 生成されたリポジトリインスタンス
+
+        Raises:
+            RepositoryFactoryError: リポジトリクラスが不正、または初期化に失敗した場合
         """
-        return TaskRepository(self.session)
+        try:
+            repository = repository_type(self.session)  # pyright: ignore[reportCallIssue]
+        except TypeError as exc:
+            error_message = (
+                "RepositoryFactoryでリポジトリの初期化に失敗しました。"
+                " セッション以外の依存関係を必要とする可能性があります。"
+            )
+            raise RepositoryFactoryError(error_message) from exc
+        if not isinstance(repository, BaseRepository):
+            error_message = (
+                f"RepositoryFactoryが生成したオブジェクトがBaseRepositoryを継承していません: {type(repository)!r}"
+            )
+            raise RepositoryFactoryError(error_message)
 
-    def create_project_repository(self) -> ProjectRepository:
-        """ProjectRepositoryを作成する
-
-        Returns:
-            ProjectRepository: プロジェクトリポジトリインスタンス
-        """
-        return ProjectRepository(self.session)
-
-    def create_tag_repository(self) -> TagRepository:
-        """TagRepositoryを作成する
-
-        Returns:
-            TagRepository: タグリポジトリインスタンス
-        """
-        return TagRepository(self.session)
-
-    def create_task_tag_repository(self) -> TaskTagRepository:
-        """TaskTagRepositoryを作成する
-
-        Returns:
-            TaskTagRepository: タスクタグリポジトリインスタンス
-        """
-        return TaskTagRepository(self.session)
+        return repository
 
 
 class ServiceFactory:
@@ -153,37 +155,37 @@ class ServiceFactory:
         self.register_service(
             MemoService,
             lambda repo_factory: MemoService(
-                memo_repo=repo_factory.create_memo_repository(),
-                task_repo=repo_factory.create_task_repository(),
+                memo_repo=repo_factory.create_repository(MemoRepository),
+                task_repo=repo_factory.create_repository(TaskRepository),
             ),
         )
         self.register_service(
             TaskService,
             lambda repo_factory: TaskService(
-                task_repo=repo_factory.create_task_repository(),
-                project_repo=repo_factory.create_project_repository(),
-                tag_repo=repo_factory.create_tag_repository(),
-                task_tag_repo=repo_factory.create_task_tag_repository(),
+                task_repo=repo_factory.create_repository(TaskRepository),
+                project_repo=repo_factory.create_repository(ProjectRepository),
+                tag_repo=repo_factory.create_repository(TagRepository),
+                task_tag_repo=repo_factory.create_repository(TaskTagRepository),
             ),
         )
         self.register_service(
             ProjectService,
             lambda repo_factory: ProjectService(
-                project_repo=repo_factory.create_project_repository(),
-                task_repo=repo_factory.create_task_repository(),
+                project_repo=repo_factory.create_repository(ProjectRepository),
+                task_repo=repo_factory.create_repository(TaskRepository),
             ),
         )
         self.register_service(
             TagService,
             lambda repo_factory: TagService(
-                tag_repo=repo_factory.create_tag_repository(),
-                task_tag_repo=repo_factory.create_task_tag_repository(),
+                tag_repo=repo_factory.create_repository(TagRepository),
+                task_tag_repo=repo_factory.create_repository(TaskTagRepository),
             ),
         )
         self.register_service(
             TaskTagService,
             lambda repo_factory: TaskTagService(
-                task_tag_repo=repo_factory.create_task_tag_repository(),
+                task_tag_repo=repo_factory.create_repository(TaskTagRepository),
             ),
         )
         self.register_service(

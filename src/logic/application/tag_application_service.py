@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from logic.application.base import BaseApplicationService
+from logic.services.tag_service import TagService
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ class TagApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
+            tag_service = uow.service_factory.get_service(TagService)
             created_tag = tag_service.create_tag(command.to_tag_create())
             uow.commit()
 
@@ -76,7 +77,7 @@ class TagApplicationService(BaseApplicationService):
         logger.debug(f"タグ取得: {query.tag_id}")
 
         with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
+            tag_service = uow.service_factory.get_service(TagService)
             tag = tag_service.get_tag_by_id(query.tag_id)
 
             if tag is None:
@@ -98,7 +99,7 @@ class TagApplicationService(BaseApplicationService):
         logger.debug("全タグ取得")
 
         with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
+            tag_service = uow.service_factory.get_service(TagService)
             return tag_service.get_all_tags()
 
     def search_tags_by_name(self, query: SearchTagsByNameQuery) -> list[TagRead]:
@@ -113,7 +114,7 @@ class TagApplicationService(BaseApplicationService):
         logger.debug(f"タグ名検索: {query.name_query}")
 
         with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
+            tag_service = uow.service_factory.get_service(TagService)
             return tag_service.search_tags(query.name_query)
 
     def update_tag(self, command: UpdateTagCommand) -> TagRead:
@@ -137,7 +138,7 @@ class TagApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
+            tag_service = uow.service_factory.get_service(TagService)
             updated_tag = tag_service.update_tag(command.tag_id, command.to_tag_update())
             uow.commit()
 
@@ -157,7 +158,7 @@ class TagApplicationService(BaseApplicationService):
         logger.info(f"タグ削除開始: {command.tag_id}")
 
         with self._unit_of_work_factory() as uow:
-            tag_service = uow.service_factory.create_tag_service()
+            tag_service = uow.service_factory.get_service(TagService)
             success = tag_service.delete_tag(command.tag_id)
 
             if not success:

@@ -3,10 +3,18 @@
 RepositoryFactory と ServiceFactory の依存性注入動作をテストします。
 """
 
+import pytest
 from sqlmodel import Session
 
 from logic.container import ServiceContainer
-from logic.factory import RepositoryFactory, ServiceFactory, create_service_factory, get_application_service_container
+from logic.factory import (
+    RepositoryFactory,
+    ServiceFactory,
+    ServiceFactoryError,
+    create_service_factory,
+    get_application_service_container,
+)
+from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
@@ -137,6 +145,39 @@ class TestServiceFactory:
 
         assert isinstance(service, OneLinerService)
         # [AI GENERATED] OneLinerServiceはリポジトリに依存しないため、リポジトリのチェックは不要
+
+    def test_register_service_allows_custom_service(self, test_session: Session) -> None:
+        """register_service で独自サービスを登録できることをテスト"""
+        repository_factory = RepositoryFactory(test_session)
+        service_factory = ServiceFactory(repository_factory)
+
+        class CustomService:
+            def __init__(self, memo_repo: MemoRepository) -> None:
+                self.memo_repo = memo_repo
+
+        service_factory.register_service(
+            CustomService,
+            lambda repo_factory: CustomService(
+                memo_repo=repo_factory.create_memo_repository(),
+            ),
+        )
+
+        service = service_factory.get_service(CustomService)
+
+        assert isinstance(service, CustomService)
+        assert isinstance(service.memo_repo, MemoRepository)
+        assert service.memo_repo.session is test_session
+
+    def test_get_service_raises_for_unregistered_service(self, test_session: Session) -> None:
+        """未登録サービスを取得しようとすると例外が発生することをテスト"""
+        repository_factory = RepositoryFactory(test_session)
+        service_factory = ServiceFactory(repository_factory)
+
+        class UnregisteredService:
+            """ServiceFactory に登録されていないダミーサービス"""
+
+        with pytest.raises(ServiceFactoryError):
+            service_factory.get_service(UnregisteredService)
 
     def test_service_factory_creates_different_instances(self, test_session: Session) -> None:
         """ServiceFactory が呼び出しごとに新しいインスタンスを作成することをテスト"""

@@ -13,14 +13,15 @@ class BaseRepository[T: SQLModel, CreateT: SQLModel, UpdateT: SQLModel]:
     CRUD操作の基本実装を提供する。
     """
 
-    def __init__(self, model_class: type[T], session: Session) -> None:
+    model_class: type[T]
+
+    def __init__(self, session: Session) -> None:
         """リポジトリを初期化する
 
         Args:
             model_class: このリポジトリが扱うモデルクラス
             session: データベースセッション
         """
-        self.model_class = model_class
         self.session = session
 
     def create(self, entity_data: CreateT) -> T:

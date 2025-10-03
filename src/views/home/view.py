@@ -34,7 +34,7 @@ class HomeView(BaseView, ErrorHandlingMixin):
         """
         return ft.Column(
             [
-                WelcomeMessage(),
+                WelcomeMessage(self.page),
                 MainActionSection(self.page, self.task_app_service),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,

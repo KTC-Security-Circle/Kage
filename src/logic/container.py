@@ -90,6 +90,7 @@ class ServiceContainer:
             return
 
         from logic.application.memo_application_service import MemoApplicationService
+        from logic.application.one_liner_application_service import OneLinerApplicationService
         from logic.application.project_application_service import ProjectApplicationService
         from logic.application.tag_application_service import TagApplicationService
         from logic.application.task_application_service import TaskApplicationService
@@ -100,6 +101,7 @@ class ServiceContainer:
         self.register_service(ProjectApplicationService, lambda _: ProjectApplicationService())
         self.register_service(TagApplicationService, lambda _: TagApplicationService())
         self.register_service(TaskTagApplicationService, lambda _: TaskTagApplicationService())
+        self.register_service(OneLinerApplicationService, lambda _: OneLinerApplicationService())
         self._defaults_registered = True
 
 

@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import NoReturn, cast
 
 from loguru import logger
@@ -20,6 +19,7 @@ from agents.agent_conf import HuggingFaceModel, LLMProvider
 from agents.task_agents.one_liner.agent import OneLinerAgent
 from agents.task_agents.one_liner.state import OneLinerState
 from logic.application.base import BaseApplicationService
+from logic.queries.one_liner_queries import OneLinerContext
 
 # 既存テスト互換のため MyBaseError を継承した同名エラーを維持
 from logic.services.base import MyBaseError
@@ -32,20 +32,6 @@ class OneLinerServiceError(MyBaseError):
 
     def __str__(self) -> str:  # pragma: no cover - フォーマットのみ
         return f"一言コメント生成エラー: {self.arg}"
-
-
-@dataclass(slots=True)
-class OneLinerContext:  # 旧 queries.one_liner_queries.OneLinerContext を内包再定義
-    today_task_count: int = 0
-    overdue_task_count: int = 0
-    completed_task_count: int = 0
-    progress_summary: str = ""
-    user_name: str = ""
-
-
-@dataclass(slots=True)
-class OneLinerContextQuery:  # 空 DTO（将来拡張用）
-    """一言コメント生成用クエリ (現状パラメータ不要で自動集計)."""
 
 
 class OneLinerApplicationService(BaseApplicationService):
@@ -97,9 +83,10 @@ class OneLinerApplicationService(BaseApplicationService):
         )
 
     # Public API ---------------------------------------------------------
-    def generate_one_liner(self, query: OneLinerContextQuery | None = None) -> str:
+    def generate_one_liner(self, query: OneLinerContext | None = None) -> str:
         """一言コメント生成 (空のクエリで自動集計)."""
-        _ = query  # 将来拡張プレースホルダ
+        if query is not None:
+            return self._generate_with_agent(query)
         try:
             ctx = self._build_context_auto()
             return self._generate_with_agent(ctx)
@@ -156,14 +143,9 @@ class OneLinerApplicationService(BaseApplicationService):
         logger.error(msg)
         raise OneLinerServiceError(msg)
 
-    # 後方互換 / テスト支援用
-    def generate_from_context(self, context: OneLinerContext) -> str:
-        return self._generate_with_agent(context)
-
 
 __all__ = [
     "OneLinerApplicationService",
     "OneLinerServiceError",
-    "OneLinerContextQuery",
     "OneLinerContext",
 ]

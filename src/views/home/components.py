@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from logic.application import OneLinerApplicationService
 from logic.factory import get_application_service_container
-from logic.queries.one_liner_queries import build_one_liner_context_auto
-from logic.services.one_liner_service import OneLinerService
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -221,8 +220,8 @@ class WelcomeMessage(ft.Container):
             """[AI GENERATED] AIサービスからメッセージを取得する処理"""
             try:
                 service_factory = get_application_service_container()
-                service = service_factory.get_service(OneLinerService)
-                ai_text = service.generate(build_one_liner_context_auto())
+                service = service_factory.get_service(OneLinerApplicationService)
+                ai_text = service.generate_one_liner()
 
                 # UIスレッドでメッセージを更新
                 self._update_message(ai_text)

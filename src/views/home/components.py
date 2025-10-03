@@ -6,6 +6,10 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from logic.factory import get_application_service_container
+from logic.queries.one_liner_queries import build_one_liner_context_auto
+from logic.services.one_liner_service import OneLinerService
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -190,17 +194,22 @@ class QuickActionCard(ft.Container):
         )
 
 
-def create_welcome_message() -> ft.Container:
-    """ウェルカムメッセージを作成.
+class WelcomeMessage(ft.Container):
+    """AIからのアドバイスを表示するウェルカムメッセージコンポーネント."""
 
-    Returns:
-        ウェルカムメッセージのContainerコンポーネント
-    """
-    return ft.Container(
-        content=ft.Text(
-            "タスク管理でもっと効率的に！",
+    def __init__(self) -> None:
+        """WelcomeMessageの初期化
+
+        Args:
+            message (str | None): 表示するメッセージ（省略時はデフォルト）
+        """
+        super().__init__()
+        service_factory = get_application_service_container()
+        service = service_factory.get_service(OneLinerService)
+        ai_text = service.generate(build_one_liner_context_auto())
+        self.content = ft.Text(
+            ai_text,
             size=18,
             # color=ft.Colors.GREY_700,
-        ),
-        alignment=ft.alignment.center,
-    )
+        )
+        self.alignment = ft.alignment.center

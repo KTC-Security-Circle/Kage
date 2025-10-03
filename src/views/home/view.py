@@ -5,7 +5,7 @@ from __future__ import annotations
 import flet as ft
 
 from logic.application.task_application_service import TaskApplicationService
-from views.home.components import MainActionSection, create_welcome_message
+from views.home.components import MainActionSection, WelcomeMessage
 from views.shared import BaseView, ErrorHandlingMixin
 
 
@@ -34,7 +34,7 @@ class HomeView(BaseView, ErrorHandlingMixin):
         """
         return ft.Column(
             [
-                create_welcome_message(),
+                WelcomeMessage(),
                 MainActionSection(self.page, self.task_app_service),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,

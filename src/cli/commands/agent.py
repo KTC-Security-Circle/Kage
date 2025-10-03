@@ -255,6 +255,7 @@ def save_one_liner_as_task(
         ctx = _build_context_auto()
     gen_res = _generate_one_liner(ctx, provider=provider, model=model)
     text = gen_res.result
+    from logic.application.task_application_service import TaskApplicationService
     from logic.commands.task_commands import CreateTaskCommand
     from logic.container import service_container
     from models import TaskStatus
@@ -263,7 +264,7 @@ def save_one_liner_as_task(
         task_status = TaskStatus(status)
     except ValueError:  # [AI GENERATED]
         task_status = TaskStatus.INBOX  # [AI GENERATED]
-    service = service_container.get_task_application_service()
+    service = service_container.get_service(TaskApplicationService)
     truncated = text[:60]
     cmd = CreateTaskCommand(title=truncated, description=text, status=task_status)
     created = service.create_task(cmd)

@@ -23,7 +23,8 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         Args:
             session: データベースセッション
         """
-        super().__init__(Task, session)
+        self.model_class = Task
+        super().__init__(session)
 
     def get_by_project_id(self, project_id: uuid.UUID) -> list[Task]:
         """指定されたプロジェクトIDのタスク一覧を取得する

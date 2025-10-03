@@ -28,9 +28,10 @@ console = Console()
 
 
 def _get_service() -> ProjectApplicationService:
+    from logic.application.project_application_service import ProjectApplicationService
     from logic.container import service_container
 
-    return service_container.get_project_application_service()
+    return service_container.get_service(ProjectApplicationService)
 
 
 @elapsed_time()

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from logic.application.task_application_service import TaskApplicationService
 from logic.commands.task_commands import UpdateTaskStatusCommand
 from logic.factory import get_application_service_container
 from models import TaskStatus
@@ -19,7 +20,6 @@ from models import TaskStatus
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from logic.application.task_application_service import TaskApplicationService
     from models import TaskRead
 
 
@@ -48,7 +48,7 @@ class TasksBoard(ft.Container):
         self.on_task_delete = on_task_delete
 
         container = get_application_service_container()
-        self._task_app_service: TaskApplicationService = container.get_task_application_service()
+        self._task_app_service: TaskApplicationService = container.get_service(TaskApplicationService)
 
         # スタイル設定
         self.bgcolor = ft.Colors.WHITE

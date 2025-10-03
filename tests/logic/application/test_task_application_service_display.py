@@ -1,7 +1,7 @@
 """TaskApplicationServiceの新機能（QuickAction、表示関連）のテストコード"""
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date
 from unittest.mock import Mock
 
 import pytest
@@ -25,7 +25,7 @@ class TestTaskApplicationServiceDisplayFeatures:
 
         # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
-        mock_service_factory.create_task_service.return_value = mock_task_service
+        mock_service_factory.get_service.return_value = mock_task_service
 
         # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
@@ -159,12 +159,10 @@ class TestTaskApplicationServiceDisplayFeatures:
             description=test_description,
             status=TaskStatus.NEXT_ACTION,
             due_date=test_due_date,
-            created_at=datetime.now(tz=UTC),
-            updated_at=datetime.now(tz=UTC),
         )
 
         # [AI GENERATED] モックのタスクサービスの戻り値を設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.create_task.return_value = expected_task
 
         # Act
@@ -200,12 +198,10 @@ class TestTaskApplicationServiceDisplayFeatures:
             description=test_description,
             status=TaskStatus.INBOX,
             due_date=None,
-            created_at=datetime.now(tz=UTC),
-            updated_at=datetime.now(tz=UTC),
         )
 
         # [AI GENERATED] モックのタスクサービスの戻り値を設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.create_task.return_value = expected_task
 
         # Act
@@ -235,12 +231,10 @@ class TestTaskApplicationServiceDisplayFeatures:
             description="",
             status=TaskStatus.SOMEDAY_MAYBE,
             due_date=None,
-            created_at=datetime.now(tz=UTC),
-            updated_at=datetime.now(tz=UTC),
         )
 
         # [AI GENERATED] モックのタスクサービスの戻り値を設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.create_task.return_value = expected_task
 
         # Act

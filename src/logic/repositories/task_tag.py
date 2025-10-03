@@ -25,7 +25,8 @@ class TaskTagRepository(BaseRepository[TaskTag, TaskTagCreate, TaskTagCreate]):
         Args:
             session: データベースセッション
         """
-        super().__init__(TaskTag, session)
+        self.model_class = TaskTag
+        super().__init__(session)
 
     def get_by_id(self, entity_id: uuid.UUID) -> TaskTag | None:  # noqa: ARG002
         """TaskTagは複合主キーのため、このメソッドは使用しない

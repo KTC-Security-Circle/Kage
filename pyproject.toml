@@ -162,6 +162,7 @@ ignore = [
     "BLE001",
     "PLC0415",
     "FIX002",
+    "EXE002",
 ]
 unfixable = [
     "F401", # unused import

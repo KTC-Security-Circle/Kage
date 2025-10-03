@@ -82,7 +82,7 @@ class RepositoryFactory:
             RepositoryFactoryError: リポジトリクラスが不正、または初期化に失敗した場合
         """
         try:
-            repository = repository_type(self.session)  # pyright: ignore[reportCallIssue]
+            repository = repository_type(self.session)
         except TypeError as exc:
             error_message = (
                 "RepositoryFactoryでリポジトリの初期化に失敗しました。"

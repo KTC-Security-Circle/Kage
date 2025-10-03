@@ -20,7 +20,8 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
         Args:
             session: データベースセッション
         """
-        super().__init__(Project, session)
+        self.model_class = Project
+        super().__init__(session)
 
     def get_all(self) -> list[Project]:
         """全てのプロジェクト一覧を取得する

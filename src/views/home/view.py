@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import flet as ft
 
+from logic.application.task_application_service import TaskApplicationService
 from views.home.components import MainActionSection, create_welcome_message
 from views.shared import BaseView, ErrorHandlingMixin
-
-if TYPE_CHECKING:
-    from logic.application.task_application_service import TaskApplicationService
 
 
 class HomeView(BaseView, ErrorHandlingMixin):
@@ -28,7 +24,7 @@ class HomeView(BaseView, ErrorHandlingMixin):
         super().__init__(page)
 
         # 依存性注入
-        self.task_app_service: TaskApplicationService = self.container.get_task_application_service()
+        self.task_app_service: TaskApplicationService = self.container.get_service(TaskApplicationService)
 
     def build_content(self) -> ft.Control:
         """ホーム画面のコンテンツを構築

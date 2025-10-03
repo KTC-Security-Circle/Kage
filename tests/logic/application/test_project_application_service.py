@@ -43,7 +43,7 @@ class TestProjectApplicationService:
 
         # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
-        mock_service_factory.create_project_service.return_value = mock_project_service
+        mock_service_factory.get_service.return_value = mock_project_service
 
         # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
@@ -79,7 +79,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: プロジェクト作成成功"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.create_project.return_value = sample_project_read
 
         # コマンド作成
@@ -115,7 +115,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: ID指定プロジェクト取得成功"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.get_project_by_id.return_value = sample_project_read
 
         # クエリ作成
@@ -135,7 +135,7 @@ class TestProjectApplicationService:
     ) -> None:
         """異常系: ID指定プロジェクト取得でプロジェクトが見つからない"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.get_project_by_id.return_value = None
 
         project_id = uuid.uuid4()
@@ -153,7 +153,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: 全プロジェクト取得"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.get_all_projects.return_value = [sample_project_read]
 
         # クエリ作成
@@ -176,7 +176,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: タイトル検索"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.search_projects.return_value = [sample_project_read]
 
         # クエリ作成
@@ -200,7 +200,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: プロジェクト更新成功"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         updated_project = ProjectRead(
             id=sample_project_read.id,
             title="更新されたプロジェクト",
@@ -245,7 +245,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: タイトル更新なしのプロジェクト更新"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         updated_project = ProjectRead(
             id=sample_project_read.id,
             title=sample_project_read.title,
@@ -276,7 +276,7 @@ class TestProjectApplicationService:
     ) -> None:
         """正常系: プロジェクト削除成功"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.delete_project.return_value = True  # 削除成功
 
         project_id = uuid.uuid4()
@@ -296,7 +296,7 @@ class TestProjectApplicationService:
     ) -> None:
         """異常系: プロジェクト削除失敗"""
         # モックの設定
-        mock_project_service = mock_unit_of_work.service_factory.create_project_service.return_value
+        mock_project_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_project_service.delete_project.return_value = False  # 削除失敗
 
         project_id = uuid.uuid4()

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from logic.application.task_application_service import TaskApplicationService
 from logic.commands.task_commands import DeleteTaskCommand
 from models import QuickActionCommand, TaskStatus
 from views.shared import BaseView, ErrorHandlingMixin
@@ -21,7 +22,6 @@ from views.task.components.task_dialog import TaskDialog
 from views.task.components.tasks_board import TasksBoard
 
 if TYPE_CHECKING:
-    from logic.application.task_application_service import TaskApplicationService
     from models import TaskRead
 
 
@@ -43,7 +43,7 @@ class TaskView(BaseView, ErrorHandlingMixin):
         super().__init__(page)
         logger.info("TaskView 初期化開始")
 
-        self._task_app_service: TaskApplicationService = self.container.get_task_application_service()
+        self._task_app_service: TaskApplicationService = self.container.get_service(TaskApplicationService)
 
         # ダイアログ初期化（サービスは後で注入）
         self.task_dialog = TaskDialog(

@@ -11,6 +11,8 @@ from sqlalchemy import Engine, create_engine
 from sqlmodel import Session, SQLModel
 
 from logic.factory import RepositoryFactory, ServiceFactory
+from logic.repositories.task import TaskRepository
+from logic.services.task_service import TaskService
 from logic.unit_of_work import SqlModelUnitOfWork, UnitOfWork
 from models import Task, TaskStatus
 from tests.logic.helpers import create_test_task
@@ -168,8 +170,8 @@ class TestSqlModelUnitOfWork:
 
             with uow:
                 # [AI GENERATED] ファクトリから作成されたリポジトリが同じセッションを使用することを確認
-                task_repo = uow.repository_factory.create_task_repository()
-                task_service = uow.service_factory.create_task_service()
+                task_repo = uow.repository_factory.create_repository(TaskRepository)
+                task_service = uow.service_factory.get_service(TaskService)
 
                 assert task_repo.session is uow.session
                 assert task_service.task_repo.session is uow.session
@@ -239,7 +241,7 @@ class TestUnitOfWorkIntegration:
             uow = SqlModelUnitOfWork()
 
             with uow:
-                task_service = uow.service_factory.create_task_service()
+                task_service = uow.service_factory.get_service(TaskService)
 
                 # [AI GENERATED] タスクを作成
                 task_data = create_test_task("統合テストタスク", "Unit of Work テスト")

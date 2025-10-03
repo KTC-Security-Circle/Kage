@@ -32,9 +32,10 @@ def _get_service() -> TaskApplicationService:
     Returns:
         TaskApplicationService: タスクアプリケーションサービス
     """
+    from logic.application.task_application_service import TaskApplicationService
     from logic.container import service_container
 
-    return service_container.get_task_application_service()
+    return service_container.get_service(TaskApplicationService)
 
 
 # === Helpers ===

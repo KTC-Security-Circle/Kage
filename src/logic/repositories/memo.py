@@ -22,7 +22,8 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
         Args:
             session: データベースセッション
         """
-        super().__init__(Memo, session)
+        self.model_class = Memo
+        super().__init__(session)
 
     def get_by_task_id(self, task_id: uuid.UUID) -> list[Memo]:
         """指定されたタスクIDのメモ一覧を取得する

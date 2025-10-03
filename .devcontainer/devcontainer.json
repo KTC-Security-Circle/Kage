@@ -31,6 +31,6 @@
     "DISPLAY": "dummy",
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
   },
-  "postCreateCommand": "chmod +x /workspace/.devcontainer/setup.sh && /workspace/.devcontainer/setup.sh",
+  "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
   "remoteUser": "vscode"
 }

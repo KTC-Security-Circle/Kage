@@ -37,9 +37,10 @@ console = Console()
 
 
 def _get_service() -> TaskTagApplicationService:  # type: ignore[name-defined]
+    from logic.application.task_tag_application_service import TaskTagApplicationService
     from logic.container import service_container
 
-    return service_container.get_task_tag_application_service()
+    return service_container.get_service(TaskTagApplicationService)
 
 
 # ==== Helpers ====

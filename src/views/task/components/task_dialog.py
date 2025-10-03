@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from logic.application.task_application_service import TaskApplicationService
 from logic.commands.task_commands import CreateTaskCommand, UpdateTaskCommand
 from logic.factory import get_application_service_container
 from models import TaskStatus
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import date
 
-    from logic.application.task_application_service import TaskApplicationService
     from models import TaskRead
 
 
@@ -104,7 +104,7 @@ class TaskDialog:
         self.on_task_updated = on_task_updated
 
         container = get_application_service_container()
-        self._task_app_service: TaskApplicationService = container.get_task_application_service()
+        self._task_app_service: TaskApplicationService = container.get_service(TaskApplicationService)
 
         # 編集モード（Noneの場合は新規作成）
         self.editing_task: TaskRead | None = None

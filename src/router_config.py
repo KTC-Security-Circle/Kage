@@ -19,8 +19,7 @@ from router import (
     performance_middleware,
 )
 from views.home.view import HomeView
-from views.memo.create_view import MemoCreateView
-from views.memo.view import MemoView
+from views.memo.view import MemoCreateView, MemoView
 from views.shared import app_bar
 from views.task.view import TaskView
 

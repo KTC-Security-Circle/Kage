@@ -21,7 +21,6 @@ from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
 from logic.repositories.task_tag import TaskTagRepository
 from logic.services.memo_service import MemoService
-from logic.services.one_liner_service import OneLinerService
 from logic.services.project_service import ProjectService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
@@ -188,10 +187,6 @@ class ServiceFactory:
                 task_tag_repo=repo_factory.create_repository(TaskTagRepository),
             ),
         )
-        self.register_service(
-            OneLinerService,
-            lambda _: OneLinerService(),
-        )
 
     @deprecated("Use get_service(MemoService) instead")
     def create_memo_service(self) -> MemoService:
@@ -237,15 +232,6 @@ class ServiceFactory:
             TaskTagService: タスクタグサービスインスタンス
         """
         return self.get_service(TaskTagService)
-
-    @deprecated("Use get_service(OneLinerService) instead")
-    def create_one_liner_service(self) -> OneLinerService:
-        """OneLinerServiceを作成する
-
-        Returns:
-            OneLinerService: 一言コメントサービスインスタンス
-        """
-        return self.get_service(OneLinerService)
 
 
 def create_service_factory(session: Session) -> ServiceFactory:

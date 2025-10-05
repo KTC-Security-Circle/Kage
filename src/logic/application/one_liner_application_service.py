@@ -64,7 +64,10 @@ class OneLinerApplicationService(BaseApplicationService):
             if isinstance(raw_model, HuggingFaceModel):
                 resolved_model = raw_model
             elif isinstance(raw_model, str):
-                msg = "OneLinerApplicationService: OPENVINO でモデル名が文字列として設定されています。Enum 型で指定してください。"  # noqa: E501
+                msg = (
+                    "OneLinerApplicationService: OPENVINO でモデル名が文字列として設定されています。"
+                    "Enum 型で指定してください。"
+                )
                 self._log_error_and_raise(msg)
             else:  # pragma: no cover - 型ガード
                 msg = f"OneLinerApplicationService: OPENVINO で不明な型のモデル名: {type(raw_model)}"

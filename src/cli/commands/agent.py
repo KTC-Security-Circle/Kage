@@ -16,8 +16,8 @@ from agents.agent_conf import HuggingFaceModel, LLMProvider
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 
 if TYPE_CHECKING:  # pragma: no cover
+    from logic.application.one_liner_application_service import OneLinerApplicationService
     from logic.queries.one_liner_queries import OneLinerContext
-    from logic.services.one_liner_service import OneLinerService
 
 app = typer.Typer(help="エージェント (one-liner) コマンド")
 
@@ -77,19 +77,19 @@ def _resolve_provider_model(
 
 def _get_one_liner_service(
     provider: LLMProvider | None = None, model: str | None = None
-) -> OneLinerService:  # [AI GENERATED]
-    """OneLinerService インスタンスを取得 (副作用で設定を書き換えない) [AI GENERATED]"""
-    from logic.services.one_liner_service import OneLinerService
+) -> OneLinerApplicationService:  # [AI GENERATED]
+    """OneLinerApplicationService インスタンスを取得 (設定を書き換えない) [AI GENERATED]"""
+    from logic.application.one_liner_application_service import OneLinerApplicationService
 
     if provider is None and model is None:
-        return OneLinerService()
+        return OneLinerApplicationService()
     try:
         resolved_provider, resolved_model = _resolve_provider_model(provider, model)
     except typer.BadParameter:
         raise
     except Exception as e:  # pragma: no cover
         raise typer.BadParameter(str(e)) from e
-    return OneLinerService(provider=resolved_provider, model_name=resolved_model)
+    return OneLinerApplicationService(provider=resolved_provider, model_name=resolved_model)
 
 
 @with_spinner("Building context...")
@@ -164,7 +164,11 @@ def _generate_one_liner(
 ) -> str:  # [AI GENERATED] TimingResult[str]
     """One-liner 生成 (TimingResult[str] 相当オブジェクトを返却) [AI GENERATED]"""
     service = _get_one_liner_service(provider=provider, model=model)
-    return service.generate(ctx)
+    from logic.application.one_liner_application_service import OneLinerContext
+
+    if isinstance(ctx, OneLinerContext):
+        return service.generate_one_liner(ctx)
+    return service.generate_one_liner()
 
 
 def _print_one_liner(

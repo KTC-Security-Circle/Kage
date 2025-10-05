@@ -5,6 +5,7 @@ View層からビジネスロジックとSession管理を分離するための層
 """
 
 from logic.application.memo_application_service import MemoApplicationService
+from logic.application.one_liner_application_service import OneLinerApplicationService
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
@@ -16,4 +17,5 @@ __all__ = [
     "TagApplicationService",
     "TaskApplicationService",
     "TaskTagApplicationService",
+    "OneLinerApplicationService",
 ]

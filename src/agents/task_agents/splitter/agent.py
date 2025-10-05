@@ -1,4 +1,4 @@
-if __package__ is None:
+if __package__ is None:  # pragma: no cover
     import sys
     from pathlib import Path
 
@@ -7,12 +7,23 @@ if __package__ is None:
 
 from langchain_core.runnables import RunnableSerializable
 from langgraph.graph import START, StateGraph
-from loguru import logger
+from pydantic import BaseModel
 
-from agents.base import BaseAgent
+from agents.base import BaseAgent, ErrorAgentOutput, KwargsAny
 from agents.task_agents.splitter.prompt import splitter_agent_prompt
 from agents.task_agents.splitter.state import TaskSplitterOutput, TaskSplitterState
-from agents.utils import LLMProvider
+from agents.utils import LLMProvider, agents_logger
+
+_fake_responses: list[BaseModel] = [
+    TaskSplitterOutput(
+        task_titles=["A", "B"],
+        task_descriptions=["A説明", "B説明"],
+    ),
+    TaskSplitterOutput(
+        task_titles=["C", "D"],
+        task_descriptions=["C説明", "D説明"],
+    ),
+]
 
 
 class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
@@ -22,9 +33,11 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     _description = "タスクを分割して処理するエージェント"
     _state = TaskSplitterState
 
-    def __init__(self, provider: LLMProvider = LLMProvider.GOOGLE) -> None:
+    _fake_responses = _fake_responses
+
+    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: KwargsAny) -> None:
         """初期化."""
-        super().__init__(provider)
+        super().__init__(provider, **kwargs)
 
     def create_graph(self, graph_builder: StateGraph) -> StateGraph:
         """グラフを作成."""
@@ -35,11 +48,11 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
     def _create_agent(self) -> RunnableSerializable:
         """エージェントのインスタンスを作成."""
         self._model = self.get_model()
-        llm_with_tools = self._model.bind_tools([TaskSplitterOutput])
-        self._agent = splitter_agent_prompt | llm_with_tools
+        structured_llm = self._model.with_structured_output(TaskSplitterOutput)
+        self._agent = splitter_agent_prompt | structured_llm
         return self._agent
 
-    def chatbot(self, state: TaskSplitterState) -> dict[str, TaskSplitterOutput]:
+    def chatbot(self, state: TaskSplitterState) -> dict[str, TaskSplitterOutput | ErrorAgentOutput]:
         """チャットボットノードの処理."""
         self._agent = self._create_agent()
         response = self._agent.invoke(
@@ -48,16 +61,11 @@ class TaskSplitterAgent(BaseAgent[TaskSplitterState, TaskSplitterOutput]):
                 "task_description": state["task_description"],
             },
         )
-        try:
-            output_obj = TaskSplitterOutput.model_validate(response.tool_calls[0]["args"])
-            logger.bind(agents=True).debug(f"Output object: {output_obj}")
-        except Exception as e:
-            logger.bind(agents=True).error(f"Error validating output: {e}")
-            output_obj = TaskSplitterOutput(task_titles=[], task_descriptions=[])
-        return {"final_response": output_obj}
+        output = self.validate_output(response, TaskSplitterOutput)
+        return {"final_response": output}
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     from uuid import uuid4
 
     from logging_conf import setup_logger
@@ -66,11 +74,11 @@ if __name__ == "__main__":
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = TaskSplitterAgent()
+    agent = TaskSplitterAgent(LLMProvider.FAKE, verbose=True)
 
     thread_id = str(uuid4())
     # thread_id = "649869e4-0782-4683-98d6-9dd3fda02133"  # Example thread ID for testing
-    logger.bind(agents=True).debug(f"Starting TaskSplitterAgent with thread ID: {thread_id}")
+    agents_logger.debug(f"Starting TaskSplitterAgent with thread ID: {thread_id}")
 
     task_name = "課題をやる"
     task_description = "国語、数学、英語の宿題をやる。"
@@ -82,13 +90,13 @@ if __name__ == "__main__":
     )
     response = agent.invoke(state, thread_id)
     if response:
-        logger.bind(agents=True).debug("Assistant: " + response.model_dump_json())
+        agents_logger.debug("Assistant: " + response.model_dump_json())
     else:
-        logger.bind(agents=True).debug("No response from the agent.")
+        agents_logger.debug("No response from the agent.")
 
     # stream mode test
     # for msg, metadata in agent.stream(state, thread_id):
     #     if isinstance(msg, TaskSplitterOutput):
-    #         logger.bind(agents=True).debug(f"Assistant: {msg.model_dump_json()}")
+    #         agents_logger.debug(f"Assistant: {msg.model_dump_json()}")
     #     else:
-    #         logger.debug("No content in the message. Metadata: " + str(metadata))
+    #         agents_logger.debug("No content in the message. Metadata: " + str(metadata))

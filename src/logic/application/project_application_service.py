@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from logic.application.base import BaseApplicationService
+from logic.services.project_service import ProjectService
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
@@ -62,7 +63,7 @@ class ProjectApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            project_service = uow.service_factory.create_project_service()
+            project_service = uow.service_factory.get_service(ProjectService)
             created_project = project_service.create_project(command.to_project_create())
             uow.commit()
 
@@ -84,7 +85,7 @@ class ProjectApplicationService(BaseApplicationService):
         logger.debug(f"プロジェクト取得: {query.project_id}")
 
         with self._unit_of_work_factory() as uow:
-            project_service = uow.service_factory.create_project_service()
+            project_service = uow.service_factory.get_service(ProjectService)
             project = project_service.get_project_by_id(query.project_id)
 
             if project is None:
@@ -106,7 +107,7 @@ class ProjectApplicationService(BaseApplicationService):
         logger.debug("全プロジェクト取得")
 
         with self._unit_of_work_factory() as uow:
-            project_service = uow.service_factory.create_project_service()
+            project_service = uow.service_factory.get_service(ProjectService)
             return project_service.get_all_projects()
 
     def search_projects_by_title(self, query: SearchProjectsByTitleQuery) -> list[ProjectRead]:
@@ -121,7 +122,7 @@ class ProjectApplicationService(BaseApplicationService):
         logger.debug(f"プロジェクト検索: {query.title_query}")
 
         with self._unit_of_work_factory() as uow:
-            project_service = uow.service_factory.create_project_service()
+            project_service = uow.service_factory.get_service(ProjectService)
             return project_service.search_projects(query.title_query)
 
     def update_project(self, command: UpdateProjectCommand) -> ProjectRead:
@@ -145,7 +146,7 @@ class ProjectApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            project_service = uow.service_factory.create_project_service()
+            project_service = uow.service_factory.get_service(ProjectService)
             updated_project = project_service.update_project(command.project_id, command.to_project_update())
             uow.commit()
 
@@ -165,7 +166,7 @@ class ProjectApplicationService(BaseApplicationService):
         logger.info(f"プロジェクト削除開始: {command.project_id}")
 
         with self._unit_of_work_factory() as uow:
-            project_service = uow.service_factory.create_project_service()
+            project_service = uow.service_factory.get_service(ProjectService)
             success = project_service.delete_project(command.project_id)
 
             if not success:

@@ -11,6 +11,7 @@ from loguru import logger
 
 from logic.application.base import BaseApplicationService
 from logic.services.quick_action_mapping_service import QuickActionMappingService
+from logic.services.task_service import TaskService
 from logic.services.task_status_display_service import (
     TaskStatusDisplay,
     TaskStatusDisplayService,
@@ -72,7 +73,7 @@ class TaskApplicationService(BaseApplicationService):
 
         # Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
             created_task = task_service.create_task(command.to_task_create())
             uow.commit()
 
@@ -100,7 +101,7 @@ class TaskApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
             updated_task = task_service.update_task(command.task_id, command.to_task_update())
             uow.commit()
 
@@ -119,7 +120,7 @@ class TaskApplicationService(BaseApplicationService):
         logger.info(f"タスク削除開始: {command.task_id}")
 
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
             task_service.delete_task(command.task_id)
             uow.commit()
 
@@ -140,7 +141,7 @@ class TaskApplicationService(BaseApplicationService):
         logger.info(f"タスクステータス更新開始: {command.task_id} -> {command.new_status.value}")
 
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
 
             # 現在のタスクを取得
             task = task_service.get_task_by_id(command.task_id)
@@ -175,7 +176,7 @@ class TaskApplicationService(BaseApplicationService):
             タスクリスト
         """
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
             return task_service.get_tasks_by_status(query.status)
 
     def get_today_tasks_count(self, query: GetTodayTasksCountQuery) -> int:
@@ -189,8 +190,30 @@ class TaskApplicationService(BaseApplicationService):
         """
         _ = query  # 将来の拡張用パラメータ
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
             return task_service.get_today_tasks_count()
+
+    # [AI GENERATED] 追加: 完了タスク件数取得
+    def get_completed_tasks_count(self) -> int:
+        """完了タスク件数取得
+
+        Returns:
+            int: 完了タスク件数
+        """
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.get_service(TaskService)
+            return task_service.get_completed_tasks_count()
+
+    # [AI GENERATED] 追加: 期限超過タスク件数取得
+    def get_overdue_tasks_count(self) -> int:
+        """期限超過タスク件数取得
+
+        Returns:
+            int: 期限超過タスク件数
+        """
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.get_service(TaskService)
+            return task_service.get_overdue_tasks_count()
 
     def get_task_by_id(self, query: GetTaskByIdQuery) -> TaskRead | None:
         """ID指定タスク取得
@@ -202,7 +225,7 @@ class TaskApplicationService(BaseApplicationService):
             タスク（見つからない場合はNone）
         """
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
             return task_service.get_task_by_id(query.task_id)
 
     def get_all_tasks_by_status_dict(self, query: GetAllTasksByStatusDictQuery) -> dict[TaskStatus, list[TaskRead]]:
@@ -220,7 +243,7 @@ class TaskApplicationService(BaseApplicationService):
         result = {}
 
         with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.create_task_service()
+            task_service = uow.service_factory.get_service(TaskService)
 
             for status in TaskStatus:
                 result[status] = task_service.get_tasks_by_status(status)

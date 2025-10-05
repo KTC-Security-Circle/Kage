@@ -566,6 +566,14 @@ class TaskService(ServiceBase[TaskServiceError]):
         """
         return self.get_tasks_by_status(TaskStatus.COMPLETED)
 
+    def get_completed_tasks_count(self) -> int:  # [AI GENERATED] 件数ユーティリティ
+        """完了済みタスク件数を取得する
+
+        Returns:
+            int: 完了済みタスク件数
+        """
+        return len(self.get_completed_tasks())
+
     def get_cancelled_tasks(self) -> list[TaskRead]:
         """キャンセル済みタスクを取得する
 
@@ -577,6 +585,23 @@ class TaskService(ServiceBase[TaskServiceError]):
             ValidationError: タスクデータの検証に失敗した場合
         """
         return self.get_tasks_by_status(TaskStatus.CANCELLED)
+
+    def get_overdue_tasks(self) -> list[TaskRead]:  # [AI GENERATED] 期限超過タスク一覧
+        """期限超過タスクを取得する
+
+        Returns:
+            list[TaskRead]: 期限超過タスク一覧
+        """
+        tasks = self.task_repo.get_overdue_tasks()
+        return [TaskRead.model_validate(t) for t in tasks]
+
+    def get_overdue_tasks_count(self) -> int:  # [AI GENERATED] 期限超過件数
+        """期限超過タスク件数を取得する
+
+        Returns:
+            int: 期限超過タスク件数
+        """
+        return len(self.get_overdue_tasks())
 
     def move_to_inbox(self, task_id: uuid.UUID) -> TaskRead:
         """タスクをインボックスに移動する

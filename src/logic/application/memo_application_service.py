@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from logic.application.base import BaseApplicationService
+from logic.services.memo_service import MemoService
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
@@ -60,7 +61,7 @@ class MemoApplicationService(BaseApplicationService):
 
         # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             created_memo = memo_service.create_memo(command.to_memo_create())
             uow.commit()
 
@@ -89,7 +90,7 @@ class MemoApplicationService(BaseApplicationService):
 
         # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             updated_memo = memo_service.update_memo(command.memo_id, command.to_memo_update())
             uow.commit()
 
@@ -112,7 +113,7 @@ class MemoApplicationService(BaseApplicationService):
 
         # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             success = memo_service.delete_memo(command.memo_id)
             uow.commit()
 
@@ -131,7 +132,7 @@ class MemoApplicationService(BaseApplicationService):
         logger.debug(f"メモ取得: ID {query.memo_id}")
 
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.get_memo_by_id(query.memo_id)
 
     def get_all_memos(self, query: GetAllMemosQuery) -> list[MemoRead]:  # noqa: ARG002
@@ -146,7 +147,7 @@ class MemoApplicationService(BaseApplicationService):
         logger.debug("全メモ取得")
 
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.get_all_memos()
 
     def get_memos_by_task_id(self, query: GetMemosByTaskIdQuery) -> list[MemoRead]:
@@ -161,7 +162,7 @@ class MemoApplicationService(BaseApplicationService):
         logger.debug(f"タスクメモ取得: タスクID {query.task_id}")
 
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.get_memos_by_task_id(query.task_id)
 
     def search_memos(self, query: SearchMemosQuery) -> list[MemoRead]:
@@ -180,5 +181,5 @@ class MemoApplicationService(BaseApplicationService):
             return []
 
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.create_memo_service()
+            memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.search_memos(query.query)

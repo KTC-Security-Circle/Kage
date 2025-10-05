@@ -46,7 +46,7 @@ class TestTaskTagApplicationService:
 
         # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
-        mock_service_factory.create_task_tag_service.return_value = mock_task_tag_service
+        mock_service_factory.get_service.return_value = mock_task_tag_service
 
         # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
@@ -80,7 +80,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクタグ作成成功"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.create_task_tag.return_value = sample_task_tag_read
 
         # コマンド作成
@@ -135,7 +135,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: 全タスクタグ取得"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.get_all_task_tags.return_value = [sample_task_tag_read]
 
         # クエリ作成
@@ -158,7 +158,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクID指定タスクタグ取得"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.get_task_tags_by_task_id.return_value = [sample_task_tag_read]
 
         # クエリ作成
@@ -181,7 +181,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タグID指定タスクタグ取得"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.get_task_tags_by_tag_id.return_value = [sample_task_tag_read]
 
         # クエリ作成
@@ -204,7 +204,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクタグ存在確認（存在する場合）"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.check_task_tag_exists.return_value = True
 
         # クエリ作成
@@ -230,7 +230,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクタグ存在確認（存在しない場合）"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.check_task_tag_exists.return_value = False
 
         # クエリ作成
@@ -256,7 +256,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクとタグ指定でタスクタグ取得"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_tag_service.get_task_tag_by_task_and_tag.return_value = sample_task_tag_read
 
         # クエリ作成
@@ -282,7 +282,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクタグ削除成功"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
 
         # コマンド作成
         command = DeleteTaskTagCommand(
@@ -307,7 +307,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タスクID指定のタスクタグ削除"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
 
         # コマンド作成
         command = DeleteTaskTagsByTaskCommand(task_id=sample_task_tag_read.task_id)
@@ -327,7 +327,7 @@ class TestTaskTagApplicationService:
     ) -> None:
         """正常系: タグID指定のタスクタグ削除"""
         # モックの設定
-        mock_task_tag_service = mock_unit_of_work.service_factory.create_task_tag_service.return_value
+        mock_task_tag_service = mock_unit_of_work.service_factory.get_service.return_value
 
         # コマンド作成
         command = DeleteTaskTagsByTagCommand(tag_id=sample_task_tag_read.tag_id)

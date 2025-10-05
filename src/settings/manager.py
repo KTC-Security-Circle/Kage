@@ -13,8 +13,10 @@ from ruamel.yaml.comments import CommentedMap
 
 from config import CONFIG_PATH
 from settings.models import (
+    AgentsSettings,
     AppSettings,
     DatabaseSettings,
+    EditableAgentsSettings,
     EditableAppSettings,
     EditableDatabaseSettings,
     EditableUserSettings,
@@ -34,6 +36,7 @@ _FROZEN_TO_EDITABLE: dict[type[BaseModel], type[BaseModel]] = {
     WindowSettings: EditableWindowSettings,
     UserSettings: EditableUserSettings,
     DatabaseSettings: EditableDatabaseSettings,
+    AgentsSettings: EditableAgentsSettings,
     AppSettings: EditableAppSettings,
 }
 _EDITABLE_TO_FROZEN = {v: k for k, v in _FROZEN_TO_EDITABLE.items()}
@@ -104,10 +107,28 @@ class ConfigManager[TSettings: BaseModel]:
 
     def _save_model(self, obj: TSettings) -> None:
         data_dict = obj.model_dump()
+        # Enum を再帰的に値へ変換して YAML シリアライズ可能にする [AI GENERATED]
+        from enum import Enum
+
+        def convert(val: object) -> object:  # [AI GENERATED]
+            if isinstance(val, Enum):
+                return val.value
+            if isinstance(val, dict):
+                return {k: convert(v) for k, v in val.items()}
+            if isinstance(val, list):
+                return [convert(v) for v in val]
+            return val
+
+        data_dict = convert(data_dict)
         schema = self._model_type.model_json_schema()
-        commented = self._to_commented_map(data_dict, schema.get("properties", {}))
-        if self._model_type.__doc__ and hasattr(commented, "yaml_set_start_comment"):
-            commented.yaml_set_start_comment(self._model_type.__doc__.strip())  # type: ignore[attr-defined]
+        commented: object
+        if isinstance(data_dict, dict):
+            commented = self._to_commented_map(data_dict, schema.get("properties", {}))
+            if self._model_type.__doc__ and hasattr(commented, "yaml_set_start_comment"):
+                # CommentedMap のみがこの属性を持つ
+                commented.yaml_set_start_comment(self._model_type.__doc__.strip())  # type: ignore[attr-defined]
+        else:  # 異常ケース (念のため)
+            commented = data_dict
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with self._path.open("w", encoding="utf-8") as wf:
             self._yaml.dump(commented, wf)

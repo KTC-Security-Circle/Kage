@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from logic.application.base import BaseApplicationService
+from logic.services.task_tag_service import TaskTagService
 from logic.unit_of_work import SqlModelUnitOfWork
 
 if TYPE_CHECKING:
@@ -69,7 +70,7 @@ class TaskTagApplicationService(BaseApplicationService):
 
         # Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             created_task_tag = task_tag_service.create_task_tag(command.to_task_tag_create())
             uow.commit()
 
@@ -89,7 +90,7 @@ class TaskTagApplicationService(BaseApplicationService):
         logger.debug("全タスクタグ取得")
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             return task_tag_service.get_all_task_tags()
 
     def delete_task_tag(self, command: DeleteTaskTagCommand) -> None:
@@ -113,7 +114,7 @@ class TaskTagApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             task_tag_service.delete_task_tag(command.task_id, command.tag_id)
             uow.commit()
 
@@ -131,7 +132,7 @@ class TaskTagApplicationService(BaseApplicationService):
         logger.debug(f"タスクID別タスクタグ取得: {query.task_id}")
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             return task_tag_service.get_task_tags_by_task_id(query.task_id)
 
     def get_task_tags_by_tag_id(self, query: GetTaskTagsByTagIdQuery) -> list[TaskTagRead]:
@@ -146,7 +147,7 @@ class TaskTagApplicationService(BaseApplicationService):
         logger.debug(f"タグID別タスクタグ取得: {query.tag_id}")
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             return task_tag_service.get_task_tags_by_tag_id(query.tag_id)
 
     def get_task_tag_by_task_and_tag(self, query: GetTaskTagByTaskAndTagQuery) -> TaskTagRead | None:
@@ -161,7 +162,7 @@ class TaskTagApplicationService(BaseApplicationService):
         logger.debug(f"タスクタグ取得: Task {query.task_id}, Tag {query.tag_id}")
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             return task_tag_service.get_task_tag_by_task_and_tag(query.task_id, query.tag_id)
 
     def check_task_tag_exists(self, query: CheckTaskTagExistsQuery) -> bool:
@@ -176,7 +177,7 @@ class TaskTagApplicationService(BaseApplicationService):
         logger.debug(f"タスクタグ存在確認: Task {query.task_id}, Tag {query.tag_id}")
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             return task_tag_service.check_task_tag_exists(query.task_id, query.tag_id)
 
     def delete_task_tags_by_task_id(self, command: DeleteTaskTagsByTaskCommand) -> None:
@@ -197,7 +198,7 @@ class TaskTagApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             task_tag_service.delete_task_tags_by_task_id(command.task_id)
             uow.commit()
 
@@ -221,7 +222,7 @@ class TaskTagApplicationService(BaseApplicationService):
             raise ValueError(msg)
 
         with self._unit_of_work_factory() as uow:
-            task_tag_service = uow.service_factory.create_task_tag_service()
+            task_tag_service = uow.service_factory.get_service(TaskTagService)
             task_tag_service.delete_task_tags_by_tag_id(command.tag_id)
             uow.commit()
 

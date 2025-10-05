@@ -31,7 +31,7 @@ class TestMemoApplicationService:
 
         # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
-        mock_service_factory.create_memo_service.return_value = mock_memo_service
+        mock_service_factory.get_service.return_value = mock_memo_service
 
         # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
@@ -66,7 +66,7 @@ class TestMemoApplicationService:
         )
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.create_memo.return_value = created_memo
 
         # Act
@@ -121,7 +121,7 @@ class TestMemoApplicationService:
         )
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.update_memo.return_value = updated_memo
 
         # Act
@@ -156,7 +156,7 @@ class TestMemoApplicationService:
         command = DeleteMemoCommand(memo_id=memo_id)
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.delete_memo.return_value = True
 
         # Act
@@ -185,7 +185,7 @@ class TestMemoApplicationService:
         )
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.get_memo_by_id.return_value = memo
 
         # Act
@@ -206,7 +206,7 @@ class TestMemoApplicationService:
         query = GetMemoByIdQuery(memo_id=memo_id)
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.get_memo_by_id.return_value = None
 
         # Act
@@ -231,7 +231,7 @@ class TestMemoApplicationService:
         ]
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.get_all_memos.return_value = memos
 
         # Act
@@ -257,7 +257,7 @@ class TestMemoApplicationService:
         ]
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.get_memos_by_task_id.return_value = memos
 
         # Act
@@ -284,7 +284,7 @@ class TestMemoApplicationService:
         ]
 
         # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.create_memo_service.return_value
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_memo_service.search_memos.return_value = matching_memos
 
         # Act

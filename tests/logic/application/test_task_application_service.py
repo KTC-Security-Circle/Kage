@@ -51,7 +51,7 @@ class TestTaskApplicationService:
 
         # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
-        mock_service_factory.create_task_service.return_value = mock_task_service
+        mock_service_factory.get_service.return_value = mock_task_service
 
         # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
@@ -88,7 +88,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: タスク作成成功"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.create_task.return_value = sample_task_read
 
         # コマンド作成
@@ -124,7 +124,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: タスク更新成功"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         updated_task = TaskRead(
             id=sample_task_read.id,
             title="更新されたタスク",
@@ -171,7 +171,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: タスク削除成功"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         task_id = uuid.uuid4()
 
         # コマンド作成
@@ -192,7 +192,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: タスクステータス更新成功"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.get_task_by_id.return_value = sample_task_read
 
         updated_task = TaskRead(
@@ -227,7 +227,7 @@ class TestTaskApplicationService:
     ) -> None:
         """異常系: タスクステータス更新時にタスクが見つからない"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.get_task_by_id.return_value = None  # タスクが見つからない
 
         task_id = uuid.uuid4()
@@ -248,7 +248,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: ステータス別タスク取得"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.get_tasks_by_status.return_value = [sample_task_read]
 
         # クエリ作成
@@ -270,7 +270,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: 今日のタスク件数取得"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.get_today_tasks_count.return_value = EXPECTED_TODAY_TASKS_COUNT
 
         # クエリ作成
@@ -291,7 +291,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: ID指定タスク取得"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.get_task_by_id.return_value = sample_task_read
 
         # クエリ作成
@@ -311,7 +311,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: ID指定タスク取得でタスクが見つからない場合"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_task_service.get_task_by_id.return_value = None
 
         task_id = uuid.uuid4()
@@ -332,7 +332,7 @@ class TestTaskApplicationService:
     ) -> None:
         """正常系: 全ステータス別タスク取得"""
         # モックの設定
-        mock_task_service = mock_unit_of_work.service_factory.create_task_service.return_value
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
 
         # [AI GENERATED] 各ステータスでの戻り値設定
         def mock_get_tasks_by_status(status: TaskStatus) -> list[TaskRead]:

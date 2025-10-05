@@ -20,7 +20,8 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
         Args:
             session: データベースセッション
         """
-        super().__init__(Tag, session)
+        self.model_class = Tag
+        super().__init__(session)
 
     def get_all(self) -> list[Tag]:
         """全てのタグ一覧を取得する

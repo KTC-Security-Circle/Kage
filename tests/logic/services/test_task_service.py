@@ -168,7 +168,7 @@ class TestTaskService:
         mock_repositories["task_repo"].get_by_id.return_value = None
 
         # 実行と検証
-        with pytest.raises(TaskServiceCheckError, match="タスクID .* が見つかりません"):
+        with pytest.raises(TaskServiceCheckError, match=r"タスクID .* が見つかりません"):
             task_service.update_task(task_id, task_update)
 
         mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
@@ -205,7 +205,7 @@ class TestTaskService:
         mock_repositories["task_repo"].get_by_id.return_value = None
 
         # 実行と検証
-        with pytest.raises(TaskServiceCheckError, match="タスクID .* が見つかりません"):
+        with pytest.raises(TaskServiceCheckError, match=r"タスクID .* が見つかりません"):
             task_service.delete_task(task_id)
 
         mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)

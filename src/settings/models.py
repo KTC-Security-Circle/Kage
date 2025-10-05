@@ -7,12 +7,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Final, Literal
+from typing import Any, ClassVar, Final, Literal
 
 from dotenv import dotenv_values, load_dotenv
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from agents.agent_conf import HuggingFaceModel, LLMProvider  # [AI GENERATED] Enum によるバリデーション
 
 
 class WindowSettings(BaseModel):
@@ -64,6 +66,10 @@ class UserSettings(BaseModel):
         default="light",
         description="UI テーマ。'light' または 'dark'。",
     )
+    user_name: str = Field(
+        default="",
+        description="アプリ内で表示/プロンプトに利用する利用者の表示名。空なら匿名扱い。",
+    )
 
 
 class EditableUserSettings(BaseModel):
@@ -79,6 +85,134 @@ class EditableUserSettings(BaseModel):
         default="light",
         description="UI テーマ。'light' または 'dark'。",
     )
+    user_name: str = Field(
+        default="",
+        description="アプリ内で表示/プロンプトに利用する利用者の表示名。",
+    )
+
+
+class HuggingFaceAgentModels(BaseModel):
+    """HuggingFace/OPENVINO 系で利用するエージェント別モデル名設定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    one_liner: HuggingFaceModel | None = Field(
+        default=None,
+        description="one_liner エージェント用 HuggingFaceModel Enum。None ならデフォルト内部値。",
+    )
+
+
+class GeminiAgentModels(BaseModel):
+    """Gemini(google) 用モデル名設定。将来 Enum 化予定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    one_liner: str | None = Field(
+        default=None,
+        description="one_liner エージェント用 Gemini モデル名。None ならライブラリ既定。",
+    )
+
+
+class AgentsSettings(BaseModel):
+    """エージェント全体設定 (互換性考慮せず再構築)。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    provider: LLMProvider = Field(
+        default=LLMProvider.FAKE,
+        description="全エージェント共通で使用する LLM プロバイダ。",
+    )
+    huggingface: HuggingFaceAgentModels | EditableHuggingFaceAgentModels = Field(
+        default_factory=HuggingFaceAgentModels, description="HuggingFace/OPENVINO 系モデル設定"
+    )
+    gemini: GeminiAgentModels | EditableGeminiAgentModels = Field(
+        default_factory=GeminiAgentModels, description="Gemini モデル設定"
+    )
+
+    def get_model_name(self, agent_key: str) -> HuggingFaceModel | str | None:  # [AI GENERATED]
+        """現在の provider に応じて該当エージェントのモデル名 (Enum/str/None) を返す。
+
+        Args:
+            agent_key (str): エージェント識別子 (例: 'one_liner')
+
+        Returns:
+            HuggingFaceModel | str | None: モデル名。未指定時は None。
+        """
+        if self.provider in (LLMProvider.OPENVINO,):
+            return getattr(self.huggingface, agent_key, None)
+        if self.provider == LLMProvider.GOOGLE:
+            return getattr(self.gemini, agent_key, None)
+        return None
+
+    # editable -> frozen 変換受け入れ (settings.manager の round-trip 用) [AI GENERATED]
+    @field_validator("huggingface", mode="before")
+    @classmethod
+    def _from_editable_hf(
+        cls, v: HuggingFaceAgentModels | EditableHuggingFaceAgentModels | dict[str, Any] | None
+    ) -> HuggingFaceAgentModels | dict[str, Any] | None:
+        if isinstance(v, EditableHuggingFaceAgentModels) and not isinstance(v, HuggingFaceAgentModels):
+            return HuggingFaceAgentModels.model_validate(v.model_dump())
+        return v
+
+    @field_validator("gemini", mode="before")
+    @classmethod
+    def _from_editable_gemini(
+        cls, v: GeminiAgentModels | EditableGeminiAgentModels | dict[str, Any] | None
+    ) -> GeminiAgentModels | dict[str, Any] | None:
+        if isinstance(v, EditableGeminiAgentModels) and not isinstance(v, GeminiAgentModels):
+            return GeminiAgentModels.model_validate(v.model_dump())
+        return v
+
+
+class EditableHuggingFaceAgentModels(BaseModel):
+    model_config = ConfigDict(frozen=False)
+    one_liner: HuggingFaceModel | None = Field(default=None)
+
+
+class EditableGeminiAgentModels(BaseModel):
+    model_config = ConfigDict(frozen=False)
+    one_liner: str | None = Field(default=None)
+
+
+class EditableAgentsSettings(BaseModel):
+    """編集可能: provider とプロバイダ別モデル設定。"""
+
+    model_config = ConfigDict(frozen=False)
+
+    provider: LLMProvider = Field(default=LLMProvider.FAKE)
+    huggingface: EditableHuggingFaceAgentModels | HuggingFaceAgentModels = Field(
+        default_factory=EditableHuggingFaceAgentModels
+    )
+    gemini: EditableGeminiAgentModels | GeminiAgentModels = Field(default_factory=EditableGeminiAgentModels)
+
+    def get_model_name(self, agent_key: str) -> HuggingFaceModel | str | None:  # [AI GENERATED]
+        if self.provider in (LLMProvider.OPENVINO,):
+            hf = self.huggingface
+            return getattr(hf, agent_key, None)
+        if self.provider == LLMProvider.GOOGLE:
+            gm = self.gemini
+            return getattr(gm, agent_key, None)
+        return None
+
+    # --- converters (before validators) ---
+    @field_validator("huggingface", mode="before")  # [AI GENERATED]
+    @classmethod
+    def _convert_huggingface(
+        cls, v: EditableHuggingFaceAgentModels | HuggingFaceAgentModels | dict[str, Any] | None
+    ) -> EditableHuggingFaceAgentModels | dict[str, Any] | None:
+        if isinstance(v, HuggingFaceAgentModels) and not isinstance(v, EditableHuggingFaceAgentModels):
+            # frozen -> editable へコピー
+            return EditableHuggingFaceAgentModels.model_validate(v.model_dump())
+        return v
+
+    @field_validator("gemini", mode="before")  # [AI GENERATED]
+    @classmethod
+    def _convert_gemini(
+        cls, v: EditableGeminiAgentModels | GeminiAgentModels | dict[str, Any] | None
+    ) -> EditableGeminiAgentModels | dict[str, Any] | None:
+        if isinstance(v, GeminiAgentModels) and not isinstance(v, EditableGeminiAgentModels):
+            return EditableGeminiAgentModels.model_validate(v.model_dump())
+        return v
 
 
 class DatabaseSettings(BaseModel):
@@ -115,6 +249,9 @@ class AppSettings(BaseModel):
     window: WindowSettings = Field(default_factory=WindowSettings, description="ウィンドウ関連設定。")
     user: UserSettings = Field(default_factory=UserSettings, description="ユーザー関連設定。")
     database: DatabaseSettings = Field(default_factory=DatabaseSettings, description="データベース設定。")
+    agents: AgentsSettings = Field(default_factory=AgentsSettings, description="エージェント関連設定。")
+
+    # one_liner_provider は agents.one_liner_provider をそのまま利用 (Enum 化後は単純委譲不要)
 
 
 class EditableAppSettings(BaseModel):
@@ -127,6 +264,9 @@ class EditableAppSettings(BaseModel):
     database: EditableDatabaseSettings = Field(
         default_factory=EditableDatabaseSettings, description="データベース設定。"
     )
+    agents: EditableAgentsSettings = Field(default_factory=EditableAgentsSettings, description="エージェント関連設定。")
+
+    # Editable も単純参照で十分 (直接 editable.agents.one_liner_provider を編集)
 
 
 # -- 環境変数 --------------------------------
@@ -159,6 +299,7 @@ ENV_VARS: Final[list[EnvVarDef]] = [
     EnvVarDef("LANGSMITH_API_KEY", "str", "ai"),
     EnvVarDef("LANGSMITH_TRACING", "bool", "ai", default="false", comment="false/true"),
     EnvVarDef("KAGE_USE_LLM_ONE_LINER", "bool", "ai", default="false", comment="false/true"),
+    EnvVarDef("HUGGINGFACEHUB_API_TOKEN", "str", "ai"),
     EnvVarDef("DATABASE_URL", "str", "db"),
 ]
 
@@ -303,5 +444,7 @@ __all__ = [
     "EditableUserSettings",
     "EditableDatabaseSettings",
     "EditableAppSettings",
+    "AgentsSettings",
+    "EditableAgentsSettings",
     "EnvSettings",
 ]

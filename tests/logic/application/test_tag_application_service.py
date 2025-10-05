@@ -43,7 +43,7 @@ class TestTagApplicationService:
 
         # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
-        mock_service_factory.create_tag_service.return_value = mock_tag_service
+        mock_service_factory.get_service.return_value = mock_tag_service
 
         # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
@@ -77,7 +77,7 @@ class TestTagApplicationService:
     ) -> None:
         """正常系: タグ作成成功"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.create_tag.return_value = sample_tag_read
 
         # コマンド作成
@@ -111,7 +111,7 @@ class TestTagApplicationService:
     ) -> None:
         """正常系: ID指定タグ取得成功"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.get_tag_by_id.return_value = sample_tag_read
 
         # クエリ作成
@@ -131,7 +131,7 @@ class TestTagApplicationService:
     ) -> None:
         """異常系: ID指定タグ取得でタグが見つからない"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.get_tag_by_id.return_value = None
 
         tag_id = uuid.uuid4()
@@ -149,7 +149,7 @@ class TestTagApplicationService:
     ) -> None:
         """正常系: 全タグ取得"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.get_all_tags.return_value = [sample_tag_read]
 
         # クエリ作成
@@ -172,7 +172,7 @@ class TestTagApplicationService:
     ) -> None:
         """正常系: 名前検索"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.search_tags.return_value = [sample_tag_read]
 
         # クエリ作成
@@ -196,7 +196,7 @@ class TestTagApplicationService:
     ) -> None:
         """正常系: タグ更新成功"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         updated_tag = TagRead(
             id=sample_tag_read.id,
             name="更新されたタグ",
@@ -237,7 +237,7 @@ class TestTagApplicationService:
     ) -> None:
         """正常系: タグ削除成功"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.delete_tag.return_value = True  # 削除成功
 
         tag_id = uuid.uuid4()
@@ -257,7 +257,7 @@ class TestTagApplicationService:
     ) -> None:
         """異常系: タグ削除失敗"""
         # モックの設定
-        mock_tag_service = mock_unit_of_work.service_factory.create_tag_service.return_value
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
         mock_tag_service.delete_tag.return_value = False  # 削除失敗
 
         tag_id = uuid.uuid4()

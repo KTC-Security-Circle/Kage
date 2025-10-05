@@ -18,5 +18,6 @@
 - ブランチ命名: [dev/branch_naming.md](dev/branch_naming.md)
 - コントリビューション: [dev/contributing_docs.md](dev/contributing_docs.md)
 - 設定と環境変数: [dev/configuration.md](dev/configuration.md)
+- CLI: [dev/cli/index.md](dev/cli/index.md)
 
 改善提案・不備報告は Issue / PR で歓迎します。

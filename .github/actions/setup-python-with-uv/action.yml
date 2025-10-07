@@ -3,6 +3,12 @@ description: |
   This GitHub Action installs Python using the uv tool.
   It caches uv files, and installs dependencies.
 
+inputs:
+  use_openvino:
+    description: "openvino extra をインストールする場合は true"
+    required: false
+    default: "false"
+
 runs:
   using: composite
 
@@ -18,5 +24,13 @@ runs:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install Dependencies
-      run: uv sync --frozen
       shell: bash
+      run: |
+        set -e
+        if [ "${{ inputs.use_openvino }}" = "true" ]; then
+          echo "[info] uv sync --frozen --extra openvino"
+          uv sync --frozen --extra openvino
+        else
+          echo "[info] uv sync --frozen"
+          uv sync --frozen
+        fi

@@ -7,7 +7,6 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_core.runnables import RunnableBinding
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openvino_genai import ChatOpenVINO, OpenVINOLLM, load_model
 from langgraph.checkpoint.sqlite import SqliteSaver
 from loguru import logger
 from pydantic import BaseModel
@@ -15,6 +14,17 @@ from pydantic import BaseModel
 from agents.agent_conf import LLM_MODEL_DIR, SQLITE_DB_PATH, HuggingFaceModel, LLMProvider
 
 agents_logger = logger.bind(agents=True)
+
+try:
+    import langchain_openvino_genai  # noqa: F401
+
+    openvino_imported = True
+except ImportError:
+    agents_logger.warning(
+        "langchain-openvino-genai is not installed. "
+        "Please install it with 'pip install langchain-openvino-genai' if you plan to use the OPENVINO provider.",
+    )
+    openvino_imported = False
 
 
 def get_sqlite_conn() -> sqlite3.Connection:
@@ -160,6 +170,16 @@ def get_model(
             max_retries=3,
         )
     elif provider == LLMProvider.OPENVINO:
+        try:
+            from langchain_openvino_genai import ChatOpenVINO, OpenVINOLLM, load_model
+        except ImportError as e:
+            err_msg = (
+                "langchain-openvino-genai is not installed. "
+                "Please install it with 'pip install langchain-openvino-genai[openvino]' to use the OPENVINO provider."
+            )
+            agents_logger.exception(err_msg)
+            raise ImportError(err_msg) from e
+
         if model_name is None:
             warning_msg = "Model name is not specified. Using default model."
             agents_logger.warning(warning_msg)

@@ -174,6 +174,7 @@ def get_config_manager() -> ConfigManager[AppSettings]:
         EnvSettings.init_environment()
         manager = ConfigManager(CONFIG_PATH, AppSettings)
         globals()["_global_manager"] = manager
+        logger.info(f"設定マネージャーを初期化しました: {CONFIG_PATH}")
     return _global_manager  # type: ignore[return-value]
 
 

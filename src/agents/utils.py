@@ -15,17 +15,6 @@ from agents.agent_conf import LLM_MODEL_DIR, SQLITE_DB_PATH, HuggingFaceModel, L
 
 agents_logger = logger.bind(agents=True)
 
-try:
-    import langchain_openvino_genai  # noqa: F401
-
-    openvino_imported = True
-except ImportError:
-    agents_logger.warning(
-        "langchain-openvino-genai is not installed. "
-        "Please install it with 'pip install langchain-openvino-genai' if you plan to use the OPENVINO provider.",
-    )
-    openvino_imported = False
-
 
 def get_sqlite_conn() -> sqlite3.Connection:
     """SQLiteデータベースへの接続を取得する関数。
@@ -175,7 +164,7 @@ def get_model(
         except ImportError as e:
             err_msg = (
                 "langchain-openvino-genai is not installed. "
-                "Please install it with 'pip install langchain-openvino-genai[openvino]' to use the OPENVINO provider."
+                "Please install it with 'uv sync --extra openvino' or 'pip install .[openvino]' to use."
             )
             agents_logger.exception(err_msg)
             raise ImportError(err_msg) from e

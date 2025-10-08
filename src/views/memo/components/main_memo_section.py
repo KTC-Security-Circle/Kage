@@ -59,8 +59,9 @@ class MainMemoSection(ft.Column):
         # [AI GENERATED] 新規メモ作成ダイアログの実装
         # 今後、ダイアログまたは専用画面で実装予定
         msg = "新規メモ作成ダイアログは未実装です"
-        self._page.snack_bar = ft.SnackBar(ft.Text(msg))
-        self._page.snack_bar.open = True
+        snack_bar = ft.SnackBar(ft.Text(msg))
+        self._page.overlay.append(snack_bar)
+        snack_bar.open = True
         self._page.update()
 
     def get_total_memo_count(self) -> int:

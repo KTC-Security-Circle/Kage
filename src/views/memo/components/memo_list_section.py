@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -179,8 +180,6 @@ class MemoListSection(ft.Column):
         """
         self._memos = memos
         self._build_components()
-        # [AI GENERATED] 安全にupdateを実行
-        import contextlib
 
         with contextlib.suppress(Exception):
             self.update()

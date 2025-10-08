@@ -62,7 +62,7 @@ dev = [
     "pytest-cov>=6.2.1",
     # lint
     "pyright>=1.1.400",
-    "ruff>=0.13,<0.14",
+    "ruff>=0.14,<0.15",
     # docs
     "mkdocs>=1.6.1",
     "mkdocs-git-committers-plugin-2>=2.5.0",

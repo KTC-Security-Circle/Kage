@@ -22,16 +22,19 @@ class MemoListSection(ft.Column):
         self,
         memos: list[MemoRead],
         on_delete_memo: Callable[[str], None],
+        on_view_detail: Callable[[str], None] | None = None,
     ) -> None:
         """MemoListSectionの初期化.
 
         Args:
             memos: 表示するメモのリスト
             on_delete_memo: メモ削除時のコールバック関数
+            on_view_detail: メモ詳細表示時のコールバック関数
         """
         super().__init__()
         self._memos = memos
         self._on_delete_memo = on_delete_memo
+        self._on_view_detail = on_view_detail
         self.horizontal_alignment = ft.CrossAxisAlignment.STRETCH
         self.spacing = 10
         self.expand = True
@@ -109,11 +112,30 @@ class MemoListSection(ft.Column):
                                     size=12,
                                     color=ft.Colors.GREY_600,
                                 ),
-                                ft.IconButton(
-                                    icon=ft.Icons.DELETE,
-                                    icon_color=ft.Colors.RED_400,
-                                    tooltip="削除",
-                                    on_click=lambda _, memo_id=str(memo.id): self._handle_delete_click(memo_id),
+                                ft.Row(
+                                    [
+                                        *(
+                                            [
+                                                ft.IconButton(
+                                                    icon=ft.Icons.VISIBILITY,
+                                                    icon_color=ft.Colors.BLUE_400,
+                                                    tooltip="詳細",
+                                                    on_click=lambda _, memo_id=str(memo.id): (
+                                                        self._handle_detail_click(memo_id)
+                                                    ),
+                                                )
+                                            ]
+                                            if self._on_view_detail
+                                            else []
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.DELETE,
+                                            icon_color=ft.Colors.RED_400,
+                                            tooltip="削除",
+                                            on_click=lambda _, memo_id=str(memo.id): self._handle_delete_click(memo_id),
+                                        ),
+                                    ],
+                                    spacing=0,
                                 ),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -139,6 +161,15 @@ class MemoListSection(ft.Column):
             memo_id: 削除するメモのID
         """
         self._on_delete_memo(memo_id)
+
+    def _handle_detail_click(self, memo_id: str) -> None:
+        """詳細ボタンクリック処理
+
+        Args:
+            memo_id: 詳細を表示するメモのID
+        """
+        if self._on_view_detail:
+            self._on_view_detail(memo_id)
 
     def update_memos(self, memos: list[MemoRead]) -> None:
         """メモリストを更新

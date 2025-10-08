@@ -282,6 +282,7 @@ class MemoView(BaseView, ErrorHandlingMixin):
         self.memo_list_section = MemoListSection(
             memos=[],  # [AI GENERATED] 初期は空のリスト（後でmountで更新）
             on_delete_memo=self._handle_delete_memo,
+            on_view_detail=self._handle_view_detail,
         )
 
         # [AI GENERATED] データ読み込みはmount()で実行するため、ここでは呼ばない
@@ -342,6 +343,14 @@ class MemoView(BaseView, ErrorHandlingMixin):
             _: イベントオブジェクト
         """
         self.page.go("/memo/create")
+
+    def _handle_view_detail(self, memo_id: str) -> None:
+        """メモ詳細表示処理
+
+        Args:
+            memo_id: 表示するメモのID
+        """
+        self.page.go(f"/memo/detail?id={memo_id}")
 
     def _handle_delete_memo(self, memo_id: str) -> None:
         """メモ削除処理

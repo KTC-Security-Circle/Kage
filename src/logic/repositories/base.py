@@ -58,8 +58,15 @@ class BaseRepository[T: SQLModel, CreateT: SQLModel, UpdateT: SQLModel]:
             T | None: 取得されたエンティティ、見つからない場合はNone
         """
         try:
+            logger.info(f"{self.model_class.__name__} リポジトリ: IDで取得中 {entity_id}")
             # SQLModel の場合、通常 id フィールドはあるのでsession.getを使用
             result = self.session.get(self.model_class, entity_id)
+            if result:
+                logger.info(f"{self.model_class.__name__} リポジトリ: エンティティが見つかりました {entity_id}")
+            else:
+                logger.warning(
+                    f"{self.model_class.__name__} リポジトリ: エンティティが見つかりませんでした {entity_id}"
+                )
         except Exception as e:
             logger.exception(f"{self.model_class.__name__} の取得に失敗しました: {e}")
             raise

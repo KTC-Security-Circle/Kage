@@ -10,7 +10,9 @@ import flet as ft
 from loguru import logger
 
 from logic.application.memo_application_service import MemoApplicationService
+from logic.application.task_application_service import TaskApplicationService
 from logic.queries.memo_queries import GetMemoByIdQuery
+from logic.queries.task_queries import GetTaskByIdQuery
 from views.shared import BaseView, ErrorHandlingMixin
 
 if TYPE_CHECKING:
@@ -33,10 +35,12 @@ class MemoDetailView(BaseView, ErrorHandlingMixin):
 
         # 依存性注入
         self.memo_app_service: MemoApplicationService = self.container.get_service(MemoApplicationService)
+        self.task_app_service: TaskApplicationService = self.container.get_service(TaskApplicationService)
 
         # 状態管理
         self.memo_id: str | None = None
         self.memo: MemoRead | None = None
+        self.task_title: str | None = None
 
     def mount(self) -> None:
         """コンポーネントのマウント処理をオーバーライド"""
@@ -202,22 +206,30 @@ class MemoDetailView(BaseView, ErrorHandlingMixin):
                             expand=True,
                         ),
                         ft.Divider(),
-                        # タスクID（もしあれば）
-                        ft.Row(
+                        # 関連タスク（もしあれば）
+                        ft.Column(
                             [
                                 ft.Text(
-                                    "関連タスクID:",
+                                    "関連タスク:",
                                     size=14,
                                     weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.GREY_700,
                                 ),
                                 ft.Text(
-                                    str(self.memo.task_id) if self.memo.task_id else "なし",
+                                    self.task_title if self.task_title else "なし",
                                     size=14,
                                     color=ft.Colors.GREY_600,
                                 ),
+                                # [AI GENERATED] タスクIDも小さく表示
+                                ft.Text(
+                                    f"ID: {self.memo.task_id}" if self.memo.task_id else "",
+                                    size=12,
+                                    color=ft.Colors.GREY_400,
+                                )
+                                if self.memo.task_id
+                                else ft.Container(),
                             ],
-                            spacing=10,
+                            spacing=5,
                         ),
                     ],
                     spacing=15,
@@ -283,6 +295,7 @@ class MemoDetailView(BaseView, ErrorHandlingMixin):
             else:
                 logger.info(f"メモを読み込みました: ID {self.memo.id}, content: {self.memo.content[:100]}...")
                 logger.info(f"メモを読み込みました: ID {self.memo.id}, content_length: {len(self.memo.content)}")
+                self._load_task()
                 # [AI GENERATED] データ読み込み後にコンテンツを再構築
                 self._rebuild_content()
                 # [AI GENERATED] データ読み込み後にページを更新
@@ -307,6 +320,27 @@ class MemoDetailView(BaseView, ErrorHandlingMixin):
                 color=ft.Colors.RED,
             )
 
+    def _load_task(self) -> None:
+        """memoに関連するタスクのタイトルの読み込み"""
+        if not self.memo or not self.memo.task_id:
+            return
+
+        try:
+            logger.info(f"タスクタイトル取得開始: ID {self.memo.task_id}")
+            query = GetTaskByIdQuery(task_id=self.memo.task_id)
+            task = self.task_app_service.get_task_by_id(query)
+
+            if not task:
+                logger.warning(f"タスクが見つかりません: ID {self.memo.task_id}")
+                self.show_error("タスクが見つかりません", f"ID: {self.memo.task_id}")
+            else:
+                logger.info(f"タスクを読み込みました: ID {task.id}, title: {task.title}")
+                # [AI GENERATED] タスクタイトルを状態として保持
+                self.task_title = task.title
+        except Exception as e:
+            logger.exception("タスクの読み込みに失敗しました")
+            self.show_error("タスクの読み込みに失敗しました", str(e))
+
     def refresh(self) -> None:
         """ビューの再読み込み - ルート変更時に呼ばれる"""
         logger.info("MemoDetailView リフレッシュ開始")
@@ -325,6 +359,7 @@ class MemoDetailView(BaseView, ErrorHandlingMixin):
             else:
                 # [AI GENERATED] メモIDがない場合はメモデータをクリア
                 self.memo = None
+                self.task_title = None
                 self._rebuild_content()
                 if hasattr(self, "page") and self.page:
                     self.page.update()

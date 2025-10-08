@@ -263,7 +263,6 @@ class MemoView(BaseView, ErrorHandlingMixin):
 
         # [AI GENERATED] データ読み込み後に表示を更新
         if self.memo_list_section and self.filtered_memos:
-            import contextlib
 
             with contextlib.suppress(Exception):
                 self.memo_list_section.update_memos(self.filtered_memos)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -21,8 +21,11 @@ from logic.queries.settings_queries import (
     GetUserSettingsQuery,
     GetWindowSettingsQuery,
 )
-from settings.manager import ConfigManager, get_config_manager
+from settings.manager import ConfigManager
 from settings.models import AppSettings
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -172,9 +175,7 @@ def test_update_setting(app_service: SettingsApplicationService, tmp_path: Path)
     assert result == "dark"
 
 
-def test_update_window_settings_validation_error(
-    app_service: SettingsApplicationService, tmp_path: Path
-) -> None:
+def test_update_window_settings_validation_error(app_service: SettingsApplicationService, tmp_path: Path) -> None:
     """ウィンドウ設定更新時のバリデーションエラーのテスト"""
     # グローバルマネージャーをモックするため、一時的な設定で実行
     config_path = tmp_path / "test_config.yaml"
@@ -185,13 +186,11 @@ def test_update_window_settings_validation_error(
     app_service._settings_service = SettingsService(temp_manager)
 
     command = UpdateWindowSettingsCommand(size=[1920])  # 不正なサイズ
-    with pytest.raises(ValueError, match="サイズは.*2要素のリスト"):
+    with pytest.raises(ValueError, match=r"サイズは.*2要素のリスト"):
         app_service.update_window_settings(command)
 
 
-def test_update_user_settings_validation_error(
-    app_service: SettingsApplicationService, tmp_path: Path
-) -> None:
+def test_update_user_settings_validation_error(app_service: SettingsApplicationService, tmp_path: Path) -> None:
     """ユーザー設定更新時のバリデーションエラーのテスト"""
     # グローバルマネージャーをモックするため、一時的な設定で実行
     config_path = tmp_path / "test_config.yaml"

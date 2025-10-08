@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from logic.services.settings_service import SettingsService
 from settings.manager import ConfigManager
 from settings.models import AppSettings
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+_SIZE_ELEMENTS = 2  # Expected number of elements in size and position lists
 
 
 @pytest.fixture
@@ -89,7 +94,7 @@ def test_get_setting_by_path(settings_service: SettingsService) -> None:
 
     size = settings_service.get_setting_by_path("window.size")
     assert isinstance(size, list)
-    assert len(size) == 2
+    assert len(size) == _SIZE_ELEMENTS
 
 
 def test_get_setting_by_invalid_path(settings_service: SettingsService) -> None:
@@ -116,13 +121,13 @@ def test_update_window_settings(settings_service: SettingsService) -> None:
 
 def test_update_window_settings_invalid_size(settings_service: SettingsService) -> None:
     """不正なサイズでのウィンドウ設定更新のテスト"""
-    with pytest.raises(ValueError, match="サイズは.*2要素のリスト"):
+    with pytest.raises(ValueError, match=r"サイズは.*2要素のリスト"):
         settings_service.update_window_settings(size=[1920])  # 1要素のみ
 
 
 def test_update_window_settings_invalid_position(settings_service: SettingsService) -> None:
     """不正な位置でのウィンドウ設定更新のテスト"""
-    with pytest.raises(ValueError, match="位置は.*2要素のリスト"):
+    with pytest.raises(ValueError, match=r"位置は.*2要素のリスト"):
         settings_service.update_window_settings(position=[200])  # 1要素のみ
 
 

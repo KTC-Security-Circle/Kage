@@ -7,7 +7,6 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_core.runnables import RunnableBinding
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openvino_genai import ChatOpenVINO, OpenVINOLLM, load_model
 from langgraph.checkpoint.sqlite import SqliteSaver
 from loguru import logger
 from pydantic import BaseModel
@@ -160,6 +159,20 @@ def get_model(
             max_retries=3,
         )
     elif provider == LLMProvider.OPENVINO:
+        try:
+            from langchain_openvino_genai import (  # type: ignore[reportMissingImports]
+                ChatOpenVINO,
+                OpenVINOLLM,
+                load_model,
+            )
+        except ImportError as e:
+            err_msg = (
+                "langchain-openvino-genai is not installed. "
+                "Please install it with 'uv sync --extra openvino' or 'pip install .[openvino]' to use."
+            )
+            agents_logger.exception(err_msg)
+            raise ImportError(err_msg) from e
+
         if model_name is None:
             warning_msg = "Model name is not specified. Using default model."
             agents_logger.warning(warning_msg)

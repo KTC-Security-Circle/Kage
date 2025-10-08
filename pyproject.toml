@@ -14,18 +14,20 @@ dependencies = [
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",
     "langchain-huggingface>=0.3.1",
-    "langchain-openvino-genai",
+    "langchain-openvino-genai@git+https://github.com/KTC-Security-Circle/langchain-openvino-genai.git#tag=v0.0.3 ; platform_system == 'Windows'",
     "langgraph>=0.4.8",
     "langgraph-checkpoint-sqlite>=2.0.10",
     "langsmith>=0.3.45",
     "loguru>=0.7.3",
-    "optimum[nncf,openvino]>=1.27.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "python-dotenv>=1.1.0",
     "ruamel-yaml>=0.18.15",
     "sqlmodel>=0.0.24"
 ]
+
+[project.optional-dependencies]
+openvino = ["langchain-openvino-genai@git+https://github.com/KTC-Security-Circle/langchain-openvino-genai.git#tag=v0.0.3"]
 
 [tool.flet]
 # org name in reverse domain name notation, e.g. "com.mycompany".
@@ -42,8 +44,21 @@ company = "Flet"
 # copyright text to display in about app dialogs
 copyright = "Copyright (C) 2025 by Flet"
 
+compile.app = true # --compile-app
+compile.packages = true # --compile-packages
+compile.cleanup = true # --cleanup-on-compile
+
+[tool.flet.flutter.pubspec.dependency_overrides]
+# To resolve the version error occurring during build, refer to the following issue.
+# https://github.com/flet-dev/flet/issues/5666
+webview_flutter_android = "4.9.1"
+
 [tool.flet.app]
 path = "src"
+boot_screen.show = true
+boot_screen.message = "Welcome to Kage!"
+startup_screen.show = true
+startup_screen.message = "Starting up the Kage…"
 
 [project.scripts]
 kage-cli = "cli.main:app"
@@ -77,7 +92,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git", tag = "v0.0.3" }
+# langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git", tag = "v0.0.3" }
 # langchain-openvino-genai = { path = "../langchain-openvino-genai", editable = true }
 
 # Poe the Poet
@@ -86,6 +101,7 @@ langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langc
 # == Essential Commands ==
 setup = ["sync", "migrate"]
 sync = "uv sync"
+sync-all = "uv sync --extra openvino"
 
 # == Application Execution ==
 run = "flet run"

@@ -172,24 +172,71 @@ Fletのコントロールを効果的に使用し、クリーンで応答性の�
 
 ### 5.2. プロジェクト構造
 
-予測可能で保守性の高い開発のため、以下のディレクトリ構造を推奨する。
 
-kage/
-├── app/                  # コアアプリケーションロジック
+予測可能で保守性の高い開発のため、以下の現状のディレクトリ構造例を参照してください。
+
+Kage/
+├── alembic.ini
+├── pyproject.toml
+├── README.md
+├── uv.lock
+├── docs/                 # ドキュメント
+│   ├── app/
+│   ├── dev/
+│   └── ...
+├── scripts/              # 開発用スクリプト
 │   ├── __init__.py
-│   ├── models.py         # データ構造を定義するクラス
-│   ├── services/         # LLM連携などのビジネスロジック
-│   └── views/            # Fletの各画面(View)を定義
-│
-├── assets/               # 画像やフォントなどの静的ファイル
-├── prompts/              # LLMプロンプトテンプレート
+│   └── ...
+├── src/                  # アプリケーション本体
+│   ├── config.py         # 設定管理
+│   ├── logging_conf.py   # ログ設定
+│   ├── main.py           # エントリーポイント
+│   ├── router.py         # ルーティング
+│   ├── agents/           # エージェント関連
+│   ├── assets/           # 画像・フォント等
+│   ├── cli/              # CLI関連
+│   ├── logic/            # ドメインロジック
+│   ├── models/           # データモデル
+│   ├── settings/         # 設定管理
+│   └── views/            # Flet画面(View)
 ├── tests/                # テストコード
-│   ├── unit_tests/
-│   └── integration_tests/
-│
-├── utils/                # 汎用的な補助関数
-├── __main__.py           # アプリケーションのエントリーポイント
-└── config.py             # 設定管理
+│   ├── agents/
+│   ├── logic/
+│   ├── migrations/
+│   ├── settings/
+│   └── ...
+└── migrations/           # DBマイグレーション
+
+※主要なサブディレクトリの役割：
+- src/：アプリケーションのコア実装（エージェント、ロジック、モデル、ビュー等を含む）
+- tests/：pytestによるユニット・統合テスト
+- docs/：開発・設計・利用ドキュメント
+- scripts/：補助スクリプト
+- migrations/：DBマイグレーション関連
+
+src/配下の構成：
+src/
+├── agents/      # LLMエージェント等
+├── assets/      # 画像・フォント等
+├── cli/         # CLIコマンド
+├── logic/       # ビジネスロジック層
+│   ├── application/   # Application Service層（View層とService層の橋渡し、トランザクション管理、CQRSパターン）
+│   ├── commands/      # コマンド（データ変更操作、DTO/バリデーション）
+│   ├── queries/       # クエリ（データ取得操作、検索条件の明確化）
+│   ├── services/      # サービス（ビジネスルール実装、Repository連携）
+│   ├── repositories/  # リポジトリ（データアクセス抽象化、SQLModelベース）
+│   ├── container.py   # 依存性注入コンテナ
+│   ├── factory.py     # ファクトリ
+│   └── unit_of_work.py # Unit of Workパターン
+├── models/      # データモデル
+├── settings/    # 設定管理
+└── views/       # Fletビュー層
+    ├── layout.py      # 全体レイアウト生成
+    ├── shared/        # 共通部品（BaseView, AppBar, エラーハンドリングMixin等）
+    ├── home/          # ホーム画面（view.py, components.py）
+    ├── task/          # タスク管理画面（view.py, components/）
+    │   └── components/    # タスクボード、クイックアクション、ダイアログ等
+    └── __init__.py    # 主要Viewのエクスポート
 
 ### 5.3. アーキテクチャの改善
 

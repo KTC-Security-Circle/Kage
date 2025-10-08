@@ -160,7 +160,11 @@ def get_model(
         )
     elif provider == LLMProvider.OPENVINO:
         try:
-            from langchain_openvino_genai import ChatOpenVINO, OpenVINOLLM, load_model
+            from langchain_openvino_genai import (  # type: ignore[reportMissingImports]
+                ChatOpenVINO,
+                OpenVINOLLM,
+                load_model,
+            )
         except ImportError as e:
             err_msg = (
                 "langchain-openvino-genai is not installed. "

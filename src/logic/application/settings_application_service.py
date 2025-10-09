@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from logic.application.base import BaseApplicationService
 from logic.services.settings_service import SettingsService
 
 if TYPE_CHECKING:
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from settings.models import AgentsSettings, AppSettings, DatabaseSettings, UserSettings, WindowSettings
 
 
-class SettingsApplicationService:
+class SettingsApplicationService(BaseApplicationService[None]):
     """設定管理のApplication Service
 
     設定の読み取りと更新を行う
@@ -39,6 +40,7 @@ class SettingsApplicationService:
 
     def __init__(self) -> None:
         """SettingsApplicationServiceの初期化"""
+        super().__init__()
         self._settings_service = SettingsService()
 
     def get_all_settings(self, query: GetAllSettingsQuery) -> AppSettings:

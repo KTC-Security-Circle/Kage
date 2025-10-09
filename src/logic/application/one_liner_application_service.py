@@ -34,7 +34,7 @@ class OneLinerServiceError(MyBaseError):
         return f"一言コメント生成エラー: {self.arg}"
 
 
-class OneLinerApplicationService(BaseApplicationService):
+class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     """一言コメント生成 Application Service
 
     Task/設定情報を内部で収集し LLM Agent を直接呼び出します。

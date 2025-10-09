@@ -19,6 +19,8 @@ from router import (
     performance_middleware,
 )
 from views.home.view import HomeView
+from views.memo.components import MemoDetailView
+from views.memo.view import MemoCreateView, MemoView
 from views.shared import app_bar
 from views.task.view import TaskView
 
@@ -49,8 +51,29 @@ def setup_enhanced_routing(page: ft.Page) -> None:
         name="task",
     )
 
+    memo_route = create_route_config(
+        path="/memo",
+        view_class=MemoView,
+        app_bar=app_bar(page, "メモ管理"),
+        name="memo",
+    )
+
+    memo_create_route = create_route_config(
+        path="/memo/create",
+        view_class=MemoCreateView,
+        app_bar=app_bar(page, "新規メモ作成"),
+        name="memo_create",
+    )
+
+    memo_detail_route = create_route_config(
+        path="/memo/detail",
+        view_class=MemoDetailView,
+        app_bar=app_bar(page, "メモ詳細"),
+        name="memo_detail",
+    )
+
     # [AI GENERATED] ルートを登録
-    router.register_routes(home_route, task_route)
+    router.register_routes(home_route, task_route, memo_route, memo_create_route, memo_detail_route)
 
     # [AI GENERATED] ミドルウェアを追加
     router.add_middleware(logging_middleware)

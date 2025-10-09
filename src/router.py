@@ -60,7 +60,13 @@ class ViewFactory:
         self._view_instances: dict[type[BaseView], BaseView] = {}
 
     def create_view(
-        self, view_class: type[BaseView], page: ft.Page, route_path: str, *, force_new: bool = False
+        self,
+        view_class: type[BaseView],
+        page: ft.Page,
+        route_path: str,
+        full_route: str | None = None,
+        *,
+        force_new: bool = False,
     ) -> BaseView:
         """ビューを作成または取得する。
 
@@ -68,18 +74,23 @@ class ViewFactory:
             view_class: ビュークラス
             page: Fletのページオブジェクト
             route_path: ルートパス
+            full_route: クエリパラメータを含む完全なルート（キャッシュキー生成用）
             force_new: 強制的に新しいインスタンスを作成するか（キーワード専用）
 
         Returns:
             BaseView: ビューインスタンス
         """
-        cache_key = f"{view_class.__name__}:{route_path}"
+        # [AI GENERATED] クエリパラメータがある場合はそれもキャッシュキーに含める
+        cache_route = full_route if full_route else route_path
+        cache_key = f"{view_class.__name__}:{cache_route}"
 
         if not force_new and cache_key in self._view_cache:
             view = self._view_cache[cache_key]
             # [AI GENERATED] ページオブジェクトが変更されている場合は更新
             if view.page != page:
                 view.page = page
+            # [AI GENERATED] 既存ビューを再利用する際にrefresh()を呼び出してデータを更新
+            view.refresh()
             return view
 
         # [AI GENERATED] 新しいビューインスタンスを作成
@@ -105,6 +116,22 @@ class ViewFactory:
             BaseView | None: キャッシュされたビューまたはNone
         """
         return self._view_instances.get(view_class)
+
+    def is_view_cached(self, view_class: type[BaseView], route_path: str, full_route: str | None = None) -> bool:
+        """ビューがキャッシュされているかを確認する。
+
+        Args:
+            view_class: ビュークラス
+            route_path: ルートパス
+            full_route: クエリパラメータを含む完全なルート
+
+        Returns:
+            bool: キャッシュされている場合True
+        """
+        # [AI GENERATED] クエリパラメータがある場合はそれもキャッシュキーに含める
+        cache_route = full_route if full_route else route_path
+        cache_key = f"{view_class.__name__}:{cache_route}"
+        return cache_key in self._view_cache
 
     def clear_cache(self, view_class: type[BaseView] | None = None) -> None:
         """ビューキャッシュをクリアする。
@@ -213,7 +240,9 @@ class FletNativeRouter:
                 logger.error(f"ミドルウェアエラー: {middleware_error}")
 
         # [AI GENERATED] ルート設定を取得
-        route_config = self._routes.get(e.route)
+        # クエリパラメータを除去してベースパスで検索
+        base_route = e.route.split("?")[0] if "?" in e.route else e.route
+        route_config = self._routes.get(base_route)
         if not route_config:
             logger.warning(f"未登録ルート: {e.route}")
             self._handle_not_found()
@@ -239,16 +268,25 @@ class FletNativeRouter:
             route_config: ルート設定
         """
         try:
-            view = self._view_factory.create_view(route_config.view_class, self.page, route_config.path)
+            # [AI GENERATED] クエリパラメータ付きの実際のルートを取得
+            actual_route = self.page.route
+            view = self._view_factory.create_view(
+                route_config.view_class, self.page, route_config.path, full_route=actual_route
+            )
 
+            # [AI GENERATED] 既に取得済みの実際のルートを使用
             flet_view = ft.View(
-                route=route_config.path,
+                route=actual_route,
                 controls=[view],
                 appbar=route_config.app_bar,
             )
 
             self.page.views.append(flet_view)
             self.page.update()
+
+            # [AI GENERATED] ビューがページに追加された後でrefreshを呼び出し（キャッシュされたビューの場合）
+            if self._view_factory.is_view_cached(route_config.view_class, route_config.path):
+                view.refresh()
 
             # [AI GENERATED] 現在のビューを更新
             self._current_view = view

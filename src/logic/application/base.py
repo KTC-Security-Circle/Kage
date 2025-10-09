@@ -11,14 +11,14 @@ if TYPE_CHECKING:
     from logic.unit_of_work import UnitOfWork
 
 
-class BaseApplicationService:
+class BaseApplicationService[T: type[UnitOfWork] | None]:
     """Application Service基底クラス
 
     全てのApplication Serviceが継承すべき基底クラス。
     Unit of Workを使用してトランザクション管理を行います。
     """
 
-    def __init__(self, unit_of_work_factory: type[UnitOfWork]) -> None:
+    def __init__(self, unit_of_work_factory: T = None) -> None:
         """BaseApplicationServiceの初期化
 
         Args:

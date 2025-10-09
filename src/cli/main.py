@@ -14,6 +14,7 @@ from cli.commands import (
     agent,  # 新規エージェントコマンド
     memo,
     project,
+    settings,
     tag,
     task,
     task_qa,  # 新規クイックアクションコマンド
@@ -32,6 +33,7 @@ app.add_typer(memo.app, name="memo")
 app.add_typer(task_qa.app, name="task-qa")
 app.add_typer(task_status.app, name="task-status")
 app.add_typer(agent.app, name="agent")
+app.add_typer(settings.app, name="settings")
 
 
 @app.callback()

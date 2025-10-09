@@ -27,17 +27,16 @@ if TYPE_CHECKING:
         GetTaskTagsByTagIdQuery,
         GetTaskTagsByTaskIdQuery,
     )
-    from logic.unit_of_work import UnitOfWork
     from models import TaskTagRead
 
 
-class TaskTagApplicationService(BaseApplicationService):
+class TaskTagApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     """タスクタグ管理のApplication Service
 
     View層からSession管理を分離し、ビジネスロジックを調整する層
     """
 
-    def __init__(self, unit_of_work_factory: type[UnitOfWork] = SqlModelUnitOfWork) -> None:
+    def __init__(self, unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork) -> None:
         """TaskTagApplicationServiceの初期化
 
         Args:

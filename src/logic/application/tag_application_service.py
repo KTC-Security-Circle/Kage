@@ -16,17 +16,16 @@ from logic.unit_of_work import SqlModelUnitOfWork
 if TYPE_CHECKING:
     from logic.commands.tag_commands import CreateTagCommand, DeleteTagCommand, UpdateTagCommand
     from logic.queries.tag_queries import GetAllTagsQuery, GetTagByIdQuery, SearchTagsByNameQuery
-    from logic.unit_of_work import UnitOfWork
     from models import TagRead
 
 
-class TagApplicationService(BaseApplicationService):
+class TagApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     """タグ管理のApplication Service
 
     View層からSession管理を分離し、ビジネスロジックを調整する層
     """
 
-    def __init__(self, unit_of_work_factory: type[UnitOfWork] = SqlModelUnitOfWork) -> None:
+    def __init__(self, unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork) -> None:
         """TagApplicationServiceの初期化
 
         Args:

@@ -24,17 +24,16 @@ if TYPE_CHECKING:
         GetProjectByIdQuery,
         SearchProjectsByTitleQuery,
     )
-    from logic.unit_of_work import UnitOfWork
     from models import ProjectRead
 
 
-class ProjectApplicationService(BaseApplicationService):
+class ProjectApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     """プロジェクト管理のApplication Service
 
     View層からSession管理を分離し、ビジネスロジックを調整する層
     """
 
-    def __init__(self, unit_of_work_factory: type[UnitOfWork] = SqlModelUnitOfWork) -> None:
+    def __init__(self, unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork) -> None:
         """ProjectApplicationServiceの初期化
 
         Args:

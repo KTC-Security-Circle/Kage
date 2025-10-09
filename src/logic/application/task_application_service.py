@@ -33,17 +33,16 @@ if TYPE_CHECKING:
         GetTasksByStatusQuery,
         GetTodayTasksCountQuery,
     )
-    from logic.unit_of_work import UnitOfWork
     from models import QuickActionCommand, TaskRead, TaskStatus
 
 
-class TaskApplicationService(BaseApplicationService):
+class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     """タスク管理のApplication Service
 
     View層からSession管理を分離し、ビジネスロジックを調整する層
     """
 
-    def __init__(self, unit_of_work_factory: type[UnitOfWork] = SqlModelUnitOfWork) -> None:
+    def __init__(self, unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork) -> None:
         """TaskApplicationServiceの初期化
 
         Args:

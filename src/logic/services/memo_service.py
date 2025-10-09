@@ -224,7 +224,6 @@ class MemoService(ServiceBase[MemoServiceError]):
             MemoServiceGetError: メモ取得に失敗した場合
         """
         try:
-            logger.info(f"メモサービス: IDでメモを取得中 {memo_id}")
             memo = self.memo_repo.get_by_id(memo_id)
             if not memo:
                 logger.warning(f"メモサービス: メモが見つかりませんでした {memo_id}")

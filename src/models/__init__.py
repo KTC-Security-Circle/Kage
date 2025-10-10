@@ -190,7 +190,7 @@ class MemoBase(SQLModel):
         content (str): メモの内容。デフォルトは空文字列。
         status (MemoStatus): メモの状態。デフォルトはInbox。
         ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNotRequested。
-        ai_analysis_log (dict | None): AI分析のログ情報。デフォルトはNone。
+        ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
         created_at (datetime): メモの作成日時。デフォルトは現在日時。
         updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
         processed_at (datetime | None): メモが最後に処理された日時。デフォルトはNone。
@@ -247,7 +247,7 @@ class MemoCreate(MemoBase):
         content (str): メモの内容。デフォルトは空文字列。
         status (MemoStatus): メモの状態。デフォルトはInbox。
         ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNotRequested。
-        ai_analysis_log (dict | None): AI分析のログ情報。デフォルトはNone。
+        ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
         created_at (datetime): メモの作成日時。デフォルトは現在日時。
         updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
         processed_at (datetime | None): メモが最後に処理された日時。デフォルトはNone。
@@ -265,7 +265,7 @@ class MemoRead(MemoBase):
         content (str): メモの内容。デフォルトは空文字列。
         status (MemoStatus): メモの状態。デフォルトはInbox。
         ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNotRequested。
-        ai_analysis_log (dict | None): AI分析のログ情報。デフォルトはNone。
+        ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
         created_at (datetime): メモの作成日時。デフォルトは現在日時。
         updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
         processed_at (datetime | None): メモが最後に処理された日時。デフォルトはNone。

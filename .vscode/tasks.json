@@ -6,7 +6,7 @@
         {
             "label": "uv sync",
             "type": "shell",
-            "command": "poe sync",
+            "command": "uv run poe sync",
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -19,7 +19,7 @@
         {
             "label": "alembic upgrade",
             "type": "shell", 
-            "command": "poe migrate",
+            "command": "uv run poe migrate",
             "group": "build",
             "options": {
                 "cwd": "${workspaceFolder}"

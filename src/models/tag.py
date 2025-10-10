@@ -1,20 +1,41 @@
 """Tagモデルの定義"""
 
 import uuid
+from datetime import datetime
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+from models.memo import Memo
+from models.memo_tag import MemoTagLink
+from models.task import Task
+from models.task_tag import TaskTagLink
 
 
 class TagBase(SQLModel):
-    """タグの基本モデル
-
-    タグの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
+    """タスクやメモを横断的に分類するタグのモデル。
 
     Attributes:
-        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
+        name: タグ名。
+        description: タグの目的や概要。
+        color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
+        created_at: タグの作成日時。
+        updated_at: タグの最終更新日時。
+        tasks: このタグが付けられたタスクのリスト。
+        memos: このタグが付けられたメモのリスト。
     """
 
-    name: str = Field(index=True)
+    name: str = Field(unique=True, index=True)
+    description: str | None = None
+    color: str | None = None
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    updated_at: datetime = Field(
+        default_factory=datetime.now,
+        sa_column_kwargs={"onupdate": datetime.now},
+        nullable=False,
+    )
+
+    tasks: list[Task] = Relationship(back_populates="tags", link_model=TaskTagLink)
+    memos: list[Memo] = Relationship(back_populates="tags", link_model=MemoTagLink)
 
 
 class Tag(TagBase, table=True):
@@ -23,9 +44,17 @@ class Tag(TagBase, table=True):
     タグの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id (uuid.UUID | None): タグのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
-        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
+        id: タグを一意に識別するID。
+        name: タグ名。
+        description: タグの目的や概要。
+        color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
+        created_at: タグの作成日時。
+        updated_at: タグの最終更新日時。
+        tasks: このタグが付けられたタスクのリスト。
+        memos: このタグが付けられたメモのリスト。
     """
+
+    __tablename__ = "tags"  # pyright: ignore[reportAssignmentType]
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
 
@@ -36,7 +65,14 @@ class TagCreate(TagBase):
     タグを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
+        id: タグを一意に識別するID。
+        name: タグ名。
+        description: タグの目的や概要。
+        color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
+        created_at: タグの作成日時。
+        updated_at: タグの最終更新日時。
+        tasks: このタグが付けられたタスクのリスト。
+        memos: このタグが付けられたメモのリスト。
     """
 
 
@@ -46,8 +82,14 @@ class TagRead(TagBase):
     タグの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id (uuid.UUID): タグのID。
-        name (str): タグ名（例: @PC, #重要）。インデックスが設定されており、検索に使用されます。
+        id: タグを一意に識別するID。
+        name: タグ名。
+        description: タグの目的や概要。
+        color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
+        created_at: タグの作成日時。
+        updated_at: タグの最終更新日時。
+        tasks: このタグが付けられたタスクのリスト。
+        memos: このタグが付けられたメモのリスト。
     """
 
     id: uuid.UUID
@@ -59,7 +101,11 @@ class TagUpdate(SQLModel):
     タグの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        name (str | None): タグ名。Noneの場合は更新しない。
+        name: タグ名。
+        description: タグの目的や概要。
+        color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
     """
 
     name: str | None = None
+    description: str | None = None
+    color: str | None = None

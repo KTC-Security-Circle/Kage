@@ -1,13 +1,23 @@
 """Projectモデルの定義"""
 
 import uuid
+from datetime import date, datetime
 from enum import Enum
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+from models.task import Task
 
 
 class ProjectStatus(str, Enum):
-    """プロジェクトのステータス"""
+    """プロジェクトのステータス
+
+    Attributes:
+        ACTIVE: プロジェクトが進行中であることを示します。
+        ON_HOLD: プロジェクトが一時停止中であることを示します。
+        COMPLETED: プロジェクトが完了したことを示します。
+        CANCELLED: プロジェクトがキャンセルされたことを示します。
+    """
 
     ACTIVE = "active"
     ON_HOLD = "on_hold"
@@ -16,19 +26,30 @@ class ProjectStatus(str, Enum):
 
 
 class ProjectBase(SQLModel):
-    """プロジェクトの基本モデル
-
-    プロジェクトの基本情報を定義するモデルクラス。SQLModelを使用してデータベースと連携します。
+    """複数のタスクを束ねる「成果」や「結果」を管理するプロジェクトのモデル。
 
     Attributes:
-        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
-        description (str): プロジェクトの説明。デフォルトは空文字列。
-        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
+        title: プロジェクトの名称。
+        description: プロジェクトの目的や概要。
+        status: プロジェクト全体の進捗状況。
+        due_date: プロジェクト全体の完了目標日。
+        created_at: プロジェクトの作成日時。
+        updated_at: プロジェクトの最終更新日時。
+        tasks: このプロジェクトに属するタスクのリスト。
     """
 
     title: str = Field(index=True)
-    description: str = Field(default="")
-    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, index=True)
+    description: str | None = None
+    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
+    due_date: date | None = None
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    updated_at: datetime = Field(
+        default_factory=datetime.now,
+        sa_column_kwargs={"onupdate": datetime.now},
+        nullable=False,
+    )
+
+    tasks: list[Task] = Relationship(back_populates="project")
 
 
 class Project(ProjectBase, table=True):
@@ -37,11 +58,17 @@ class Project(ProjectBase, table=True):
     プロジェクトの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id (uuid.UUID | None): プロジェクトのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
-        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
-        description (str): プロジェクトの説明。デフォルトは空文字列。
-        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
+        id: プロジェクトを一意に識別するID。
+        title: プロジェクトの名称。
+        description: プロジェクトの目的や概要。
+        status: プロジェクト全体の進捗状況。
+        due_date: プロジェクト全体の完了目標日。
+        created_at: プロジェクトの作成日時。
+        updated_at: プロジェクトの最終更新日時。
+        tasks: このプロジェクトに属するタスクのリスト。
     """
+
+    __tablename__ = "projects"  # pyright: ignore[reportAssignmentType]
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
 
@@ -52,9 +79,14 @@ class ProjectCreate(ProjectBase):
     プロジェクトを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
-        description (str): プロジェクトの説明。デフォルトは空文字列。
-        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
+        id: プロジェクトを一意に識別するID。
+        title: プロジェクトの名称。
+        description: プロジェクトの目的や概要。
+        status: プロジェクト全体の進捗状況。
+        due_date: プロジェクト全体の完了目標日。
+        created_at: プロジェクトの作成日時。
+        updated_at: プロジェクトの最終更新日時。
+        tasks: このプロジェクトに属するタスクのリスト。
     """
 
 
@@ -64,10 +96,14 @@ class ProjectRead(ProjectBase):
     プロジェクトの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id (uuid.UUID): プロジェクトのID。
-        title (str): プロジェクト名。インデックスが設定されており、検索に使用されます。
-        description (str): プロジェクトの説明。デフォルトは空文字列。
-        status (ProjectStatus): プロジェクトのステータス。デフォルトはACTIVE。
+        id: プロジェクトを一意に識別するID。
+        title: プロジェクトの名称。
+        description: プロジェクトの目的や概要。
+        status: プロジェクト全体の進捗状況。
+        due_date: プロジェクト全体の完了目標日。
+        created_at: プロジェクトの作成日時。
+        updated_at: プロジェクトの最終更新日時。
+        tasks: このプロジェクトに属するタスクのリスト。
     """
 
     id: uuid.UUID
@@ -79,11 +115,13 @@ class ProjectUpdate(SQLModel):
     プロジェクトの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        title (str | None): プロジェクト名。Noneの場合は更新しない。
-        description (str | None): プロジェクトの説明。Noneの場合は更新しない。
-        status (ProjectStatus | None): プロジェクトのステータス。Noneの場合は更新しない。
+        title: プロジェクトの名称。
+        description: プロジェクトの目的や概要。
+        status: プロジェクト全体の進捗状況。
+        due_date: プロジェクト全体の完了目標日。
     """
 
     title: str | None = None
     description: str | None = None
     status: ProjectStatus | None = None
+    due_date: date | None = None

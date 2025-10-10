@@ -408,7 +408,7 @@ class TagBase(SQLModel):
         created_at: タグの作成日時。
         updated_at: タグの最終更新日時。
         tasks: このタグが付けられたタスクのリスト。
-        memos: sこのタグが付けられたメモのリスト。
+        memos: このタグが付けられたメモのリスト。
     """
 
     name: str = Field(unique=True, index=True)

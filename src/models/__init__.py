@@ -1,3 +1,54 @@
+"""データベースモデルの定義
+
+このモジュールでは、SQLModelを使用してデータベースモデルを定義しています。
+各モデルは、アプリケーション内で使用されるエンティティ（タスク、プロジェクト、メモ、タグなど）を表現しています。
+
+各モデルクラスは、SQLModelの基礎クラスを継承したBaseクラスがあり、そこから派生した各エンティティのモデルクラスが定義されています。
+
+- Baseクラス: SQLModelの基礎クラス。
+- データベースモデルクラス: 各エンティティのデータベースモデルを定義するクラス。
+- Readクラス: データベースからの読み取り専用のモデル。
+- Createクラス: 新規作成用のモデル。
+- Updateクラス: 更新用のモデル。
+
+
+Attributes:
+    Base: SQLModelの基礎クラス。
+
+    ## ステータス用列挙型
+    TaskStatus: タスクのステータスを表す列挙型。
+    ProjectStatus: プロジェクトのステータスを表す列挙型。
+    AiSuggestionStatus: AI提案のステータスを表す列挙型。
+    MemoStatus: メモのステータスを表す列挙型。
+
+    ## モデルクラス
+    Task: タスクモデル。
+    TaskCreate: タスク作成用モデル。
+    TaskRead: タスク読み取り用モデル。
+    TaskUpdate: タスク更新用モデル。
+    Project: プロジェクトモデル。
+    ProjectCreate: プロジェクト作成用モデル。
+    ProjectRead: プロジェクト読み取り用モデル。
+    ProjectUpdate: プロジェクト更新用モデル。
+    Memo: メモモデル。
+    MemoCreate: メモ作成用モデル。
+    MemoRead: メモ読み取り用モデル。
+    MemoUpdate: メモ更新用モデル。
+    Tag: タグモデル。
+    TagCreate: タグ作成用モデル。
+    TagRead: タグ読み取り用モデル。
+    TagUpdate: タグ更新用モデル。
+    TaskTagLink: タスクとタグの中間テーブルモデル。
+    TaskTagLinkCreate: タスクとタグの関連作成用モデル。
+    TaskTagLinkRead: タスクとタグの関連読み取り用モデル。
+    MemoTagLink: メモとタグの中間テーブルモデル。
+    MemoTagLinkCreate: メモとタグの関連作成用モデル。
+    MemoTagLinkRead: メモとタグの関連読み取り用モデル。
+"""
+
+# tablename用 ignore
+# pyright: reportAssignmentType=false
+
 from __future__ import annotations
 
 import uuid
@@ -7,6 +58,11 @@ from enum import Enum
 from sqlmodel import Field, Relationship, SQLModel
 
 
+# ==============================================================================
+# ==============================================================================
+# Enums (列挙型)
+# ==============================================================================
+# ==============================================================================
 class MemoStatus(str, Enum):
     """メモの状態を表す列挙型
 
@@ -81,16 +137,15 @@ class TaskStatus(str, Enum):
     OVERDUE = "overdue"
 
 
-class MemoTagLinkBase(SQLModel):
-    """メモとタグの中間テーブルモデル。
+# ==============================================================================
+# ==============================================================================
+# Link Models (中間テーブルモデル)
+# 中間テーブルは読み書きする際のBase/Create/Readモデルを定義しない
+# ==============================================================================
+# ==============================================================================
 
-    Attributes:
-        memo_id: 関連するメモのID。
-        tag_id: 関連するタグのID。
-    """
 
-
-class MemoTagLink(MemoTagLinkBase, table=True):
+class MemoTagLink(SQLModel, table=True):
     """メモとタグの関連モデル
 
     メモとタグの多対多関係をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -100,47 +155,13 @@ class MemoTagLink(MemoTagLinkBase, table=True):
         tag_id (uuid.UUID): タグのID。複合主キーの一部。
     """
 
-    __tablename__ = "memo_tag"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "memo_tag"
 
-    memo_id: uuid.UUID | None = Field(default=None, foreign_key="memos.id", primary_key=True)
-    tag_id: uuid.UUID | None = Field(default=None, foreign_key="tags.id", primary_key=True)
-
-
-class MemoTagLinkCreate(MemoTagLinkBase):
-    """メモとタグの関連作成用モデル
-
-    メモとタグの関連を新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
-
-    Attributes:
-        memo_id (uuid.UUID): メモのID。
-        tag_id (uuid.UUID): タグのID。
-    """
+    memo_id: uuid.UUID = Field(foreign_key="memos.id", primary_key=True)
+    tag_id: uuid.UUID = Field(foreign_key="tags.id", primary_key=True)
 
 
-class MemoTagLinkRead(MemoTagLinkBase):
-    """メモとタグの関連読み取り用モデル
-
-    メモとタグの関連情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
-
-    Attributes:
-        memo_id (uuid.UUID): メモのID。
-        tag_id (uuid.UUID): タグのID。
-    """
-
-    memo_id: uuid.UUID
-    tag_id: uuid.UUID
-
-
-class TaskTagLinkBase(SQLModel):
-    """タスクとタグの中間テーブルモデル。
-
-    Attributes:
-        task_id: 関連するタスクのID。
-        tag_id: 関連するタグのID。
-    """
-
-
-class TaskTagLink(TaskTagLinkBase, table=True):
+class TaskTagLink(SQLModel, table=True):
     """タスクとタグの関連モデル
 
     タスクとタグの多対多関係をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -150,46 +171,25 @@ class TaskTagLink(TaskTagLinkBase, table=True):
         tag_id (uuid.UUID): タグのID。複合主キーの一部。
     """
 
-    __tablename__ = "task_tag"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "task_tag"
 
-    task_id: uuid.UUID | None = Field(default=None, foreign_key="tasks.id", primary_key=True)
-    tag_id: uuid.UUID | None = Field(default=None, foreign_key="tags.id", primary_key=True)
-
-
-class TaskTagLinkCreate(TaskTagLinkBase):
-    """タスクとタグの関連作成用モデル
-
-    タスクとタグの関連を新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
-
-    Attributes:
-        task_id (uuid.UUID): タスクのID。
-        tag_id (uuid.UUID): タグのID。
-    """
+    task_id: uuid.UUID = Field(foreign_key="tasks.id", primary_key=True)
+    tag_id: uuid.UUID = Field(foreign_key="tags.id", primary_key=True)
 
 
-class TaskTagLinkRead(TaskTagLinkBase):
-    """タスクとタグの関連読み取り用モデル
-
-    タスクとタグの関連情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
-
-    Attributes:
-        task_id (uuid.UUID): タスクのID。
-        tag_id (uuid.UUID): タグのID。
-    """
-
-    task_id: uuid.UUID
-    tag_id: uuid.UUID
-
-
+# ==============================================================================
+# ==============================================================================
+# Memo Models (メモモデル)
+# ==============================================================================
+# ==============================================================================
 class MemoBase(SQLModel):
     """メモの基本モデル
 
     Attributes:
-        title (str): メモのタイトル。インデックスが設定されており
-                     検索可能です。
+        title (str): メモのタイトル。インデックスが設定されており検索可能です。
         content (str): メモの内容。デフォルトは空文字列。
         status (MemoStatus): メモの状態。デフォルトはInbox。
-        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNotRequested。
+        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNOT_REQUESTED。
         ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
         created_at (datetime): メモの作成日時。デフォルトは現在日時。
         updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
@@ -201,7 +201,6 @@ class MemoBase(SQLModel):
     status: MemoStatus = Field(default=MemoStatus.INBOX, index=True)
     ai_suggestion_status: AiSuggestionStatus = Field(default=AiSuggestionStatus.NOT_REQUESTED, index=True)
     ai_analysis_log: str | None = Field(default=None)
-
     created_at: datetime = Field(default_factory=datetime.now, nullable=False)
     updated_at: datetime = Field(
         default_factory=datetime.now,
@@ -229,10 +228,9 @@ class Memo(MemoBase, table=True):
         tags: このメモに付けられたタグのリスト。
     """
 
-    __tablename__ = "memos"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "memos"
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
-
     tasks: list[Task] = Relationship(back_populates="memo")
     tags: list[Tag] = Relationship(back_populates="memos", link_model=MemoTagLink)
 
@@ -243,10 +241,10 @@ class MemoCreate(MemoBase):
     メモを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        title (str): メモのタイトル。インデックスが設定されており、検索可能です。
+        title (str): メモのタイトル。インデックスが設定されており検索可能です。
         content (str): メモの内容。デフォルトは空文字列。
         status (MemoStatus): メモの状態。デフォルトはInbox。
-        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNotRequested。
+        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNOT_REQUESTED。
         ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
         created_at (datetime): メモの作成日時。デフォルトは現在日時。
         updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
@@ -260,11 +258,11 @@ class MemoRead(MemoBase):
     メモの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id (uuid.UUID): メモのID。
-        title (str): メモのタイトル。インデックスが設定されており、検索可能です。
+        id (uuid.UUID): メモを一意に識別するID。
+        title (str): メモのタイトル。インデックスが設定されており検索可能です。
         content (str): メモの内容。デフォルトは空文字列。
         status (MemoStatus): メモの状態。デフォルトはInbox。
-        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNotRequested。
+        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNOT_REQUESTED。
         ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
         created_at (datetime): メモの作成日時。デフォルトは現在日時。
         updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
@@ -278,22 +276,30 @@ class MemoUpdate(SQLModel):
     """メモ更新用モデル
 
     メモの情報を更新する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
+    Noneが指定された属性は更新されません。
 
     Attributes:
-        title (str | None): メモのタイトル。Noneの場合は更新しない。
-        content (str | None): メモの内容。Noneの場合は更新しない。
-        status (MemoStatus | None): メモの状態。Noneの場合は更新しない。
-        ai_suggestion_status (AiSuggestionStatus | None): AI提案の状態。Noneの場合は更新しない。
-        ai_analysis_log (dict | None): AI分析のログ情報。Noneの場合は更新しない。
-        processed_at (datetime | None): メモが最後に処理された日時。Noneの場合は更新しない。
+        title (str | None): メモのタイトル。
+        content (str | None): メモの内容。
+        status (MemoStatus | None): メモの状態。
+        ai_suggestion_status (AiSuggestionStatus | None): AI提案の状態。
+        ai_analysis_log (str | None): AI分析のログ情報。
+        processed_at (datetime | None): メモが最後に処理された日時。
     """
 
     title: str | None = None
     content: str | None = None
     status: MemoStatus | None = None
     ai_suggestion_status: AiSuggestionStatus | None = None
-    ai_analysis_log: dict | None = None
+    ai_analysis_log: str | None = None
     processed_at: datetime | None = None
+
+
+# ==============================================================================
+# ==============================================================================
+# Project Models (プロジェクトモデル)
+# ==============================================================================
+# ==============================================================================
 
 
 class ProjectBase(SQLModel):
@@ -306,7 +312,6 @@ class ProjectBase(SQLModel):
         due_date: プロジェクト全体の完了目標日。
         created_at: プロジェクトの作成日時。
         updated_at: プロジェクトの最終更新日時。
-        tasks: このプロジェクトに属するタスクのリスト。
     """
 
     title: str = Field(index=True)
@@ -337,10 +342,9 @@ class Project(ProjectBase, table=True):
         tasks: このプロジェクトに属するタスクのリスト。
     """
 
-    __tablename__ = "projects"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "projects"
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
-
     tasks: list[Task] = Relationship(back_populates="project")
 
 
@@ -350,14 +354,12 @@ class ProjectCreate(ProjectBase):
     プロジェクトを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id: プロジェクトを一意に識別するID。
         title: プロジェクトの名称。
         description: プロジェクトの目的や概要。
         status: プロジェクト全体の進捗状況。
         due_date: プロジェクト全体の完了目標日。
         created_at: プロジェクトの作成日時。
         updated_at: プロジェクトの最終更新日時。
-        tasks: このプロジェクトに属するタスクのリスト。
     """
 
 
@@ -374,7 +376,6 @@ class ProjectRead(ProjectBase):
         due_date: プロジェクト全体の完了目標日。
         created_at: プロジェクトの作成日時。
         updated_at: プロジェクトの最終更新日時。
-        tasks: このプロジェクトに属するタスクのリスト。
     """
 
     id: uuid.UUID
@@ -398,6 +399,13 @@ class ProjectUpdate(SQLModel):
     due_date: date | None = None
 
 
+# ==============================================================================
+# ==============================================================================
+# Tag Models (タグモデル)
+# ==============================================================================
+# ==============================================================================
+
+
 class TagBase(SQLModel):
     """タスクやメモを横断的に分類するタグのモデル。
 
@@ -407,8 +415,6 @@ class TagBase(SQLModel):
         color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
         created_at: タグの作成日時。
         updated_at: タグの最終更新日時。
-        tasks: このタグが付けられたタスクのリスト。
-        memos: このタグが付けられたメモのリスト。
     """
 
     name: str = Field(unique=True, index=True)
@@ -438,10 +444,9 @@ class Tag(TagBase, table=True):
         memos: このタグが付けられたメモのリスト。
     """
 
-    __tablename__ = "tags"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "tags"
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
-
     tasks: list[Task] = Relationship(back_populates="tags", link_model=TaskTagLink)
     memos: list[Memo] = Relationship(back_populates="tags", link_model=MemoTagLink)
 
@@ -452,14 +457,11 @@ class TagCreate(TagBase):
     タグを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id: タグを一意に識別するID。
         name: タグ名。
         description: タグの目的や概要。
         color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
         created_at: タグの作成日時。
         updated_at: タグの最終更新日時。
-        tasks: このタグが付けられたタスクのリスト。
-        memos: このタグが付けられたメモのリスト。
     """
 
 
@@ -474,9 +476,7 @@ class TagRead(TagBase):
         description: タグの目的や概要。
         color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
         created_at: タグの作成日時。
-        updated_at: タグの最終更新日時。
-        tasks: このタグが付けられたタスクのリスト。
-        memos: このタグが付けられたメモのリスト。
+        updated_at: タグの最終更新日時
     """
 
     id: uuid.UUID
@@ -502,6 +502,44 @@ class TaskBase(SQLModel):
     """タスクの基本モデル
 
     Attributes:
+        title: タスクのタイトル。
+        description: タスクの詳細な説明。
+        status: タスクの状態。
+        due_date: タスクの期限日。
+        completed_at: タスクの完了日時。
+        project_id: このタスクが属するプロジェクトのID。
+        memo_id: このタスクの生成元となったメモのID。
+        is_recurring: 繰り返しタスクかどうかを示すフラグ。
+        recurrence_rule: 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
+        created_at: タスクの作成日時。
+        updated_at: タスクの最終更新日時。
+    """
+
+    title: str = Field(index=True)
+    description: str | None = None
+    status: TaskStatus = Field(default=TaskStatus.TODO, index=True)
+    due_date: date | None = Field(default=None, index=True)
+    completed_at: datetime | None = None
+    is_recurring: bool = Field(default=False)
+    recurrence_rule: str | None = None
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    updated_at: datetime = Field(
+        default_factory=datetime.now,
+        sa_column_kwargs={"onupdate": datetime.now},
+        nullable=False,
+    )
+
+    # foreign keys
+    project_id: uuid.UUID | None = Field(default=None, foreign_key="projects.id", nullable=True, index=True)
+    memo_id: uuid.UUID | None = Field(default=None, foreign_key="memos.id", nullable=True)
+
+
+class Task(TaskBase, table=True):
+    """新しいタスクモデル
+
+    タスクの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
         id: タスクを一意に識別するID。
         title: タスクのタイトル。
         description: タスクの詳細な説明。
@@ -519,52 +557,9 @@ class TaskBase(SQLModel):
         tags: このタスクに付けられたタグのリスト。
     """
 
-    title: str = Field(index=True)
-    description: str | None = None
-    status: TaskStatus = Field(default=TaskStatus.TODO, index=True)
-    due_date: date | None = Field(default=None, index=True)
-    completed_at: datetime | None = None
-    project_id: uuid.UUID | None = Field(default=None, foreign_key="projects.id", nullable=True, index=True)
-    memo_id: uuid.UUID | None = Field(default=None, foreign_key="memos.id", nullable=True)
-    is_recurring: bool = Field(default=False)
-    recurrence_rule: str | None = None
-    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    updated_at: datetime = Field(
-        default_factory=datetime.now,
-        sa_column_kwargs={"onupdate": datetime.now},
-        nullable=False,
-    )
-
-
-class Task(TaskBase, table=True):
-    """新しいタスクモデル
-
-    タスクの情報をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
-
-    Attributes:
-        id (uuid.UUID | None): タスクのID。デフォルトはNoneで、データベースに保存時に自動生成されます。
-        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
-        description (str): タスクの詳細な説明。
-        status (TaskStatus): タスクの状態。デフォルトはTODO。
-        due_date (date | None): タスクの期限日。設定されていない場合はNone。
-        completed_at (datetime | None): タスクの完了日時。設定されていない場合はNone。
-        project_id (int | None): このタスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
-        memo_id (int | None): このタスクの生成元となったメモのID。メモから生成されていないタスクの場合はNone。
-        is_recurring (bool): 繰り返しタスクかどうかを示すフラグ。デフォルトはFalse。
-        recurrence_rule (str | None): 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
-                                        設定されていない場合はNone。
-        created_at (datetime): タスクの作成日時。デフォルトは現在のUTC日時。
-        updated_at (datetime): タスクの最終更新日時。デフォルトは現在のUTC日時で、更新時に自動的に更新されます。
-        project (Project | None): このタスクが属するプロジェクトのオブジェクト。
-                                    プロジェクトに属さないタスクの場合はNone。
-        memo (Memo | None): このタスクの生成元となったメモのオブジェクト。メモから生成されていないタスクの場合はNone。
-        tags (list[Tag]): このタスクに付けられたタグのリスト。
-    """
-
-    __tablename__ = "tasks"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "tasks"
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
-
     project: Project | None = Relationship(back_populates="tasks")
     memo: Memo | None = Relationship(back_populates="tasks")
     tags: list[Tag] = Relationship(back_populates="tasks", link_model=TaskTagLink)
@@ -576,16 +571,17 @@ class TaskCreate(TaskBase):
     タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
-        description (str | None): タスクの詳細な説明。
-        status (TaskStatus): タスクの状態。デフォルトはTODO。
-        due_date (date | None): タスクの期限日。設定されていない場合はNone。
-        completed_at (datetime | None): タスクの完了日時。設定されていない場合はNone。
-        project_id (int | None): このタスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
-        memo_id (int | None): このタスクの生成元となったメモのID。メモから生成されていないタスクの場合はNone。
-        is_recurring (bool): 繰り返しタスクかどうかを示すフラグ。デフォルトはFalse。
-        recurrence_rule (str | None): 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
-                                        設定されていない場合はNone。
+        title: タスクのタイトル。
+        description: タスクの詳細な説明。
+        status: タスクの状態。
+        due_date: タスクの期限日。
+        completed_at: タスクの完了日時。
+        project_id: このタスクが属するプロジェクトのID。
+        memo_id: このタスクの生成元となったメモのID。
+        is_recurring: 繰り返しタスクかどうかを示すフラグ。
+        recurrence_rule: 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
+        created_at: タスクの作成日時。
+        updated_at: タスクの最終更新日時。
     """
 
 
@@ -595,23 +591,18 @@ class TaskRead(TaskBase):
     タスクの情報を読み取る際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        id (uuid.UUID): タスクのID。
-        title (str): タスクのタイトル。インデックスが設定されており、検索に使用されます。
-        description (str): タスクの詳細な説明。
-        status (TaskStatus): タスクの状態。デフォルトはTODO。
-        due_date (date | None): タスクの期限日。設定されていない場合はNone。
-        completed_at (datetime | None): タスクの完了日時。設定されていない場合はNone。
-        project_id (int | None): このタスクが属するプロジェクトのID。プロジェクトに属さないタスクの場合はNone。
-        memo_id (int | None): このタスクの生成元となったメモのID。メモから生成されていないタスクの場合はNone。
-        is_recurring (bool): 繰り返しタスクかどうかを示すフラグ。デフォルトはFalse。
-        recurrence_rule (str | None): 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
-                                        設定されていない場合はNone。
-        created_at (datetime): タスクの作成日時。
-        updated_at (datetime): タスクの最終更新日時。
-        project (Project | None): このタスクが属するプロジェクトのオブジェクト。
-                                    プロジェクトに属さないタスクの場合はNone。
-        memo (Memo | None): このタスクの生成元となったメモのオブジェクト。メモから生成されていないタスクの場合はNone。
-        tags (list[Tag]): このタスクに付けられたタグのリスト。
+        id: タスクを一意に識別するID。
+        title: タスクのタイトル。
+        description: タスクの詳細な説明。
+        status: タスクの状態。
+        due_date: タスクの期限日。
+        completed_at: タスクの完了日時。
+        project_id: このタスクが属するプロジェクトのID。
+        memo_id: このタスクの生成元となったメモのID。
+        is_recurring: 繰り返しタスクかどうかを示すフラグ。
+        recurrence_rule: 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
+        created_at: タスクの作成日時。
+        updated_at: タスクの最終更新日時。
     """
 
     id: uuid.UUID

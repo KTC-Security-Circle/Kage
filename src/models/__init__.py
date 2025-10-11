@@ -47,7 +47,7 @@ Attributes:
 """
 
 # tablename用 ignore
-# pyright: reportAssignmentType=false
+# pyright: reportAssignmentType=false, reportGeneralTypeIssues=false
 
 from __future__ import annotations
 
@@ -139,6 +139,30 @@ class TaskStatus(str, Enum):
 
 # ==============================================================================
 # ==============================================================================
+# Base Model (基底モデル)
+# ==============================================================================
+# ==============================================================================
+
+
+class BaseModel(SQLModel):
+    """IDを持つ基本モデル
+
+    Attributes:
+        id (uuid.UUID): エンティティの一意な識別子。デフォルトでUUID4が生成される。
+        created_at (datetime): エンティティの作成日時。デフォルトで現在日時が設定される。
+        updated_at (datetime): エンティティの最終更新日時。デフォルトで現在日時が設定され、更新時に自動的に更新される。
+    """
+
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime | None = Field(default_factory=datetime.now)
+    updated_at: datetime | None = Field(
+        default_factory=datetime.now,
+        sa_column_kwargs={"onupdate": datetime.now},
+    )
+
+
+# ==============================================================================
+# ==============================================================================
 # Link Models (中間テーブルモデル)
 # 中間テーブルは読み書きする際のBase/Create/Readモデルを定義しない
 # ==============================================================================
@@ -182,7 +206,7 @@ class TaskTagLink(SQLModel, table=True):
 # Memo Models (メモモデル)
 # ==============================================================================
 # ==============================================================================
-class MemoBase(SQLModel):
+class MemoBase(BaseModel):
     """メモの基本モデル
 
     Attributes:
@@ -201,12 +225,6 @@ class MemoBase(SQLModel):
     status: MemoStatus = Field(default=MemoStatus.INBOX, index=True)
     ai_suggestion_status: AiSuggestionStatus = Field(default=AiSuggestionStatus.NOT_REQUESTED, index=True)
     ai_analysis_log: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    updated_at: datetime = Field(
-        default_factory=datetime.now,
-        nullable=False,
-        sa_column_kwargs={"onupdate": datetime.now},
-    )
     processed_at: datetime | None = Field(default=None, index=True)
 
 
@@ -230,26 +248,30 @@ class Memo(MemoBase, table=True):
 
     __tablename__ = "memos"
 
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     tasks: list[Task] = Relationship(back_populates="memo")
     tags: list[Tag] = Relationship(back_populates="memos", link_model=MemoTagLink)
 
 
-class MemoCreate(MemoBase):
+class MemoCreate(SQLModel):
     """メモ作成用モデル
 
     メモを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
 
     Attributes:
-        title (str): メモのタイトル。インデックスが設定されており検索可能です。
-        content (str): メモの内容。デフォルトは空文字列。
-        status (MemoStatus): メモの状態。デフォルトはInbox。
-        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。デフォルトはNOT_REQUESTED。
-        ai_analysis_log (str | None): AI分析のログ情報。デフォルトはNone。
-        created_at (datetime): メモの作成日時。デフォルトは現在日時。
-        updated_at (datetime): メモの最終更新日時。デフォルトは現在日時。
-        processed_at (datetime | None): メモが最後に処理された日時。デフォルトはNone。
+        title (str): メモのタイトル。
+        content (str): メモの内容。
+        status (MemoStatus): メモの状態。
+        ai_suggestion_status (AiSuggestionStatus): AI提案の状態。
+        ai_analysis_log (str | None): AI分析のログ情報。
+        processed_at (datetime | None): メモが最後に処理された日時。
     """
+
+    title: str
+    content: str
+    status: MemoStatus = Field(default=MemoStatus.INBOX)
+    ai_suggestion_status: AiSuggestionStatus = Field(default=AiSuggestionStatus.NOT_REQUESTED)
+    ai_analysis_log: str | None = None
+    processed_at: datetime | None = None
 
 
 class MemoRead(MemoBase):
@@ -302,10 +324,11 @@ class MemoUpdate(SQLModel):
 # ==============================================================================
 
 
-class ProjectBase(SQLModel):
+class ProjectBase(BaseModel):
     """複数のタスクを束ねる「成果」や「結果」を管理するプロジェクトのモデル。
 
     Attributes:
+        id: プロジェクトを一意に識別するID。
         title: プロジェクトの名称。
         description: プロジェクトの目的や概要。
         status: プロジェクト全体の進捗状況。
@@ -318,12 +341,6 @@ class ProjectBase(SQLModel):
     description: str | None = None
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
     due_date: date | None = None
-    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    updated_at: datetime = Field(
-        default_factory=datetime.now,
-        sa_column_kwargs={"onupdate": datetime.now},
-        nullable=False,
-    )
 
 
 class Project(ProjectBase, table=True):
@@ -344,11 +361,10 @@ class Project(ProjectBase, table=True):
 
     __tablename__ = "projects"
 
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     tasks: list[Task] = Relationship(back_populates="project")
 
 
-class ProjectCreate(ProjectBase):
+class ProjectCreate(SQLModel):
     """プロジェクト作成用モデル
 
     プロジェクトを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -358,9 +374,12 @@ class ProjectCreate(ProjectBase):
         description: プロジェクトの目的や概要。
         status: プロジェクト全体の進捗状況。
         due_date: プロジェクト全体の完了目標日。
-        created_at: プロジェクトの作成日時。
-        updated_at: プロジェクトの最終更新日時。
     """
+
+    title: str
+    description: str | None = None
+    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
+    due_date: date | None = None
 
 
 class ProjectRead(ProjectBase):
@@ -406,7 +425,7 @@ class ProjectUpdate(SQLModel):
 # ==============================================================================
 
 
-class TagBase(SQLModel):
+class TagBase(BaseModel):
     """タスクやメモを横断的に分類するタグのモデル。
 
     Attributes:
@@ -420,12 +439,6 @@ class TagBase(SQLModel):
     name: str = Field(unique=True, index=True)
     description: str | None = None
     color: str | None = None
-    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    updated_at: datetime = Field(
-        default_factory=datetime.now,
-        sa_column_kwargs={"onupdate": datetime.now},
-        nullable=False,
-    )
 
 
 class Tag(TagBase, table=True):
@@ -446,12 +459,11 @@ class Tag(TagBase, table=True):
 
     __tablename__ = "tags"
 
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     tasks: list[Task] = Relationship(back_populates="tags", link_model=TaskTagLink)
     memos: list[Memo] = Relationship(back_populates="tags", link_model=MemoTagLink)
 
 
-class TagCreate(TagBase):
+class TagCreate(SQLModel):
     """タグ作成用モデル
 
     タグを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -460,9 +472,11 @@ class TagCreate(TagBase):
         name: タグ名。
         description: タグの目的や概要。
         color: UIで視覚的に区別するための色情報（例: '#FF5733'）。
-        created_at: タグの作成日時。
-        updated_at: タグの最終更新日時。
     """
+
+    name: str
+    description: str | None = None
+    color: str | None = None
 
 
 class TagRead(TagBase):
@@ -498,7 +512,14 @@ class TagUpdate(SQLModel):
     color: str | None = None
 
 
-class TaskBase(SQLModel):
+# ==============================================================================
+# ==============================================================================
+# Task Models (タスクモデル)
+# ==============================================================================
+# ==============================================================================
+
+
+class TaskBase(BaseModel):
     """タスクの基本モデル
 
     Attributes:
@@ -522,12 +543,6 @@ class TaskBase(SQLModel):
     completed_at: datetime | None = None
     is_recurring: bool = Field(default=False)
     recurrence_rule: str | None = None
-    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    updated_at: datetime = Field(
-        default_factory=datetime.now,
-        sa_column_kwargs={"onupdate": datetime.now},
-        nullable=False,
-    )
 
     # foreign keys
     project_id: uuid.UUID | None = Field(default=None, foreign_key="projects.id", nullable=True, index=True)
@@ -559,13 +574,12 @@ class Task(TaskBase, table=True):
 
     __tablename__ = "tasks"
 
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     project: Project | None = Relationship(back_populates="tasks")
     memo: Memo | None = Relationship(back_populates="tasks")
     tags: list[Tag] = Relationship(back_populates="tasks", link_model=TaskTagLink)
 
 
-class TaskCreate(TaskBase):
+class TaskCreate(SQLModel):
     """新しいタスク作成用モデル
 
     タスクを新規作成する際に使用するモデルクラス。SQLModelを使用してデータベースと連携します。
@@ -580,9 +594,17 @@ class TaskCreate(TaskBase):
         memo_id: このタスクの生成元となったメモのID。
         is_recurring: 繰り返しタスクかどうかを示すフラグ。
         recurrence_rule: 繰り返しのルールを定義する文字列 (iCalendar RRULE形式)。
-        created_at: タスクの作成日時。
-        updated_at: タスクの最終更新日時。
     """
+
+    title: str
+    description: str | None = None
+    status: TaskStatus = Field(default=TaskStatus.TODO)
+    due_date: date | None = None
+    completed_at: datetime | None = None
+    project_id: uuid.UUID | None = None
+    memo_id: uuid.UUID | None = None
+    is_recurring: bool = False
+    recurrence_rule: str | None = None
 
 
 class TaskRead(TaskBase):

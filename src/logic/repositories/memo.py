@@ -6,7 +6,7 @@ from loguru import logger
 from sqlmodel import Session, func, select
 
 from logic.repositories.base import BaseRepository
-from models import Memo, MemoCreate, MemoUpdate
+from models import Memo, MemoCreate, MemoStatus, MemoTagLink, MemoUpdate, Tag
 
 
 class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
@@ -22,49 +22,90 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
         Args:
             session: データベースセッション
         """
-        self.model_class = Memo
-        super().__init__(session)
+        super().__init__(session, Memo, load_options=[Memo.tags, Memo.tasks])
 
-    def get_by_task_id(self, task_id: uuid.UUID) -> list[Memo]:
-        """指定されたタスクIDのメモ一覧を取得する
+    def add_tag_to_memo(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> Memo | None:
+        """メモにタグを追加する"""
+        memo = self.get_by_id(memo_id, with_details=True)
+        tag = self.session.get(Tag, tag_id)
+
+        if not memo or not tag:
+            logger.warning("メモまたはタグが見つかりません。")
+            return None
+
+        # 既に追加済みでないか確認
+        if tag not in memo.tags:
+            memo.tags.append(tag)
+            self._commit_and_refresh(memo)
+            logger.info(f"メモ({memo_id})にタグ({tag_id})を追加しました。")
+
+        return memo
+
+    def remove_tag_from_memo(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> Memo | None:
+        """メモからタグを削除する"""
+        memo = self.get_by_id(memo_id, with_details=True)
+        tag = self.session.get(Tag, tag_id)
+
+        if not memo or not tag:
+            logger.warning("メモまたはタグが見つかりません。")
+            return None
+
+        # タグがメモに存在するか確認
+        if tag in memo.tags:
+            memo.tags.remove(tag)
+            self._commit_and_refresh(memo)
+            logger.info(f"メモ({memo_id})からタグ({tag_id})を削除しました。")
+
+        return memo
+
+    # ==============================================================================
+    # ==============================================================================
+    # get functions
+    # ==============================================================================
+    # ==============================================================================
+
+    def get_by_status(self, status: MemoStatus, *, with_details: bool = False) -> list[Memo] | None:
+        """指定されたステータスのメモ一覧を取得する
 
         Args:
-            task_id: タスクID
+            status: メモステータス
+            with_details: 詳細情報を含めるかどうか
 
         Returns:
-            list[Memo]: 指定されたタスクのメモ一覧
-
-        Raises:
-            Exception: データベース操作エラー
+            list[Memo]: 指定された条件に一致するメモ一覧
         """
-        try:
-            statement = select(Memo).where(Memo.task_id == task_id)
-            results = self.session.exec(statement).all()
-            return list(results)
-        except Exception as e:
-            logger.exception(f"タスクのメモ取得に失敗しました: {e}")
-            raise
+        stmt = select(Memo).where(Memo.status == status)
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)
 
-    def search_by_content(self, content_query: str) -> list[Memo]:
+    def get_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Memo] | None:
+        """指定されたタグが付与されたメモ一覧を取得する
+
+        Args:
+            tag_id: タグID
+            with_details: 詳細情報を含めるかどうか
+
+        Returns:
+            list[Memo]: 指定された条件に一致するメモ一覧
+        """
+        # 特定のタグが付与されたメモを取得
+        stmt = select(Memo).join(MemoTagLink).join(Tag).where(Tag.id == tag_id)
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)
+
+    def search_by_content(self, content_query: str, *, with_details: bool = False) -> list[Memo]:
         """メモ内容でメモを検索する
 
         Args:
             content_query: 検索クエリ（部分一致）
+            with_details: 詳細情報を含めるかどうか
 
         Returns:
             list[Memo]: 検索条件に一致するメモ一覧
-
-        Raises:
-            Exception: データベース操作エラー
         """
-        try:
-            # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
-            # [AI GENERATED] 大文字小文字を区別しない検索のためfunc.lower()を使用
-            statement = select(Memo).where(func.lower(Memo.content).contains(func.lower(content_query)))  # pyright: ignore[reportAttributeAccessIssue]
-            filtered_memos = list(self.session.exec(statement).all())
-
-        except Exception as e:
-            logger.exception(f"メモ内容検索に失敗しました: {e}")
-            raise
-        else:
-            return filtered_memos
+        stmt = select(Memo).where(func.lower(Memo.content).contains(func.lower(content_query)))
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)

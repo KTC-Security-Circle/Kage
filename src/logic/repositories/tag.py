@@ -19,7 +19,8 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
         Args:
             session: データベースセッション
         """
-        super().__init__(session, Tag, load_options=[Tag.tasks, Tag.memos])
+        self.model_class = Tag
+        super().__init__(session, load_options=[Tag.tasks, Tag.memos])
 
     # ==============================================================================
     # ==============================================================================
@@ -27,7 +28,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
     # ==============================================================================
     # ==============================================================================
 
-    def get_by_name(self, name: str, *, with_details: bool = False) -> Tag | None:
+    def get_by_name(self, name: str, *, with_details: bool = False) -> Tag:
         """指定されたタグ名でタグを取得する
 
         Args:
@@ -35,7 +36,10 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             with_details: 関連エンティティを含めるかどうか
 
         Returns:
-            Tag | None: 取得されたタグ、見つからない場合はNone
+            Tag | None: 取得されたタグ
+
+        Raises:
+            CheckExistsError: エンティティが存在しない場合
         """
         stmt = select(Tag).where(Tag.name == name)
 
@@ -53,6 +57,9 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
 
         Returns:
             list[Tag]: 検索条件に一致するタグ一覧
+
+        Raises:
+            CheckExistsError: エンティティが存在しない場合
         """
         stmt = select(Tag).where(func.lower(Tag.name).like(f"%{name_query.lower()}%"))
 
@@ -60,16 +67,3 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             stmt = self._apply_eager_loading(stmt)
 
         return self._gets_by_statement(stmt)
-
-    def exists_by_name(self, name: str) -> bool:
-        """指定されたタグ名のタグが存在するか確認する
-
-        Args:
-            name: タグ名
-
-        Returns:
-            bool: タグが存在する場合はTrue、存在しない場合はFalse
-        """
-        stmt = select(Tag).where(Tag.name == name)
-        result = self._get_by_statement(stmt, name)
-        return bool(result)

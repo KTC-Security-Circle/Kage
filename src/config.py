@@ -3,6 +3,9 @@
 import os
 from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
+from loguru import logger
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel
 
@@ -12,21 +15,21 @@ STORAGE_DIR: str = os.environ.get("FLET_APP_STORAGE_DATA", "./storage/data")
 DB_PATH: Path = Path(STORAGE_DIR) / "tasks.db"
 # データベースエンジンの作成
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
-
-
-# アプリケーション起動時にテーブルを作成するための関数
-def create_db_and_tables() -> None:
-    """アプリケーション起動時にテーブルを作成するための関数"""
-    # この関数は main.py の最初で一度だけ呼び出す
-    from sqlmodel import SQLModel
-
-    from models import __all__  # これで全てのモデルがインポートされる # noqa: F401
-
-    SQLModel.metadata.create_all(engine)
-
+# Alembicの設定ファイルのパス
+ALEMBIC_INI_PATH = Path(__file__).parent / "models" / "migrations" / "alembic.ini"
+alembic_cfg = Config(ALEMBIC_INI_PATH)
 
 # SQLModelの基礎クラスを使用
 Base = SQLModel
+
+
+# Alembicを使用してデータベースを最新の状態にマイグレーションする関数
+def migrate_db() -> None:
+    # alembicを介してマイグレーションを実行
+    logger.info("Migrating database...")
+    command.upgrade(alembic_cfg, "head")
+    logger.info("Database migrated to the latest version.")
+
 
 # アプリケーションのタイトル
 APP_TITLE: str = "Kage"

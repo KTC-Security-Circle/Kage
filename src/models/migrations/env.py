@@ -9,13 +9,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from config import Base
-from models import (
-    memo,
-    project,
-    tag,
-    task,
-    task_tag,
-)
+from models import SQLModel
 
 # モデルをインポートしてAlembicがテーブル構造を認識できるようにする
 
@@ -34,13 +28,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 # target_metadata = Base.metadata
-target_metadata = [
-    task.Task.metadata,
-    project.Project.metadata,
-    tag.Tag.metadata,
-    task_tag.TaskTag.metadata,
-    memo.Memo.metadata,
-]
+target_metadata = SQLModel.metadata
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")

@@ -5,35 +5,26 @@ View層からSession管理を分離し、ビジネスロジックを調整する
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, override
 
 from loguru import logger
 
+from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
-from logic.services.quick_action_mapping_service import QuickActionMappingService
 from logic.services.task_service import TaskService
-from logic.services.task_status_display_service import (
-    TaskStatusDisplay,
-    TaskStatusDisplayService,
-)
 from logic.unit_of_work import SqlModelUnitOfWork
+from models import TaskCreate, TaskRead, TaskStatus, TaskUpdate
 
 if TYPE_CHECKING:
-    from datetime import date
+    import uuid
 
-    from logic.commands.task_commands import (
-        CreateTaskCommand,
-        DeleteTaskCommand,
-        UpdateTaskCommand,
-        UpdateTaskStatusCommand,
-    )
-    from logic.queries.task_queries import (
-        GetAllTasksByStatusDictQuery,
-        GetTaskByIdQuery,
-        GetTasksByStatusQuery,
-        GetTodayTasksCountQuery,
-    )
-    from models import QuickActionCommand, TaskRead, TaskStatus
+
+class TaskApplicationError(ApplicationError):
+    """タスク管理のApplication Serviceで発生するエラー"""
+
+
+class TaskContentValidationError(ValidationError, TaskApplicationError):
+    """タスク内容のバリデーションエラー"""
 
 
 class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
@@ -50,331 +41,92 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         """
         super().__init__(unit_of_work_factory)
 
-    def create_task(self, command: CreateTaskCommand) -> TaskRead:
-        """タスク作成
+    @classmethod
+    @override
+    def get_instance(cls, *args: Any, **kwargs: Any) -> TaskApplicationService: ...
+
+    def create(self, title: str, description: str | None = None, *, status: TaskStatus | None = None) -> TaskRead:
+        """タスクを作成する
 
         Args:
-            command: タスク作成コマンド
+            title: タスクタイトル
+            description: 詳細説明
+            status: 初期ステータス（未指定時はモデル既定）
 
         Returns:
-            作成されたタスク
+            TaskRead: 作成されたタスク
 
         Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 作成エラー
+            TaskContentValidationError: タイトルが空の場合
         """
-        logger.info(f"タスク作成開始: {command.title}")
-
-        # バリデーション
-        if not command.title.strip():
+        if not title.strip():
             msg = "タスクタイトルを入力してください"
-            raise ValueError(msg)
+            raise TaskContentValidationError(msg)
 
-        # Unit of Workでトランザクション管理
-        with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.get_service(TaskService)
-            created_task = task_service.create_task(command.to_task_create())
-            uow.commit()
-
-            logger.info(f"タスク作成完了: {created_task.title} (ID: {created_task.id})")
-            return created_task
-
-    def update_task(self, command: UpdateTaskCommand) -> TaskRead:
-        """タスク更新
-
-        Args:
-            command: タスク更新コマンド
-
-        Returns:
-            更新されたタスク
-
-        Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 更新エラー
-        """
-        logger.info(f"タスク更新開始: {command.task_id}")
-
-        # バリデーション
-        if not command.title.strip():
-            msg = "タスクタイトルを入力してください"
-            raise ValueError(msg)
+        create_model = TaskCreate(title=title, description=description, status=status or TaskStatus.TODO)
 
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
-            updated_task = task_service.update_task(command.task_id, command.to_task_update())
-            uow.commit()
+            created = task_service.create(create_model)
 
-            logger.info(f"タスク更新完了: {updated_task.title} (ID: {updated_task.id})")
-            return updated_task
+        logger.info(f"タスク作成完了 - (ID={created.id})")
+        return created
 
-    def delete_task(self, command: DeleteTaskCommand) -> None:
+    def update(self, task_id: uuid.UUID, update_data: TaskUpdate) -> TaskRead:
+        """タスクを更新する
+
+        Args:
+            task_id: 更新対象タスクのID
+            update_data: タスク更新データ
+
+        Returns:
+            TaskRead: 更新後タスク
+        """
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.get_service(TaskService)
+            updated = task_service.update(task_id, update_data)
+
+        logger.info(f"タスク更新完了 - (ID={updated.id})")
+        return updated
+
+    def delete(self, task_id: uuid.UUID) -> bool:
         """タスク削除
 
         Args:
-            command: タスク削除コマンド
-
-        Raises:
-            RuntimeError: 削除エラー
-        """
-        logger.info(f"タスク削除開始: {command.task_id}")
-
-        with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.get_service(TaskService)
-            task_service.delete_task(command.task_id)
-            uow.commit()
-
-            logger.info(f"タスク削除完了: {command.task_id}")
-
-    def update_task_status(self, command: UpdateTaskStatusCommand) -> TaskRead:
-        """タスクステータス更新
-
-        Args:
-            command: タスクステータス更新コマンド
+            task_id: 削除するタスクのID
 
         Returns:
-            更新されたタスク
-
-        Raises:
-            RuntimeError: 更新エラー
-        """
-        logger.info(f"タスクステータス更新開始: {command.task_id} -> {command.new_status.value}")
-
-        with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.get_service(TaskService)
-
-            # 現在のタスクを取得
-            task = task_service.get_task_by_id(command.task_id)
-            if not task:
-                msg = f"タスクが見つかりません: {command.task_id}"
-                raise RuntimeError(msg)
-
-            # ステータス更新用のUpdateTaskCommandを作成
-            from logic.commands.task_commands import UpdateTaskCommand
-
-            update_command = UpdateTaskCommand(
-                task_id=command.task_id,
-                title=task.title,
-                description=task.description,
-                status=command.new_status,
-                due_date=task.due_date,
-            )
-
-            updated_task = task_service.update_task(command.task_id, update_command.to_task_update())
-            uow.commit()
-
-            logger.info(f"タスクステータス更新完了: {updated_task.title} (ID: {updated_task.id})")
-            return updated_task
-
-    def get_tasks_by_status(self, query: GetTasksByStatusQuery) -> list[TaskRead]:
-        """ステータス別タスク取得
-
-        Args:
-            query: ステータス別タスク取得クエリ
-
-        Returns:
-            タスクリスト
+            bool: 削除成功フラグ
         """
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
-            return task_service.get_tasks_by_status(query.status)
+            success = task_service.delete(task_id)
+            logger.info(f"タスク削除完了: ID {task_id}, 結果: {success}")
+            return success
 
-    def get_today_tasks_count(self, query: GetTodayTasksCountQuery) -> int:
-        """今日のタスク件数取得
+    # 取得系
+    def get_by_id(self, task_id: uuid.UUID, *, with_details: bool = False) -> TaskRead | None:
+        """IDでタスク取得
 
         Args:
-            query: 今日のタスク件数取得クエリ
+            task_id: タスクのID
+            with_details: 関連エンティティも取得するか
 
         Returns:
-            今日のタスク件数
-        """
-        _ = query  # 将来の拡張用パラメータ
-        with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.get_service(TaskService)
-            return task_service.get_today_tasks_count()
-
-    # [AI GENERATED] 追加: 完了タスク件数取得
-    def get_completed_tasks_count(self) -> int:
-        """完了タスク件数取得
-
-        Returns:
-            int: 完了タスク件数
+            TaskRead | None: 見つかったタスク（存在しない場合None想定の呼び出し元もある）
         """
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
-            return task_service.get_completed_tasks_count()
+            return task_service.get_by_id(task_id, with_details=with_details)
 
-    # [AI GENERATED] 追加: 期限超過タスク件数取得
-    def get_overdue_tasks_count(self) -> int:
-        """期限超過タスク件数取得
-
-        Returns:
-            int: 期限超過タスク件数
-        """
+    def get_all_tasks(self) -> list[TaskRead]:
+        """全タスク取得"""
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
-            return task_service.get_overdue_tasks_count()
+            return task_service.get_all()
 
-    def get_task_by_id(self, query: GetTaskByIdQuery) -> TaskRead | None:
-        """ID指定タスク取得
-
-        Args:
-            query: ID指定タスク取得クエリ
-
-        Returns:
-            タスク（見つからない場合はNone）
-        """
+    def list_by_status(self, status: TaskStatus, *, with_details: bool = False) -> list[TaskRead]:
+        """ステータスでタスク取得"""
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
-            return task_service.get_task_by_id(query.task_id)
-
-    def get_all_tasks_by_status_dict(self, query: GetAllTasksByStatusDictQuery) -> dict[TaskStatus, list[TaskRead]]:
-        """全ステータスのタスクを辞書形式で取得
-
-        Args:
-            query: 全ステータス別タスク取得クエリ
-
-        Returns:
-            ステータス別タスク辞書
-        """
-        _ = query  # 将来の拡張用パラメータ
-        from models import TaskStatus
-
-        result = {}
-
-        with self._unit_of_work_factory() as uow:
-            task_service = uow.service_factory.get_service(TaskService)
-
-            for status in TaskStatus:
-                result[status] = task_service.get_tasks_by_status(status)
-
-            return result
-
-    # [AI GENERATED] QuickAction関連のメソッド
-
-    def get_task_status_for_quick_action(self, action: QuickActionCommand) -> TaskStatus:
-        """QuickActionCommandに対応するTaskStatusを取得
-
-        Args:
-            action: クイックアクションコマンド
-
-        Returns:
-            対応するTaskStatus
-
-        Raises:
-            ValueError: 未対応のアクションが指定された場合
-        """
-        logger.info(f"クイックアクション→ステータス変換: {action}")
-        return QuickActionMappingService.map_quick_action_to_task_status(action)
-
-    def get_available_quick_actions(self) -> list[QuickActionCommand]:
-        """利用可能なクイックアクションのリストを取得
-
-        Returns:
-            利用可能なQuickActionCommandのリスト
-        """
-        return QuickActionMappingService.get_available_quick_actions()
-
-    def get_quick_action_description(self, action: QuickActionCommand) -> str:
-        """クイックアクションの説明を取得
-
-        Args:
-            action: クイックアクションコマンド
-
-        Returns:
-            アクションの説明文
-
-        Raises:
-            ValueError: 未対応のアクションが指定された場合
-        """
-        return QuickActionMappingService.get_quick_action_description(action)
-
-    # [AI GENERATED] タスクステータス表示関連のメソッド
-
-    def get_task_status_display(self, status: TaskStatus) -> TaskStatusDisplay:
-        """タスクステータスの表示情報を取得
-
-        Args:
-            status: タスクステータス
-
-        Returns:
-            TaskStatusDisplay: 表示情報
-
-        Raises:
-            ValueError: 未対応のステータスが指定された場合
-        """
-        return TaskStatusDisplayService.get_task_status_display(status)
-
-    def get_board_column_mapping(self) -> dict[str, list[TaskStatus]]:
-        """タスクボードのカラムマッピングを取得
-
-        Returns:
-            カラム名とタスクステータスリストのマッピング
-        """
-        return TaskStatusDisplayService.get_board_column_mapping()
-
-    def get_board_section_display(self, section_name: str, status: TaskStatus) -> str:
-        """ボードセクションの表示ラベルを取得
-
-        Args:
-            section_name: セクション名（"CLOSED" または "INBOX"）
-            status: タスクステータス
-
-        Returns:
-            表示ラベル
-
-        Raises:
-            ValueError: 未対応の組み合わせが指定された場合
-        """
-        return TaskStatusDisplayService.get_board_section_display(section_name, status)
-
-    def get_all_status_displays(self) -> list[TaskStatusDisplay]:
-        """全てのタスクステータスの表示情報を取得
-
-        Returns:
-            全タスクステータスの表示情報リスト
-        """
-        return TaskStatusDisplayService.get_all_status_displays()
-
-    # [AI GENERATED] QuickAction経由でのタスク作成便利メソッド
-
-    def create_task_from_quick_action(
-        self,
-        action: QuickActionCommand,
-        title: str,
-        description: str = "",
-        due_date: date | None = None,
-    ) -> TaskRead:
-        """QuickActionからタスクを作成
-
-        QuickActionCommandを基にTaskStatusを決定してタスクを作成する便利メソッド。
-        View層からの呼び出しを簡素化します。
-
-        Args:
-            action: クイックアクションコマンド
-            title: タスクタイトル
-            description: タスク説明（オプション）
-            due_date: 締切日（オプション）
-
-        Returns:
-            作成されたタスク
-
-        Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 作成エラー
-        """
-        logger.info(f"QuickAction経由でタスク作成: {action} - {title}")
-
-        # [AI GENERATED] QuickActionに対応するステータスを取得
-        task_status = self.get_task_status_for_quick_action(action)
-
-        # [AI GENERATED] 既存のCreateTaskCommandを使用してタスク作成
-        from logic.commands.task_commands import CreateTaskCommand
-
-        command = CreateTaskCommand(
-            title=title,
-            description=description,
-            status=task_status,
-            due_date=due_date,
-        )
-
-        return self.create_task(command)
+            return task_service.list_by_status(status, with_details=with_details)

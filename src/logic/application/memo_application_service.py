@@ -5,23 +5,28 @@ View層からSession管理を分離し、ビジネスロジックを調整する
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, override
 
 from loguru import logger
 
+from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
 from logic.services.memo_service import MemoService
 from logic.unit_of_work import SqlModelUnitOfWork
+from models import MemoCreate, MemoRead, MemoUpdate
 
 if TYPE_CHECKING:
-    from logic.commands.memo_commands import CreateMemoCommand, DeleteMemoCommand, UpdateMemoCommand
-    from logic.queries.memo_queries import (
-        GetAllMemosQuery,
-        GetMemoByIdQuery,
-        GetMemosByTaskIdQuery,
-        SearchMemosQuery,
-    )
-    from models import MemoRead
+    import uuid
+
+logger_msg = "{msg} - (ID={memo_id})"
+
+
+class MemoApplicationError(ApplicationError):
+    """メモ管理のApplication Serviceで発生するエラー"""
+
+
+class ContentValidationError(ValidationError, MemoApplicationError):
+    """メモ内容のバリデーションエラー"""
 
 
 class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
@@ -38,69 +43,62 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         """
         super().__init__(unit_of_work_factory)
 
-    def create_memo(self, command: CreateMemoCommand) -> MemoRead:
-        """メモ作成
+    @classmethod
+    @override
+    def get_instance(cls, *args: Any, **kwargs: Any) -> MemoApplicationService: ...
+
+    def create(self, title: str, content: str) -> MemoRead:
+        """メモを作成する
 
         Args:
-            command: メモ作成コマンド
+            title: メモタイトル
+            content: メモ内容
 
         Returns:
             MemoRead: 作成されたメモ
 
         Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 作成エラー
+            ContentValidationError: タイトルまたは内容が空の場合
         """
-        logger.info(f"メモ作成開始: タスクID {command.task_id}")
+        if not title.strip():
+            msg = "メモタイトルを入力してください"
+            raise ContentValidationError(msg)
 
-        # [AI GENERATED] バリデーション
-        if not command.content.strip():
+        if not content.strip():
             msg = "メモ内容を入力してください"
-            raise ValueError(msg)
+            raise ContentValidationError(msg)
 
-        # [AI GENERATED] Unit of Workでトランザクション管理
+        memo = MemoCreate(title=title, content=content)
+
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            created_memo = memo_service.create_memo(command.to_memo_create())
-            uow.commit()
+            memo_service = uow.get_service(MemoService)
+            created_memo = memo_service.create(memo)
 
-            logger.info(f"メモ作成完了: ID {created_memo.id}, タスクID {created_memo.task_id}")
-            return created_memo
+        logger.info(logger_msg.format(msg="メモ作成完了", memo_id=created_memo.id))
+        return created_memo
 
-    def update_memo(self, command: UpdateMemoCommand) -> MemoRead:
-        """メモ更新
+    def update(self, memo_id: uuid.UUID, update_data: MemoUpdate) -> MemoRead:
+        """メモを更新する
 
         Args:
-            command: メモ更新コマンド
+            memo_id: 更新するメモのID
+            update_data: メモ更新データ
 
         Returns:
             MemoRead: 更新されたメモ
-
-        Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 更新エラー
         """
-        logger.info(f"メモ更新開始: ID {command.memo_id}")
-
-        # [AI GENERATED] バリデーション
-        if not command.content.strip():
-            msg = "メモ内容を入力してください"
-            raise ValueError(msg)
-
-        # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            updated_memo = memo_service.update_memo(command.memo_id, command.to_memo_update())
-            uow.commit()
+            memo_service = uow.get_service(MemoService)
+            updated_memo = memo_service.update(memo_id, update_data)
 
-            logger.info(f"メモ更新完了: ID {updated_memo.id}")
-            return updated_memo
+        logger.info(logger_msg.format(msg="メモ更新完了", memo_id=updated_memo.id))
+        return updated_memo
 
-    def delete_memo(self, command: DeleteMemoCommand) -> bool:
+    def delete(self, memo_id: uuid.UUID) -> bool:
         """メモ削除
 
         Args:
-            command: メモ削除コマンド
+            memo_id: 削除するメモのID
 
         Returns:
             bool: 削除成功フラグ
@@ -108,77 +106,36 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         Raises:
             RuntimeError: 削除エラー
         """
-        logger.info(f"メモ削除開始: ID {command.memo_id}")
-
-        # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            success = memo_service.delete_memo(command.memo_id)
-            uow.commit()
+            memo_service = uow.get_service(MemoService)
+            success = memo_service.delete(memo_id)
 
-            logger.info(f"メモ削除完了: ID {command.memo_id}, 結果: {success}")
+            logger.info(f"メモ削除完了: ID {memo_id}, 結果: {success}")
             return success
 
-    def get_memo_by_id(self, query: GetMemoByIdQuery) -> MemoRead | None:
+    def get_by_id(self, memo_id: uuid.UUID, *, with_details: bool = False) -> MemoRead:
         """IDでメモ取得
 
         Args:
-            query: メモ取得クエリ
+            memo_id: メモのID
+            with_details: 関連エンティティも取得するかどうか
 
         Returns:
-            MemoRead | None: 取得されたメモ、存在しない場合はNone
+            MemoRead: 指定されたIDのメモ
         """
-        logger.debug(f"メモ取得: ID {query.memo_id}")
-
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.get_memo_by_id(query.memo_id)
+            memo_service = uow.get_service(MemoService)
+            return memo_service.get_by_id(memo_id, with_details=with_details)
 
-    def get_all_memos(self, query: GetAllMemosQuery) -> list[MemoRead]:  # noqa: ARG002
+    def get_all_memos(self, *, with_details: bool = False) -> list[MemoRead]:
         """全メモ取得
 
         Args:
-            query: 全メモ取得クエリ
+            with_details: 関連エンティティも取得するかどうか
 
         Returns:
             list[MemoRead]: 全メモのリスト
         """
-        logger.debug("全メモ取得")
-
         with self._unit_of_work_factory() as uow:
             memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.get_all_memos()
-
-    def get_memos_by_task_id(self, query: GetMemosByTaskIdQuery) -> list[MemoRead]:
-        """タスクIDでメモ取得
-
-        Args:
-            query: タスクID指定メモ取得クエリ
-
-        Returns:
-            list[MemoRead]: 指定されたタスクのメモリスト
-        """
-        logger.debug(f"タスクメモ取得: タスクID {query.task_id}")
-
-        with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.get_memos_by_task_id(query.task_id)
-
-    def search_memos(self, query: SearchMemosQuery) -> list[MemoRead]:
-        """メモ検索
-
-        Args:
-            query: メモ検索クエリ
-
-        Returns:
-            list[MemoRead]: 検索条件に一致するメモのリスト
-        """
-        logger.debug(f"メモ検索: クエリ '{query.query}'")
-
-        # [AI GENERATED] 空の検索クエリは全件返却しない
-        if not query.query.strip():
-            return []
-
-        with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.search_memos(query.query)
+            return memo_service.get_all(with_details=with_details)

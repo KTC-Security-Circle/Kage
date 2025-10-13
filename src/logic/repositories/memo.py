@@ -173,7 +173,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
     # ==============================================================================
     # ==============================================================================
 
-    def get_by_status(self, status: MemoStatus, *, with_details: bool = False) -> list[Memo]:
+    def list_by_status(self, status: MemoStatus, *, with_details: bool = False) -> list[Memo]:
         """指定されたステータスのメモ一覧を取得する
 
         Args:
@@ -191,7 +191,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             stmt = self._apply_eager_loading(stmt)
         return self._gets_by_statement(stmt)
 
-    def get_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Memo]:
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Memo]:
         """指定されたタグが付与されたメモ一覧を取得する
 
         Args:

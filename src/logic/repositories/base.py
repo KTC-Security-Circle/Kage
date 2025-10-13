@@ -56,7 +56,19 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             raise NotImplementedError(msg)
 
     def _commit_and_refresh(self, entity: T) -> None:
-        """エンティティをコミットしてリフレッシュする"""
+        """エンティティをコミットしてリフレッシュする
+
+        以下の内容を実行する:
+        >>> self.session.add(entity)
+        >>> self.session.commit()
+        >>> self.session.refresh(entity)
+
+        Args:
+            entity: コミットしてリフレッシュするエンティティ
+
+        Returns:
+            None
+        """
         self.session.add(entity)
         self.session.commit()
         self.session.refresh(entity)

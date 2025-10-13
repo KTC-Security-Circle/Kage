@@ -220,9 +220,7 @@ src/
 ├── assets/      # 画像・フォント等
 ├── cli/         # CLIコマンド
 ├── logic/       # ビジネスロジック層
-│   ├── application/   # Application Service層（View層とService層の橋渡し、トランザクション管理、CQRSパターン）
-│   ├── commands/      # コマンド（データ変更操作、DTO/バリデーション）
-│   ├── queries/       # クエリ（データ取得操作、検索条件の明確化）
+│   ├── application/   # Application Service層（View層とService層の橋渡し、トランザクション管理、バリデーションなど）
 │   ├── services/      # サービス（ビジネスルール実装、Repository連携）
 │   ├── repositories/  # リポジトリ（データアクセス抽象化、SQLModelベース）
 │   ├── container.py   # 依存性注入コンテナ

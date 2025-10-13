@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from logic.services.base import ServiceBase
 from settings.manager import ConfigManager, get_config_manager
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ _POSITION_SIZE_ELEMENTS = 2
 _MIN_PATH_DEPTH = 2
 
 
-class SettingsService:
+class SettingsService(ServiceBase):
     """設定管理サービス
 
     ConfigManagerを使用して設定の読み取りと更新を行う
@@ -38,6 +39,15 @@ class SettingsService:
             config_manager: 設定マネージャー。Noneの場合はグローバルインスタンスを使用
         """
         self._config_manager = config_manager or get_config_manager()
+
+    @classmethod
+    def build_service(cls) -> SettingsService:
+        """SettingsServiceのインスタンスを生成するファクトリメソッド
+
+        Returns:
+            SettingsService: 設定管理サービスのインスタンス
+        """
+        return cls()
 
     def get_all_settings(self) -> AppSettings:
         """全設定を取得

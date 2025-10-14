@@ -102,7 +102,7 @@ class TagService(ServiceBase):
         Raises:
             TagServiceError: タグの削除に失敗した場合
         """
-        exitsing_tag = self.tag_repo.get_by_id(tag_id)
+        existing_tag = self.tag_repo.get_by_id(tag_id)
 
         if not force:
             self.tag_repo.remove_all_memos(tag_id)
@@ -113,7 +113,7 @@ class TagService(ServiceBase):
             self.delete(tag_id, force=True)
             success = True
 
-        logger.debug(f"タグ '{exitsing_tag.name}' を削除しました (ID: {tag_id})")
+        logger.debug(f"タグ '{existing_tag.name}' を削除しました (ID: {tag_id})")
         return success
 
     @handle_service_errors(SERVICE_NAME, "取得", TagServiceError)

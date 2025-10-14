@@ -119,6 +119,7 @@ test-cov = "uv run pytest --cov=src --cov-report=html"
 
 # == Database ==
 migrate = "uv run alembic -c src/models/migrations/alembic.ini upgrade head"
+revision = "uv run alembic -c src/models/migrations/alembic.ini revision --autogenerate -m"
 db-status = "uv run alembic -c src/models/migrations/alembic.ini current"
 
 # == Documentation ==

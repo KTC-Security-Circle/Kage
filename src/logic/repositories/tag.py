@@ -5,7 +5,8 @@ import uuid
 from loguru import logger
 from sqlmodel import Session, func, select
 
-from logic.repositories.base import BaseRepository, CheckExistsError
+from errors import NotFoundError
+from logic.repositories.base import BaseRepository
 from models import Memo, Tag, TagCreate, TagUpdate, Task
 
 
@@ -35,12 +36,12 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Task: 存在するタスク
 
         Raises:
-            CheckExistsError: タスクが存在しない場合
+            NotFoundError: タスクが存在しない場合
         """
         task = self.session.get(Task, task_id)
         if task is None:
             msg = f"タスクが見つかりません: {task_id}"
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
         return task
 
     def _check_exists_memo(self, memo_id: uuid.UUID) -> Memo:
@@ -53,12 +54,12 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Memo: 存在するメモ
 
         Raises:
-            CheckExistsError: メモが存在しない場合
+            NotFoundError: メモが存在しない場合
         """
         memo = self.session.get(Memo, memo_id)
         if memo is None:
             msg = f"メモが見つかりません: {memo_id}"
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
         return memo
 
     def add_task(self, tag_id: uuid.UUID, task_id: uuid.UUID) -> Tag:
@@ -72,7 +73,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag: 更新されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         tag = self.get_by_id(tag_id, with_details=True)
         task = self._check_exists_task(task_id)
@@ -97,7 +98,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag: 更新されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         tag = self.get_by_id(tag_id, with_details=True)
         task = self._check_exists_task(task_id)
@@ -121,7 +122,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag: 更新されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         tag = self.get_by_id(tag_id, with_details=True)
 
@@ -146,7 +147,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag: 更新されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         tag = self.get_by_id(tag_id, with_details=True)
         memo = self._check_exists_memo(memo_id)
@@ -171,7 +172,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag: 更新されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         tag = self.get_by_id(tag_id, with_details=True)
         memo = self._check_exists_memo(memo_id)
@@ -195,7 +196,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag: 更新されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         tag = self.get_by_id(tag_id, with_details=True)
 
@@ -226,7 +227,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             Tag | None: 取得されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Tag).where(Tag.name == name)
 
@@ -246,7 +247,7 @@ class TagRepository(BaseRepository[Tag, TagCreate, TagUpdate]):
             list[Tag]: 検索条件に一致するタグ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Tag).where(func.lower(Tag.name).like(f"%{name_query.lower()}%"))
 

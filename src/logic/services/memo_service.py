@@ -63,7 +63,7 @@ class MemoService(ServiceBase):
             MemoRead: 作成されたメモ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             MemoServiceError: メモ作成に失敗した場合
         """
         memo = self.memo_repo.create(create_data)
@@ -84,7 +84,7 @@ class MemoService(ServiceBase):
             MemoRead: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモが存在しない場合
+            NotFoundError: メモが存在しない場合
             MemoServiceError: メモの更新に失敗した場合
         """
         memo = self.memo_repo.update(memo_id, update_data)
@@ -126,7 +126,7 @@ class MemoService(ServiceBase):
             MemoRead: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモまたはタグが存在しない場合
+            NotFoundError: メモまたはタグが存在しない場合
             MemoServiceError: メモの更新に失敗した場合
         """
         memo = self.memo_repo.add_tag(memo_id, tag_id)
@@ -147,7 +147,7 @@ class MemoService(ServiceBase):
             MemoRead: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモまたはタスクが存在しない場合
+            NotFoundError: メモまたはタスクが存在しない場合
             MemoServiceError: メモの更新に失敗した場合
         """
         memo = self.memo_repo.add_task(memo_id, task_id)
@@ -168,7 +168,7 @@ class MemoService(ServiceBase):
             MemoRead: 取得されたメモ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             MemoServiceError: メモの取得に失敗した場合
         """
         memo = self.memo_repo.get_by_id(memo_id, with_details=with_details)
@@ -188,7 +188,7 @@ class MemoService(ServiceBase):
             list[MemoRead]: 取得されたメモのリスト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             MemoServiceError: メモの取得に失敗した場合
         """
         memos = self.memo_repo.get_all(with_details=with_details)
@@ -209,7 +209,7 @@ class MemoService(ServiceBase):
             list[MemoRead]: 指定されたステータスのメモ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             MemoServiceError: メモの取得に失敗した場合
         """
         memos = self.memo_repo.list_by_status(status, with_details=with_details)
@@ -230,7 +230,7 @@ class MemoService(ServiceBase):
             list[MemoRead]: 検索結果のメモ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             MemoServiceError: メモの取得に失敗した場合
         """
         memos = self.memo_repo.search_by_title(query, with_details=with_details)

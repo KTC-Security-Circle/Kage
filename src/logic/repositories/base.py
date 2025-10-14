@@ -1,4 +1,8 @@
-"""リポジトリの基底クラス"""
+"""リポジトリの基底クラス
+
+エンティティの存在しない場合は NotFoundError を送出し、
+DB/IO 等の技術的失敗は RepositoryError に集約して送出する。
+"""
 
 import uuid
 from typing import Any, TypeVar
@@ -8,27 +12,13 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from errors import NotFoundError, RepositoryError
 from models import BaseModel
 
 _LoadOptionType = TypeVar("_LoadOptionType", bound=Any)
 
 
-class MyBaseError(Exception):
-    """カスタム例外クラス"""
-
-    def __init__(self, arg: str = "") -> None:
-        self.arg = arg
-
-
-class CheckExistsError(MyBaseError):
-    """エンティティ存在確認エラー
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"エンティティ存在確認エラー: {self.arg}"
+# 旧例外は廃止。統一エラー (errors) を使用する。
 
 
 class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
@@ -90,18 +80,19 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             T | None: 取得されたエンティティ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         try:
             result = self.session.exec(stmt).first()
         except Exception as e:
-            logger.exception(f"{self.model_class.__name__} の取得に失敗しました: {e}")
-            raise
+            # 技術的失敗は RepositoryError に集約
+            msg = f"{self.model_class.__name__} の取得に失敗しました"
+            raise RepositoryError(msg) from e
 
         if not result:
             msg = f"{self.model_class.__name__} が見つかりません: {entity}"
             logger.warning(msg)
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
 
         logger.debug(f"{self.model_class.__name__} が見つかりました: {entity}")
         return result
@@ -116,18 +107,19 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             list[T]: 取得されたエンティティ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         try:
             results = self.session.exec(stmt).all()
         except Exception as e:
-            logger.exception(f"{self.model_class.__name__} の一覧取得に失敗しました: {e}")
-            raise
+            # 技術的失敗は RepositoryError に集約
+            msg = f"{self.model_class.__name__} の一覧取得に失敗しました"
+            raise RepositoryError(msg) from e
 
         if not results:
             msg = f"{self.model_class.__name__} のエンティティが見つかりません。"
             logger.warning(msg)
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
 
         logger.info(f"{self.model_class.__name__} のエンティティが {len(results)} 件見つかりました。")
         return list(results)
@@ -135,8 +127,8 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
     def check_exists(self, entity_id: uuid.UUID) -> T:
         """エンティティが存在するか確認する
 
-        check_exists は get_by_id を呼び出し、存在しない場合は CheckExistsError を発生させる
-        リレーションが必要な場合は直接 get_by_id(with_details=True) を呼び出すこと
+        check_exists は get_by_id を呼び出し、存在しない場合は NotFoundError を発生させる。
+        リレーションが必要な場合は直接 get_by_id(with_details=True) を呼び出すこと。
 
         Args:
             entity_id: 確認するエンティティのID
@@ -145,7 +137,7 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             T: 存在するエンティティ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         return self.get_by_id(entity_id)
 
@@ -159,7 +151,7 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             T: 作成されたエンティティ
 
         Raises:
-            Exception: データベース操作エラー
+            RepositoryError: データベース操作エラー
         """
         try:
             data = entity_data.model_dump(exclude_unset=True, exclude_none=True)
@@ -167,8 +159,9 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             self._commit_and_refresh(entity)
             logger.info(f"{self.model_class.__name__} を作成しました: {entity.id}")
         except Exception as e:
-            logger.exception(f"{self.model_class.__name__} の作成に失敗しました: {e}")
-            raise
+            # 技術的失敗は RepositoryError に集約
+            msg = f"{self.model_class.__name__} の作成に失敗しました"
+            raise RepositoryError(msg) from e
         return entity
 
     def get_by_id(self, entity_id: uuid.UUID, *, with_details: bool = False) -> T:
@@ -182,7 +175,7 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             T | None: 取得されたエンティティ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(self.model_class).where(self.model_class.id == entity_id)
 
@@ -215,7 +208,7 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             T | None: 更新されたエンティティ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         try:
             entity = self.check_exists(entity_id)
@@ -226,8 +219,9 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             self._commit_and_refresh(entity)
             logger.info(f"{self.model_class.__name__} を更新しました: {entity_id}")
         except Exception as e:
-            logger.exception(f"{self.model_class.__name__} の更新に失敗しました: {e}")
-            raise
+            # 技術的失敗は RepositoryError に集約
+            msg = f"{self.model_class.__name__} の更新に失敗しました"
+            raise RepositoryError(msg) from e
         return entity
 
     def delete(self, entity_id: uuid.UUID) -> bool:
@@ -245,10 +239,11 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
             self.session.delete(entity)
             self.session.commit()
             logger.info(f"{self.model_class.__name__} を削除しました: {entity_id}")
-        except CheckExistsError:
+        except NotFoundError:
             logger.warning(f"{self.model_class.__name__} が見つかりません: {entity_id}")
             return False
         except Exception as e:
-            logger.exception(f"{self.model_class.__name__} の削除に失敗しました: {e}")
-            raise
+            # 技術的失敗は RepositoryError に集約
+            msg = f"{self.model_class.__name__} の削除に失敗しました"
+            raise RepositoryError(msg) from e
         return True

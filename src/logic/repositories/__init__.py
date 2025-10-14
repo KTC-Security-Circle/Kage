@@ -11,7 +11,7 @@ from typing import TypeVar
 
 from sqlmodel import Session
 
-from logic.repositories.base import BaseRepository, CheckExistsError
+from logic.repositories.base import BaseRepository
 from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
@@ -77,7 +77,6 @@ class RepositoryFactory:
 
 __all__ = [
     "BaseRepository",
-    "CheckExistsError",
     "MemoRepository",
     "ProjectRepository",
     "TagRepository",

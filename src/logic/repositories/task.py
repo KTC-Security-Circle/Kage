@@ -5,7 +5,8 @@ import uuid
 from loguru import logger
 from sqlmodel import Session, func, select
 
-from logic.repositories.base import BaseRepository, CheckExistsError
+from errors import NotFoundError
+from logic.repositories.base import BaseRepository
 from models import Tag, Task, TaskCreate, TaskStatus, TaskUpdate
 
 
@@ -35,13 +36,13 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             Tag: 存在するタグ
 
         Raises:
-            CheckExistsError: タグが存在しない場合
+            NotFoundError: タグが存在しない場合
         """
         tag = self.session.get(Tag, tag_id)
         if tag is None:
             msg = f"タグが見つかりません: {tag_id}"
             logger.warning(msg)
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
         return tag
 
     def add_tag(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> Task:
@@ -55,7 +56,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             Task: 更新されたタスク
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         task = self.get_by_id(task_id, with_details=True)
         tag = self._check_exists_tag(tag_id)
@@ -81,7 +82,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             Task: 更新されたタスク
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         task = self.get_by_id(task_id, with_details=True)
         tag = self._check_exists_tag(tag_id)
@@ -106,7 +107,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             Task: 更新されたタスク
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         task = self.get_by_id(task_id, with_details=True)
 
@@ -137,7 +138,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             list[Task]: 指定された条件に一致するタスク一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Task).where(Task.status == status)
 
@@ -157,7 +158,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             list[Task]: 指定された条件に一致するタスク一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Task).where(Task.project_id == project_id)
 
@@ -177,7 +178,7 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
             list[Task]: 指定された条件に一致するタスク一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Task).where(func.lower(Task.title).like(f"%{title_query.lower()}%"))
 

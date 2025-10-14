@@ -59,7 +59,7 @@ class TaskService(ServiceBase):
             TaskRead: 作成されたタスク
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             TaskServiceError: タスク作成に失敗した場合
         """
         task = self.task_repo.create(create_data)
@@ -79,7 +79,7 @@ class TaskService(ServiceBase):
             TaskRead: 更新されたタスク
 
         Raises:
-            CheckExistsError: タスクが存在しない場合
+            NotFoundError: タスクが存在しない場合
             TaskServiceError: タスク更新に失敗した場合
         """
         task = self.task_repo.update(task_id, update_data)
@@ -99,7 +99,7 @@ class TaskService(ServiceBase):
             bool: タスクが正常に削除された場合にTrueを返す
 
         Raises:
-            CheckExistsError: タスクが存在しない場合
+            NotFoundError: タスクが存在しない場合
             TaskServiceError: タスクが関連している場合、または削除に失敗した場合
         """
         existing_task = self.task_repo.get_by_id(task_id)
@@ -128,7 +128,7 @@ class TaskService(ServiceBase):
             TaskRead: 更新されたタスク
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         task = self.task_repo.get_by_id(task_id, with_details=True)
 
@@ -157,7 +157,7 @@ class TaskService(ServiceBase):
             TaskRead: 見つかったタスク
 
         Raises:
-            CheckExistsError: タスクが存在しない場合
+            NotFoundError: タスクが存在しない場合
             TaskServiceError: タスクの取得に失敗した場合
         """
         task = self.task_repo.get_by_id(task_id, with_details=with_details)
@@ -173,7 +173,7 @@ class TaskService(ServiceBase):
             list[TaskRead]: 全てのタスクのリスト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             TaskServiceError: 全タスクの取得に失敗した場合
         """
         tasks = self.task_repo.get_all()
@@ -193,7 +193,7 @@ class TaskService(ServiceBase):
             list[TaskRead]: 指定されたステータスのタスクのリスト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             TaskServiceError: タスクの取得に失敗した場合
         """
         tasks = self.task_repo.list_by_status(status, with_details=with_details)

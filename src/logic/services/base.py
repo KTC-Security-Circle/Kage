@@ -11,7 +11,7 @@ from typing import Any, Literal, ParamSpec, Self, TypeVar, overload
 
 from loguru import logger
 
-from logic.repositories import CheckExistsError
+from errors import NotFoundError, RepositoryError
 from models import BaseModel
 
 
@@ -52,9 +52,14 @@ def handle_service_errors(
             try:
                 return func(*args, **kwargs)
 
-            except CheckExistsError as e:
-                msg = f"<{service_name}> {operation}処理でエンティティが存在しません: {e}"
-                raise CheckExistsError(msg) from e
+            except NotFoundError:
+                # ドメイン相当の条件不一致はそのまま透過（UI/CLIで情報表示する想定）
+                raise
+            except RepositoryError as e:
+                # インフラ失敗はサービス層で抽象化
+                msg = f"<{service_name}> {operation}処理でリポジトリエラーが発生しました: {e}"
+                logger.debug(msg)
+                raise error_cls(message=msg, operation=operation) from e
             except Exception as e:
                 msg = f"<{service_name}> {operation}処理で予期しないエラーが発生しました: {e}"
                 logger.exception(msg)

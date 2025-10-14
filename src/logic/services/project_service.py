@@ -59,7 +59,7 @@ class ProjectService(ServiceBase):
             ProjectRead: 作成されたプロジェクト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             ProjectServiceError: プロジェクト作成に失敗した場合
         """
         project = self.project_repo.create(project_data)
@@ -80,7 +80,7 @@ class ProjectService(ServiceBase):
             ProjectRead: 更新されたプロジェクト
 
         Raises:
-            CheckExistsError: プロジェクトが存在しない場合
+            NotFoundError: プロジェクトが存在しない場合
             ProjectServiceError: プロジェクト更新に失敗した場合
         """
         updated_project = self.project_repo.update(project_id, project_data)
@@ -100,7 +100,7 @@ class ProjectService(ServiceBase):
             bool: 削除が成功した場合True
 
         Raises:
-            CheckExistsError: プロジェクトが存在しない場合
+            NotFoundError: プロジェクトが存在しない場合
             ProjectServiceError: タスクが関連している場合、または削除に失敗した場合
         """
         # プロジェクトの存在を確認し、関連タスクを取得
@@ -131,7 +131,7 @@ class ProjectService(ServiceBase):
             ProjectRead: 更新されたプロジェクト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         project = self.project_repo.get_by_id(project_id, with_details=True)
 
@@ -159,7 +159,7 @@ class ProjectService(ServiceBase):
             ProjectRead: 見つかったプロジェクト、存在しない場合はNone
 
         Raises:
-            CheckExistsError: プロジェクトが存在しない場合
+            NotFoundError: プロジェクトが存在しない場合
             ProjectServiceError: プロジェクトの取得に失敗した場合
         """
         project = self.project_repo.get_by_id(project_id)
@@ -175,7 +175,7 @@ class ProjectService(ServiceBase):
             list[ProjectRead]: 全てのプロジェクトのリスト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             ProjectServiceError: 全プロジェクトの取得に失敗した場合
         """
         projects = self.project_repo.get_all()
@@ -194,7 +194,7 @@ class ProjectService(ServiceBase):
             list[ProjectRead]: 指定されたステータスのプロジェクトのリスト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             ProjectServiceError: プロジェクトの取得に失敗した場合
         """
         projects = self.project_repo.list_by_status(status)

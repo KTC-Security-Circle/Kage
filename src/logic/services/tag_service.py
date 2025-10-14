@@ -59,7 +59,7 @@ class TagService(ServiceBase):
             TagRead: 作成されたタグ
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             TagServiceError: タグ作成に失敗した場合
         """
         tag = self.tag_repo.create(create_data)
@@ -80,7 +80,7 @@ class TagService(ServiceBase):
             TagRead: 更新されたタグ
 
         Raises:
-            CheckExistsError: タグが存在しない場合
+            NotFoundError: タグが存在しない場合
             TagServiceError: タグ更新に失敗した場合
         """
         tag = self.tag_repo.update(tag_id, update_data)
@@ -128,7 +128,7 @@ class TagService(ServiceBase):
             TagRead: 見つかったタグ
 
         Raises:
-            CheckExistsError: タグが存在しない場合
+            NotFoundError: タグが存在しない場合
             TagServiceError: タグの取得に失敗した場合
         """
         tag = self.tag_repo.get_by_id(tag_id)
@@ -147,7 +147,7 @@ class TagService(ServiceBase):
             TagRead: 見つかったタグ
 
         Raises:
-            CheckExistsError: タグが存在しない場合
+            NotFoundError: タグが存在しない場合
             TagServiceError: タグの取得に失敗した場合
         """
         tag = self.tag_repo.get_by_name(name)
@@ -163,7 +163,7 @@ class TagService(ServiceBase):
             list[TagRead]: 取得したタグのリスト
 
         Raises:
-            CheckExistsError: タグが存在しない場合
+            NotFoundError: エンティティが存在しない場合
             TagServiceError: タグの取得に失敗した場合
         """
         tags = self.tag_repo.get_all()

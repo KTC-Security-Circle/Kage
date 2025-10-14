@@ -5,7 +5,8 @@ import uuid
 from loguru import logger
 from sqlmodel import Session, func, select
 
-from logic.repositories.base import BaseRepository, CheckExistsError
+from errors import NotFoundError
+from logic.repositories.base import BaseRepository
 from models import Memo, MemoCreate, MemoStatus, MemoTagLink, MemoUpdate, Tag, Task
 
 
@@ -35,13 +36,13 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Tag: 存在するタグ
 
         Raises:
-            CheckExistsError: タグが存在しない場合
+            NotFoundError: タグが存在しない場合
         """
         tag = self.session.get(Tag, tag_id)
         if tag is None:
             msg = f"タグが見つかりません: {tag_id}"
             logger.warning(msg)
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
         return tag
 
     def _check_exists_task(self, task_id: uuid.UUID) -> Task:
@@ -54,13 +55,13 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Task: 存在するタスク
 
         Raises:
-            CheckExistsError: タスクが存在しない場合
+            NotFoundError: タスクが存在しない場合
         """
         task = self.session.get(Task, task_id)
         if task is None:
             msg = f"タスクが見つかりません: {task_id}"
             logger.warning(msg)
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
         return task
 
     def add_tag(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> Memo:
@@ -74,7 +75,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Memo: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモまたはタグが存在しない場合
+            NotFoundError: メモまたはタグが存在しない場合
         """
         memo = self.get_by_id(memo_id, with_details=True)
         tag = self._check_exists_tag(tag_id)
@@ -100,7 +101,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Memo: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモまたはタグが存在しない場合
+            NotFoundError: メモまたはタグが存在しない場合
         """
         memo = self.get_by_id(memo_id, with_details=True)
         tag = self._check_exists_tag(tag_id)
@@ -126,7 +127,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Memo: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモまたはタスクが存在しない場合
+            NotFoundError: メモまたはタスクが存在しない場合
         """
         memo = self.get_by_id(memo_id, with_details=True)
         task = self._check_exists_task(task_id)
@@ -152,7 +153,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             Memo: 更新されたメモ
 
         Raises:
-            CheckExistsError: メモまたはタスクが存在しない場合
+            NotFoundError: メモまたはタスクが存在しない場合
         """
         memo = self.get_by_id(memo_id, with_details=True)
         task = self._check_exists_task(task_id)
@@ -184,7 +185,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             list[Memo]: 指定された条件に一致するメモ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Memo).where(Memo.status == status)
         if with_details:
@@ -202,7 +203,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             list[Memo]: 指定された条件に一致するメモ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         # 特定のタグが付与されたメモを取得
         stmt = select(Memo).join(MemoTagLink).join(Tag).where(Tag.id == tag_id)
@@ -221,7 +222,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             list[Memo]: 検索条件に一致するメモ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Memo).where(func.lower(Memo.title).like(f"%{title_query.lower()}%"))
         if with_details:
@@ -239,7 +240,7 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
             list[Memo]: 検索条件に一致するメモ一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Memo).where(func.lower(Memo.content).contains(func.lower(content_query)))
         if with_details:

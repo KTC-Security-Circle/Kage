@@ -5,7 +5,8 @@ import uuid
 from loguru import logger
 from sqlmodel import Session, func, select
 
-from logic.repositories.base import BaseRepository, CheckExistsError
+from errors import NotFoundError
+from logic.repositories.base import BaseRepository
 from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate, Task
 
 
@@ -35,13 +36,13 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             Task: 存在するタスク
 
         Raises:
-            CheckExistsError: タスクが存在しない場合
+            NotFoundError: タスクが存在しない場合
         """
         task = self.session.get(Task, task_id)
         if task is None:
             msg = f"タスクが見つかりません: {task_id}"
             logger.warning(msg)
-            raise CheckExistsError(msg)
+            raise NotFoundError(msg)
         return task
 
     def add_task(self, project_id: uuid.UUID, task_id: str) -> Project:
@@ -55,7 +56,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             Project: 更新されたプロジェクト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         project = self.get_by_id(project_id, with_details=True)
         task = self._check_exists_task(task_id)
@@ -81,7 +82,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             Project: 更新されたプロジェクト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         project = self.get_by_id(project_id, with_details=True)
         task = self._check_exists_task(task_id)
@@ -107,7 +108,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             Project: 更新されたプロジェクト
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         project = self.get_by_id(project_id, with_details=True)
 
@@ -137,7 +138,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             list[Project]: 指定された条件に一致するプロジェクト一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Project).where(Project.status == status)
         return self._gets_by_statement(stmt)
@@ -152,7 +153,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             list[Project]: 検索条件に一致するプロジェクト一覧
 
         Raises:
-            CheckExistsError: エンティティが存在しない場合
+            NotFoundError: エンティティが存在しない場合
         """
         stmt = select(Project).where(func.lower(Project.title).like(f"%{title_query.lower()}%"))
         return self._gets_by_statement(stmt)

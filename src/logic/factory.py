@@ -7,6 +7,7 @@ Application Service層への移行をサポートするため、
 従来のcreate_service_factory関数は引き続き利用可能です。
 """
 
+from inspect import signature
 from typing import TypeVar
 
 from sqlmodel import Session
@@ -55,7 +56,8 @@ class ServiceFactory:
             service_type: 登録対象のサービスクラス
         """
         try:
-            if service_type.build_service.__code__.co_argcount == 1:
+            if signature(service_type.build_service).parameters == {"self"}:
+                # self のみを引数としている場合
                 # 引数なしのビルドメソッド
                 built = service_type.build_service()
             else:

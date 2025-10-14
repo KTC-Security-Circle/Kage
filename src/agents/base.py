@@ -11,6 +11,7 @@ from typing_extensions import TypedDict
 
 from agents.agent_conf import HuggingFaceModel, LLMProvider
 from agents.utils import agents_logger, get_memory, get_model
+from errors import ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -248,7 +249,7 @@ class BaseAgent[StateType, ReturnType](ABC):
             if self._error_response:
                 # 強制的にエラーを発生させてエラーハンドリングをテスト
                 err_msg = "Forced error for testing error handling."
-                raise ValueError(err_msg)  # noqa: TRY301
+                raise ValidationError(err_msg)  # noqa: TRY301
             output = validate_model.model_validate(output)
         except Exception as e:
             agents_logger.error(f"Output validation failed: {e}, raw_output: {output}")

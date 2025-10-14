@@ -8,6 +8,7 @@ import uuid
 
 from loguru import logger
 
+from errors import NotFoundError
 from logic.repositories import ProjectRepository, RepositoryFactory
 from logic.services.base import MyBaseError, ServiceBase, convert_read_model, handle_service_errors
 from models import Project, ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate
@@ -143,7 +144,7 @@ class ProjectService(ServiceBase):
         else:
             msg = f"プロジェクト({project_id})にタスク({task_id})は存在しません。"
             logger.warning(msg)
-            raise ValueError(msg)
+            raise NotFoundError(msg)
 
         return updated_project
 

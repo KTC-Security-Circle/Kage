@@ -8,6 +8,7 @@ import uuid
 
 from loguru import logger
 
+from errors import NotFoundError
 from logic.repositories import RepositoryFactory, TaskRepository
 from logic.services.base import MyBaseError, ServiceBase, convert_read_model, handle_service_errors
 from models import Task, TaskCreate, TaskRead, TaskStatus, TaskUpdate
@@ -140,7 +141,7 @@ class TaskService(ServiceBase):
         else:
             msg = f"タスク({task_id})にタグ({tag_id})は存在しません。"
             logger.debug(msg)
-            raise ValueError(msg)
+            raise NotFoundError(msg)
 
         return updated_task
 

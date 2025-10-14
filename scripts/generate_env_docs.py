@@ -5,7 +5,7 @@
 # ]
 #
 # [tool.uv.sources]
-# kage = { path = "../" }
+# kage = { path = "../", editable = true }
 # ///
 """環境変数レジストリと初期設定YAMLをドキュメントへ反映するスクリプト。
 

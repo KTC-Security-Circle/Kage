@@ -47,7 +47,8 @@ Attributes:
 """
 
 # tablename用 ignore
-# pyright: reportAssignmentType=false, reportGeneralTypeIssues=false
+# pyright: reportAssignmentType=false  # 型アサインメントの警告を無効化
+# pyright: reportGeneralTypeIssues=false  # 一般的な型の問題の警告を無効化
 
 from __future__ import annotations
 

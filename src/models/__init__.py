@@ -47,8 +47,10 @@ Attributes:
 """
 
 # tablename用 ignore
-# pyright: reportAssignmentType=false  # 型アサインメントの警告を無効化
-# pyright: reportGeneralTypeIssues=false  # 一般的な型の問題の警告を無効化
+# # 型アサインメントの警告を無効化
+# pyright: reportAssignmentType=false
+# # 一般的な型の問題の警告を無効化
+# pyright: reportGeneralTypeIssues=false
 
 from __future__ import annotations
 
@@ -154,10 +156,11 @@ class BaseModel(SQLModel):
     """
 
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(default_factory=datetime.now)
+    created_at: datetime | None = Field(default_factory=datetime.now, nullable=False)
     updated_at: datetime | None = Field(
         default_factory=datetime.now,
         sa_column_kwargs={"onupdate": datetime.now},
+        nullable=False,
     )
 
 

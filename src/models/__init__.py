@@ -119,7 +119,6 @@ class TaskStatus(str, Enum):
     """タスクのステータス（GTDシステムに基づく）
 
     Attributes:
-        INBOX: 新規タスク。未処理の状態。
         TODO: これから取り組むべきタスク。
         TODAYS: 今日中に完了させるべきタスク。
         PROGRESS: 現在進行中のタスク。

@@ -10,12 +10,19 @@
 - exists_by_name: タグ名による存在チェック
 """
 
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session
 
-from logic.repositories.tag import TagRepository
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from logic.repositories.tag import TagRepository
+
+from errors import NotFoundError, RepositoryError
 from models import Tag, TagCreate, TagUpdate
 
 
@@ -82,13 +89,10 @@ class TestTagRepositoryGetAll:
         expected_ids = {tag.id for tag in sample_tags}
         assert result_ids == expected_ids
 
-    def test_get_all_returns_empty_list_when_no_tags(self, tag_repository: TagRepository) -> None:
-        """タグが存在しない場合に空のリストを返すことをテスト"""
-        # [AI GENERATED] タグが存在しない状態で実行
-        result = tag_repository.get_all()
-
-        # [AI GENERATED] 空のリストが返されることを確認
-        assert result == []
+    def test_get_all_raises_not_found_when_no_tags(self, tag_repository: TagRepository) -> None:
+        """タグが存在しない場合は NotFoundError を送出"""
+        with pytest.raises(NotFoundError):
+            tag_repository.get_all()
 
 
 class TestTagRepositoryGetByName:
@@ -105,15 +109,12 @@ class TestTagRepositoryGetByName:
         assert result.id == target_tag.id
         assert result.name == target_tag.name
 
-    def test_get_by_name_returns_none_for_nonexistent_tag(
+    def test_get_by_name_raises_not_found_for_nonexistent_tag(
         self, tag_repository: TagRepository, sample_tags: list[Tag]
     ) -> None:
-        """存在しないタグ名で検索した場合にNoneを返すことをテスト"""
-        # [AI GENERATED] 存在しないタグ名で検索
-        result = tag_repository.get_by_name("存在しないタグ")
-
-        # [AI GENERATED] Noneが返されることを確認
-        assert result is None
+        """存在しないタグ名で検索した場合は NotFoundError"""
+        with pytest.raises(NotFoundError):
+            tag_repository.get_by_name("存在しないタグ")
 
     def test_get_by_name_case_sensitive(self, tag_repository: TagRepository, sample_tags: list[Tag]) -> None:
         """タグ名検索が大文字小文字を区別することをテスト"""
@@ -151,40 +152,15 @@ class TestTagRepositorySearchByName:
         # [AI GENERATED] 同じ結果が得られることを確認
         assert len(result_lower) == len(result_upper)
 
-    def test_search_by_name_returns_empty_list_for_no_matches(
+    def test_search_by_name_raises_not_found_for_no_matches(
         self, tag_repository: TagRepository, sample_tags: list[Tag]
     ) -> None:
-        """一致しないキーワードで検索した場合に空のリストを返すことをテスト"""
-        # [AI GENERATED] 存在しないキーワードで検索
-        result = tag_repository.search_by_name("存在しないキーワード")
-
-        # [AI GENERATED] 空のリストが返されることを確認
-        assert result == []
+        """一致しないキーワードで検索した場合は NotFoundError を送出"""
+        with pytest.raises(NotFoundError):
+            tag_repository.search_by_name("存在しないキーワード")
 
 
-class TestTagRepositoryExistsByName:
-    """exists_by_nameメソッドのテストクラス"""
-
-    def test_exists_by_name_returns_true_for_existing_tag(
-        self, tag_repository: TagRepository, sample_tags: list[Tag]
-    ) -> None:
-        """存在するタグ名でTrueを返すことをテスト"""
-        # [AI GENERATED] 存在するタグ名で存在チェック
-        target_tag = sample_tags[0]
-        result = tag_repository.exists_by_name(target_tag.name)
-
-        # [AI GENERATED] Trueが返されることを確認
-        assert result is True
-
-    def test_exists_by_name_returns_false_for_nonexistent_tag(
-        self, tag_repository: TagRepository, sample_tags: list[Tag]
-    ) -> None:
-        """存在しないタグ名でFalseを返すことをテスト"""
-        # [AI GENERATED] 存在しないタグ名で存在チェック
-        result = tag_repository.exists_by_name("存在しないタグ")
-
-        # [AI GENERATED] Falseが返されることを確認
-        assert result is False
+"""exists_by_name は現行APIに存在しないためスキップ"""
 
 
 class TestTagRepositoryBaseCRUD:
@@ -224,13 +200,10 @@ class TestTagRepositoryBaseCRUD:
         assert result.name == created_tag.name
 
     def test_get_by_id_not_found(self, tag_repository: TagRepository) -> None:
-        """存在しないIDでタグ取得した場合にNoneを返すことをテスト"""
-        # [AI GENERATED] 存在しないUUIDで検索
+        """存在しないIDでタグ取得した場合は NotFoundError"""
         non_existent_id = uuid.uuid4()
-        result = tag_repository.get_by_id(non_existent_id)
-
-        # [AI GENERATED] Noneが返されることを確認
-        assert result is None
+        with pytest.raises(NotFoundError):
+            tag_repository.get_by_id(non_existent_id)
 
     def test_update_tag_success(self, tag_repository: TagRepository) -> None:
         """タグ更新が成功することをテスト"""
@@ -254,15 +227,11 @@ class TestTagRepositoryBaseCRUD:
         assert result.name == update_data.name
 
     def test_update_tag_not_found(self, tag_repository: TagRepository) -> None:
-        """存在しないタグの更新でNoneを返すことをテスト"""
-        # [AI GENERATED] 存在しないUUIDで更新を試行
+        """存在しないタグの更新は RepositoryError を送出"""
         non_existent_id = uuid.uuid4()
         update_data = TagUpdate(name="存在しない更新")
-
-        result = tag_repository.update(non_existent_id, update_data)
-
-        # [AI GENERATED] Noneが返されることを確認
-        assert result is None
+        with pytest.raises(RepositoryError):
+            tag_repository.update(non_existent_id, update_data)
 
     def test_delete_tag_success(self, tag_repository: TagRepository) -> None:
         """タグ削除が成功することをテスト"""
@@ -280,9 +249,10 @@ class TestTagRepositoryBaseCRUD:
         # [AI GENERATED] 削除が成功したことを確認
         assert result is True
 
-        # [AI GENERATED] 削除されたタグが取得できないことを確認
-        deleted_tag = tag_repository.get_by_id(created_tag.id)
-        assert deleted_tag is None
+        # [AI GENERATED] 削除後の取得は NotFoundError
+        assert created_tag.id is not None
+        with pytest.raises(NotFoundError):
+            tag_repository.get_by_id(created_tag.id)
 
     def test_delete_tag_not_found(self, tag_repository: TagRepository) -> None:
         """存在しないタグの削除でFalseを返すことをテスト"""

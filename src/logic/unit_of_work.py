@@ -7,16 +7,21 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, TypeVar
 
 from sqlmodel import Session
 
 from config import engine
-from logic.factory import RepositoryFactory, ServiceFactory
+from logic.factory import ServiceFactory
+from logic.repositories import RepositoryFactory
+from logic.services import ServiceBase
 
 if TYPE_CHECKING:
     from collections.abc import Generator
     from types import TracebackType
+
+
+_InputServiceType = TypeVar("_InputServiceType", bound=ServiceBase)
 
 
 class UnitOfWork(ABC):
@@ -155,6 +160,20 @@ class SqlModelUnitOfWork(UnitOfWork):
             msg = "Unit of Work not initialized"
             raise RuntimeError(msg)
         return self._service_factory
+
+    def get_service(self, service_type: type[_InputServiceType]) -> _InputServiceType:
+        """サービスインスタンスを取得する
+
+        Args:
+            service_type: 取得対象のサービスクラス
+
+        Returns:
+            ServiceBase: サービスインスタンス
+
+        Raises:
+            ServiceFactoryError: サービスが登録されていない場合
+        """
+        return self.service_factory.get_service(service_type)
 
     @contextmanager
     def get_service_factory(self) -> Generator[ServiceFactory, None, None]:

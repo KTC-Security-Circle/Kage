@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from errors import ValidationError
+from logic.services.base import ServiceBase
 from settings.manager import ConfigManager, get_config_manager
 
 if TYPE_CHECKING:
@@ -25,7 +27,7 @@ _POSITION_SIZE_ELEMENTS = 2
 _MIN_PATH_DEPTH = 2
 
 
-class SettingsService:
+class SettingsService(ServiceBase):
     """設定管理サービス
 
     ConfigManagerを使用して設定の読み取りと更新を行う
@@ -38,6 +40,15 @@ class SettingsService:
             config_manager: 設定マネージャー。Noneの場合はグローバルインスタンスを使用
         """
         self._config_manager = config_manager or get_config_manager()
+
+    @classmethod
+    def build_service(cls) -> SettingsService:
+        """SettingsServiceのインスタンスを生成するファクトリメソッド
+
+        Returns:
+            SettingsService: 設定管理サービスのインスタンス
+        """
+        return cls()
 
     def get_all_settings(self) -> AppSettings:
         """全設定を取得
@@ -94,7 +105,7 @@ class SettingsService:
             設定値
 
         Raises:
-            ValueError: パスが不正な場合
+            ValidationError: パスが不正な場合
         """
         logger.debug(f"設定を取得: {path}")
         parts = path.split(".")
@@ -105,7 +116,7 @@ class SettingsService:
                 value = getattr(value, part)
         except AttributeError as e:
             msg = f"設定パスが見つかりません: {path}"
-            raise ValueError(msg) from e
+            raise ValidationError(msg) from e
         else:
             return value
 
@@ -122,17 +133,17 @@ class SettingsService:
             更新後のウィンドウ設定
 
         Raises:
-            ValueError: バリデーションエラー
+            ValidationError: バリデーションエラー
         """
         logger.info(f"ウィンドウ設定を更新: size={size}, position={position}")
 
         if size is not None and len(size) != _POSITION_SIZE_ELEMENTS:
             msg = "サイズは[幅, 高さ]の2要素のリストである必要があります"
-            raise ValueError(msg)
+            raise ValidationError(msg)
 
         if position is not None and len(position) != _POSITION_SIZE_ELEMENTS:
             msg = "位置は[X, Y]の2要素のリストである必要があります"
-            raise ValueError(msg)
+            raise ValidationError(msg)
 
         with self._config_manager.edit() as editable:
             if size is not None:
@@ -159,13 +170,13 @@ class SettingsService:
             更新後のユーザー設定
 
         Raises:
-            ValueError: バリデーションエラー
+            ValidationError: バリデーションエラー
         """
         logger.info(f"ユーザー設定を更新: theme={theme}, user_name={user_name}")
 
         if theme is not None and theme not in {"light", "dark"}:
             msg = "テーマは'light'または'dark'である必要があります"
-            raise ValueError(msg)
+            raise ValidationError(msg)
 
         with self._config_manager.edit() as editable:
             if last_login_user is not None:
@@ -187,13 +198,13 @@ class SettingsService:
             更新後のデータベース設定
 
         Raises:
-            ValueError: バリデーションエラー
+            ValidationError: バリデーションエラー
         """
         logger.info(f"データベース設定を更新: url={url}")
 
         if url is not None and not url.strip():
             msg = "URLは空にできません"
-            raise ValueError(msg)
+            raise ValidationError(msg)
 
         with self._config_manager.edit() as editable:
             if url is not None:
@@ -212,14 +223,14 @@ class SettingsService:
             更新後の設定値
 
         Raises:
-            ValueError: パスが不正な場合
+            ValidationError: パスが不正な場合
         """
         logger.info(f"設定を更新: {path} = {value}")
         parts = path.split(".")
 
         if len(parts) < _MIN_PATH_DEPTH:
             msg = f"設定パスは少なくとも2階層必要です: {path}"
-            raise ValueError(msg)
+            raise ValidationError(msg)
 
         with self._config_manager.edit() as editable:
             obj: Any = editable

@@ -11,27 +11,26 @@
 
 from __future__ import annotations
 
-from typing import NoReturn, cast
+from typing import Any, NoReturn, cast, override
+from uuid import uuid4
 
 from loguru import logger
 
 from agents.agent_conf import HuggingFaceModel, LLMProvider
 from agents.task_agents.one_liner.agent import OneLinerAgent
 from agents.task_agents.one_liner.state import OneLinerState
-from logic.application.base import BaseApplicationService
-from logic.queries.one_liner_queries import OneLinerContext
-
-# 既存テスト互換のため MyBaseError を継承した同名エラーを維持
-from logic.services.base import MyBaseError
+from errors import ApplicationError
+from logic.application import ApplicationServices, BaseApplicationService, TaskApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
+from models import TaskStatus
 from settings.manager import get_config_manager
 
 
-class OneLinerServiceError(MyBaseError):
+class OneLinerServiceError(ApplicationError):
     """一言コメント生成時のカスタム例外クラス"""
 
-    def __str__(self) -> str:  # pragma: no cover - フォーマットのみ
-        return f"一言コメント生成エラー: {self.arg}"
+    def __init__(self, message: str) -> None:
+        super().__init__(f"一言コメント生成エラー: {message}")
 
 
 class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
@@ -85,8 +84,12 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             self._model_name,
         )
 
+    @classmethod
+    @override
+    def get_instance(cls, *args: Any, **kwargs: Any) -> OneLinerApplicationService: ...
+
     # Public API ---------------------------------------------------------
-    def generate_one_liner(self, query: OneLinerContext | None = None) -> str:
+    def generate_one_liner(self, query: OneLinerState | None = None) -> str:
         """一言コメント生成 (空のクエリで自動集計)."""
         if query is not None:
             return self._generate_with_agent(query)
@@ -98,41 +101,30 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             return self._get_default_message()
 
     # Internal helpers --------------------------------------------------
-    def _build_context_auto(self) -> OneLinerContext:
+    def _build_context_auto(self) -> OneLinerState:
         """タスク件数とユーザー名を取得し `OneLinerContext` を構築."""
-        # 循環 import 回避のため遅延 import
-        from logic.application.task_application_service import TaskApplicationService
-        from logic.queries.task_queries import GetTodayTasksCountQuery
-
-        task_app = TaskApplicationService(self._unit_of_work_factory)
-        today = task_app.get_today_tasks_count(GetTodayTasksCountQuery())
-        completed = task_app.get_completed_tasks_count()
-        overdue = task_app.get_overdue_tasks_count()
+        apps = ApplicationServices.create()
+        task_app = apps.get_service(TaskApplicationService)
 
         try:
             user_name = get_config_manager().settings.user.user_name or ""
         except Exception:  # pragma: no cover
             user_name = ""
 
-        return OneLinerContext(
-            today_task_count=today,
-            completed_task_count=completed,
-            overdue_task_count=overdue,
-            progress_summary="",  # 未来拡張
+        return OneLinerState(
+            today_task_count=len(task_app.list_by_status(TaskStatus.TODAYS)),
+            completed_task_count=len(task_app.list_by_status(TaskStatus.COMPLETED)),
+            overdue_task_count=len(task_app.list_by_status(TaskStatus.OVERDUE)),
+            progress_summary="",  # 未使用
             user_name=user_name,
-        )
-
-    def _generate_with_agent(self, context: OneLinerContext) -> str:
-        logger.debug(f"Generating one-liner with context={context}")
-        state = OneLinerState(
-            today_task_count=context.today_task_count,
-            completed_task_count=context.completed_task_count,
-            overdue_task_count=context.overdue_task_count,
-            progress_summary=context.progress_summary,
-            user_name=context.user_name,
             final_response="",
         )
-        thread_id = f"{context.today_task_count}-{context.completed_task_count}-{context.overdue_task_count}"
+
+    def _generate_with_agent(
+        self,
+        state: OneLinerState,
+    ) -> str:
+        thread_id = str(uuid4())
         result = self._agent.invoke(cast("OneLinerState", state), thread_id)
         if not result or not getattr(result, "response", ""):
             logger.warning("OneLinerAgent が期待する応答を返しませんでした。デフォルトに置換します。")
@@ -150,5 +142,4 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
 __all__ = [
     "OneLinerApplicationService",
     "OneLinerServiceError",
-    "OneLinerContext",
 ]

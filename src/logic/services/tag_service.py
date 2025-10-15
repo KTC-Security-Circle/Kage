@@ -8,300 +8,189 @@ import uuid
 
 from loguru import logger
 
-from logic.repositories.tag import TagRepository
-from logic.repositories.task_tag import TaskTagRepository
-from logic.services.base import MyBaseError, ServiceBase
-from models.tag import TagCreate, TagRead, TagUpdate
+from logic.repositories import RepositoryFactory, TagRepository
+from logic.services.base import MyBaseError, ServiceBase, convert_read_model, handle_service_errors
+from models import Tag, TagCreate, TagRead, TagUpdate
+
+SERVICE_NAME = "タグサービス"
 
 
-# Custom exceptions for tag service errors
-class TagServiceCreateError(MyBaseError):
-    """タグ作成時のカスタム例外クラス
+class TagServiceError(MyBaseError):
+    """タグサービス層で発生する汎用的なエラー"""
 
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"タグ作成エラー: {self.arg}"
+    def __init__(self, message: str, operation: str = "不明な操作") -> None:  # [AI GENERATED]
+        super().__init__(f"タグの{operation}処理でエラーが発生しました: {message}")
+        self.operation = operation
 
 
-class TagServiceCheckError(MyBaseError):
-    """タグ存在確認時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"タグ存在確認エラー: {self.arg}"
-
-
-class TagServiceUpdateError(MyBaseError):
-    """タグ更新時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"タグ更新エラー: {self.arg}"
-
-
-class TagServiceDeleteError(MyBaseError):
-    """タグ削除時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"タグ削除エラー: {self.arg}"
-
-
-class TagServiceGetError(MyBaseError):
-    """タグ取得時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"タグ取得エラー: {self.arg}"
-
-
-type TagServiceError = (
-    TagServiceGetError | TagServiceCreateError | TagServiceCheckError | TagServiceUpdateError | TagServiceDeleteError
-)
-
-
-class TagService(ServiceBase[TagServiceError]):
+class TagService(ServiceBase):
     """タグサービス
 
     タグに関するビジネスロジックを提供するサービスクラス。
     複数のリポジトリを組み合わせて、複雑なタグ操作を実装します。
     """
 
-    def __init__(self, tag_repo: TagRepository, task_tag_repo: TaskTagRepository) -> None:
-        """TagServiceを初期化する
+    def __init__(self, tag_repo: TagRepository) -> None:
+        """タグサービスの初期化
 
         Args:
             tag_repo: タグリポジトリ
-            task_tag_repo: タスクタグリポジトリ
         """
         self.tag_repo = tag_repo
-        self.task_tag_repo = task_tag_repo
 
-    # タグの存在を確認するメソッド
-    def _check_tag_exists(self, tag_id: uuid.UUID) -> TagRead:
-        """タグの存在を確認する
-
-        Args:
-            tag_id: タグのID
+    @classmethod
+    def build_service(cls, repo_factory: RepositoryFactory) -> "TagService":
+        """TagServiceのインスタンスを生成するファクトリメソッド
 
         Returns:
-            TagRead: 存在するタグ
-
-        Raises:
-            TagServiceCheckError: タグが存在しない場合
-            ValidationError: タグデータの検証に失敗した場合
+            TagService: タグサービスのインスタンス
         """
-        tag = self.tag_repo.get_by_id(tag_id)
-        if not tag:
-            self._log_error_and_raise(f"タグID {tag_id} が見つかりません", TagServiceCheckError)
-        return TagRead.model_validate(tag)
+        return cls(tag_repo=repo_factory.create(TagRepository))
 
-    def create_tag(self, tag_data: TagCreate) -> TagRead:
+    @handle_service_errors(SERVICE_NAME, "作成", TagServiceError)
+    @convert_read_model(TagRead)
+    def create(self, create_data: TagCreate) -> Tag:
         """新しいタグを作成する
 
         Args:
-            tag_data: 作成するタグのデータ
+            create_data: 作成するタグのデータ
 
         Returns:
             TagRead: 作成されたタグ
 
         Raises:
-            TagServiceCreateError: 同一名のタグが既に存在する場合、またはタグ作成に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            NotFoundError: エンティティが存在しない場合
+            TagServiceError: タグ作成に失敗した場合
         """
-        # [AI GENERATED] 同一名のタグが既に存在するかチェック
-        existing_tag = self.tag_repo.get_by_name(tag_data.name)
-        if existing_tag:
-            self._log_error_and_raise(f"タグ名 '{tag_data.name}' は既に存在します", TagServiceCreateError)
+        tag = self.tag_repo.create(create_data)
+        logger.info(f"タグを作成しました: {tag.id}")
 
-        tag = self.tag_repo.create(tag_data)
-        if not tag:
-            self._log_error_and_raise("タグの作成に失敗しました", TagServiceCreateError)
+        return tag
 
-        logger.info(f"タグ '{tag.name}' を作成しました (ID: {tag.id})")
-        return TagRead.model_validate(tag)
-
-    def update_tag(self, tag_id: uuid.UUID, tag_data: TagUpdate) -> TagRead:
+    @handle_service_errors(SERVICE_NAME, "更新", TagServiceError)
+    @convert_read_model(TagRead)
+    def update(self, tag_id: uuid.UUID, update_data: TagUpdate) -> Tag:
         """タグを更新する
 
         Args:
             tag_id: 更新するタグのID
-            tag_data: 更新するタグのデータ
+            update_data: 更新データ
 
         Returns:
             TagRead: 更新されたタグ
 
         Raises:
-            TagServiceCheckError: タグが存在しない場合
-            TagServiceUpdateError: 同一名のタグが既に存在する場合、またはタグ更新に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            NotFoundError: タグが存在しない場合
+            TagServiceError: タグ更新に失敗した場合
         """
-        # タグの存在を確認
-        self._check_tag_exists(tag_id)
+        tag = self.tag_repo.update(tag_id, update_data)
+        logger.info(f"タグを更新しました: {tag.id}")
 
-        # [AI GENERATED] 新しいタグ名が指定されている場合、重複チェック
-        if tag_data.name is not None:
-            existing_tag = self.tag_repo.get_by_name(tag_data.name)
-            if existing_tag and existing_tag.id != tag_id:
-                self._log_error_and_raise(f"タグ名 '{tag_data.name}' は既に存在します", TagServiceUpdateError)
+        return tag
 
-        updated_tag = self.tag_repo.update(tag_id, tag_data)
-        if not updated_tag:
-            self._log_error_and_raise(f"タグの更新に失敗しました (ID: {tag_id})", TagServiceUpdateError)
-
-        logger.info(f"タグ '{updated_tag.name}' を更新しました (ID: {tag_id})")
-        return TagRead.model_validate(updated_tag)
-
-    def delete_tag(self, tag_id: uuid.UUID, *, force: bool = False) -> bool:
+    @handle_service_errors(SERVICE_NAME, "削除", TagServiceError)
+    def delete(self, tag_id: uuid.UUID, *, force: bool = False) -> bool:
         """タグを削除する
 
         Args:
             tag_id: 削除するタグのID
-            force: 関連タスクがある場合も強制削除するかどうか(default: False)
+            force: 関連タスクが存在しても強制的に削除するかどうか
 
         Returns:
-            bool: 削除が成功した場合True
+            bool: 削除が成功したかどうか
 
         Raises:
-            TagServiceCheckError: タグが存在しない場合
-            TagServiceDeleteError: タスクが関連している場合、または削除に失敗した場合
+            TagServiceError: タグの削除に失敗した場合
         """
-        # [AI GENERATED] タグの存在を確認
-        existing_tag = self._check_tag_exists(tag_id)
+        existing_tag = self.tag_repo.get_by_id(tag_id)
 
-        # [AI GENERATED] 関連するタスクタグがあるかチェック
-        related_task_tags = self.task_tag_repo.get_by_tag_id(tag_id)
-        if related_task_tags and not force:
-            self._log_error_and_raise(
-                f"タグ '{existing_tag.name}' には {len(related_task_tags)} 個のタスクが関連しています。"
-                "force=Trueで強制削除できます",
-                TagServiceDeleteError,
-            )
+        if not force:
+            self.tag_repo.remove_all_memos(tag_id)
+            self.tag_repo.remove_all_tasks(tag_id)
+            self.tag_repo.delete(tag_id)
+            success = True
+        else:
+            self.delete(tag_id, force=True)
+            success = True
 
-        # [AI GENERATED] 強制削除の場合、関連するタスクタグを削除
-        if force and related_task_tags:
-            for task_tag in related_task_tags:
-                self.task_tag_repo.delete_by_task_and_tag(task_tag.task_id, task_tag.tag_id)
-            logger.info(f"{len(related_task_tags)} 個のタスクタグ関連を削除しました")
-
-        success = self.tag_repo.delete(tag_id)
-        if not success:
-            self._log_error_and_raise(f"タグの削除に失敗しました (ID: {tag_id})", TagServiceDeleteError)
-
-        logger.info(f"タグ '{existing_tag.name}' を削除しました (ID: {tag_id})")
+        logger.debug(f"タグ '{existing_tag.name}' を削除しました (ID: {tag_id})")
         return success
 
-    def get_tag_by_id(self, tag_id: uuid.UUID) -> TagRead | None:
+    @handle_service_errors(SERVICE_NAME, "取得", TagServiceError)
+    @convert_read_model(TagRead)
+    def get_by_id(self, tag_id: uuid.UUID) -> Tag:
         """IDでタグを取得する
 
         Args:
             tag_id: タグのID
 
         Returns:
-            TagRead | None: 見つかったタグ、存在しない場合はNone
+            TagRead: 見つかったタグ
 
         Raises:
-            TagServiceGetError: タグ取得に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            NotFoundError: タグが存在しない場合
+            TagServiceError: タグの取得に失敗した場合
         """
-        try:
-            tag = self.tag_repo.get_by_id(tag_id)
-            if not tag:
-                return None
-            return TagRead.model_validate(tag)
-        except Exception:
-            self._log_error_and_raise(f"タグの取得に失敗しました (ID: {tag_id})", TagServiceGetError)
+        tag = self.tag_repo.get_by_id(tag_id)
+        logger.debug(f"タグを取得しました: {tag.id}")
+        return tag
 
-    def get_tag_by_name(self, name: str) -> TagRead | None:
+    @handle_service_errors(SERVICE_NAME, "取得", TagServiceError)
+    @convert_read_model(TagRead)
+    def get_by_name(self, name: str) -> Tag:
         """タグ名でタグを取得する
 
         Args:
             name: タグ名
 
         Returns:
-            TagRead | None: 見つかったタグ、存在しない場合はNone
+            TagRead: 見つかったタグ
 
         Raises:
-            TagServiceGetError: タグ取得に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            NotFoundError: タグが存在しない場合
+            TagServiceError: タグの取得に失敗した場合
         """
-        try:
-            tag = self.tag_repo.get_by_name(name)
-            if not tag:
-                return None
-            return TagRead.model_validate(tag)
-        except Exception:
-            self._log_error_and_raise(f"タグの取得に失敗しました (名前: {name})", TagServiceGetError)
+        tag = self.tag_repo.get_by_name(name)
+        logger.debug(f"タグを取得しました: {tag.id}")
+        return tag
 
-    def get_all_tags(self) -> list[TagRead]:
+    @handle_service_errors(SERVICE_NAME, "取得", TagServiceError)
+    @convert_read_model(TagRead, is_list=True)
+    def get_all(self) -> list[Tag]:
         """全てのタグを取得する
 
         Returns:
-            list[TagRead]: 全てのタグのリスト
+            list[TagRead]: 取得したタグのリスト
 
         Raises:
-            TagServiceGetError: タグ一覧の取得に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            NotFoundError: エンティティが存在しない場合
+            TagServiceError: タグの取得に失敗した場合
         """
-        try:
-            tags = self.tag_repo.get_all()
-            return [TagRead.model_validate(tag) for tag in tags]
-        except Exception:
-            self._log_error_and_raise("タグ一覧の取得に失敗しました", TagServiceGetError)
+        tags = self.tag_repo.get_all()
+        logger.debug(f"{len(tags)} 件のタグを取得しました。")
+        return tags
 
-    def search_tags(self, query: str) -> list[TagRead]:
+    @handle_service_errors(SERVICE_NAME, "検索", TagServiceError)
+    @convert_read_model(TagRead, is_list=True)
+    def search_by_name(self, query: str) -> list[Tag]:
         """タグを名前で検索する
 
         Args:
             query: 検索クエリ
 
         Returns:
-            list[TagRead]: 検索条件に一致するタグのリスト
+            list[TagRead]: 検索結果のタグのリスト
 
         Raises:
-            TagServiceGetError: タグの検索に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            TagServiceError: タグの検索に失敗した場合
         """
-        try:
-            tags = self.tag_repo.search_by_name(query)
-            return [TagRead.model_validate(tag) for tag in tags]
-        except Exception:
-            self._log_error_and_raise(f"タグの検索に失敗しました (クエリ: {query})", TagServiceGetError)
+        tags = self.tag_repo.search_by_name(query)
+        logger.debug(f"検索クエリ '{query}' に一致するタグを {len(tags)} 件取得しました。")
+        return tags
 
-    def check_tag_exists_by_name(self, name: str) -> bool:
-        """タグ名でタグの存在をチェックする
-
-        Args:
-            name: タグ名
-
-        Returns:
-            bool: タグが存在する場合True
-
-        Raises:
-            TagServiceGetError: タグ存在チェックに失敗した場合
-        """
-        try:
-            return self.tag_repo.exists_by_name(name)
-        except Exception:
-            self._log_error_and_raise(f"タグ存在チェックに失敗しました (名前: {name})", TagServiceGetError)
-
+    @handle_service_errors(SERVICE_NAME, "取得または作成", TagServiceError)
     def get_or_create_tag(self, name: str) -> TagRead:
-        """タグ名でタグを取得、存在しない場合は作成する
+        """タグ名でタグを取得し、存在しない場合は新規作成する
 
         Args:
             name: タグ名
@@ -310,16 +199,14 @@ class TagService(ServiceBase[TagServiceError]):
             TagRead: 取得または作成されたタグ
 
         Raises:
-            TagServiceCreateError: タグの作成に失敗した場合
-            TagServiceGetError: タグの取得に失敗した場合
-            ValidationError: タグデータの検証に失敗した場合
+            TagServiceError: タグの取得または作成に失敗した場合
         """
-        # [AI GENERATED] 既存のタグを検索
-        existing_tag = self.get_tag_by_name(name)
-        if existing_tag:
-            logger.debug(f"既存のタグ '{name}' を取得しました (ID: {existing_tag.id})")
-            return existing_tag
+        try:
+            tag = self.get_by_name(name)
+            logger.debug(f"既存のタグを取得しました: {tag.id}")
+        except Exception:
+            create_data = TagCreate(name=name)
+            tag = self.create(create_data)
+            logger.debug(f"新しいタグを作成しました: {tag.id}")
 
-        # [AI GENERATED] 新規作成
-        tag_data = TagCreate(name=name)
-        return self.create_tag(tag_data)
+        return tag

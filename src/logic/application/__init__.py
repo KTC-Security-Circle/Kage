@@ -2,22 +2,14 @@
 
 このパッケージは、Application Service層の実装を提供します。
 View層からビジネスロジックとSession管理を分離するための層です。
+
+注意: 循環インポート回避のため、ここでは重いサブモジュールのインポートを行いません。
+必要なクラスは各サブモジュールから直接インポートしてください。
+例: ``from logic.application.task_application_service import TaskApplicationService``
 """
 
-from logic.application.apps import ApplicationServices
 from logic.application.base import BaseApplicationService
-from logic.application.memo_application_service import MemoApplicationService
-from logic.application.one_liner_application_service import OneLinerApplicationService
-from logic.application.project_application_service import ProjectApplicationService
-from logic.application.tag_application_service import TagApplicationService
-from logic.application.task_application_service import TaskApplicationService
 
 __all__ = [
-    "ApplicationServices",
     "BaseApplicationService",
-    "MemoApplicationService",
-    "OneLinerApplicationService",
-    "ProjectApplicationService",
-    "TagApplicationService",
-    "TaskApplicationService",
 ]

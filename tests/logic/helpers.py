@@ -45,10 +45,9 @@ def create_test_tag(name: str = "テストタグ") -> Tag:
 def create_test_task(
     title: str = "テストタスク",
     description: str = "テスト用のタスクです",
-    status: TaskStatus = TaskStatus.INBOX,
+    status: TaskStatus = TaskStatus.TODO,
     due_date: date | None = None,
     project_id: uuid.UUID | None = None,
-    parent_id: uuid.UUID | None = None,
 ) -> Task:
     """テスト用Taskインスタンスを作成
 
@@ -70,17 +69,15 @@ def create_test_task(
         status=status,
         due_date=due_date,
         project_id=project_id,
-        parent_id=parent_id,
     )
 
 
 def create_test_task_create(
     title: str = "テストタスク作成",
     description: str = "テスト用のタスク作成データです",
-    status: TaskStatus = TaskStatus.INBOX,
+    status: TaskStatus = TaskStatus.TODO,
     due_date: date | None = None,
     project_id: uuid.UUID | None = None,
-    parent_id: uuid.UUID | None = None,
 ) -> TaskCreate:
     """テスト用TaskCreateインスタンスを作成
 
@@ -101,5 +98,4 @@ def create_test_task_create(
         status=status,
         due_date=due_date,
         project_id=project_id,
-        parent_id=parent_id,
     )

@@ -20,12 +20,6 @@ from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
-from logic.repositories.task_tag import TaskTagRepository
-from logic.services.memo_service import MemoService
-from logic.services.project_service import ProjectService
-from logic.services.tag_service import TagService
-from logic.services.task_service import TaskService
-from logic.services.task_tag_service import TaskTagService
 from models import Task, TaskStatus
 from tests.logic.helpers import create_test_task
 
@@ -97,97 +91,7 @@ def tag_repository(test_session: Session) -> TagRepository:
     return TagRepository(test_session)
 
 
-@pytest.fixture
-def task_tag_repository(test_session: Session) -> TaskTagRepository:
-    """テスト用TaskTagRepositoryインスタンスを作成"""
-    return TaskTagRepository(test_session)
-
-
-@pytest.fixture
-def memo_service(
-    memo_repository: MemoRepository,
-    task_repository: TaskRepository,
-) -> MemoService:
-    """テスト用MemoServiceインスタンスを作成
-
-    Args:
-        memo_repository: テスト用MemoRepositoryインスタンス
-        task_repository: テスト用TaskRepositoryインスタンス
-
-    Returns:
-        MemoService: テスト用MemoServiceインスタンス
-    """
-    return MemoService(memo_repository, task_repository)
-
-
-@pytest.fixture
-def task_service(
-    task_repository: TaskRepository,
-    project_repository: ProjectRepository,
-    tag_repository: TagRepository,
-    task_tag_repository: TaskTagRepository,
-) -> TaskService:
-    """テスト用TaskServiceインスタンスを作成
-
-    Args:
-        task_repository: テスト用TaskRepositoryインスタンス
-        project_repository: テスト用ProjectRepositoryインスタンス
-        tag_repository: テスト用TagRepositoryインスタンス
-        task_tag_repository: テスト用TaskTagRepositoryインスタンス
-
-    Returns:
-        TaskService: テスト用TaskServiceインスタンス
-    """
-    return TaskService(task_repository, project_repository, tag_repository, task_tag_repository)
-
-
-@pytest.fixture
-def project_service(
-    project_repository: ProjectRepository,
-    task_repository: TaskRepository,
-) -> ProjectService:
-    """テスト用ProjectServiceインスタンスを作成
-
-    Args:
-        project_repository: テスト用ProjectRepositoryインスタンス
-        task_repository: テスト用TaskRepositoryインスタンス
-
-    Returns:
-        ProjectService: テスト用ProjectServiceインスタンス
-    """
-    return ProjectService(project_repository, task_repository)
-
-
-@pytest.fixture
-def tag_service(
-    tag_repository: TagRepository,
-    task_tag_repository: TaskTagRepository,
-) -> TagService:
-    """テスト用TagServiceインスタンスを作成
-
-    Args:
-        tag_repository: テスト用TagRepositoryインスタンス
-        task_tag_repository: テスト用TaskTagRepositoryインスタンス
-
-    Returns:
-        TagService: テスト用TagServiceインスタンス
-    """
-    return TagService(tag_repository, task_tag_repository)
-
-
-@pytest.fixture
-def task_tag_service(
-    task_tag_repository: TaskTagRepository,
-) -> TaskTagService:
-    """テスト用TaskTagServiceインスタンスを作成
-
-    Args:
-        task_tag_repository: テスト用TaskTagRepositoryインスタンス
-
-    Returns:
-        TaskTagService: テスト用TaskTagServiceインスタンス
-    """
-    return TaskTagService(task_tag_repository)
+# 不存在の TaskTag 系は現行実装に合わせて削除（必要になれば復活させる）
 
 
 @pytest.fixture
@@ -206,11 +110,11 @@ def sample_tasks(test_session: Session) -> list[Task]:
     tomorrow = today + timedelta(days=1)
 
     tasks = [
-        create_test_task("INBOXタスク", "新しく追加されたタスク", TaskStatus.INBOX),
-        create_test_task("次のアクション", "すぐに実行すべきタスク", TaskStatus.NEXT_ACTION, tomorrow),
-        create_test_task("完了済みタスク", "既に完了したタスク", TaskStatus.COMPLETED),
-        create_test_task("待機中タスク", "他の人の対応待ち", TaskStatus.WAITING_FOR),
-        create_test_task("いつかやる", "緊急ではないタスク", TaskStatus.SOMEDAY_MAYBE),
+        create_test_task("TODOタスク", "新しく追加されたタスク", TaskStatus.TODO),
+        create_test_task("今日のタスク", "本日中に行うタスク", TaskStatus.TODAYS, tomorrow),
+        create_test_task("進行中タスク", "現在進行中", TaskStatus.PROGRESS),
+        create_test_task("待機中タスク", "他の対応待ち", TaskStatus.WAITING),
+        create_test_task("完了済みタスク", "既に完了", TaskStatus.COMPLETED),
     ]
 
     # [AI GENERATED] データベースにサンプルタスクを保存

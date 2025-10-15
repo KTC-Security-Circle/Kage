@@ -51,12 +51,12 @@ Attributes:
 # pyright: reportAssignmentType=false
 # # 一般的な型の問題の警告を無効化
 # pyright: reportGeneralTypeIssues=false
-
-from __future__ import annotations
+# ruff: noqa: UP006 UP035
 
 import uuid
 from datetime import date, datetime
 from enum import Enum
+from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -251,8 +251,8 @@ class Memo(MemoBase, table=True):
 
     __tablename__ = "memos"
 
-    tasks: list[Task] = Relationship(back_populates="memo")
-    tags: list[Tag] = Relationship(back_populates="memos", link_model=MemoTagLink)
+    tasks: List["Task"] = Relationship(back_populates="memo")
+    tags: List["Tag"] = Relationship(back_populates="memos", link_model=MemoTagLink)
 
 
 class MemoCreate(SQLModel):
@@ -364,7 +364,7 @@ class Project(ProjectBase, table=True):
 
     __tablename__ = "projects"
 
-    tasks: list[Task] = Relationship(back_populates="project")
+    tasks: List["Task"] = Relationship(back_populates="project")
 
 
 class ProjectCreate(SQLModel):
@@ -462,8 +462,8 @@ class Tag(TagBase, table=True):
 
     __tablename__ = "tags"
 
-    tasks: list[Task] = Relationship(back_populates="tags", link_model=TaskTagLink)
-    memos: list[Memo] = Relationship(back_populates="tags", link_model=MemoTagLink)
+    tasks: List["Task"] = Relationship(back_populates="tags", link_model=TaskTagLink)
+    memos: List["Memo"] = Relationship(back_populates="tags", link_model=MemoTagLink)
 
 
 class TagCreate(SQLModel):
@@ -577,9 +577,9 @@ class Task(TaskBase, table=True):
 
     __tablename__ = "tasks"
 
-    project: Project | None = Relationship(back_populates="tasks")
-    memo: Memo | None = Relationship(back_populates="tasks")
-    tags: list[Tag] = Relationship(back_populates="tasks", link_model=TaskTagLink)
+    project: Optional["Project"] = Relationship(back_populates="tasks")
+    memo: Optional["Memo"] = Relationship(back_populates="tasks")
+    tags: List["Tag"] = Relationship(back_populates="tasks", link_model=TaskTagLink)
 
 
 class TaskCreate(SQLModel):

@@ -20,7 +20,8 @@ from agents.agent_conf import HuggingFaceModel, LLMProvider
 from agents.task_agents.one_liner.agent import OneLinerAgent
 from agents.task_agents.one_liner.state import OneLinerState
 from errors import ApplicationError
-from logic.application import ApplicationServices, BaseApplicationService, TaskApplicationService
+from logic.application import BaseApplicationService
+from logic.application.task_application_service import TaskApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
 from models import TaskStatus
 from settings.manager import get_config_manager
@@ -103,6 +104,8 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     # Internal helpers --------------------------------------------------
     def _build_context_auto(self) -> OneLinerState:
         """タスク件数とユーザー名を取得し `OneLinerContext` を構築."""
+        from logic.application.apps import ApplicationServices
+
         apps = ApplicationServices.create()
         task_app = apps.get_service(TaskApplicationService)
 

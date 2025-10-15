@@ -1,26 +1,22 @@
-"""メモApplication Serviceのテスト"""
+"""MemoApplicationService のテスト（現行API）
+
+Unit of Work のモックを用い、MemoApplicationService の公開APIを検証する。
+"""
 
 import uuid
 from unittest.mock import Mock
 
 import pytest
 
-from logic.application.memo_application_service import MemoApplicationService
-from logic.commands.memo_commands import CreateMemoCommand, DeleteMemoCommand, UpdateMemoCommand
-from logic.queries.memo_queries import (
-    GetAllMemosQuery,
-    GetMemoByIdQuery,
-    GetMemosByTaskIdQuery,
-    SearchMemosQuery,
-)
-from models import MemoRead
+from logic.application.memo_application_service import ContentValidationError, MemoApplicationService
+from models import MemoRead, MemoStatus, MemoUpdate
 
-# 定数
-EXPECTED_MEMO_PAIR_COUNT = 2
+# テスト用定数
+EXPECTED_PAIR_COUNT = 2
 
 
 class TestMemoApplicationService:
-    """MemoApplicationServiceのテストクラス"""
+    """MemoApplicationServiceのApplication Service層機能をテストするクラス"""
 
     @pytest.fixture
     def mock_unit_of_work(self) -> Mock:
@@ -29,11 +25,12 @@ class TestMemoApplicationService:
         mock_service_factory = Mock()
         mock_memo_service = Mock()
 
-        # [AI GENERATED] モックの階層構造を設定
         mock_uow.service_factory = mock_service_factory
+        # ApplicationService 実装は uow.get_service(...) と uow.service_factory.get_service(...) の
+        # 両方を使用するため、どちらも同じモックを返すように設定する。
+        mock_uow.get_service = Mock(return_value=mock_memo_service)
         mock_service_factory.get_service.return_value = mock_memo_service
 
-        # [AI GENERATED] コンテキストマネージャとして機能させる
         mock_uow.__enter__ = Mock(return_value=mock_uow)
         mock_uow.__exit__ = Mock(return_value=None)
 
@@ -49,276 +46,118 @@ class TestMemoApplicationService:
         """MemoApplicationServiceのインスタンスを作成"""
         return MemoApplicationService(mock_unit_of_work_factory)  # type: ignore[arg-type]
 
-    def test_create_memo_success(
-        self,
-        memo_app_service: MemoApplicationService,
-        mock_unit_of_work: Mock,
-    ) -> None:
-        """メモ作成のテスト（正常系）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        command = CreateMemoCommand(content="テスト用メモ", task_id=task_id)
-
-        created_memo = MemoRead(
+    @pytest.fixture
+    def sample_memo_read(self) -> MemoRead:
+        """テスト用のMemoReadデータを作成"""
+        return MemoRead(
             id=uuid.uuid4(),
+            title="メモタイトル",
             content="テスト用メモ",
-            task_id=task_id,
+            status=MemoStatus.INBOX,
         )
 
-        # [AI GENERATED] モックの設定
+    def test_create_success(
+        self,
+        memo_app_service: MemoApplicationService,
+        mock_unit_of_work: Mock,
+        sample_memo_read: MemoRead,
+    ) -> None:
+        """正常系: メモ作成成功"""
         mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.create_memo.return_value = created_memo
+        mock_memo_service.create.return_value = sample_memo_read
 
-        # Act
-        result = memo_app_service.create_memo(command)
+        result = memo_app_service.create(title="メモタイトル", content="テスト用メモ")
 
-        # Assert
-        assert result == created_memo
-        mock_memo_service.create_memo.assert_called_once()
-        mock_unit_of_work.commit.assert_called_once()
+        assert isinstance(result, MemoRead)
+        assert result.title == sample_memo_read.title
+        mock_memo_service.create.assert_called_once()
 
-    def test_create_memo_validation_error(
+    @pytest.mark.parametrize(
+        ("title", "content", "expected_msg"),
+        [
+            ("", "内容", "メモタイトルを入力してください"),
+            ("   ", "内容", "メモタイトルを入力してください"),
+            ("タイトル", "", "メモ内容を入力してください"),
+            ("タイトル", "   ", "メモ内容を入力してください"),
+        ],
+    )
+    def test_create_validation_error(
+        self, memo_app_service: MemoApplicationService, title: str, content: str, expected_msg: str
+    ) -> None:
+        """異常系: 作成時のバリデーションエラー"""
+        with pytest.raises(ContentValidationError, match=expected_msg):
+            memo_app_service.create(title=title, content=content)
+
+    def test_update_success(
         self,
         memo_app_service: MemoApplicationService,
+        mock_unit_of_work: Mock,
+        sample_memo_read: MemoRead,
     ) -> None:
-        """メモ作成のテスト（バリデーションエラー）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        command = CreateMemoCommand(content="", task_id=task_id)  # 空文字
+        """正常系: メモ更新成功"""
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
+        updated = sample_memo_read.model_copy(update={"content": "更新後メモ"})
+        mock_memo_service.update.return_value = updated
 
-        # Act & Assert
-        with pytest.raises(ValueError, match="メモ内容を入力してください"):
-            memo_app_service.create_memo(command)
+        upd = MemoUpdate(content="更新後メモ")
+        result = memo_app_service.update(sample_memo_read.id, upd)
 
-    def test_create_memo_whitespace_validation(
-        self,
-        memo_app_service: MemoApplicationService,
-    ) -> None:
-        """メモ作成のテスト（空白のみのバリデーションエラー）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        command = CreateMemoCommand(content="   ", task_id=task_id)  # 空白のみ
+        assert isinstance(result, MemoRead)
+        assert result.content == "更新後メモ"
+        mock_memo_service.update.assert_called_once()
 
-        # Act & Assert
-        with pytest.raises(ValueError, match="メモ内容を入力してください"):
-            memo_app_service.create_memo(command)
-
-    def test_update_memo_success(
+    def test_delete_success(
         self,
         memo_app_service: MemoApplicationService,
         mock_unit_of_work: Mock,
     ) -> None:
-        """メモ更新のテスト（正常系）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-        command = UpdateMemoCommand(memo_id=memo_id, content="更新後メモ")
-
-        updated_memo = MemoRead(
-            id=memo_id,
-            content="更新後メモ",
-            task_id=task_id,
-        )
-
-        # [AI GENERATED] モックの設定
+        """正常系: メモ削除成功"""
         mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.update_memo.return_value = updated_memo
-
-        # Act
-        result = memo_app_service.update_memo(command)
-
-        # Assert
-        assert result == updated_memo
-        mock_memo_service.update_memo.assert_called_once()
-        mock_unit_of_work.commit.assert_called_once()
-
-    def test_update_memo_validation_error(
-        self,
-        memo_app_service: MemoApplicationService,
-    ) -> None:
-        """メモ更新のテスト（バリデーションエラー）"""
-        # Arrange
         memo_id = uuid.uuid4()
-        command = UpdateMemoCommand(memo_id=memo_id, content="")  # 空文字
+        mock_memo_service.delete.return_value = True
 
-        # Act & Assert
-        with pytest.raises(ValueError, match="メモ内容を入力してください"):
-            memo_app_service.update_memo(command)
+        result = memo_app_service.delete(memo_id)
 
-    def test_delete_memo_success(
-        self,
-        memo_app_service: MemoApplicationService,
-        mock_unit_of_work: Mock,
-    ) -> None:
-        """メモ削除のテスト（正常系）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        command = DeleteMemoCommand(memo_id=memo_id)
-
-        # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.delete_memo.return_value = True
-
-        # Act
-        result = memo_app_service.delete_memo(command)
-
-        # Assert
         assert result is True
-        mock_memo_service.delete_memo.assert_called_once_with(memo_id)
-        mock_unit_of_work.commit.assert_called_once()
+        mock_memo_service.delete.assert_called_once_with(memo_id)
 
-    def test_get_memo_by_id_success(
+    def test_get_by_id_success(
         self,
         memo_app_service: MemoApplicationService,
         mock_unit_of_work: Mock,
+        sample_memo_read: MemoRead,
     ) -> None:
-        """IDでメモ取得のテスト（正常系）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-        query = GetMemoByIdQuery(memo_id=memo_id)
-
-        memo = MemoRead(
-            id=memo_id,
-            content="取得テスト用メモ",
-            task_id=task_id,
-        )
-
-        # [AI GENERATED] モックの設定
+        """正常系: ID指定メモ取得"""
         mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.get_memo_by_id.return_value = memo
+        mock_memo_service.get_by_id.return_value = sample_memo_read
 
-        # Act
-        result = memo_app_service.get_memo_by_id(query)
+        result = memo_app_service.get_by_id(sample_memo_read.id)
 
-        # Assert
-        assert result == memo
-        mock_memo_service.get_memo_by_id.assert_called_once_with(memo_id)
+        assert result == sample_memo_read
+        mock_memo_service.get_by_id.assert_called_once_with(sample_memo_read.id, with_details=False)
 
-    def test_get_memo_by_id_not_found(
-        self,
-        memo_app_service: MemoApplicationService,
-        mock_unit_of_work: Mock,
-    ) -> None:
-        """IDでメモ取得のテスト（見つからない場合）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        query = GetMemoByIdQuery(memo_id=memo_id)
-
-        # [AI GENERATED] モックの設定
+    def test_get_by_id_not_found(self, memo_app_service: MemoApplicationService, mock_unit_of_work: Mock) -> None:
+        """正常系: ID指定メモ取得で見つからない場合"""
         mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.get_memo_by_id.return_value = None
+        mock_memo_service.get_by_id.return_value = None
 
-        # Act
-        result = memo_app_service.get_memo_by_id(query)
+        memo_id = uuid.uuid4()
+        result = memo_app_service.get_by_id(memo_id)
 
-        # Assert
         assert result is None
-        mock_memo_service.get_memo_by_id.assert_called_once_with(memo_id)
+        mock_memo_service.get_by_id.assert_called_once_with(memo_id, with_details=False)
 
-    def test_get_all_memos_success(
-        self,
-        memo_app_service: MemoApplicationService,
-        mock_unit_of_work: Mock,
-    ) -> None:
-        """全メモ取得のテスト（正常系）"""
-        # Arrange
-        query = GetAllMemosQuery()
-        task_id = uuid.uuid4()
+    def test_get_all_memos(self, memo_app_service: MemoApplicationService, mock_unit_of_work: Mock) -> None:
+        """正常系: 全件取得"""
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
         memos = [
-            MemoRead(id=uuid.uuid4(), content="メモ1", task_id=task_id),
-            MemoRead(id=uuid.uuid4(), content="メモ2", task_id=task_id),
+            MemoRead(id=uuid.uuid4(), title="A", content="a", status=MemoStatus.INBOX),
+            MemoRead(id=uuid.uuid4(), title="B", content="b", status=MemoStatus.INBOX),
         ]
+        mock_memo_service.get_all.return_value = memos
 
-        # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.get_all_memos.return_value = memos
+        result = memo_app_service.get_all_memos()
 
-        # Act
-        result = memo_app_service.get_all_memos(query)
-
-        # Assert
         assert result == memos
-        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
-        mock_memo_service.get_all_memos.assert_called_once()
-
-    def test_get_memos_by_task_id_success(
-        self,
-        memo_app_service: MemoApplicationService,
-        mock_unit_of_work: Mock,
-    ) -> None:
-        """タスクIDでメモ取得のテスト（正常系）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        query = GetMemosByTaskIdQuery(task_id=task_id)
-        memos = [
-            MemoRead(id=uuid.uuid4(), content="タスクメモ1", task_id=task_id),
-            MemoRead(id=uuid.uuid4(), content="タスクメモ2", task_id=task_id),
-        ]
-
-        # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.get_memos_by_task_id.return_value = memos
-
-        # Act
-        result = memo_app_service.get_memos_by_task_id(query)
-
-        # Assert
-        assert result == memos
-        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
-        mock_memo_service.get_memos_by_task_id.assert_called_once_with(task_id)
-
-    def test_search_memos_success(
-        self,
-        memo_app_service: MemoApplicationService,
-        mock_unit_of_work: Mock,
-    ) -> None:
-        """メモ検索のテスト（正常系）"""
-        # Arrange
-        search_query = "Python"
-        query = SearchMemosQuery(query=search_query)
-        task_id = uuid.uuid4()
-        matching_memos = [
-            MemoRead(id=uuid.uuid4(), content="Pythonプログラミング", task_id=task_id),
-            MemoRead(id=uuid.uuid4(), content="Python学習メモ", task_id=task_id),
-        ]
-
-        # [AI GENERATED] モックの設定
-        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_memo_service.search_memos.return_value = matching_memos
-
-        # Act
-        result = memo_app_service.search_memos(query)
-
-        # Assert
-        assert result == matching_memos
-        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
-        mock_memo_service.search_memos.assert_called_once_with(search_query)
-
-    def test_search_memos_empty_query(
-        self,
-        memo_app_service: MemoApplicationService,
-    ) -> None:
-        """メモ検索のテスト（空のクエリ）"""
-        # Arrange
-        query = SearchMemosQuery(query="")
-
-        # Act
-        result = memo_app_service.search_memos(query)
-
-        # Assert
-        assert result == []
-
-    def test_search_memos_whitespace_query(
-        self,
-        memo_app_service: MemoApplicationService,
-    ) -> None:
-        """メモ検索のテスト（空白のみのクエリ）"""
-        # Arrange
-        query = SearchMemosQuery(query="   ")
-
-        # Act
-        result = memo_app_service.search_memos(query)
-
-        # Assert
-        assert result == []
+        assert len(result) == EXPECTED_PAIR_COUNT
+        mock_memo_service.get_all.assert_called_once_with(with_details=False)

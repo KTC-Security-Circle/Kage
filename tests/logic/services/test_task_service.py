@@ -2,10 +2,10 @@ import uuid
 
 import pytest
 
-from errors import NotFoundError
+from errors import NotFoundError, RepositoryError
 from logic.repositories.task import TaskRepository
-from logic.services.task_service import TaskService
-from models import Task, TaskStatus
+from logic.services.task_service import TaskService, TaskServiceError
+from models import Task, TaskCreate, TaskRead, TaskStatus
 from tests.logic.helpers import create_test_tag, create_test_task_create
 
 
@@ -73,3 +73,118 @@ def test_list_by_status_not_found_raises(task_service: TaskService) -> None:
     """該当ステータスのタスクがない場合、ServiceもNotFoundErrorを透過。"""
     with pytest.raises(NotFoundError):
         task_service.list_by_status(TaskStatus.WAITING)
+
+
+# ---- 以下、light 版から統合したユニット志向テスト（DummyRepoベース） ----
+
+
+class DummyTaskRepo:
+    def __init__(self) -> None:
+        self.storage: dict[uuid.UUID, Task] = {}
+
+    def create(self, data: TaskCreate) -> Task:
+        t = Task(id=uuid.uuid4(), title=data.title)
+        assert t.id is not None
+        self.storage[t.id] = t
+        return t
+
+    def get_by_id(self, task_id: uuid.UUID, *, with_details: bool = False) -> Task:
+        t = self.storage.get(task_id)
+        if t is None:
+            msg = "not found"
+            raise NotFoundError(msg)
+        return t
+
+    def get_all(self) -> list[Task]:
+        if not self.storage:
+            msg = "no tasks"
+            raise NotFoundError(msg)
+        return list(self.storage.values())
+
+    def delete(self, task_id: uuid.UUID) -> bool:
+        return bool(self.storage.pop(task_id, None))
+
+    def remove_all_tags(self, task_id: uuid.UUID) -> None:
+        return None
+
+
+class RepoRaiser(DummyTaskRepo):
+    def create(self, data: TaskCreate) -> Task:
+        msg = "db down"
+        raise RepositoryError(msg)
+
+
+class RepoUnexpected(DummyTaskRepo):
+    def create(self, data: TaskCreate) -> Task:
+        msg = "boom"
+        raise RuntimeError(msg)
+
+
+@pytest.fixture
+def svc() -> TaskService:
+    return TaskService(task_repo=DummyTaskRepo())  # type: ignore[arg-type]
+
+
+def test_create_happy_path_unified_light(svc: TaskService) -> None:
+    data = TaskCreate(title="task1")
+    res = svc.create(data)
+    assert isinstance(res, TaskRead)
+    assert res.title == "task1"
+
+
+def test_get_by_id_not_found_unified_light(svc: TaskService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_by_id(uuid.uuid4())
+
+
+def test_get_all_not_found_unified_light(svc: TaskService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_all()
+
+
+def test_delete_happy_path_unified_light() -> None:
+    repo = DummyTaskRepo()
+    service = TaskService(task_repo=repo)  # type: ignore[arg-type]
+    created = repo.create(TaskCreate(title="t"))
+    assert created.id is not None
+    assert service.delete(created.id) is True
+
+
+def test_create_repo_error_wrapped_unified_light() -> None:
+    service = TaskService(task_repo=RepoRaiser())  # type: ignore[arg-type]
+
+    with pytest.raises(TaskServiceError) as exc:
+        service.create(TaskCreate(title="x"))
+
+    err = exc.value
+    assert isinstance(err.__cause__, RepositoryError)
+
+
+def test_create_unexpected_exception_is_wrapped() -> None:
+    service = TaskService(task_repo=RepoUnexpected())  # type: ignore[arg-type]
+
+    with pytest.raises(TaskServiceError) as exc:
+        service.create(TaskCreate(title="y"))
+
+    err = exc.value
+    assert isinstance(err.__cause__, RuntimeError)
+
+
+def test_remove_tag_happy_path(task_service: TaskService, task_repository: TaskRepository) -> None:
+    """タスクに付与済みのタグを remove_tag で削除できる。"""
+    # 準備: タスクとタグを作成して付与
+    task = task_repository.create(create_test_task_create(title="has-tag"))
+    tag = create_test_tag("t1")
+    assert task.id is not None
+    assert tag.id is not None
+    task_repository.session.add(tag)
+    task_repository.session.commit()
+    task_repository.add_tag(task.id, tag.id)
+
+    # 実行: 削除
+    updated = task_service.remove_tag(task.id, tag.id)
+
+    # 検証: ReadModelで返る & DB上でタグが外れている
+    assert isinstance(updated, TaskRead)
+    task_entity = task_repository.get_by_id(task.id, with_details=True)
+    assert all(t.id != tag.id for t in task_entity.tags)

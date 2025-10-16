@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 from errors import NotFoundError, RepositoryError
 from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate
+from tests.logic.helpers import create_test_task
 
 
 def create_test_project(
@@ -312,6 +313,48 @@ class TestProjectRepositoryBaseCRUD:
         assert created_project.id is not None
         with pytest.raises(NotFoundError):
             project_repository.get_by_id(created_project.id)
+
+
+class TestProjectRepositoryRelations:
+    """ProjectRepository のタスク関連操作の分岐テスト"""
+
+    def test_add_remove_and_clear_tasks(self, project_repository: ProjectRepository, test_session: Session) -> None:
+        """add/remove/remove_all の重複・未関連・空分岐・NotFound を検証する"""
+        # プロジェクトとタスク作成
+        project = Project(title="関連テスト", description="", status=ProjectStatus.ACTIVE)
+        task = create_test_task(title="関連タスク")
+        other_task = create_test_task(title="未関連")
+        test_session.add_all([project, task, other_task])
+        test_session.commit()
+        test_session.refresh(project)
+        test_session.refresh(task)
+        test_session.refresh(other_task)
+
+        assert project.id is not None
+        assert task.id is not None
+        assert other_task.id is not None
+
+        # add_task: 追加 + 重複追加で二重に増えない
+        updated = project_repository.add_task(project.id, task.id)  # type: ignore[arg-type]
+        assert any(t.id == task.id for t in updated.tasks)
+        updated = project_repository.add_task(project.id, task.id)  # type: ignore[arg-type]
+        assert len([t for t in updated.tasks if t.id == task.id]) == 1
+
+        # remove_task: 未関連の別タスクを指定しても例外にならない
+        updated = project_repository.remove_task(project.id, other_task.id)  # type: ignore[arg-type]
+        assert all(t.id != other_task.id for t in updated.tasks)
+
+        # remove_task: 存在しないタスクIDは NotFoundError
+        with pytest.raises(NotFoundError):
+            project_repository.remove_task(project.id, uuid.uuid4())  # type: ignore[arg-type]
+
+        # remove_all_tasks: タスクがある場合に全て消える
+        updated = project_repository.remove_all_tasks(project.id)
+        assert len(updated.tasks) == 0
+
+        # remove_all_tasks: タスクが無い場合の分岐（ログのみで例外なし）
+        updated = project_repository.remove_all_tasks(project.id)
+        assert len(updated.tasks) == 0
 
     def test_delete_project_not_found(self, project_repository: ProjectRepository) -> None:
         """存在しないプロジェクトの削除でFalseを返すことをテスト"""

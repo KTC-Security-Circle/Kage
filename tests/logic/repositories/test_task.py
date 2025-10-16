@@ -19,7 +19,7 @@ from sqlmodel import Session
 
 from errors import NotFoundError
 from logic.repositories.task import TaskRepository
-from models import Task, TaskStatus
+from models import Tag, Task, TaskStatus
 
 
 def create_test_task(
@@ -99,6 +99,16 @@ class TestTaskRepository:
         task_titles = {task.title for task in progress_tasks}
         assert task_titles == {"進行中1", "進行中2"}
 
+    def test_list_by_status_with_details(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """正常系: with_details=True で関連読み込み分岐を通す"""
+        # タグやプロジェクトの関連はDB側にテーブルがある前提。ここでは存在有無の例外にならないことのみ確認。
+        progress_task = create_test_task(title="進行中D", status=TaskStatus.PROGRESS)
+        test_session.add(progress_task)
+        test_session.commit()
+
+        results = task_repository.list_by_status(TaskStatus.PROGRESS, with_details=True)
+        assert any(t.title == "進行中D" for t in results)
+
     def test_list_by_status_not_found(self, task_repository: TaskRepository) -> None:
         """異常系: 該当ステータスが存在しない場合は NotFoundError"""
         with pytest.raises(NotFoundError):
@@ -140,3 +150,82 @@ class TestTaskRepository:
         assert search_results[0].title == "Project Management"
 
     # 旧 get_inbox/get_next_action/get_completed/get_overdue は現行実装に無いため削除
+
+    def test_search_by_title_with_details_and_not_found(
+        self, task_repository: TaskRepository, test_session: Session
+    ) -> None:
+        """with_details=True 分岐とヒットなしでの NotFoundError を検証"""
+        task = create_test_task(title="Alpha")
+        test_session.add(task)
+        test_session.commit()
+
+        # with_details=True でヒット
+        found = task_repository.search_by_title("alpha", with_details=True)
+        assert len(found) == 1
+        assert found[0].title == "Alpha"
+
+        # ヒットなしで NotFoundError
+        with pytest.raises(NotFoundError):
+            task_repository.search_by_title("Gamma")
+
+    def test_list_by_project_with_details(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """with_details=True での list_by_project 分岐を通す"""
+        project_id = uuid.uuid4()
+        t1 = create_test_task(title="P-1", project_id=project_id)
+        t2 = create_test_task(title="P-2", project_id=project_id)
+        other = create_test_task(title="Other")
+        test_session.add_all([t1, t2, other])
+        test_session.commit()
+
+        results = task_repository.list_by_project(project_id, with_details=True)
+        titles = {t.title for t in results}
+        assert titles == {"P-1", "P-2"}
+
+    def test_add_remove_and_clear_tags(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """タグの追加/重複追加/未関連削除/全削除/空時全削除/存在しないIDエラーの分岐を網羅"""
+        # エンティティ作成
+        task = create_test_task(title="TagTarget")
+        tag_attached = Tag(name="T-A")
+        tag_other = Tag(name="T-B")
+        test_session.add_all([task, tag_attached, tag_other])
+        test_session.commit()
+        test_session.refresh(task)
+        test_session.refresh(tag_attached)
+        test_session.refresh(tag_other)
+
+        assert task.id is not None
+        assert tag_attached.id is not None
+        assert tag_other.id is not None
+
+        task_id = task.id
+        tag_id = tag_attached.id
+        other_tag_id = tag_other.id
+
+        # 追加（初回）
+        updated = task_repository.add_tag(task_id, tag_id)
+        assert any(t.name == "T-A" for t in updated.tags)
+
+        # 重複追加は冪等
+        updated2 = task_repository.add_tag(task_id, tag_id)
+        names = [t.name for t in updated2.tags]
+        assert names.count("T-A") == 1
+
+        # 未関連タグの削除は何も起きない（例外なし）
+        updated3 = task_repository.remove_tag(task_id, other_tag_id)
+        assert any(t.name == "T-A" for t in updated3.tags)
+
+        # 存在しないタグIDは NotFoundError
+        with pytest.raises(NotFoundError):
+            task_repository.remove_tag(task_id, uuid.uuid4())
+
+        # 全削除（1件あり）
+        cleared = task_repository.remove_all_tags(task_id)
+        assert cleared.tags == []
+
+        # 既に空の状態で全削除（分岐通過）
+        cleared2 = task_repository.remove_all_tags(task_id)
+        assert cleared2.tags == []
+
+        # 存在しないタスクIDへの追加は NotFoundError
+        with pytest.raises(NotFoundError):
+            task_repository.add_tag(uuid.uuid4(), tag_id)

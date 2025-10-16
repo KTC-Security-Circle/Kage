@@ -1,218 +1,73 @@
-# Logic 層テストカバレッジレポート
+# Logic 層テストカバレッジレポート（最新）
 
-## 概要
+最終更新: 2025-10-16
 
-Kage アプリケーションの logic 層全体に対するテストコードの実装が完了しました。
-この文書は、テストカバレッジと実装状況を報告します。
+## サマリ
 
-## テストカバレッジ結果
+- 総合カバレッジ: 76%（前回 75% → +1pt）
+- 実行結果: 190 件 すべて成功（pytest）
+- 主な改善: TaskRepository の分岐網羅により 53% → 95% へ大幅上昇
 
-### 全体カバレッジ
+## モジュール別ハイライト（抜粋）
 
-- **総合カバレッジ率: 80%**
-- **総テスト数: 278 個**
-- **すべてのテストが成功**
+- Repositories
 
-### 層別カバレッジ詳細
+  - logic/repositories/task.py: 95%
+  - logic/repositories/project.py: 94%
+  - logic/repositories/memo.py: 91%
+  - logic/repositories/tag.py: 91%
+  - logic/repositories/base.py: 83%
 
-#### Application Service 層 (100%)
+- Services（要改善）
 
-- TaskApplicationService: 100%
-- ProjectApplicationService: 100%
-- TagApplicationService: 100%
-- TaskTagApplicationService: 90%
+  - logic/services/task_service.py: 80%
+  - logic/services/settings_service.py: 99%
+  - logic/services/memo_service.py: 68%
+  - logic/services/project_service.py: 68%
+  - logic/services/tag_service.py: 68%
+  - logic/services/base.py: 83%
 
-#### Commands/Queries 層 (100%)
+- Application
 
-- すべての Command/Query クラス: 100%
+  - logic/application/task_application_service.py: 100%
+  - logic/application/memo_application_service.py: 100%
+  - logic/application/tag_application_service.py: 94%
+  - logic/application/project_application_service.py: 72%
+  - logic/application/base.py: 64%
+  - logic/application/apps.py: 0%（未対象の初期化コード）
 
-#### Service 層 (54-65%)
+- Infra
+  - logic/unit_of_work.py: 99%
+  - logic/factory.py: 91%
 
-- TaskService: 54%
-- ProjectService: 57%
-- TagService: 61%
-- TaskTagService: 65%
+※ 上記は `uv run pytest tests/logic --cov=src/logic --cov-report=term-missing` の直近実測値から抜粋。
 
-#### Repository 層 (71-78%)
+## 今後の優先課題（短期）
 
-- TaskRepository: 73%
-- ProjectRepository: 75%
-- TagRepository: 71%
-- TaskTagRepository: 77%
-- BaseRepository: 78%
+1. Service 層の底上げ（目標 85% 以上）
 
-#### インフラストラクチャ層 (100%)
+   - memo_service / project_service / tag_service の未テスト分岐
+   - 失敗パス（RepositoryError ラップ、想定外例外の wrap）の網羅
 
-- Container: 100%
-- Factory: 100%
-- Unit of Work: 100%
+2. Application 層の不足補完
 
-## 実装済みテスト
+   - project_application_service のハッピーパス＋失敗系の追加
+   - apps.py は初期化コードのため、E2E/統合実行テストでの間接カバーを検討
 
-### フェーズ 1: 基盤整備 ✅
+3. Repository の残り細部
+   - base.py の NotFound/更新・削除失敗パスをもう一段厳密に
 
-- [x] テストディレクトリ構造の作成
-- [x] 共通テストユーティリティの作成
-- [x] テストデータベース設定の実装
-- [x] 基底テストクラスの作成
+## 実施済み（この更新での差分）
 
-### フェーズ 2: Repository 層テスト ✅
+- TaskRepository の以下分岐を網羅
+  - add_tag/remove_tag/remove_all_tags（重複追加の冪等性、未関連削除、空時全削除、NotFound）
+  - list_by_project / list_by_status / search_by_title の with_details 分岐と未ヒット時 NotFound
 
-- [x] BaseRepository テストの実装
-- [x] TaskRepository テストの実装
-- [x] ProjectRepository テストの実装
-- [x] TagRepository テストの実装
-- [x] TaskTagRepository テストの実装
+## 実行方法（参考）
 
-### フェーズ 3: Service 層テスト ✅
+- すべての logic テスト＋カバレッジ
+  - uv run pytest tests/logic --cov=src/logic --cov-report=term-missing
 
-- [x] BaseService テストの実装
-- [x] TaskService テストの実装
-- [x] ProjectService テストの実装
-- [x] TagService テストの実装
-- [x] TaskTagService テストの実装
+## 備考
 
-### フェーズ 4: Application Service 層テスト ✅
-
-- [x] BaseApplicationService テストの実装
-- [x] TaskApplicationService テストの実装
-- [x] ProjectApplicationService テストの実装
-- [x] TagApplicationService テストの実装
-- [x] TaskTagApplicationService テストの実装
-
-### フェーズ 5: DTO テスト ✅
-
-- [x] Task Commands テストの実装
-- [x] Project Commands テストの実装
-- [x] Tag Commands テストの実装
-- [x] TaskTag Commands テストの実装
-- [x] Task Queries テストの実装
-- [x] Project Queries テストの実装
-- [x] Tag Queries テストの実装
-- [x] TaskTag Queries テストの実装
-
-### フェーズ 6: インフラストラクチャテスト ✅
-
-- [x] Container テストの実装
-- [x] Factory テストの実装
-- [x] Unit of Work テストの実装
-
-### フェーズ 7: 統合テスト・最終調整 ✅
-
-- [x] テストカバレッジの確認
-- [ ] パフォーマンステストの実装
-- [x] ドキュメント更新
-
-## パフォーマンステスト
-
-### 実装されたパフォーマンステスト
-
-1. **大量タスク作成テスト**: 100 個のタスクを 5 秒以内で作成
-2. **タスクタグ割り当てテスト**: 150 個のタスクタグ関連を 3 秒以内で処理
-3. **大量データ取得テスト**: 200 個のタスクデータを 2 秒以内で取得
-4. **並行操作シミュレーション**: 50 回の作成・更新操作を 5 秒以内で実行
-5. **メモリ安定性テスト**: メモリリークがないことを確認
-6. **データベース接続効率テスト**: 複数サービス同時アクセスを 1 秒以内で実行
-7. **コンテナメモリ効率テスト**: 100 個のコンテナ作成・削除のメモリ管理
-8. **ファクトリ再利用テスト**: シングルトンパターンの正常動作確認
-
-## テスト品質指標
-
-### 機能カバレッジ
-
-- **CRUD 操作**: 全ドメインで完全カバー
-- **ビジネスロジック**: 主要なビジネスルール検証済み
-- **エラーハンドリング**: 例外ケースのテスト実装済み
-- **統合テスト**: 複数層にわたる処理フローの検証済み
-
-### テストの信頼性
-
-- **独立性**: 各テストは他のテストに依存しない
-- **再現性**: 同じ条件で常に同じ結果を返す
-- **高速実行**: 全テスト実行時間 3.43 秒
-- **明確性**: テスト名と意図が明確
-
-## カバレッジ改善の提案
-
-### 優先度: 高
-
-1. **Service 層のカバレッジ向上** (現在 54-65%)
-
-   - エラーハンドリングロジックのテスト追加
-   - ビジネスルール検証のテスト強化
-
-2. **Repository 層のカバレッジ向上** (現在 71-78%)
-   - データベース例外処理のテスト追加
-   - 複雑なクエリロジックのテスト強化
-
-### 優先度: 中
-
-1. **TaskTagApplicationService カバレッジ向上** (現在 90%)
-
-   - 残り 10%のエッジケーステスト追加
-
-2. **結合テストの拡充**
-   - より複雑なビジネスシナリオのテスト追加
-
-## テスト実行方法
-
-### 全テスト実行
-
-```bash
-uv run pytest tests/logic/ -v
-```
-
-### カバレッジ付きテスト実行
-
-```bash
-uv run pytest tests/logic/ --cov=src/logic --cov-report=html --cov-report=term-missing
-```
-
-### パフォーマンステスト実行
-
-```bash
-uv run pytest tests/logic/test_performance.py -v
-```
-
-## 技術的な成果
-
-### アーキテクチャ改善
-
-- **依存性注入の適切な実装**: ServiceContainer による管理
-- **Unit of Work パターンの活用**: トランザクション境界の明確化
-- **CQRS パターンの採用**: Command/Query の分離
-
-### テスト基盤の整備
-
-- **共通フィクスチャの活用**: テストデータの一元管理
-- **ヘルパー関数の整備**: テストコードの再利用性向上
-- **インメモリデータベース**: 高速で独立性の高いテスト環境
-
-## 今後の改善計画
-
-### 短期 (1-2 週間)
-
-1. Service 層と Repository 層のカバレッジを 85%以上に向上
-2. より多くのエッジケーステストの追加
-3. 統合テストの拡充
-
-### 中期 (1 ヶ月)
-
-1. E2E テストの実装
-2. パフォーマンステストの継続的実行環境整備
-3. テストデータファクトリの更なる改善
-
-### 長期 (3 ヶ月)
-
-1. Property-based testing の導入
-2. Mutation testing による品質評価
-3. テストカバレッジの自動監視
-
-## 結論
-
-Logic 層のテストコード実装プロジェクトは成功裏に完了しました。
-80%のテストカバレッジを達成し、278 個のテストが全て成功しています。
-これにより、アプリケーションの信頼性と保守性が大幅に向上しました。
-
-今後は継続的なテスト品質の向上と、新機能開発時のテスト追加を
-確実に実施していくことが重要です。
+- 目標（OpenSpec）: logic 配下 85% 以上（段階的に強制）。現時点では 76% のため、Service 層と Application 層改善を継続。

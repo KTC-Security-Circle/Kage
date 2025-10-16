@@ -23,7 +23,8 @@ if TYPE_CHECKING:
     from logic.repositories.tag import TagRepository
 
 from errors import NotFoundError, RepositoryError
-from models import Tag, TagCreate, TagUpdate
+from models import Memo, MemoStatus, Tag, TagCreate, TagUpdate
+from tests.logic.helpers import create_test_task
 
 
 def create_test_tag(
@@ -262,3 +263,71 @@ class TestTagRepositoryBaseCRUD:
 
         # [AI GENERATED] Falseが返されることを確認
         assert result is False
+
+
+class TestTagRepositoryRelations:
+    """TagRepository の関連操作分岐テスト"""
+
+    def test_task_relations_add_remove_clear(self, tag_repository: TagRepository, test_session: Session) -> None:
+        """タスクの追加・重複・未関連削除・全削除・存在しないIDの分岐を検証"""
+        tag = Tag(name="関連")
+        task = create_test_task(title="関連タスク")
+        other_task = create_test_task(title="未関連")
+        test_session.add_all([tag, task, other_task])
+        test_session.commit()
+        test_session.refresh(tag)
+        test_session.refresh(task)
+        test_session.refresh(other_task)
+
+        assert tag.id is not None
+        assert task.id is not None
+        assert other_task.id is not None
+
+        updated = tag_repository.add_task(tag.id, task.id)
+        assert any(t.id == task.id for t in updated.tasks)
+        updated = tag_repository.add_task(tag.id, task.id)
+        assert len([t for t in updated.tasks if t.id == task.id]) == 1
+
+        updated = tag_repository.remove_task(tag.id, other_task.id)
+        assert all(t.id != other_task.id for t in updated.tasks)
+
+        with pytest.raises(NotFoundError):
+            tag_repository.remove_task(tag.id, uuid.uuid4())
+
+        updated = tag_repository.remove_all_tasks(tag.id)
+        assert len(updated.tasks) == 0
+
+        updated = tag_repository.remove_all_tasks(tag.id)
+        assert len(updated.tasks) == 0
+
+    def test_memo_relations_add_remove_clear(self, tag_repository: TagRepository, test_session: Session) -> None:
+        """メモの追加・重複・未関連削除・全削除・存在しないIDの分岐を検証"""
+        tag = Tag(name="関連2")
+        memo = Memo(title="学習ノート", content="", status=MemoStatus.INBOX)
+        other_memo = Memo(title="未関連ノート", content="", status=MemoStatus.INBOX)
+        test_session.add_all([tag, memo, other_memo])
+        test_session.commit()
+        test_session.refresh(tag)
+        test_session.refresh(memo)
+        test_session.refresh(other_memo)
+
+        assert tag.id is not None
+        assert memo.id is not None
+        assert other_memo.id is not None
+
+        updated = tag_repository.add_memo(tag.id, memo.id)
+        assert any(m.id == memo.id for m in updated.memos)
+        updated = tag_repository.add_memo(tag.id, memo.id)
+        assert len([m for m in updated.memos if m.id == memo.id]) == 1
+
+        updated = tag_repository.remove_memo(tag.id, other_memo.id)
+        assert all(m.id != other_memo.id for m in updated.memos)
+
+        with pytest.raises(NotFoundError):
+            tag_repository.remove_memo(tag.id, uuid.uuid4())
+
+        updated = tag_repository.remove_all_memos(tag.id)
+        assert len(updated.memos) == 0
+
+        updated = tag_repository.remove_all_memos(tag.id)
+        assert len(updated.memos) == 0

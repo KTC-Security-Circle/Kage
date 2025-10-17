@@ -47,6 +47,18 @@ class DummyMemoRepo:
             raise NotFoundError(msg)
         return matched
 
+    def add_tag(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> Memo:
+        return self.get_by_id(memo_id)
+
+    def add_task(self, memo_id: uuid.UUID, task_id: uuid.UUID) -> Memo:
+        return self.get_by_id(memo_id)
+
+    def search_by_title(self, query: str, *, with_details: bool = False) -> list[Memo]:
+        return [memo for memo in self.storage.values() if query in memo.title]
+
+    def search_by_content(self, query: str, *, with_details: bool = False) -> list[Memo]:
+        return [memo for memo in self.storage.values() if query in memo.content]
+
 
 class RepoRaiser(DummyMemoRepo):
     def create(self, create_data: MemoCreate) -> Memo:
@@ -58,6 +70,12 @@ class RepoUnexpected(DummyMemoRepo):
     def create(self, create_data: MemoCreate) -> Memo:
         msg = "boom"
         raise RuntimeError(msg)
+
+
+class RepoDeleteFailure(DummyMemoRepo):
+    def delete(self, memo_id: uuid.UUID) -> bool:  # type: ignore[override]
+        super().get_by_id(memo_id)
+        return False
 
 
 @pytest.fixture
@@ -89,6 +107,15 @@ def test_delete_happy_path() -> None:
     created = repo.create(MemoCreate(title="a", content="b"))
     assert created.id is not None
     assert svc.delete(created.id) is True
+
+
+def test_delete_failure_returns_false() -> None:
+    repo = RepoDeleteFailure()
+    svc = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+    created = repo.create(MemoCreate(title="a", content="b"))
+    assert created.id is not None
+
+    assert svc.delete(created.id) is False
 
 
 def test_create_repo_error_wrapped() -> None:
@@ -123,6 +150,19 @@ def test_get_all_with_details_happy(memo_service: MemoService) -> None:
     assert any(m.id == created.id for m in res)
 
 
+def test_list_by_status_with_details(memo_service: MemoService) -> None:
+    memo = memo_service.create(MemoCreate(title="x", content="y"))
+    assert isinstance(memo, MemoRead)
+
+    repo = memo_service.memo_repo
+    if isinstance(repo, DummyMemoRepo):
+        stored = repo.storage[memo.id]
+        stored.status = MemoStatus.INBOX
+
+    res = memo_service.list_by_status(MemoStatus.INBOX, with_details=True)
+    assert any(item.id == memo.id for item in res)
+
+
 def test_list_by_status_not_found(memo_service: MemoService) -> None:
     from models import MemoStatus
 
@@ -131,17 +171,28 @@ def test_list_by_status_not_found(memo_service: MemoService) -> None:
 
 
 def test_search_memos_deduplicates_and_returns(memo_service: MemoService) -> None:
-    # DummyMemoRepo では search_by_title/content を実装していないため、
-    # ここでは storage を直接用意し、get_all での最低限の動作を検証する。
-    created_1 = memo_service.create(MemoCreate(title="alpha", content="x"))
-    created_2 = memo_service.create(MemoCreate(title="alphabet", content="x"))
+    first = memo_service.create(MemoCreate(title="alpha", content="shared content"))
+    second = memo_service.create(MemoCreate(title="beta", content="alpha shared content"))
 
-    assert isinstance(created_1, MemoRead)
-    assert isinstance(created_2, MemoRead)
+    assert isinstance(first, MemoRead)
+    assert isinstance(second, MemoRead)
 
-    # search_memos はリポジトリの search_by_* を使うが、ダミーでは未実装。
-    # ここでは NotFound を想定しないクエリはスキップし、
-    # 代替として get_all によりメモが取得可能であることを確認しておく。
-    res = memo_service.get_all()
-    min_expected = 2
-    assert len(res) >= min_expected
+    res = memo_service.search_memos("alpha", with_details=True)
+    ids = {item.id for item in res}
+    assert ids == {first.id, second.id}
+
+
+def test_add_tag_returns_read_model(memo_service: MemoService) -> None:
+    memo = memo_service.create(MemoCreate(title="x", content="y"))
+    assert isinstance(memo, MemoRead)
+
+    result = memo_service.add_tag(memo.id, uuid.uuid4())
+    assert isinstance(result, MemoRead)
+
+
+def test_add_task_returns_read_model(memo_service: MemoService) -> None:
+    memo = memo_service.create(MemoCreate(title="x", content="y"))
+    assert isinstance(memo, MemoRead)
+
+    result = memo_service.add_task(memo.id, uuid.uuid4())
+    assert isinstance(result, MemoRead)

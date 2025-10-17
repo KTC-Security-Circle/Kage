@@ -10,6 +10,8 @@
 6. [x] 冗長テストの整理とテスト名の明確化 (命名規約の統一)
 7. [x] カバレッジ閾値の段階設定と CI 反映 (tooling)
 8. [x] ドキュメント更新: tests/logic/COVERAGE_REPORT.md を刷新
+9. [x] Service 層の残課題整理とカバレッジ 85% 達成 (memo_service convert_read_model、project_service force=True など)
+10. [ ] Application 初期化コード (logic/application/apps.py など) のカバレッジ方針を策定
 
 検証:
 

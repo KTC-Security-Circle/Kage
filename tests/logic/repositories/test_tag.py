@@ -10,13 +10,21 @@
 - exists_by_name: タグ名による存在チェック
 """
 
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session
 
-from logic.repositories.tag import TagRepository
-from models import Tag, TagCreate, TagUpdate
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from logic.repositories.tag import TagRepository
+
+from errors import NotFoundError, RepositoryError
+from models import Memo, MemoStatus, Tag, TagCreate, TagUpdate
+from tests.logic.helpers import create_test_task
 
 
 def create_test_tag(
@@ -82,13 +90,10 @@ class TestTagRepositoryGetAll:
         expected_ids = {tag.id for tag in sample_tags}
         assert result_ids == expected_ids
 
-    def test_get_all_returns_empty_list_when_no_tags(self, tag_repository: TagRepository) -> None:
-        """タグが存在しない場合に空のリストを返すことをテスト"""
-        # [AI GENERATED] タグが存在しない状態で実行
-        result = tag_repository.get_all()
-
-        # [AI GENERATED] 空のリストが返されることを確認
-        assert result == []
+    def test_get_all_raises_not_found_when_no_tags(self, tag_repository: TagRepository) -> None:
+        """タグが存在しない場合は NotFoundError を送出"""
+        with pytest.raises(NotFoundError):
+            tag_repository.get_all()
 
 
 class TestTagRepositoryGetByName:
@@ -105,15 +110,12 @@ class TestTagRepositoryGetByName:
         assert result.id == target_tag.id
         assert result.name == target_tag.name
 
-    def test_get_by_name_returns_none_for_nonexistent_tag(
+    def test_get_by_name_raises_not_found_for_nonexistent_tag(
         self, tag_repository: TagRepository, sample_tags: list[Tag]
     ) -> None:
-        """存在しないタグ名で検索した場合にNoneを返すことをテスト"""
-        # [AI GENERATED] 存在しないタグ名で検索
-        result = tag_repository.get_by_name("存在しないタグ")
-
-        # [AI GENERATED] Noneが返されることを確認
-        assert result is None
+        """存在しないタグ名で検索した場合は NotFoundError"""
+        with pytest.raises(NotFoundError):
+            tag_repository.get_by_name("存在しないタグ")
 
     def test_get_by_name_case_sensitive(self, tag_repository: TagRepository, sample_tags: list[Tag]) -> None:
         """タグ名検索が大文字小文字を区別することをテスト"""
@@ -151,40 +153,15 @@ class TestTagRepositorySearchByName:
         # [AI GENERATED] 同じ結果が得られることを確認
         assert len(result_lower) == len(result_upper)
 
-    def test_search_by_name_returns_empty_list_for_no_matches(
+    def test_search_by_name_raises_not_found_for_no_matches(
         self, tag_repository: TagRepository, sample_tags: list[Tag]
     ) -> None:
-        """一致しないキーワードで検索した場合に空のリストを返すことをテスト"""
-        # [AI GENERATED] 存在しないキーワードで検索
-        result = tag_repository.search_by_name("存在しないキーワード")
-
-        # [AI GENERATED] 空のリストが返されることを確認
-        assert result == []
+        """一致しないキーワードで検索した場合は NotFoundError を送出"""
+        with pytest.raises(NotFoundError):
+            tag_repository.search_by_name("存在しないキーワード")
 
 
-class TestTagRepositoryExistsByName:
-    """exists_by_nameメソッドのテストクラス"""
-
-    def test_exists_by_name_returns_true_for_existing_tag(
-        self, tag_repository: TagRepository, sample_tags: list[Tag]
-    ) -> None:
-        """存在するタグ名でTrueを返すことをテスト"""
-        # [AI GENERATED] 存在するタグ名で存在チェック
-        target_tag = sample_tags[0]
-        result = tag_repository.exists_by_name(target_tag.name)
-
-        # [AI GENERATED] Trueが返されることを確認
-        assert result is True
-
-    def test_exists_by_name_returns_false_for_nonexistent_tag(
-        self, tag_repository: TagRepository, sample_tags: list[Tag]
-    ) -> None:
-        """存在しないタグ名でFalseを返すことをテスト"""
-        # [AI GENERATED] 存在しないタグ名で存在チェック
-        result = tag_repository.exists_by_name("存在しないタグ")
-
-        # [AI GENERATED] Falseが返されることを確認
-        assert result is False
+"""exists_by_name は現行APIに存在しないためスキップ"""
 
 
 class TestTagRepositoryBaseCRUD:
@@ -224,13 +201,10 @@ class TestTagRepositoryBaseCRUD:
         assert result.name == created_tag.name
 
     def test_get_by_id_not_found(self, tag_repository: TagRepository) -> None:
-        """存在しないIDでタグ取得した場合にNoneを返すことをテスト"""
-        # [AI GENERATED] 存在しないUUIDで検索
+        """存在しないIDでタグ取得した場合は NotFoundError"""
         non_existent_id = uuid.uuid4()
-        result = tag_repository.get_by_id(non_existent_id)
-
-        # [AI GENERATED] Noneが返されることを確認
-        assert result is None
+        with pytest.raises(NotFoundError):
+            tag_repository.get_by_id(non_existent_id)
 
     def test_update_tag_success(self, tag_repository: TagRepository) -> None:
         """タグ更新が成功することをテスト"""
@@ -254,15 +228,11 @@ class TestTagRepositoryBaseCRUD:
         assert result.name == update_data.name
 
     def test_update_tag_not_found(self, tag_repository: TagRepository) -> None:
-        """存在しないタグの更新でNoneを返すことをテスト"""
-        # [AI GENERATED] 存在しないUUIDで更新を試行
+        """存在しないタグの更新は RepositoryError を送出"""
         non_existent_id = uuid.uuid4()
         update_data = TagUpdate(name="存在しない更新")
-
-        result = tag_repository.update(non_existent_id, update_data)
-
-        # [AI GENERATED] Noneが返されることを確認
-        assert result is None
+        with pytest.raises(RepositoryError):
+            tag_repository.update(non_existent_id, update_data)
 
     def test_delete_tag_success(self, tag_repository: TagRepository) -> None:
         """タグ削除が成功することをテスト"""
@@ -280,9 +250,10 @@ class TestTagRepositoryBaseCRUD:
         # [AI GENERATED] 削除が成功したことを確認
         assert result is True
 
-        # [AI GENERATED] 削除されたタグが取得できないことを確認
-        deleted_tag = tag_repository.get_by_id(created_tag.id)
-        assert deleted_tag is None
+        # [AI GENERATED] 削除後の取得は NotFoundError
+        assert created_tag.id is not None
+        with pytest.raises(NotFoundError):
+            tag_repository.get_by_id(created_tag.id)
 
     def test_delete_tag_not_found(self, tag_repository: TagRepository) -> None:
         """存在しないタグの削除でFalseを返すことをテスト"""
@@ -292,3 +263,71 @@ class TestTagRepositoryBaseCRUD:
 
         # [AI GENERATED] Falseが返されることを確認
         assert result is False
+
+
+class TestTagRepositoryRelations:
+    """TagRepository の関連操作分岐テスト"""
+
+    def test_task_relations_add_remove_clear(self, tag_repository: TagRepository, test_session: Session) -> None:
+        """タスクの追加・重複・未関連削除・全削除・存在しないIDの分岐を検証"""
+        tag = Tag(name="関連")
+        task = create_test_task(title="関連タスク")
+        other_task = create_test_task(title="未関連")
+        test_session.add_all([tag, task, other_task])
+        test_session.commit()
+        test_session.refresh(tag)
+        test_session.refresh(task)
+        test_session.refresh(other_task)
+
+        assert tag.id is not None
+        assert task.id is not None
+        assert other_task.id is not None
+
+        updated = tag_repository.add_task(tag.id, task.id)
+        assert any(t.id == task.id for t in updated.tasks)
+        updated = tag_repository.add_task(tag.id, task.id)
+        assert len([t for t in updated.tasks if t.id == task.id]) == 1
+
+        updated = tag_repository.remove_task(tag.id, other_task.id)
+        assert all(t.id != other_task.id for t in updated.tasks)
+
+        with pytest.raises(NotFoundError):
+            tag_repository.remove_task(tag.id, uuid.uuid4())
+
+        updated = tag_repository.remove_all_tasks(tag.id)
+        assert len(updated.tasks) == 0
+
+        updated = tag_repository.remove_all_tasks(tag.id)
+        assert len(updated.tasks) == 0
+
+    def test_memo_relations_add_remove_clear(self, tag_repository: TagRepository, test_session: Session) -> None:
+        """メモの追加・重複・未関連削除・全削除・存在しないIDの分岐を検証"""
+        tag = Tag(name="関連2")
+        memo = Memo(title="学習ノート", content="", status=MemoStatus.INBOX)
+        other_memo = Memo(title="未関連ノート", content="", status=MemoStatus.INBOX)
+        test_session.add_all([tag, memo, other_memo])
+        test_session.commit()
+        test_session.refresh(tag)
+        test_session.refresh(memo)
+        test_session.refresh(other_memo)
+
+        assert tag.id is not None
+        assert memo.id is not None
+        assert other_memo.id is not None
+
+        updated = tag_repository.add_memo(tag.id, memo.id)
+        assert any(m.id == memo.id for m in updated.memos)
+        updated = tag_repository.add_memo(tag.id, memo.id)
+        assert len([m for m in updated.memos if m.id == memo.id]) == 1
+
+        updated = tag_repository.remove_memo(tag.id, other_memo.id)
+        assert all(m.id != other_memo.id for m in updated.memos)
+
+        with pytest.raises(NotFoundError):
+            tag_repository.remove_memo(tag.id, uuid.uuid4())
+
+        updated = tag_repository.remove_all_memos(tag.id)
+        assert len(updated.memos) == 0
+
+        updated = tag_repository.remove_all_memos(tag.id)
+        assert len(updated.memos) == 0

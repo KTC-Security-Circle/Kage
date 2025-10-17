@@ -1,364 +1,190 @@
-"""TaskServiceのテストケース
-
-このモジュールは、TaskServiceクラスのビジネスロジックを
-テストするためのテストケースを提供します。
-
-テスト対象：
-- create_task: タスク作成のビジネスロジック
-- update_task: タスク更新のビジネスロジック
-- delete_task: タスク削除のビジネスロジック
-- get_task_by_id: タスク取得のビジネスロジック
-- complete_task: タスク完了処理
-- プロジェクト存在チェック等のビジネスルール
-"""
-
 import uuid
-from unittest.mock import Mock
 
 import pytest
 
-from logic.services.task_service import (
-    TaskService,
-    TaskServiceCheckError,
-    TaskServiceCreateError,
-    TaskServiceGetError,
-)
-from models import Task, TaskCreate, TaskRead, TaskStatus, TaskUpdate
-
-# テスト用定数
-EXPECTED_TASK_COUNT = 2
+from errors import NotFoundError, RepositoryError
+from logic.repositories.task import TaskRepository
+from logic.services.task_service import TaskService, TaskServiceError
+from models import Task, TaskCreate, TaskRead, TaskStatus
+from tests.logic.helpers import create_test_tag, create_test_task_create
 
 
-class TestTaskService:
-    """TaskServiceのビジネスロジックをテストするクラス"""
+@pytest.fixture
+def task_service(task_repository: TaskRepository) -> TaskService:
+    """TaskServiceを実データベース(インメモリ)で構築するフィクスチャ。"""
+    return TaskService(task_repo=task_repository)  # type: ignore[arg-type]
 
-    @pytest.fixture
-    def mock_repositories(self) -> dict[str, Mock]:
-        """モックのRepositoryを作成"""
-        return {
-            "task_repo": Mock(),
-            "project_repo": Mock(),
-            "tag_repo": Mock(),
-            "task_tag_repo": Mock(),
-        }
 
-    @pytest.fixture
-    def task_service(self, mock_repositories: dict[str, Mock]) -> TaskService:
-        """TaskServiceのインスタンスを作成"""
-        return TaskService(
-            task_repo=mock_repositories["task_repo"],
-            project_repo=mock_repositories["project_repo"],
-            tag_repo=mock_repositories["tag_repo"],
-            task_tag_repo=mock_repositories["task_tag_repo"],
-        )
+def test_delete_force_false_calls_remove_and_delete(task_service: TaskService, task_repository: TaskRepository) -> None:
+    """delete(force=False) 経路でタグ全削除と削除が実行され、Trueを返す。"""
+    # 準備: タスク作成
+    task = task_repository.create(create_test_task_create(title="del-target"))
 
-    def test_create_task_success(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: タスクの作成成功"""
-        # モックの設定
-        task_create = TaskCreate(title="新しいタスク", description="テストタスク")
-        created_task = Task(
-            id=uuid.uuid4(),
-            title="新しいタスク",
-            description="テストタスク",
-            status=TaskStatus.INBOX,
-        )
-        mock_repositories["task_repo"].create.return_value = created_task
+    # 監視: 呼び出しフラグ
+    called: dict[str, bool] = {"remove": False, "delete": False}
 
-        # 実行
-        result = task_service.create_task(task_create)
+    original_remove_all_tags = task_repository.remove_all_tags
+    original_delete = task_repository.delete
 
-        # 検証
-        assert isinstance(result, TaskRead)
-        assert result.title == "新しいタスク"
-        mock_repositories["task_repo"].create.assert_called_once()
+    def spy_remove_all_tags(task_id: uuid.UUID) -> Task:
+        called["remove"] = True
+        return original_remove_all_tags(task_id)
 
-    def test_create_task_with_project_success(
-        self, task_service: TaskService, mock_repositories: dict[str, Mock]
-    ) -> None:
-        """正常系: プロジェクト付きタスクの作成成功"""
-        # モックの設定
-        project_id = uuid.uuid4()
-        task_create = TaskCreate(
-            title="プロジェクトタスク",
-            description="プロジェクト関連タスク",
-            project_id=project_id,
-        )
+    def spy_delete(task_id: uuid.UUID) -> bool:
+        called["delete"] = True
+        return original_delete(task_id)
 
-        # プロジェクトが存在することをモック
-        mock_project = Mock()
-        mock_repositories["project_repo"].get_by_id.return_value = mock_project
+    # モンキーパッチ
+    # pytest の monkeypatch フィクスチャを使わず、直接属性を差し替え
+    task_repository.remove_all_tags = spy_remove_all_tags  # type: ignore[method-assign]
+    task_repository.delete = spy_delete  # type: ignore[method-assign]
 
-        created_task = Task(
-            id=uuid.uuid4(),
-            title="プロジェクトタスク",
-            description="プロジェクト関連タスク",
-            status=TaskStatus.INBOX,
-            project_id=project_id,
-        )
-        mock_repositories["task_repo"].create.return_value = created_task
+    # 実行
+    assert task.id is not None
+    res = task_service.delete(task.id, force=False)
 
-        # 実行
-        result = task_service.create_task(task_create)
+    # 検証
+    assert res is True
+    assert called["remove"] is True
+    assert called["delete"] is True
 
-        # 検証
-        assert isinstance(result, TaskRead)
-        assert result.title == "プロジェクトタスク"
-        assert result.project_id == project_id
-        mock_repositories["project_repo"].get_by_id.assert_called_once_with(project_id)
-        mock_repositories["task_repo"].create.assert_called_once()
+    # 後片付け: 元に戻す
+    task_repository.remove_all_tags = original_remove_all_tags  # type: ignore[method-assign]
+    task_repository.delete = original_delete  # type: ignore[method-assign]
 
-    def test_create_task_with_invalid_project(
-        self, task_service: TaskService, mock_repositories: dict[str, Mock]
-    ) -> None:
-        """異常系: 存在しないプロジェクトIDでのタスク作成"""
-        # モックの設定
-        project_id = uuid.uuid4()
-        task_create = TaskCreate(
-            title="無効プロジェクトタスク",
-            project_id=project_id,
-        )
 
-        # プロジェクトが存在しないことをモック
-        mock_repositories["project_repo"].get_by_id.return_value = None
+def test_remove_tag_raises_when_tag_not_attached(task_service: TaskService, task_repository: TaskRepository) -> None:
+    """タスクに付与されていないタグをremove_tagするとNotFoundError。"""
+    # 準備: タスクと（未付与の）タグを作成
+    task = task_repository.create(create_test_task_create(title="has-no-tags"))
+    tag = create_test_tag("t1")
+    # タグはDBに存在するが、タスクには付与していない
+    task_repository.session.add(tag)
+    task_repository.session.commit()
 
-        # 実行と検証
-        with pytest.raises(TaskServiceCreateError, match=f"プロジェクトID {task_create.project_id} が見つかりません"):
-            task_service.create_task(task_create)
+    # 実行/検証
+    assert task.id is not None
+    assert tag.id is not None
+    with pytest.raises(NotFoundError):
+        task_service.remove_tag(task.id, tag.id)
 
-        mock_repositories["project_repo"].get_by_id.assert_called_once_with(project_id)
-        mock_repositories["task_repo"].create.assert_not_called()
 
-    def test_update_task_success(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: タスクの更新成功"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        task_update = TaskUpdate(title="更新されたタスク", description="更新後の説明")
+def test_list_by_status_not_found_raises(task_service: TaskService) -> None:
+    """該当ステータスのタスクがない場合、ServiceもNotFoundErrorを透過。"""
+    with pytest.raises(NotFoundError):
+        task_service.list_by_status(TaskStatus.WAITING)
 
-        existing_task = Task(
-            id=task_id,
-            title="元のタスク",
-            description="元の説明",
-            status=TaskStatus.INBOX,
-        )
-        updated_task = Task(
-            id=task_id,
-            title="更新されたタスク",
-            description="更新後の説明",
-            status=TaskStatus.INBOX,
-        )
 
-        mock_repositories["task_repo"].get_by_id.return_value = existing_task
-        mock_repositories["task_repo"].update.return_value = updated_task
+# ---- 以下、light 版から統合したユニット志向テスト（DummyRepoベース） ----
 
-        # 実行
-        result = task_service.update_task(task_id, task_update)
 
-        # 検証
-        assert isinstance(result, TaskRead)
-        assert result.title == "更新されたタスク"
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
-        mock_repositories["task_repo"].update.assert_called_once()
+class DummyTaskRepo:
+    def __init__(self) -> None:
+        self.storage: dict[uuid.UUID, Task] = {}
 
-    def test_update_task_not_found(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """異常系: 存在しないタスクの更新"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        task_update = TaskUpdate(title="更新されたタスク")
+    def create(self, data: TaskCreate) -> Task:
+        t = Task(id=uuid.uuid4(), title=data.title)
+        assert t.id is not None
+        self.storage[t.id] = t
+        return t
 
-        mock_repositories["task_repo"].get_by_id.return_value = None
+    def get_by_id(self, task_id: uuid.UUID, *, with_details: bool = False) -> Task:
+        t = self.storage.get(task_id)
+        if t is None:
+            msg = "not found"
+            raise NotFoundError(msg)
+        return t
 
-        # 実行と検証
-        with pytest.raises(TaskServiceCheckError, match=r"タスクID .* が見つかりません"):
-            task_service.update_task(task_id, task_update)
+    def get_all(self) -> list[Task]:
+        if not self.storage:
+            msg = "no tasks"
+            raise NotFoundError(msg)
+        return list(self.storage.values())
 
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
-        mock_repositories["task_repo"].update.assert_not_called()
+    def delete(self, task_id: uuid.UUID) -> bool:
+        return bool(self.storage.pop(task_id, None))
 
-    def test_delete_task_success(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: タスクの削除成功"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        existing_task = Task(
-            id=task_id,
-            title="削除対象タスク",
-            description="削除テスト",
-            status=TaskStatus.INBOX,
-        )
+    def remove_all_tags(self, task_id: uuid.UUID) -> None:
+        return None
 
-        mock_repositories["task_repo"].get_by_id.return_value = existing_task
-        mock_repositories["task_repo"].delete.return_value = True
-        # タスクタグの削除に関するモック設定
-        mock_repositories["task_tag_repo"].get_by_task_id.return_value = []
 
-        # 実行
-        result = task_service.delete_task(task_id)
+class RepoRaiser(DummyTaskRepo):
+    def create(self, data: TaskCreate) -> Task:
+        msg = "db down"
+        raise RepositoryError(msg)
 
-        # 検証
-        assert result is True
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
-        mock_repositories["task_repo"].delete.assert_called_once_with(task_id)
 
-    def test_delete_task_not_found(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """異常系: 存在しないタスクの削除"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        mock_repositories["task_repo"].get_by_id.return_value = None
+class RepoUnexpected(DummyTaskRepo):
+    def create(self, data: TaskCreate) -> Task:
+        msg = "boom"
+        raise RuntimeError(msg)
 
-        # 実行と検証
-        with pytest.raises(TaskServiceCheckError, match=r"タスクID .* が見つかりません"):
-            task_service.delete_task(task_id)
 
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
-        mock_repositories["task_repo"].delete.assert_not_called()
+@pytest.fixture
+def svc() -> TaskService:
+    return TaskService(task_repo=DummyTaskRepo())  # type: ignore[arg-type]
 
-    def test_get_task_by_id_success(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: タスクの取得成功"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        task = Task(
-            id=task_id,
-            title="取得対象タスク",
-            description="取得テスト",
-            status=TaskStatus.NEXT_ACTION,
-        )
 
-        mock_repositories["task_repo"].get_by_id.return_value = task
+def test_create_happy_path_unified_light(svc: TaskService) -> None:
+    data = TaskCreate(title="task1")
+    res = svc.create(data)
+    assert isinstance(res, TaskRead)
+    assert res.title == "task1"
 
-        # 実行
-        result = task_service.get_task_by_id(task_id)
 
-        # 検証
-        assert result is not None
-        assert isinstance(result, TaskRead)
-        assert result.title == "取得対象タスク"
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
+def test_get_by_id_not_found_unified_light(svc: TaskService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_by_id(uuid.uuid4())
 
-    def test_get_task_by_id_not_found(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """異常系: 存在しないタスクの取得でエラー"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        mock_repositories["task_repo"].get_by_id.return_value = None
 
-        # 実行と検証
-        with pytest.raises(TaskServiceGetError, match="タスクの取得に失敗しました"):
-            task_service.get_task_by_id(task_id)
+def test_get_all_not_found_unified_light(svc: TaskService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_all()
 
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
 
-    def test_complete_task_success(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: タスクの完了処理成功"""
-        # モックの設定
-        task_id = uuid.uuid4()
-        existing_task = Task(
-            id=task_id,
-            title="完了対象タスク",
-            description="完了テスト",
-            status=TaskStatus.NEXT_ACTION,
-        )
-        completed_task = Task(
-            id=task_id,
-            title="完了対象タスク",
-            description="完了テスト",
-            status=TaskStatus.COMPLETED,
-        )
+def test_delete_happy_path_unified_light() -> None:
+    repo = DummyTaskRepo()
+    service = TaskService(task_repo=repo)  # type: ignore[arg-type]
+    created = repo.create(TaskCreate(title="t"))
+    assert created.id is not None
+    assert service.delete(created.id) is True
 
-        mock_repositories["task_repo"].get_by_id.return_value = existing_task
-        mock_repositories["task_repo"].update.return_value = completed_task
 
-        # 実行
-        result = task_service.complete_task(task_id)
+def test_create_repo_error_wrapped_unified_light() -> None:
+    service = TaskService(task_repo=RepoRaiser())  # type: ignore[arg-type]
 
-        # 検証
-        assert isinstance(result, TaskRead)
-        assert result.status == TaskStatus.COMPLETED
-        mock_repositories["task_repo"].get_by_id.assert_called_once_with(task_id)
-        mock_repositories["task_repo"].update.assert_called_once()
+    with pytest.raises(TaskServiceError) as exc:
+        service.create(TaskCreate(title="x"))
 
-    def test_get_tasks_by_status(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: ステータス別タスク取得"""
-        # モックの設定
-        tasks = [
-            Task(
-                id=uuid.uuid4(),
-                title="タスク1",
-                description="説明1",
-                status=TaskStatus.NEXT_ACTION,
-            ),
-            Task(
-                id=uuid.uuid4(),
-                title="タスク2",
-                description="説明2",
-                status=TaskStatus.NEXT_ACTION,
-            ),
-        ]
+    err = exc.value
+    assert isinstance(err.__cause__, RepositoryError)
 
-        mock_repositories["task_repo"].get_by_status.return_value = tasks
 
-        # 実行
-        result = task_service.get_tasks_by_status(TaskStatus.NEXT_ACTION)
+def test_create_unexpected_exception_is_wrapped() -> None:
+    service = TaskService(task_repo=RepoUnexpected())  # type: ignore[arg-type]
 
-        # 検証
-        assert len(result) == EXPECTED_TASK_COUNT
-        assert all(isinstance(task, TaskRead) for task in result)
-        assert all(task.status == TaskStatus.NEXT_ACTION for task in result)
-        mock_repositories["task_repo"].get_by_status.assert_called_once_with(TaskStatus.NEXT_ACTION)
+    with pytest.raises(TaskServiceError) as exc:
+        service.create(TaskCreate(title="y"))
 
-    def test_get_inbox_tasks(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: INBOXタスクの取得"""
-        # モックの設定
-        inbox_tasks = [
-            Task(
-                id=uuid.uuid4(),
-                title="INBOX タスク1",
-                description="INBOX 説明1",
-                status=TaskStatus.INBOX,
-            ),
-            Task(
-                id=uuid.uuid4(),
-                title="INBOX タスク2",
-                description="INBOX 説明2",
-                status=TaskStatus.INBOX,
-            ),
-        ]
+    err = exc.value
+    assert isinstance(err.__cause__, RuntimeError)
 
-        # get_inbox_tasksの内部でget_by_statusが呼ばれるのでそちらをモック
-        mock_repositories["task_repo"].get_by_status.return_value = inbox_tasks
 
-        # 実行
-        result = task_service.get_inbox_tasks()
+def test_remove_tag_happy_path(task_service: TaskService, task_repository: TaskRepository) -> None:
+    """タスクに付与済みのタグを remove_tag で削除できる。"""
+    # 準備: タスクとタグを作成して付与
+    task = task_repository.create(create_test_task_create(title="has-tag"))
+    tag = create_test_tag("t1")
+    assert task.id is not None
+    assert tag.id is not None
+    task_repository.session.add(tag)
+    task_repository.session.commit()
+    task_repository.add_tag(task.id, tag.id)
 
-        # 検証
-        assert len(result) == EXPECTED_TASK_COUNT
-        assert all(isinstance(task, TaskRead) for task in result)
-        assert all(task.status == TaskStatus.INBOX for task in result)
-        mock_repositories["task_repo"].get_by_status.assert_called_once_with(TaskStatus.INBOX)
+    # 実行: 削除
+    updated = task_service.remove_tag(task.id, tag.id)
 
-    def test_get_next_action_tasks(self, task_service: TaskService, mock_repositories: dict[str, Mock]) -> None:
-        """正常系: 次のアクションタスクの取得"""
-        # モックの設定
-        next_action_tasks = [
-            Task(
-                id=uuid.uuid4(),
-                title="次のアクション1",
-                description="説明1",
-                status=TaskStatus.NEXT_ACTION,
-            ),
-            Task(
-                id=uuid.uuid4(),
-                title="次のアクション2",
-                description="説明2",
-                status=TaskStatus.NEXT_ACTION,
-            ),
-        ]
-
-        # get_next_action_tasksの内部でget_by_statusが呼ばれるのでそちらをモック
-        mock_repositories["task_repo"].get_by_status.return_value = next_action_tasks
-
-        # 実行
-        result = task_service.get_next_action_tasks()
-
-        # 検証
-        assert len(result) == EXPECTED_TASK_COUNT
-        assert all(isinstance(task, TaskRead) for task in result)
-        assert all(task.status == TaskStatus.NEXT_ACTION for task in result)
-        mock_repositories["task_repo"].get_by_status.assert_called_once_with(TaskStatus.NEXT_ACTION)
+    # 検証: ReadModelで返る & DB上でタグが外れている
+    assert isinstance(updated, TaskRead)
+    task_entity = task_repository.get_by_id(task.id, with_details=True)
+    assert all(t.id != tag.id for t in task_entity.tags)

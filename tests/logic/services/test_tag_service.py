@@ -1,316 +1,128 @@
-"""TagServiceのテストケース
-
-このモジュールは、TagServiceクラスのタグ関連のビジネスロジックを
-テストするためのテストケースを提供します。
-
-テスト対象：
-- create_tag: タグ作成
-- update_tag: タグ更新
-- delete_tag: タグ削除（関連タスクタグチェック含む）
-- get_all_tags: 全タグ取得
-- search_tags: タグ検索
-"""
+from __future__ import annotations
 
 import uuid
-from unittest.mock import Mock, call
 
 import pytest
 
-from logic.repositories.tag import TagRepository
-from logic.repositories.task_tag import TaskTagRepository
-from logic.services.tag_service import (
-    TagService,
-    TagServiceCheckError,
-    TagServiceCreateError,
-    TagServiceDeleteError,
-    TagServiceUpdateError,
-)
-from models import Tag, TagCreate, TagRead, TagUpdate, TaskTag
+from errors import NotFoundError, RepositoryError
+from logic.services.tag_service import TagService, TagServiceError
+from models import Tag, TagCreate, TagRead
 
 
-class TestTagServiceCreate:
-    """create_tagメソッドのテストクラス"""
+class DummyTagRepo:
+    def __init__(self) -> None:
+        self.storage: dict[uuid.UUID, Tag] = {}
 
-    def test_create_tag_success(self) -> None:
-        """タグ作成が成功することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
+    def create(self, data: TagCreate) -> Tag:
+        t = Tag(id=uuid.uuid4(), name=data.name)
+        tag_id = t.id
+        assert tag_id is not None
+        self.storage[tag_id] = t
+        return t
 
-        # [AI GENERATED] 作成するタグデータ
-        tag_data = TagCreate(name="新しいタグ")
+    def get_by_id(self, tag_id: uuid.UUID) -> Tag:
+        t = self.storage.get(tag_id)
+        if t is None:
+            msg = "not found"
+            raise NotFoundError(msg)
+        return t
 
-        # [AI GENERATED] モックの戻り値を設定
-        created_tag = Tag(
-            id=uuid.uuid4(),
-            name=tag_data.name,
-        )
-        tag_repo.get_by_name.return_value = None  # 重複なし
-        tag_repo.create.return_value = created_tag
+    def get_by_name(self, name: str) -> Tag:
+        for t in self.storage.values():
+            if t.name == name:
+                return t
+        msg = "not found"
+        raise NotFoundError(msg)
 
-        # [AI GENERATED] タグを作成
-        result = service.create_tag(tag_data)
+    def get_all(self) -> list[Tag]:
+        if not self.storage:
+            msg = "no tags"
+            raise NotFoundError(msg)
+        return list(self.storage.values())
 
-        # [AI GENERATED] 結果の検証
-        assert isinstance(result, TagRead)
-        assert result.name == tag_data.name
-        assert result.id == created_tag.id
+    def delete(self, tag_id: uuid.UUID) -> bool:
+        return bool(self.storage.pop(tag_id, None))
 
-        # [AI GENERATED] モックの呼び出しを確認
-        tag_repo.create.assert_called_once_with(tag_data)
+    def remove_all_memos(self, tag_id: uuid.UUID) -> None:  # pragma: no cover - no side effects needed
+        return None
 
-    def test_create_tag_failure(self) -> None:
-        """タグ作成が失敗することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
+    def remove_all_tasks(self, tag_id: uuid.UUID) -> None:  # pragma: no cover - no side effects needed
+        return None
 
-        # [AI GENERATED] 作成するタグデータ
-        tag_data = TagCreate(name="失敗タグ")
-
-        # [AI GENERATED] リポジトリの作成が失敗する設定
-        tag_repo.create.return_value = None
-
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(TagServiceCreateError):
-            service.create_tag(tag_data)
+    def search_by_name(self, query: str) -> list[Tag]:
+        return [t for t in self.storage.values() if query.lower() in t.name.lower()]
 
 
-class TestTagServiceUpdate:
-    """update_tagメソッドのテストクラス"""
-
-    def test_update_tag_success(self) -> None:
-        """タグ更新が成功することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
-
-        # [AI GENERATED] 更新対象のタグ
-        tag_id = uuid.uuid4()
-        existing_tag = Tag(
-            id=tag_id,
-            name="更新前タグ",
-        )
-
-        # [AI GENERATED] 更新データ
-        update_data = TagUpdate(name="更新後タグ")
-
-        # [AI GENERATED] 更新後のタグ
-        updated_tag = Tag(
-            id=tag_id,
-            name=update_data.name or "デフォルト名",
-        )
-
-        # [AI GENERATED] モックの戻り値を設定
-        tag_repo.get_by_id.return_value = existing_tag
-        tag_repo.get_by_name.return_value = None  # 重複なし
-        tag_repo.update.return_value = updated_tag
-
-        # [AI GENERATED] タグを更新
-        result = service.update_tag(tag_id, update_data)
-
-        # [AI GENERATED] 結果の検証
-        assert isinstance(result, TagRead)
-        assert result.id == tag_id
-        assert result.name == (update_data.name or "デフォルト名")
-
-        # [AI GENERATED] モックの呼び出しを確認
-        tag_repo.get_by_id.assert_called_once_with(tag_id)
-        tag_repo.update.assert_called_once_with(tag_id, update_data)
-
-    def test_update_tag_not_found(self) -> None:
-        """存在しないタグの更新でエラーが発生することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
-
-        # [AI GENERATED] 存在しないタグID
-        tag_id = uuid.uuid4()
-        update_data = TagUpdate(name="更新データ")
-
-        # [AI GENERATED] タグが見つからない設定
-        tag_repo.get_by_id.return_value = None
-
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(TagServiceCheckError):
-            service.update_tag(tag_id, update_data)
-
-    def test_update_tag_failure(self) -> None:
-        """タグ更新が失敗することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
-
-        # [AI GENERATED] 更新対象のタグ
-        tag_id = uuid.uuid4()
-        existing_tag = Tag(
-            id=tag_id,
-            name="更新前タグ",
-        )
-
-        update_data = TagUpdate(name="更新データ")
-
-        # [AI GENERATED] モックの戻り値を設定
-        tag_repo.get_by_id.return_value = existing_tag
-        tag_repo.update.return_value = None  # 更新失敗
-
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(TagServiceUpdateError):
-            service.update_tag(tag_id, update_data)
+class RepoRaiser(DummyTagRepo):
+    def create(self, data: TagCreate) -> Tag:  # type: ignore[override]
+        msg = "db down"
+        raise RepositoryError(msg)
 
 
-class TestTagServiceDelete:
-    """delete_tagメソッドのテストクラス"""
+@pytest.fixture
+def svc() -> TagService:
+    return TagService(tag_repo=DummyTagRepo())  # type: ignore[arg-type]
 
-    def test_delete_tag_success_no_related_task_tags(self) -> None:
-        """関連タスクタグがないタグの削除が成功することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
 
-        # [AI GENERATED] 削除対象のタグ
-        tag_id = uuid.uuid4()
-        existing_tag = Tag(
-            id=tag_id,
-            name="削除対象タグ",
-        )
+def test_create_happy_path(svc: TagService) -> None:
+    data = TagCreate(name="tag1")
+    res = svc.create(data)
+    assert isinstance(res, TagRead)
+    assert res.name == "tag1"
 
-        # [AI GENERATED] モックの戻り値を設定
-        tag_repo.get_by_id.return_value = existing_tag
-        task_tag_repo.get_by_tag_id.return_value = []  # 関連タスクタグなし
-        tag_repo.delete.return_value = True
 
-        # [AI GENERATED] タグを削除
-        result = service.delete_tag(tag_id)
+def test_get_by_id_not_found(svc: TagService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_by_id(uuid.uuid4())
 
-        # [AI GENERATED] 削除が成功したことを確認
-        assert result is True
 
-        # [AI GENERATED] モックの呼び出しを確認
-        tag_repo.get_by_id.assert_called_once_with(tag_id)
-        task_tag_repo.get_by_tag_id.assert_called_once_with(tag_id)
-        tag_repo.delete.assert_called_once_with(tag_id)
+def test_get_all_not_found(svc: TagService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_all()
 
-    def test_delete_tag_with_related_task_tags_without_force(self) -> None:
-        """関連タスクタグがあるタグの削除でエラーが発生することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
 
-        # [AI GENERATED] 削除対象のタグ
-        tag_id = uuid.uuid4()
-        existing_tag = Tag(
-            id=tag_id,
-            name="関連タスクタグありタグ",
-        )
+def test_delete_happy_path() -> None:
+    repo = DummyTagRepo()
+    service = TagService(tag_repo=repo)  # type: ignore[arg-type]
+    created = repo.create(TagCreate(name="t"))
+    assert created.id is not None
+    assert service.delete(created.id) is True
 
-        # [AI GENERATED] 関連タスクタグを作成
-        related_task_tags = [
-            TaskTag(
-                task_id=uuid.uuid4(),
-                tag_id=tag_id,
-            )
-        ]
 
-        # [AI GENERATED] モックの戻り値を設定
-        tag_repo.get_by_id.return_value = existing_tag
-        task_tag_repo.get_by_tag_id.return_value = related_task_tags
+def test_create_repo_error_wrapped() -> None:
+    service = TagService(tag_repo=RepoRaiser())  # type: ignore[arg-type]
 
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(TagServiceDeleteError):
-            service.delete_tag(tag_id, force=False)
+    with pytest.raises(TagServiceError) as exc:
+        service.create(TagCreate(name="x"))
 
-        # [AI GENERATED] 削除が呼ばれていないことを確認
-        tag_repo.delete.assert_not_called()
+    err = exc.value
+    assert isinstance(err.__cause__, RepositoryError)
 
-    def test_delete_tag_with_related_task_tags_with_force(self) -> None:
-        """関連タスクタグがあるタグの強制削除が成功することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
 
-        # [AI GENERATED] 削除対象のタグ
-        tag_id = uuid.uuid4()
-        existing_tag = Tag(
-            id=tag_id,
-            name="強制削除タグ",
-        )
+def test_get_by_name_not_found(svc: TagService) -> None:
+    with pytest.raises(NotFoundError):
+        svc.get_by_name("missing")
 
-        # [AI GENERATED] 関連タスクタグを作成
-        task1_id = uuid.uuid4()
-        task2_id = uuid.uuid4()
-        related_task_tags = [
-            TaskTag(
-                task_id=task1_id,
-                tag_id=tag_id,
-            ),
-            TaskTag(
-                task_id=task2_id,
-                tag_id=tag_id,
-            ),
-        ]
 
-        # [AI GENERATED] モックの戻り値を設定
-        tag_repo.get_by_id.return_value = existing_tag
-        task_tag_repo.get_by_tag_id.return_value = related_task_tags
-        task_tag_repo.delete_by_task_and_tag.return_value = True  # 各削除が成功
-        tag_repo.delete.return_value = True
+def test_search_by_name_returns_list(svc: TagService) -> None:
+    svc.create(TagCreate(name="alpha"))
+    svc.create(TagCreate(name="beta"))
+    svc.create(TagCreate(name="Alpine"))
 
-        # [AI GENERATED] タグを強制削除
-        result = service.delete_tag(tag_id, force=True)
+    res = svc.search_by_name("al")
+    assert isinstance(res, list)
+    names = {t.name for t in res}
+    assert names == {"alpha", "Alpine"}
 
-        # [AI GENERATED] 削除が成功したことを確認
-        assert result is True
 
-        # [AI GENERATED] 関連タスクタグの削除が呼ばれたことを確認
-        expected_calls = [call(task1_id, tag_id), call(task2_id, tag_id)]
-        task_tag_repo.delete_by_task_and_tag.assert_has_calls(expected_calls)
-        tag_repo.delete.assert_called_once_with(tag_id)
+def test_get_or_create_tag_when_exists(svc: TagService) -> None:
+    created = svc.create(TagCreate(name="keep"))
+    got = svc.get_or_create_tag("keep")
+    assert isinstance(got, TagRead)
+    assert got.id == created.id
 
-    def test_delete_tag_not_found(self) -> None:
-        """存在しないタグの削除でエラーが発生することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
 
-        # [AI GENERATED] 存在しないタグID
-        tag_id = uuid.uuid4()
-
-        # [AI GENERATED] タグが見つからない設定
-        tag_repo.get_by_id.return_value = None
-
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(TagServiceCheckError):
-            service.delete_tag(tag_id)
-
-    def test_delete_tag_failure(self) -> None:
-        """タグ削除が失敗することをテスト"""
-        # [AI GENERATED] モックを作成
-        tag_repo = Mock(spec=TagRepository)
-        task_tag_repo = Mock(spec=TaskTagRepository)
-        service = TagService(tag_repo, task_tag_repo)
-
-        # [AI GENERATED] 削除対象のタグ
-        tag_id = uuid.uuid4()
-        existing_tag = Tag(
-            id=tag_id,
-            name="削除失敗タグ",
-        )
-
-        # [AI GENERATED] モックの戻り値を設定
-        tag_repo.get_by_id.return_value = existing_tag
-        task_tag_repo.get_by_tag_id.return_value = []
-        tag_repo.delete.return_value = False  # 削除失敗
-
-        # [AI GENERATED] 例外が発生することを確認
-        with pytest.raises(TagServiceDeleteError):
-            service.delete_tag(tag_id)
+def test_get_or_create_tag_when_missing_creates(svc: TagService) -> None:
+    got = svc.get_or_create_tag("new-tag")
+    assert isinstance(got, TagRead)
+    assert got.name == "new-tag"

@@ -79,15 +79,6 @@ class TestServiceFactory:
         with pytest.raises(ServiceFactoryError):
             service_factory.get_service(NotAService)  # type: ignore[arg-type]
 
-    def test_service_factory_caches_same_instance(self, test_session: Session) -> None:
-        """同じサービス型の取得は同一インスタンス（キャッシュ）"""
-        repository_factory = RepositoryFactory(test_session)
-        service_factory = ServiceFactory(repository_factory)
-
-        s1 = service_factory.get_service(TaskService)
-        s2 = service_factory.get_service(TaskService)
-        assert s1 is s2
-
     def test_service_factory_has_repo_factory(self, test_session: Session) -> None:
         """ServiceFactory は RepositoryFactory を保持している"""
         repository_factory = RepositoryFactory(test_session)
@@ -98,8 +89,8 @@ class TestServiceFactory:
 
     # 未登録サービス/不正型は上のテストで網羅
 
-    def test_service_factory_creates_cached_instance(self, test_session: Session) -> None:
-        """ServiceFactory は同じ型のサービスをキャッシュして返す"""
+    def test_get_service_returns_cached_instance(self, test_session: Session) -> None:
+        """同じサービス型の取得は同一インスタンスを返す"""
         repository_factory = RepositoryFactory(test_session)
         service_factory = ServiceFactory(repository_factory)
 

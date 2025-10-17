@@ -1,83 +1,100 @@
-"""OneLinerApplicationService 移行後テスト
-
-シンプルな pytest 関数スタイルで記述し、インデント問題を回避。
-"""
-
 from __future__ import annotations
 
-from unittest.mock import patch
+from typing import Self
 
 import pytest
 
-from agents.agent_conf import LLMProvider
-from logic.application.one_liner_application_service import (
-    OneLinerApplicationService,
-    OneLinerContext,
-    OneLinerServiceError,
+from errors import NotFoundError, RepositoryError
+from logic.services.base import (
+    MyBaseError,
+    ServiceBase,
+    ServiceError,
+    handle_service_errors,
 )
-from logic.services.base import MyBaseError
 
 
-def test_one_liner_basic_generation() -> None:
-    svc = OneLinerApplicationService()
-    text = svc.generate_one_liner()
-    assert isinstance(text, str)
-    assert text
+class DummyService(ServiceBase):
+    """例外ラップ検証用のダミーサービス。
+
+    RepositoryError は ServiceError に変換され、
+    NotFoundError はそのまま伝播することを確認する。
+    """
+
+    @classmethod
+    def build_service(cls) -> Self:  # type: ignore[override]
+        return cls()
+
+    @handle_service_errors(service_name="DummyService", operation="operate")
+    def ok(self) -> str:
+        return "ok"
+
+    @handle_service_errors(service_name="DummyService", operation="operate")
+    def raise_not_found(self) -> None:
+        msg = "not found"
+        raise NotFoundError(msg)
+
+    @handle_service_errors(service_name="DummyService", operation="operate")
+    def raise_repo_error(self) -> None:
+        msg = "db is down"
+        raise RepositoryError(msg)
+
+    @handle_service_errors(service_name="DummyService", operation="operate")
+    def raise_unknown(self) -> None:
+        msg = "boom"
+        raise RuntimeError(msg)
 
 
-def test_one_liner_generation_with_context() -> None:
-    svc = OneLinerApplicationService()
-    ctx = OneLinerContext(today_task_count=5, overdue_task_count=1, completed_task_count=2)
-    text = svc.generate_one_liner(ctx)
-    assert isinstance(text, str)
-    assert text
+def test_repository_error_is_wrapped_as_service_error() -> None:
+    svc = DummyService.build_service()
+
+    with pytest.raises(ServiceError) as exc:
+        svc.raise_repo_error()
+
+    # メッセージ・operation が設定され、原因がチェインされていること
+    err = exc.value
+    assert isinstance(err, ServiceError)
+    assert getattr(err, "operation", None) == "operate"
+    # __cause__ に RepositoryError が入っている
+    assert isinstance(err.__cause__, RepositoryError)
 
 
-def test_one_liner_exception_fallback() -> None:
-    svc = OneLinerApplicationService()
-    with patch.object(svc, "_generate_with_agent", side_effect=Exception("boom")):
-        text = svc.generate_one_liner()
-        assert text == "今日も一日、お疲れさまです。"
+def test_not_found_error_is_passed_through() -> None:
+    svc = DummyService.build_service()
+
+    with pytest.raises(NotFoundError):
+        svc.raise_not_found()
 
 
-def test_one_liner_provider_override() -> None:
-    from settings.manager import get_config_manager
+def test_unexpected_exception_is_wrapped() -> None:
+    svc = DummyService.build_service()
 
-    mgr = get_config_manager()
-    with mgr.edit() as editable:
-        editable.agents.provider = LLMProvider.FAKE
-    svc = OneLinerApplicationService()
-    text = svc.generate_one_liner()
-    assert isinstance(text, str)
-    assert text
+    with pytest.raises(ServiceError) as exc:
+        svc.raise_unknown()
 
-
-def test_one_liner_log_error_and_raise() -> None:
-    svc = OneLinerApplicationService()
-    with pytest.raises(OneLinerServiceError):
-        svc._log_error_and_raise("err")
+    err = exc.value
+    assert getattr(err, "operation", None) == "operate"
+    assert isinstance(err.__cause__, RuntimeError)
 
 
-def test_one_liner_context_defaults() -> None:
-    ctx = OneLinerContext()
-    assert ctx.today_task_count == 0
-    assert ctx.overdue_task_count == 0
-    assert ctx.completed_task_count == 0
+class CustomServiceError(MyBaseError):
+    """エラー型を差し替え可能であることの検証用。"""
+
+    def __str__(self) -> str:  # pragma: no cover - 表示は検証対象外
+        return f"{self.operation}: {self.message}"
 
 
-def test_one_liner_context_mutability() -> None:
-    ctx = OneLinerContext(today_task_count=2)
-    new_value = 3
-    ctx.today_task_count = new_value
-    assert ctx.today_task_count == new_value
+def test_error_cls_override() -> None:
+    class OverrideService(DummyService):
+        @handle_service_errors("OverrideService", "operate", error_cls=CustomServiceError)
+        def do(self) -> None:
+            msg = "fail"
+            raise RepositoryError(msg)
 
+    svc = OverrideService.build_service()
 
-def test_one_liner_service_error_message() -> None:
-    err = OneLinerServiceError("x")
-    assert "一言コメント生成エラー" in str(err)
+    with pytest.raises(CustomServiceError) as exc:
+        svc.do()
 
-
-def test_one_liner_service_error_inheritance() -> None:
-    err = OneLinerServiceError("test")
-    assert isinstance(err, MyBaseError)
-    assert isinstance(err, Exception)
+    err = exc.value
+    assert isinstance(err, CustomServiceError)
+    assert getattr(err, "operation", None) == "operate"

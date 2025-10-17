@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from errors import ValidationError
 from logic.services.settings_service import SettingsService
 from settings.manager import ConfigManager
 from settings.models import AppSettings
@@ -99,7 +100,7 @@ def test_get_setting_by_path(settings_service: SettingsService) -> None:
 
 def test_get_setting_by_invalid_path(settings_service: SettingsService) -> None:
     """不正なパスでの設定取得のテスト"""
-    with pytest.raises(ValueError, match="設定パスが見つかりません"):
+    with pytest.raises(ValidationError, match="設定パスが見つかりません"):
         settings_service.get_setting_by_path("invalid.path")
 
 
@@ -121,13 +122,13 @@ def test_update_window_settings(settings_service: SettingsService) -> None:
 
 def test_update_window_settings_invalid_size(settings_service: SettingsService) -> None:
     """不正なサイズでのウィンドウ設定更新のテスト"""
-    with pytest.raises(ValueError, match=r"サイズは.*2要素のリスト"):
+    with pytest.raises(ValidationError, match=r"サイズは.*2要素のリスト"):
         settings_service.update_window_settings(size=[1920])  # 1要素のみ
 
 
 def test_update_window_settings_invalid_position(settings_service: SettingsService) -> None:
     """不正な位置でのウィンドウ設定更新のテスト"""
-    with pytest.raises(ValueError, match=r"位置は.*2要素のリスト"):
+    with pytest.raises(ValidationError, match=r"位置は.*2要素のリスト"):
         settings_service.update_window_settings(position=[200])  # 1要素のみ
 
 
@@ -149,7 +150,7 @@ def test_update_user_settings(settings_service: SettingsService) -> None:
 
 def test_update_user_settings_invalid_theme(settings_service: SettingsService) -> None:
     """不正なテーマでのユーザー設定更新のテスト"""
-    with pytest.raises(ValueError, match="テーマは'light'または'dark'"):
+    with pytest.raises(ValidationError, match="テーマは'light'または'dark'"):
         settings_service.update_user_settings(theme="invalid")
 
 
@@ -168,7 +169,7 @@ def test_update_database_settings(settings_service: SettingsService) -> None:
 
 def test_update_database_settings_empty_url(settings_service: SettingsService) -> None:
     """空のURLでのデータベース設定更新のテスト"""
-    with pytest.raises(ValueError, match="URLは空にできません"):
+    with pytest.raises(ValidationError, match="URLは空にできません"):
         settings_service.update_database_settings(url="")
 
 
@@ -186,5 +187,5 @@ def test_update_setting_by_path(settings_service: SettingsService) -> None:
 
 def test_update_setting_by_invalid_path(settings_service: SettingsService) -> None:
     """不正なパスでの設定更新のテスト"""
-    with pytest.raises(ValueError, match="設定パスは少なくとも2階層必要"):
+    with pytest.raises(ValidationError, match="設定パスは少なくとも2階層必要"):
         settings_service.update_setting_by_path("theme", "dark")

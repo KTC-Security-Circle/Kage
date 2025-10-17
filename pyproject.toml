@@ -115,7 +115,7 @@ fix = ["_lint-fix", "_format"]
 
 # == Testing ==
 test = "uv run pytest"
-test-cov = "uv run pytest --cov=src --cov-report=html"
+test-cov = "uv run python scripts/run_logic_cov.py"
 
 # == Database ==
 # migrate = "uv run alembic -c src/models/migrations/alembic.ini upgrade head"

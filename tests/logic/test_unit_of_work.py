@@ -158,6 +158,21 @@ class TestSqlModelUnitOfWork:
                 saved_task = verify_session.get(Task, task_id)
                 assert saved_task is None
 
+    def test_exit_calls_rollback_on_exception(self, clean_engine: Engine) -> None:
+        """例外発生時に rollback が呼び出されることを直接確認する"""
+        with patch("logic.unit_of_work.engine", clean_engine):
+            uow = SqlModelUnitOfWork()
+            error_message = "boom"
+
+            with (
+                patch.object(uow, "rollback", wraps=uow.rollback) as mock_rollback,
+                pytest.raises(RuntimeError, match=error_message),
+                uow,
+            ):
+                raise RuntimeError(error_message)
+
+            mock_rollback.assert_called_once()
+
     def test_session_closes_after_context_exit(self, clean_engine: Engine) -> None:
         """コンテキスト終了後にセッションがクローズされることをテスト"""
         with patch("logic.unit_of_work.engine", clean_engine):
@@ -301,3 +316,21 @@ class TestUnitOfWorkIntegration:
                 final_task = uow3.session.get(Task, task_id)
                 assert final_task is not None
                 assert final_task.title == "元のタスク"  # [AI GENERATED] 元のタイトルのまま
+
+    def test_get_service_requires_initialization(self) -> None:
+        """初期化前に get_service を呼ぶと RuntimeError"""
+        uow = SqlModelUnitOfWork()
+
+        with pytest.raises(RuntimeError, match="Unit of Work not initialized"):
+            uow.get_service(TaskService)
+
+    def test_get_service_delegates_to_factory(self, test_engine: Engine) -> None:
+        """get_service は service_factory へ委譲する"""
+        with patch("logic.unit_of_work.engine", test_engine):
+            uow = SqlModelUnitOfWork()
+
+            with uow:
+                service = uow.get_service(TaskService)
+
+            assert isinstance(service, TaskService)
+            assert service.task_repo.session is uow.session

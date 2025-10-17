@@ -29,7 +29,7 @@ logic 配下 (application / services / repositories / infra) のテストコー�
 - 含む: Service/Repository/Application/Infra(Unit of Work, Factory) のユニット/軽い統合テスト
 - 含まない: UI 層、エージェント層のテスト
 
-## What
+## What Changes
 
 - 未到達分岐・例外のテスト追加 (NotFound、空集合、with_details 分岐 等)
 - UnitOfWork/Factory のロールバック/ライフサイクルのエッジ検証

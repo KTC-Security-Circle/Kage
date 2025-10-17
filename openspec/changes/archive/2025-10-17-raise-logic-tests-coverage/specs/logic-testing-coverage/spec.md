@@ -2,7 +2,7 @@
 
 <!-- OPENSPEC:START -->
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Service 層の例外・分岐網羅
 
@@ -53,8 +53,6 @@
 - GIVEN トランザクション開始
 - WHEN 処理中に例外が発生
 - THEN ロールバックが実行される
-
-## ADDED Requirements
 
 ### Requirement: カバレッジ閾値の段階設定
 

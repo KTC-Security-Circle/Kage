@@ -12,9 +12,6 @@ import pytest
 from logic.application.task_application_service import TaskApplicationService, TaskContentValidationError
 from models import TaskRead, TaskStatus, TaskUpdate
 
-# テスト用定数
-EXPECTED_TODAY_TASKS_COUNT = 5
-
 
 class TestTaskApplicationService:
     """TaskApplicationServiceのApplication Service層機能をテストするクラス"""
@@ -122,10 +119,26 @@ class TestTaskApplicationService:
         # モックの設定
         mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
         task_id = uuid.uuid4()
-        # 実行
-        task_application_service.delete(task_id)
 
-        # 検証
+        result = task_application_service.delete(task_id)
+
+        assert result is mock_task_service.delete.return_value
+        mock_task_service.delete.assert_called_once_with(task_id)
+
+    def test_delete_failure(
+        self,
+        task_application_service: TaskApplicationService,
+        mock_unit_of_work: Mock,
+    ) -> None:
+        """異常系: タスク削除でサービスが False を返す場合"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_task_service.delete.return_value = False
+
+        task_id = uuid.uuid4()
+
+        result = task_application_service.delete(task_id)
+
+        assert result is False
         mock_task_service.delete.assert_called_once_with(task_id)
 
     # ステータス更新の個別APIは現行Application層に存在しないため対象外
@@ -152,6 +165,18 @@ class TestTaskApplicationService:
         assert result[0] == sample_task_read
         mock_task_service.list_by_status.assert_called_once_with(TaskStatus.TODO, with_details=False)
 
+    def test_list_by_status_with_details(
+        self,
+        task_application_service: TaskApplicationService,
+        mock_unit_of_work: Mock,
+    ) -> None:
+        """正常系: 詳細情報を含めてステータス別に取得"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+
+        task_application_service.list_by_status(TaskStatus.PROGRESS, with_details=True)
+
+        mock_task_service.list_by_status.assert_called_once_with(TaskStatus.PROGRESS, with_details=True)
+
     # Today 件数APIは現行仕様に存在しないため対象外
 
     def test_get_by_id(
@@ -171,6 +196,21 @@ class TestTaskApplicationService:
         # 検証
         assert result == sample_task_read
         mock_task_service.get_by_id.assert_called_once_with(sample_task_read.id, with_details=False)
+
+    def test_get_by_id_with_details(
+        self,
+        task_application_service: TaskApplicationService,
+        mock_unit_of_work: Mock,
+        sample_task_read: TaskRead,
+    ) -> None:
+        """正常系: 詳細情報付きでの ID 指定取得"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_task_service.get_by_id.return_value = sample_task_read
+
+        result = task_application_service.get_by_id(sample_task_read.id, with_details=True)
+
+        assert result == sample_task_read
+        mock_task_service.get_by_id.assert_called_once_with(sample_task_read.id, with_details=True)
 
     def test_get_by_id_not_found(
         self,
@@ -201,3 +241,16 @@ class TestTaskApplicationService:
         result = task_application_service.get_all_tasks()
         assert isinstance(result, list)
         mock_task_service.get_all.assert_called_once()
+
+    def test_create_with_explicit_status(
+        self,
+        task_application_service: TaskApplicationService,
+        mock_unit_of_work: Mock,
+    ) -> None:
+        """正常系: 明示したステータスでタスクを作成"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+
+        task_application_service.create(title="A", description=None, status=TaskStatus.PROGRESS)
+
+        args, _ = mock_task_service.create.call_args
+        assert args[0].status is TaskStatus.PROGRESS

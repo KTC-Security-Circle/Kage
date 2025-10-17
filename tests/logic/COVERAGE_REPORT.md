@@ -1,12 +1,12 @@
 # Logic 層テストカバレッジレポート（最新）
 
-最終更新: 2025-10-16（再計測）
+最終更新: 2025-10-17（再計測）
 
 ## サマリ
 
-- 総合カバレッジ: 79%（前回 78% → +1pt）
-- 実行結果: 247 passed, 3 skipped（テスト全体。logic 配下の測定対象で集計）
-- 主な改善: task_service/memo_service のテストを拡張し、task_service は 87% へ、memo_service は 73% へ上昇。light/extra テストの統合完了。
+- 総合カバレッジ: 80%（前回 79% → +1pt）
+- 実行結果: 210 passed（logic スイートのみ計測）
+- 主な改善: application 層（task/project/base）が 100% に到達。UnitOfWork の例外経路テストを追加し、Factory 系の冗長テストを整理。
 
 ## モジュール別ハイライト（抜粋）
 
@@ -32,8 +32,8 @@
   - logic/application/task_application_service.py: 100%
   - logic/application/memo_application_service.py: 100%
   - logic/application/tag_application_service.py: 94%
-  - logic/application/project_application_service.py: 72%
-  - logic/application/base.py: 64%
+  - logic/application/project_application_service.py: 100%
+  - logic/application/base.py: 100%
   - logic/application/apps.py: 0%（未対象の初期化コード）
 
 - Infra
@@ -42,37 +42,30 @@
 
 ※ 上記は `uv run pytest tests/logic --cov=src/logic --cov-report=term-missing` の直近実測値から抜粋。
 
-## 今後の優先課題（短期）
+- 今後の優先課題（短期）
 
 1. Service 層の底上げ（目標 85% 以上）
 
-- memo*service の未テスト分岐追加（search_memos での search_by*\* 経路、convert_read_model 経路の網羅）
-- project_service の残り分岐（update/convert_read_model 経路、force=True 経路）
-- 失敗パス（RepositoryError ラップ、想定外例外の wrap）の網羅
+- memo_service の未テスト分岐（convert_read_model、search 系の失敗パス）
+- project_service の force=True 経路と convert_read_model
+- service/base.py のログ分岐・例外ラップパス
 
-2. Application 層の不足補完
+1. アプリケーション初期化コードの扱い
 
-   - project_application_service のハッピーパス＋失敗系の追加
-   - apps.py は初期化コードのため、E2E/統合実行テストでの間接カバーを検討
+- logic/application/apps.py は現状 0%。E2E/結合テストでの間接カバー方針を決める
 
-3. Repository の残り細部
+1. Repository の残り細部
 
 - base.py の NotFound/更新・削除失敗パスをもう一段厳密に
 
-## 実施済み（この更新での差分）
+- 実施済み（この更新での差分）
 
-- TaskRepository の以下分岐を網羅
-
-  - add_tag/remove_tag/remove_all_tags（重複追加の冪等性、未関連削除、空時全削除、NotFound）
-  - list_by_project / list_by_status / search_by_title の with_details 分岐と未ヒット時 NotFound
-
-- Service 層の追加テスト
-  - TagService: get_by_name/search_by_name/get_or_create を追加、例外透過性と ReadModel 変換を確認（86%）
-  - ProjectService: list_by_status の NotFound 透過、remove_task の NotFound 経路を追加（76%）
-  - TaskService: light を本体へ統合。RepoRaiser/RepoUnexpected 経路、remove_tag（存在しないタグ/存在するタグ）を追加（87%）。
-  - MemoService: 予期しない例外 wrap、get_all(with_details=True)、list_by_status NotFound 経路を追加。ダミーリポジトリに list_by_status を実装（73%）。
-
-なお、保守性向上のため service テストの light/extra を統合しました。legacy ファイル（test_tag_service_light/extra.py, test_project_service_light/extra.py, test_task_service_light.py）は当面の安定性確保のため module-level skip のプレースホルダーとして残置しています（今後のクリーンアップ対象）。
+- TaskApplicationService: with_details 分岐と削除の戻り値検証を追加
+- ProjectApplicationService: バリデーション/削除失敗/一覧 API を網羅し 100% 達成
+- BaseApplicationService: get_instance シングルトン契約のテストを追加し 100% 達成
+- UnitOfWork: 例外時 rollback 呼び出しと get_service 経路の直接検証を追加
+- Factory テスト: キャッシュ関連の重複ケースを統合し、命名を整理
+- poe test-cov: scripts/run_logic_cov.py 経由で logic に限定したカバレッジ計測と閾値（既定 80%、環境変数で 85% へ引き上げ可能）を強制
 
 ## 実行方法（参考）
 
@@ -81,4 +74,4 @@
 
 ## 備考
 
-- 目標（OpenSpec）: logic 配下 85% 以上（段階的に強制）。現時点では 76% のため、Service 層と Application 層改善を継続。
+- 目標（OpenSpec）: logic 配下 85% 以上（段階的に強制）。現時点では 80% のため、Service 層中心の改善を継続。環境変数 LOGIC_COV_THRESHOLD=85 を指定すると CI で 85% を強制できる。

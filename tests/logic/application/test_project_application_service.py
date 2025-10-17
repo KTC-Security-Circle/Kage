@@ -11,8 +11,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from logic.application.project_application_service import ProjectApplicationService
-from models import ProjectRead, ProjectStatus
+from logic.application.project_application_service import ProjectApplicationService, ProjectValidationError
+from models import ProjectRead, ProjectStatus, ProjectUpdate
 
 
 @pytest.fixture
@@ -65,6 +65,12 @@ def test_create_success(
     mock_proj_service.create.assert_called_once()
 
 
+def test_create_validation_error(project_app_service: ProjectApplicationService) -> None:
+    """異常系: プロジェクト作成時のバリデーションエラー。"""
+    with pytest.raises(ProjectValidationError, match="プロジェクトタイトルを入力してください"):
+        project_app_service.create(title="   ")
+
+
 def test_delete_success(project_app_service: ProjectApplicationService, mock_unit_of_work: Mock) -> None:
     """正常系: プロジェクト削除成功。"""
     mock_proj_service = mock_unit_of_work.service_factory.get_service.return_value
@@ -73,6 +79,33 @@ def test_delete_success(project_app_service: ProjectApplicationService, mock_uni
     pid = uuid.uuid4()
     assert project_app_service.delete(pid) is True
     mock_proj_service.delete.assert_called_once_with(pid)
+
+
+def test_delete_failure(project_app_service: ProjectApplicationService, mock_unit_of_work: Mock) -> None:
+    """異常系: プロジェクト削除失敗時は False を返す。"""
+    mock_proj_service = mock_unit_of_work.service_factory.get_service.return_value
+    mock_proj_service.delete.return_value = False
+
+    pid = uuid.uuid4()
+    assert project_app_service.delete(pid) is False
+    mock_proj_service.delete.assert_called_once_with(pid)
+
+
+def test_update_success(
+    project_app_service: ProjectApplicationService,
+    mock_unit_of_work: Mock,
+    sample_project_read: ProjectRead,
+) -> None:
+    """正常系: プロジェクト更新成功。"""
+    mock_proj_service = mock_unit_of_work.service_factory.get_service.return_value
+    mock_proj_service.update.return_value = sample_project_read
+
+    update_data = ProjectUpdate(title="更新", description="desc")
+
+    result = project_app_service.update(sample_project_read.id, update_data)
+
+    assert result is sample_project_read
+    mock_proj_service.update.assert_called_once_with(sample_project_read.id, update_data)
 
 
 def test_get_by_id_success(
@@ -87,3 +120,30 @@ def test_get_by_id_success(
     res = project_app_service.get_by_id(sample_project_read.id)
     assert res is sample_project_read
     mock_proj_service.get_by_id.assert_called_once_with(sample_project_read.id)
+
+
+def test_get_all_projects(
+    project_app_service: ProjectApplicationService,
+    mock_unit_of_work: Mock,
+    sample_project_read: ProjectRead,
+) -> None:
+    """正常系: プロジェクト全件取得。"""
+    mock_proj_service = mock_unit_of_work.service_factory.get_service.return_value
+    mock_proj_service.get_all.return_value = [sample_project_read]
+
+    res = project_app_service.get_all_projects()
+
+    assert res == [sample_project_read]
+    mock_proj_service.get_all.assert_called_once_with()
+
+
+def test_list_by_status(
+    project_app_service: ProjectApplicationService,
+    mock_unit_of_work: Mock,
+) -> None:
+    """正常系: ステータス別取得で Service へパラメータを透過。"""
+    mock_proj_service = mock_unit_of_work.service_factory.get_service.return_value
+
+    project_app_service.list_by_status(ProjectStatus.COMPLETED)
+
+    mock_proj_service.list_by_status.assert_called_once_with(ProjectStatus.COMPLETED)

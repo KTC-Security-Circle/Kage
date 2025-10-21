@@ -318,7 +318,7 @@ class TestTerminologyServiceLargeDataset:
         exported_data.sort(key=lambda x: x["key"])
         large_dataset.sort(key=lambda x: x["key"])
 
-        for original, exported in zip(large_dataset, exported_data, strict=False):
+        for original, exported in zip(large_dataset, exported_data, strict=True):
             assert original["key"] == exported["key"]
             assert original["title"] == exported["title"]
             assert original["description"] == exported["description"]

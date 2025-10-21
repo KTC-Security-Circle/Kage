@@ -139,6 +139,20 @@ class TaskStatus(str, Enum):
     OVERDUE = "overdue"
 
 
+class TermStatus(str, Enum):
+    """用語のステータス
+
+    Attributes:
+        DRAFT: 草案状態（未承認）
+        APPROVED: 承認済み
+        DEPRECATED: 非推奨（使用すべきでない）
+    """
+
+    DRAFT = "draft"
+    APPROVED = "approved"
+    DEPRECATED = "deprecated"
+
+
 # ==============================================================================
 # ==============================================================================
 # Base Model (基底モデル)
@@ -201,6 +215,22 @@ class TaskTagLink(SQLModel, table=True):
     __tablename__ = "task_tag"
 
     task_id: uuid.UUID = Field(foreign_key="tasks.id", primary_key=True)
+    tag_id: uuid.UUID = Field(foreign_key="tags.id", primary_key=True)
+
+
+class TermTagLink(SQLModel, table=True):
+    """用語とタグの関連モデル
+
+    用語とタグの多対多関係をデータベースに保存するためのモデルクラス。SQLModelを使用してデータベースと連携します。
+
+    Attributes:
+        term_id (uuid.UUID): 用語のID。複合主キーの一部。
+        tag_id (uuid.UUID): タグのID。複合主キーの一部。
+    """
+
+    __tablename__ = "term_tag"
+
+    term_id: uuid.UUID = Field(foreign_key="terms.id", primary_key=True)
     tag_id: uuid.UUID = Field(foreign_key="tags.id", primary_key=True)
 
 
@@ -464,6 +494,7 @@ class Tag(TagBase, table=True):
 
     tasks: List["Task"] = Relationship(back_populates="tags", link_model=TaskTagLink)
     memos: List["Memo"] = Relationship(back_populates="tags", link_model=MemoTagLink)
+    terms: List["Term"] = Relationship(back_populates="tags", link_model=TermTagLink)
 
 
 class TagCreate(SQLModel):
@@ -659,3 +690,194 @@ class TaskUpdate(SQLModel):
     memo_id: uuid.UUID | None = None
     is_recurring: bool | None = None
     recurrence_rule: str | None = None
+
+
+# ==============================================================================
+# ==============================================================================
+# Terminology Models (用語管理モデル)
+# ==============================================================================
+# ==============================================================================
+
+
+class TermBase(BaseModel):
+    """用語の基本モデル
+
+    Attributes:
+        key: 用語のキー（一意識別子、例: "LLM", "RAG"）。
+        title: 用語の正式名称。
+        description: 用語の説明・定義。
+        status: 用語のステータス（草案/承認済み/非推奨）。
+        source_url: 出典や参照先のURL。
+    """
+
+    key: str = Field(unique=True, index=True, max_length=100)
+    title: str = Field(max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    status: TermStatus = Field(default=TermStatus.DRAFT, index=True)
+    source_url: str | None = Field(default=None, max_length=500)
+
+
+class Term(TermBase, table=True):
+    """用語モデル
+
+    社内固有の用語・略語・定義を管理するモデルクラス。
+    タグや同義語と関連付けて、検索性とLLM連携を強化します。
+
+    Attributes:
+        id: 用語を一意に識別するID。
+        key: 用語のキー（一意識別子）。
+        title: 用語の正式名称。
+        description: 用語の説明・定義。
+        status: 用語のステータス。
+        source_url: 出典や参照先のURL。
+        created_at: 用語の作成日時。
+        updated_at: 用語の最終更新日時。
+        synonyms: この用語の同義語のリスト。
+        tags: この用語に付けられたタグのリスト。
+    """
+
+    __tablename__ = "terms"
+
+    synonyms: List["Synonym"] = Relationship(
+        back_populates="term", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    tags: List["Tag"] = Relationship(back_populates="terms", link_model=TermTagLink)
+
+
+class TermCreate(SQLModel):
+    """用語作成用モデル
+
+    用語を新規作成する際に使用するモデルクラス。
+
+    Attributes:
+        key: 用語のキー（一意識別子）。
+        title: 用語の正式名称。
+        description: 用語の説明・定義。
+        status: 用語のステータス。
+        source_url: 出典や参照先のURL。
+    """
+
+    key: str = Field(max_length=100)
+    title: str = Field(max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    status: TermStatus = Field(default=TermStatus.DRAFT)
+    source_url: str | None = Field(default=None, max_length=500)
+
+
+class TermRead(TermBase):
+    """用語読み取り用モデル
+
+    用語の情報を読み取る際に使用するモデルクラス。
+
+    Attributes:
+        id: 用語を一意に識別するID。
+        key: 用語のキー。
+        title: 用語の正式名称。
+        description: 用語の説明・定義。
+        status: 用語のステータス。
+        source_url: 出典や参照先のURL。
+        created_at: 用語の作成日時。
+        updated_at: 用語の最終更新日時。
+    """
+
+    id: uuid.UUID
+
+
+class TermUpdate(SQLModel):
+    """用語更新用モデル
+
+    用語の情報を更新する際に使用するモデルクラス。
+    Noneが指定された属性は更新されません。
+
+    Attributes:
+        key: 用語のキー。
+        title: 用語の正式名称。
+        description: 用語の説明・定義。
+        status: 用語のステータス。
+        source_url: 出典や参照先のURL。
+    """
+
+    key: str | None = Field(default=None, max_length=100)
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    status: TermStatus | None = None
+    source_url: str | None = Field(default=None, max_length=500)
+
+
+# ==============================================================================
+# Synonym Models (同義語モデル)
+# ==============================================================================
+
+
+class SynonymBase(SQLModel):
+    """同義語の基本モデル
+
+    Attributes:
+        text: 同義語のテキスト（例: "大規模言語モデル", "LLM"）。
+        term_id: この同義語が属する用語のID。
+    """
+
+    text: str = Field(max_length=200, index=True)
+    term_id: uuid.UUID = Field(foreign_key="terms.id", index=True)
+
+
+class Synonym(SynonymBase, table=True):
+    """同義語モデル
+
+    用語の同義語・別名を管理するモデルクラス。
+    検索時に同義語展開を行い、検索精度を向上させます。
+
+    Attributes:
+        id: 同義語を一意に識別するID。
+        text: 同義語のテキスト。
+        term_id: この同義語が属する用語のID。
+        term: この同義語が属する用語オブジェクト。
+    """
+
+    __tablename__ = "synonyms"
+
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
+    term: "Term" = Relationship(back_populates="synonyms")
+
+
+class SynonymCreate(SQLModel):
+    """同義語作成用モデル
+
+    同義語を新規作成する際に使用するモデルクラス。
+
+    Attributes:
+        text: 同義語のテキスト。
+        term_id: この同義語が属する用語のID。
+    """
+
+    text: str = Field(max_length=200)
+    term_id: uuid.UUID
+
+
+class SynonymRead(SynonymBase):
+    """同義語読み取り用モデル
+
+    同義語の情報を読み取る際に使用するモデルクラス。
+
+    Attributes:
+        id: 同義語を一意に識別するID。
+        text: 同義語のテキスト。
+        term_id: この同義語が属する用語のID。
+    """
+
+    id: uuid.UUID
+
+
+class SynonymUpdate(SQLModel):
+    """同義語更新用モデル
+
+    同義語の情報を更新する際に使用するモデルクラス。
+    Noneが指定された属性は更新されません。
+
+    Attributes:
+        text: 同義語のテキスト。
+        term_id: この同義語が属する用語のID。
+    """
+
+    text: str | None = Field(default=None, max_length=200)
+    term_id: uuid.UUID | None = None

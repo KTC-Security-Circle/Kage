@@ -11,6 +11,7 @@ from logic.services.project_service import ProjectService
 from logic.services.settings_service import SettingsService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
+from logic.services.terminology_service import TerminologyService
 
 __all__ = [
     "ServiceBase",
@@ -19,4 +20,5 @@ __all__ = [
     "SettingsService",
     "TagService",
     "TaskService",
+    "TerminologyService",
 ]

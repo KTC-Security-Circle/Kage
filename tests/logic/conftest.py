@@ -9,10 +9,12 @@
 - テストデータのファクトリ関数
 """
 
+# import sys
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from loguru import logger
 from sqlalchemy import Engine, create_engine
 from sqlmodel import Session, SQLModel
 
@@ -20,8 +22,35 @@ from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
+from logic.repositories.term import TermRepository
 from models import Task, TaskStatus
 from tests.logic.helpers import create_test_task
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_loguru_for_pytest_capture() -> None:
+    """
+    loguruのデフォルトハンドラを削除し、
+    pytestがキャプチャできるsys.stderrにハンドラを再設定する。
+    """
+
+    logger.remove()  # デフォルトハンドラを削除
+
+    # pytestのキャプチャが機能するように、sys.stderrにハンドラを追加
+    # enqueue=True にすると非同期になり出力が混ざることがあるため、
+    # テスト中は enqueue=False (同期) にするのが一般的です。
+    # logger.add(
+    #     sys.stderr,
+    #     level="ERROR",  # テスト中はERRORレベル以上を出力
+    #     enqueue=False,  # テスト中は同期的に出力
+    # )
+
+    # 2. ログメッセージを破棄する「何もしない」ハンドラを追加
+    #    これがないと、loguruが「ハンドラがない」と判断して
+    #    デフォルトハンドラを再度追加してしまう可能性があるため。
+    #    sinkにはファイルパスや関数を指定できます。
+    #    ここでは、受け取ったメッセージを単に無視するラムダ関数をsinkに指定します。
+    logger.add(lambda _: None, level="DEBUG")
 
 
 @pytest.fixture
@@ -89,6 +118,12 @@ def project_repository(test_session: Session) -> ProjectRepository:
 def tag_repository(test_session: Session) -> TagRepository:
     """テスト用TagRepositoryインスタンスを作成"""
     return TagRepository(test_session)
+
+
+@pytest.fixture
+def term_repository(test_session: Session) -> TermRepository:
+    """テスト用TermRepositoryインスタンスを作成"""
+    return TermRepository(test_session)
 
 
 # 不存在の TaskTag 系は現行実装に合わせて削除（必要になれば復活させる）

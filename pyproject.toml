@@ -114,7 +114,8 @@ check = ["_lint", "_format-check", "_type-check"]
 fix = ["_lint-fix", "_format"]
 
 # == Testing ==
-test = "uv run pytest"
+test = "uv run pytest -q"
+test-v = "uv run pytest --verbose"
 test-cov = "uv run python scripts/run_logic_cov.py"
 
 # == Database ==

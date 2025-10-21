@@ -18,6 +18,8 @@ class BaseApplicationService[T: type[UnitOfWork] | None]:
     Unit of Workを使用してトランザクション管理を行います。
     """
 
+    _instance: BaseApplicationService | None = None
+
     def __init__(self, unit_of_work_factory: T = None) -> None:
         """BaseApplicationServiceの初期化
 
@@ -37,7 +39,7 @@ class BaseApplicationService[T: type[UnitOfWork] | None]:
         Returns:
             BaseApplicationService: Application Serviceのインスタンス
         """
-        if not hasattr(cls, "_instance"):
+        if cls._instance is None:
             cls._instance = cls(*args, **kwargs)
         else:
             cls._instance.__init__(*args, **kwargs)

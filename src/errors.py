@@ -25,6 +25,7 @@ __all__ = [
     "DomainError",
     "NotFoundError",
     "ValidationError",
+    "AlreadyExistsError",
 ]
 
 
@@ -90,3 +91,10 @@ class NotFoundError(DomainError):
 
 class ValidationError(DomainError):
     """入力/状態がドメインルールに反していることを示す例外。"""
+
+
+class AlreadyExistsError(DomainError):
+    """エンティティが既に存在する場合の例外。
+
+    一意性制約（例: キー、名前）に違反する場合に使用します。
+    """

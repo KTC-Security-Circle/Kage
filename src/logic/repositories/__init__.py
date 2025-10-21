@@ -16,6 +16,7 @@ from logic.repositories.memo import MemoRepository
 from logic.repositories.project import ProjectRepository
 from logic.repositories.tag import TagRepository
 from logic.repositories.task import TaskRepository
+from logic.repositories.term import TermRepository
 
 _RepositoryT = TypeVar("_RepositoryT", bound=BaseRepository)
 
@@ -81,6 +82,7 @@ __all__ = [
     "ProjectRepository",
     "TagRepository",
     "TaskRepository",
+    "TermRepository",
     "RepositoryFactory",
     "RepositoryFactoryError",
 ]

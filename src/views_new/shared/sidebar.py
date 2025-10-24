@@ -117,14 +117,6 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
         )
         sidebar_items.append(item_container)
 
-    # return ft.Container(
-    #     content=ft.Column(
-    #         sidebar_items,
-    #         spacing=SPACING.xs,
-    #         scroll=ft.ScrollMode.AUTO,
-    #         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-    #     ),
-    # )
     return ft.Container(
         content=ft.Column(
             [

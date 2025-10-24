@@ -173,3 +173,4 @@ copilot/
 # other
 .ruff_cache/
 .benchmarks/
+src/views/template/

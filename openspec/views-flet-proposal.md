@@ -100,7 +100,7 @@ src/views/
 from __future__ import annotations
 from typing import Callable
 import flet as ft
-from src.views.layout import build_layout
+from views.layout import build_layout
 
 RouteHandler = Callable[[ft.Page, str], None]
 
@@ -202,9 +202,9 @@ class BaseView(ft.UserControl):
 # src/views/layout.py
 from __future__ import annotations
 import flet as ft
-from src.views.shared.sidebar import build_sidebar
-from src.views.home.view import HomeView
-from src.views.projects.view import ProjectsView
+from views.shared.sidebar import build_sidebar
+from views.home.view import HomeView
+from views.projects.view import ProjectsView
 # ... 他Viewのimport
 
 ROUTE_TO_VIEW = {

@@ -11,8 +11,8 @@
     - 各種画面: home, projects, tags, tasks, memos, terms, settings
 
 使用例:
-    from src.views_new import HomeView, ProjectsView
-    from src.views_new.layout import build_layout
+    from views_new import HomeView, ProjectsView
+    from views_new.layout import build_layout
 """
 
 from __future__ import annotations

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import flet as ft
 
-from .home import HomeView
-from .projects import ProjectsView
-from .shared.sidebar import build_sidebar
+from views_new.home import HomeView
+from views_new.projects import ProjectsView
+from views_new.shared.sidebar import build_sidebar
 
 
 def build_layout(page: ft.Page, route: str) -> ft.View:
@@ -49,6 +49,7 @@ def build_layout(page: ft.Page, route: str) -> ft.View:
                     ),
                 ],
                 expand=True,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ],
         vertical_alignment=ft.MainAxisAlignment.START,

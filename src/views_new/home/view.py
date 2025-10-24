@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import flet as ft
 
-from src.views_new.shared.base_view import BaseView
-from src.views_new.theme import SPACING, get_light_color
+from views_new.shared.base_view import BaseView
+from views_new.theme import SPACING, get_light_color
 
 
 class HomeView(BaseView):
@@ -66,6 +66,7 @@ class HomeView(BaseView):
                 ],
                 spacing=SPACING.md,
                 scroll=ft.ScrollMode.AUTO,
+                expand=True,
             ),
             padding=SPACING.lg,
             expand=True,

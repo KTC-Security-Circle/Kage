@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import flet as ft
 
-from src.views_new.shared.base_view import BaseView
+from views_new.shared.base_view import BaseView
 
 
 class ProjectsView(BaseView):

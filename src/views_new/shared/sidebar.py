@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from src.views_new.theme import SPACING, get_dark_color, get_light_color
+from views_new.theme import SPACING, get_dark_color, get_light_color
 
 
 class NavigationItem:
@@ -63,7 +63,7 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
     # 置換先: settings service から現在のテーマモードを取得
     is_dark_mode = False  # ダミー値
 
-    sidebar_items = []
+    sidebar_items: list[ft.Container | ft.Divider] = []
 
     # App title
     sidebar_items.append(
@@ -91,7 +91,7 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
     for item in NAVIGATION_ITEMS:
         is_selected = current_route == item.route
 
-        nav_item = ft.Container(
+        item_container = ft.Container(
             content=ft.Row(
                 [
                     ft.Icon(
@@ -115,16 +115,33 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
             on_click=lambda _e, route=item.route: _handle_navigation(page, route),
             ink=True,
         )
-
-        sidebar_items.append(nav_item)
+        sidebar_items.append(item_container)
 
     return ft.Container(
         content=ft.Column(
-            sidebar_items,
-            spacing=SPACING.xs,
-            scroll=ft.ScrollMode.AUTO,
+            [
+                # タイトルと上部ナビゲーション項目
+                ft.Column(
+                    sidebar_items[0:2],
+                    spacing=SPACING.xs,
+                    alignment=ft.MainAxisAlignment.START,
+                ),
+                # 中間のスペーサー
+                ft.Column(
+                    sidebar_items[2:-1],
+                    expand=True,
+                    scroll=ft.ScrollMode.ADAPTIVE,
+                ),
+                # 下部ナビゲーション項目
+                ft.Column(
+                    sidebar_items[-1:],
+                    spacing=SPACING.xs,
+                    alignment=ft.MainAxisAlignment.END,
+                ),
+            ],
+            expand=True,
         ),
-        width=250,
+        width=200,
         height=None,
         bgcolor=get_light_color("surface") if not is_dark_mode else get_dark_color("surface"),
         padding=SPACING.sm,

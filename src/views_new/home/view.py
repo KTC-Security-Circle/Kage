@@ -90,7 +90,7 @@ class HomeView(BaseView):
                         ft.Text(
                             "タスク管理の概要とクイックアクセス",
                             size=16,
-                            color=ft.colors.ON_SURFACE_VARIANT,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                     ],
                     spacing=SPACING.xs,
@@ -106,10 +106,10 @@ class HomeView(BaseView):
             統計カードコントロール
         """
         stats_cards = [
-            self._create_stat_card("プロジェクト", str(self.project_stats["total_projects"]), ft.icons.FOLDER),
-            self._create_stat_card("進行中タスク", str(self.project_stats["active_tasks"]), ft.icons.TASK),
-            self._create_stat_card("完了タスク", str(self.project_stats["completed_tasks"]), ft.icons.CHECK_CIRCLE),
-            self._create_stat_card("未処理メモ", str(self.project_stats["pending_memos"]), ft.icons.NOTE),
+            self._create_stat_card("プロジェクト", str(self.project_stats["total_projects"]), ft.Icons.FOLDER),
+            self._create_stat_card("進行中タスク", str(self.project_stats["active_tasks"]), ft.Icons.TASK),
+            self._create_stat_card("完了タスク", str(self.project_stats["completed_tasks"]), ft.Icons.CHECK_CIRCLE),
+            self._create_stat_card("未処理メモ", str(self.project_stats["pending_memos"]), ft.Icons.NOTE),
         ]
 
         return ft.Row(
@@ -148,7 +148,7 @@ class HomeView(BaseView):
                     ft.Text(
                         title,
                         size=14,
-                        color=ft.colors.ON_SURFACE_VARIANT,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                 ],
                 spacing=SPACING.sm,
@@ -200,7 +200,7 @@ class HomeView(BaseView):
         return ft.Container(
             content=ft.Row(
                 [
-                    ft.Icon(ft.icons.TASK, size=16),
+                    ft.Icon(ft.Icons.TASK, size=16),
                     ft.Column(
                         [
                             ft.Text(
@@ -211,7 +211,7 @@ class HomeView(BaseView):
                             ft.Text(
                                 f"{task['project']} • {task['due_date']}",
                                 size=12,
-                                color=ft.colors.ON_SURFACE_VARIANT,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ],
                         spacing=2,
@@ -233,10 +233,10 @@ class HomeView(BaseView):
             クイックアクションコントロール
         """
         actions = [
-            {"label": "新しいタスク", "icon": ft.icons.ADD_TASK, "route": "/tasks"},
-            {"label": "プロジェクト作成", "icon": ft.icons.CREATE_NEW_FOLDER, "route": "/projects"},
-            {"label": "メモ追加", "icon": ft.icons.NOTE_ADD, "route": "/memos"},
-            {"label": "週間レビュー", "icon": ft.icons.ASSESSMENT, "route": "/weekly-review"},
+            {"label": "新しいタスク", "icon": ft.Icons.ADD_TASK, "route": "/tasks"},
+            {"label": "プロジェクト作成", "icon": ft.Icons.CREATE_NEW_FOLDER, "route": "/projects"},
+            {"label": "メモ追加", "icon": ft.Icons.NOTE_ADD, "route": "/memos"},
+            {"label": "週間レビュー", "icon": ft.Icons.ASSESSMENT, "route": "/weekly-review"},
         ]
 
         return ft.Column(

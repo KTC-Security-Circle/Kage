@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     import flet as ft
 
 from views_new.shared.base_view import BaseView
+from views_new.shared.components import create_page_header
+
+from .components import create_project_card
 
 
 class ProjectsView(BaseView):
@@ -69,7 +72,10 @@ class ProjectsView(BaseView):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    self._build_header(),
+                    create_page_header(
+                        title="プロジェクト管理",
+                        subtitle=f"合計 {len(self.projects_data)} 件のプロジェクト",
+                    ),
                     self._build_action_bar(),
                     self._build_projects_list(),
                 ],
@@ -78,39 +84,6 @@ class ProjectsView(BaseView):
             ),
             padding=24,
             expand=True,
-        )
-
-    def _build_header(self) -> ft.Control:  # type: ignore[name-defined]
-        """ページヘッダーを構築する。
-
-        Returns:
-            ヘッダーコンテンツ
-        """
-        import flet as ft
-
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Column(
-                        controls=[
-                            ft.Text(
-                                "プロジェクト管理",
-                                style=ft.TextThemeStyle.HEADLINE_MEDIUM,
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                            ft.Text(
-                                f"合計 {len(self.projects_data)} 件のプロジェクト",
-                                style=ft.TextThemeStyle.BODY_MEDIUM,
-                                color=ft.colors.GREY_600,
-                            ),
-                        ],
-                        spacing=8,
-                    ),
-                ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            padding=ft.padding.only(bottom=16),
         )
 
     def _build_action_bar(self) -> ft.Control:  # type: ignore[name-defined]
@@ -126,7 +99,7 @@ class ProjectsView(BaseView):
                 controls=[
                     ft.ElevatedButton(
                         text="新規プロジェクト",
-                        icon=ft.icons.ADD,
+                        icon=ft.Icons.ADD,
                         on_click=self._handle_create_project,
                         bgcolor=ft.colors.BLUE,
                         color=ft.colors.WHITE,
@@ -134,17 +107,17 @@ class ProjectsView(BaseView):
                     ft.Container(expand=True),  # Spacer
                     ft.TextField(
                         hint_text="プロジェクトを検索...",
-                        prefix_icon=ft.icons.SEARCH,
+                        prefix_icon=ft.Icons.SEARCH,
                         width=300,
                         on_change=self._handle_search,
                     ),
                     ft.IconButton(
-                        icon=ft.icons.FILTER_LIST,
+                        icon=ft.Icons.FILTER_LIST,
                         tooltip="フィルター",
                         on_click=self._handle_filter,
                     ),
                     ft.IconButton(
-                        icon=ft.icons.REFRESH,
+                        icon=ft.Icons.REFRESH,
                         tooltip="更新",
                         on_click=self._handle_refresh,
                     ),
@@ -166,11 +139,18 @@ class ProjectsView(BaseView):
         if not self.projects_data:
             return self._build_empty_state()
 
-        projects_cards = [self._create_project_card(project) for project in self.projects_data]
+        project_cards = [
+            create_project_card(
+                project=project,
+                on_edit=self._handle_edit_project,
+                on_delete=self._handle_delete_project,
+            )
+            for project in self.projects_data
+        ]
 
         return ft.Container(
             content=ft.Column(
-                controls=projects_cards,
+                controls=project_cards,
                 spacing=16,
                 scroll=ft.ScrollMode.AUTO,
             ),
@@ -189,7 +169,7 @@ class ProjectsView(BaseView):
             content=ft.Column(
                 controls=[
                     ft.Icon(
-                        ft.icons.FOLDER_OPEN_OUTLINED,
+                        ft.Icons.FOLDER_OPEN_OUTLINED,
                         size=64,
                         color=ft.colors.GREY_400,
                     ),
@@ -207,7 +187,7 @@ class ProjectsView(BaseView):
                     ft.Container(height=24),
                     ft.ElevatedButton(
                         text="最初のプロジェクトを作成",
-                        icon=ft.icons.ADD,
+                        icon=ft.Icons.ADD,
                         on_click=self._handle_create_project,
                         bgcolor=ft.colors.BLUE,
                         color=ft.colors.WHITE,
@@ -218,137 +198,6 @@ class ProjectsView(BaseView):
             ),
             alignment=ft.alignment.center,
             expand=True,
-        )
-
-    def _create_project_card(self, project: dict[str, str]) -> ft.Control:  # type: ignore[name-defined]
-        """プロジェクトカードを作成する。
-
-        Args:
-            project: プロジェクトデータ
-
-        Returns:
-            プロジェクトカード
-        """
-        import flet as ft
-
-        # Status color mapping
-        status_colors = {
-            "進行中": ft.colors.BLUE,
-            "計画中": ft.colors.ORANGE,
-            "完了": ft.colors.GREEN,
-            "保留": ft.colors.GREY,
-        }
-
-        status_color = status_colors.get(project["status"], ft.colors.GREY)
-
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            project["name"],
-                                            style=ft.TextThemeStyle.TITLE_MEDIUM,
-                                            weight=ft.FontWeight.W500,
-                                        ),
-                                        ft.Text(
-                                            project["description"],
-                                            style=ft.TextThemeStyle.BODY_MEDIUM,
-                                            color=ft.colors.GREY_600,
-                                            max_lines=2,
-                                            overflow=ft.TextOverflow.ELLIPSIS,
-                                        ),
-                                    ],
-                                    spacing=8,
-                                    expand=True,
-                                ),
-                                ft.Container(
-                                    content=ft.Text(
-                                        project["status"],
-                                        style=ft.TextThemeStyle.LABEL_SMALL,
-                                        color=ft.colors.WHITE,
-                                        weight=ft.FontWeight.W500,
-                                    ),
-                                    bgcolor=status_color,
-                                    padding=ft.padding.symmetric(
-                                        horizontal=8,
-                                        vertical=4,
-                                    ),
-                                    border_radius=ft.border_radius.all(12),
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            vertical_alignment=ft.CrossAxisAlignment.START,
-                        ),
-                        ft.Divider(
-                            height=1,
-                            color=ft.colors.GREY_300,
-                        ),
-                        ft.Row(
-                            controls=[
-                                ft.Row(
-                                    controls=[
-                                        ft.Icon(
-                                            ft.icons.TASK_ALT,
-                                            size=16,
-                                            color=ft.colors.GREY_600,
-                                        ),
-                                        ft.Text(
-                                            f"{project['tasks_count']} タスク",
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.colors.GREY_600,
-                                        ),
-                                    ],
-                                    spacing=4,
-                                ),
-                                ft.Row(
-                                    controls=[
-                                        ft.Icon(
-                                            ft.icons.CALENDAR_TODAY,
-                                            size=16,
-                                            color=ft.colors.GREY_600,
-                                        ),
-                                        ft.Text(
-                                            project["created_at"],
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.colors.GREY_600,
-                                        ),
-                                    ],
-                                    spacing=4,
-                                ),
-                                ft.Container(expand=True),  # Spacer
-                                ft.Row(
-                                    controls=[
-                                        ft.IconButton(
-                                            icon=ft.icons.EDIT_OUTLINED,
-                                            tooltip="編集",
-                                            icon_size=20,
-                                            on_click=lambda e, p=project: self._handle_edit_project(e, p),
-                                            icon_color=ft.colors.GREY_600,
-                                        ),
-                                        ft.IconButton(
-                                            icon=ft.icons.DELETE_OUTLINE,
-                                            tooltip="削除",
-                                            icon_size=20,
-                                            on_click=lambda e, p=project: self._handle_delete_project(e, p),
-                                            icon_color=ft.colors.RED,
-                                        ),
-                                    ],
-                                    spacing=0,
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                    ],
-                    spacing=16,
-                ),
-                padding=20,
-            ),
-            elevation=2,
         )
 
     def _handle_create_project(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]

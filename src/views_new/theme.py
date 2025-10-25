@@ -43,6 +43,33 @@ class ColorTokens:
 
 
 @dataclass
+class TagColors:
+    """タグ用のカラーパレット定義。"""
+
+    red: str = "#f44336"
+    pink: str = "#e91e63"
+    purple: str = "#9c27b0"
+    indigo: str = "#3f51b5"
+    blue: str = "#2196f3"
+    cyan: str = "#00bcd4"
+    green: str = "#4caf50"
+    orange: str = "#ff9800"
+    brown: str = "#795548"
+    grey: str = "#607d8b"
+
+
+@dataclass
+class StatusColors:
+    """プロジェクト・タスクのステータス色定義。"""
+
+    in_progress: str = "#2196f3"  # ブルー - 進行中
+    planned: str = "#ff9800"  # オレンジ - 計画中
+    completed: str = "#4caf50"  # グリーン - 完了
+    on_hold: str = "#9e9e9e"  # グレー - 保留
+    cancelled: str = "#f44336"  # レッド - 中止
+
+
+@dataclass
 class SpacingTokens:
     """間隔定義のデータクラス。"""
 
@@ -118,6 +145,33 @@ DARK_COLORS = ColorTokens(
 SPACING = SpacingTokens()
 BORDER_RADIUS = BorderRadiusTokens()
 FONT = FontTokens()
+
+# Color palette instances
+TAG_COLORS = TagColors()
+STATUS_COLORS = StatusColors()
+
+# Tag color palette for UI components
+TAG_COLOR_PALETTE = [
+    {"name": "レッド", "value": TAG_COLORS.red, "hex": TAG_COLORS.red[1:].upper()},
+    {"name": "ピンク", "value": TAG_COLORS.pink, "hex": TAG_COLORS.pink[1:].upper()},
+    {"name": "パープル", "value": TAG_COLORS.purple, "hex": TAG_COLORS.purple[1:].upper()},
+    {"name": "インディゴ", "value": TAG_COLORS.indigo, "hex": TAG_COLORS.indigo[1:].upper()},
+    {"name": "ブルー", "value": TAG_COLORS.blue, "hex": TAG_COLORS.blue[1:].upper()},
+    {"name": "シアン", "value": TAG_COLORS.cyan, "hex": TAG_COLORS.cyan[1:].upper()},
+    {"name": "グリーン", "value": TAG_COLORS.green, "hex": TAG_COLORS.green[1:].upper()},
+    {"name": "オレンジ", "value": TAG_COLORS.orange, "hex": TAG_COLORS.orange[1:].upper()},
+    {"name": "ブラウン", "value": TAG_COLORS.brown, "hex": TAG_COLORS.brown[1:].upper()},
+    {"name": "グレー", "value": TAG_COLORS.grey, "hex": TAG_COLORS.grey[1:].upper()},
+]
+
+# Status color mapping for projects and tasks
+STATUS_COLOR_MAP = {
+    "進行中": STATUS_COLORS.in_progress,
+    "計画中": STATUS_COLORS.planned,
+    "完了": STATUS_COLORS.completed,
+    "保留": STATUS_COLORS.on_hold,
+    "中止": STATUS_COLORS.cancelled,
+}
 
 
 def create_light_theme() -> ft.Theme:
@@ -208,6 +262,27 @@ def get_dark_color(color_name: str) -> str:
         raise AttributeError(msg)
 
     return getattr(colors, color_name)
+
+
+def get_status_color(status: str) -> str:
+    """ステータス名から対応する色コードを取得する。
+
+    Args:
+        status: ステータス名（進行中、計画中、完了、保留、中止）
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return STATUS_COLOR_MAP.get(status, STATUS_COLORS.on_hold)
+
+
+def get_tag_color_palette() -> list[dict[str, str]]:
+    """タグ用のカラーパレットを取得する。
+
+    Returns:
+        カラーパレットのリスト（name, value, hex を含む辞書）
+    """
+    return TAG_COLOR_PALETTE.copy()
 
 
 # TODO: 統合フェーズで settings から現在のテーマモード設定を取得する機能を追加

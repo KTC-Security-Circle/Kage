@@ -12,6 +12,7 @@ import flet as ft
 from views_new.home import HomeView
 from views_new.projects import ProjectsView
 from views_new.shared.sidebar import build_sidebar
+from views_new.tags import TagsView
 
 
 def build_layout(page: ft.Page, route: str) -> ft.View:
@@ -76,6 +77,10 @@ def _get_view_content(page: ft.Page, route: str) -> ft.Control:
         # Projects view is now implemented
         return ProjectsView(page)
 
+    if route == "/tags":
+        # Tags view is now implemented
+        return TagsView(page)
+
     # Other views are still placeholders
     # TODO: 各View実装完了後に対応するViewクラスを追加
     # 理由: ProjectsView、TagsView等が未実装のため
@@ -119,13 +124,13 @@ def _create_placeholder_content(route: str) -> ft.Control:
             ft.Text(
                 f"ルート: {route}",
                 size=14,
-                color=ft.colors.ON_SURFACE_VARIANT,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             ft.Text(
                 "TODO: 実際のViewコンテンツで置換予定",
                 size=12,
                 italic=True,
-                color=ft.colors.ON_SURFACE_VARIANT,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
         ],
         spacing=8,

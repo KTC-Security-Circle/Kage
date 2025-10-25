@@ -65,6 +65,40 @@ class ErrorHandlingMixin:
         snack_bar.open = True
         page.update()
 
+    def show_info_snackbar(
+        self,
+        message: str = "情報",
+    ) -> None:
+        """情報スナックバーを表示する。
+
+        Args:
+            message: 情報メッセージ
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=ft.colors.BLUE,
+        )
+        self.page.snack_bar = snack_bar
+        snack_bar.open = True
+        self.page.update()
+
+    def show_success_snackbar(
+        self,
+        message: str = "成功しました",
+    ) -> None:
+        """成功スナックバーを表示する。
+
+        Args:
+            message: 成功メッセージ
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=ft.colors.GREEN,
+        )
+        self.page.snack_bar = snack_bar
+        snack_bar.open = True
+        self.page.update()
+
     def handle_exception_with_dialog(
         self,
         page: ft.Page,

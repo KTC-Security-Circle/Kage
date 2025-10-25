@@ -37,14 +37,14 @@ class NavigationItem:
 
 # Navigation items configuration
 NAVIGATION_ITEMS = [
-    NavigationItem("ホーム", "/", ft.icons.HOME_OUTLINED, ft.icons.HOME),
-    NavigationItem("プロジェクト", "/projects", ft.icons.FOLDER_OUTLINED, ft.icons.FOLDER),
-    NavigationItem("タグ", "/tags", ft.icons.LOCAL_OFFER_OUTLINED, ft.icons.LOCAL_OFFER),
-    NavigationItem("タスク", "/tasks", ft.icons.TASK_OUTLINED, ft.icons.TASK),
-    NavigationItem("メモ", "/memos", ft.icons.NOTE_OUTLINED, ft.icons.NOTE),
-    NavigationItem("用語集", "/terms", ft.icons.MENU_BOOK_OUTLINED, ft.icons.MENU_BOOK),
-    NavigationItem("週間レビュー", "/weekly-review", ft.icons.ASSESSMENT_OUTLINED, ft.icons.ASSESSMENT),
-    NavigationItem("設定", "/settings", ft.icons.SETTINGS_OUTLINED, ft.icons.SETTINGS),
+    NavigationItem("ホーム", "/", ft.Icons.HOME_OUTLINED, ft.Icons.HOME),
+    NavigationItem("プロジェクト", "/projects", ft.Icons.FOLDER_OUTLINED, ft.Icons.FOLDER),
+    NavigationItem("タグ", "/tags", ft.Icons.LOCAL_OFFER_OUTLINED, ft.Icons.LOCAL_OFFER),
+    NavigationItem("タスク", "/tasks", ft.Icons.TASK_OUTLINED, ft.Icons.TASK),
+    NavigationItem("メモ", "/memos", ft.Icons.NOTE_OUTLINED, ft.Icons.NOTE),
+    NavigationItem("用語集", "/terms", ft.Icons.MENU_BOOK_OUTLINED, ft.Icons.MENU_BOOK),
+    NavigationItem("週間レビュー", "/weekly-review", ft.Icons.ASSESSMENT_OUTLINED, ft.Icons.ASSESSMENT),
+    NavigationItem("設定", "/settings", ft.Icons.SETTINGS_OUTLINED, ft.Icons.SETTINGS),
 ]
 
 
@@ -70,7 +70,7 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
         ft.Container(
             content=ft.Row(
                 [
-                    ft.Icon(ft.icons.PSYCHOLOGY, size=24),
+                    ft.Icon(ft.Icons.PSYCHOLOGY, size=24),
                     ft.Text(
                         "Kage",
                         size=20,

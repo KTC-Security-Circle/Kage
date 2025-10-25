@@ -106,7 +106,7 @@ sync-all = "uv sync --extra openvino"
 # == Application Execution ==
 run = "flet run"
 dev = "flet run -dr"
-web = "flet run --web"
+web = "flet run --web --port 8080"
 cli = "kage-cli"
 
 # == Code Quality ==

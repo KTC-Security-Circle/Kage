@@ -20,9 +20,9 @@ from __future__ import annotations
 # 主要Viewクラスのエクスポート（実装後に追加予定）
 from .home.view import HomeView
 from .projects.view import ProjectsView
+from .tags.view import TagsView
 
 # TODO: 各View実装完了後に以下をアンコメント
-# from .tags.view import TagsView
 # from .tasks.view import TasksView
 # from .memos.view import MemosView
 # from .terms.view import TermsView
@@ -31,7 +31,7 @@ from .projects.view import ProjectsView
 __all__ = [
     "HomeView",
     "ProjectsView",
-    # "TagsView",
+    "TagsView",
     # "TasksView",
     # "MemosView",
     # "TermsView",

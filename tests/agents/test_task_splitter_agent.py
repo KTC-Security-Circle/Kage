@@ -1,3 +1,5 @@
+import pytest
+
 from agents.agent_conf import LLMProvider
 from agents.base import ErrorAgentOutput
 from agents.task_agents.splitter.agent import TaskSplitterAgent
@@ -55,3 +57,25 @@ def test_task_splitter_get_model_singleton(task_splitter_agent: TaskSplitterAgen
     m1 = task_splitter_agent.get_model()
     m2 = task_splitter_agent.get_model()
     assert m1 is m2
+
+
+def test_task_splitter_handles_empty_candidates(monkeypatch: pytest.MonkeyPatch, thread_id: str) -> None:
+    agent = TaskSplitterAgent(LLMProvider.FAKE, verbose=False, error_response=False)
+
+    class _EmptyResponseAgent:
+        def invoke(self, *_args: object, **_kwargs: object) -> TaskSplitterOutput:
+            return TaskSplitterOutput(task_titles=[], task_descriptions=[])
+
+    monkeypatch.setattr(agent, "_create_agent", lambda: _EmptyResponseAgent())
+
+    state: TaskSplitterState = {
+        "task_title": "準備",
+        "task_description": "明日の会議の準備",
+        "final_response": "",
+    }
+
+    result = agent.invoke(state, thread_id)
+
+    assert isinstance(result, TaskSplitterOutput)
+    assert result.task_titles == []
+    assert result.task_descriptions == []

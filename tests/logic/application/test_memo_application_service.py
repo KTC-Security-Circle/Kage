@@ -8,7 +8,14 @@ from unittest.mock import Mock
 
 import pytest
 
-from logic.application.memo_application_service import ContentValidationError, MemoApplicationService
+from agents.base import ErrorAgentOutput
+from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
+from agents.task_agents.memo_to_task.state import MemoToTaskState
+from logic.application.memo_application_service import (
+    ContentValidationError,
+    MemoApplicationError,
+    MemoApplicationService,
+)
 from models import MemoRead, MemoStatus, MemoUpdate
 
 # テスト用定数
@@ -161,3 +168,99 @@ class TestMemoApplicationService:
         assert result == memos
         assert len(result) == EXPECTED_PAIR_COUNT
         mock_memo_service.get_all.assert_called_once_with(with_details=False)
+
+    def test_clarify_memo_returns_clarify_for_empty_input(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """メモが空の場合はタスクなし・clarifyステータスを返す"""
+
+        monkeypatch.setattr(MemoApplicationService, "_collect_existing_tag_names", lambda _self: [])
+
+        result = memo_app_service.clarify_memo("   ")
+
+        assert result.tasks == []
+        assert result.suggested_memo_status == "clarify"
+
+    def test_clarify_memo_success_with_due_date_and_tags(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """エージェントの結果が期日とタグを含む場合にそのまま返す"""
+
+        existing_tags = ["レポート", "買い物"]
+        monkeypatch.setattr(MemoApplicationService, "_collect_existing_tag_names", lambda _self: existing_tags)
+
+        agent_output = MemoToTaskAgentOutput(
+            tasks=[
+                TaskDraft(
+                    title="金曜までにレポート提出",
+                    description="部長へメール送付",
+                    due_date="2025-11-10",
+                    tags=["レポート"],
+                    route="calendar",
+                )
+            ],
+            suggested_memo_status="active",
+        )
+
+        def _fake_invoke(self: MemoApplicationService, _state: MemoToTaskState) -> MemoToTaskAgentOutput:
+            return agent_output
+
+        monkeypatch.setattr(MemoApplicationService, "_invoke_memo_to_task_agent", _fake_invoke)
+
+        result = memo_app_service.clarify_memo("レポートをまとめる")
+
+        assert result.suggested_memo_status == "active"
+        assert result.tasks[0].due_date == "2025-11-10"
+        assert result.tasks[0].tags == ["レポート"]
+
+    def test_clarify_memo_agent_error_raises(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """エージェントがエラーを返す場合は例外を送出"""
+
+        monkeypatch.setattr(MemoApplicationService, "_collect_existing_tag_names", lambda _self: [])
+
+        error_response = ErrorAgentOutput(message="failure", raw="err")
+
+        def _fake_invoke_error(
+            self: MemoApplicationService,
+            _state: MemoToTaskState,
+        ) -> ErrorAgentOutput:
+            return error_response
+
+        monkeypatch.setattr(MemoApplicationService, "_invoke_memo_to_task_agent", _fake_invoke_error)
+
+        with pytest.raises(MemoApplicationError):
+            memo_app_service.clarify_memo("エラーになる入力")
+
+    def test_generate_tasks_from_memo_returns_only_task_list(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """generate_tasks_from_memoはタスクリストのみを返却する"""
+
+        agent_output = MemoToTaskAgentOutput(
+            tasks=[
+                TaskDraft(title="牛乳を買う", description=None, due_date=None, tags=["買い物"], route="progress"),
+                TaskDraft(title="請求書送付", description="経理宛", due_date=None, tags=["仕事"], route="next_action"),
+            ],
+            suggested_memo_status="active",
+        )
+
+        monkeypatch.setattr(
+            MemoApplicationService,
+            "clarify_memo",
+            lambda _self, _memo_text: agent_output,
+        )
+
+        tasks = memo_app_service.generate_tasks_from_memo("買い物リスト")
+
+        assert tasks == agent_output.tasks
+        assert tasks is not agent_output.tasks

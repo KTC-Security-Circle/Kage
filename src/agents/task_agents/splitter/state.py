@@ -1,6 +1,10 @@
+from __future__ import annotations
+
+from typing import NotRequired
+
 from pydantic import BaseModel, Field
 
-from agents.base import BaseAgentState
+from agents.base import BaseAgentState, ErrorAgentOutput
 
 
 class TaskSplitterState(BaseAgentState):
@@ -16,6 +20,12 @@ class TaskSplitterState(BaseAgentState):
     """タスクのタイトル"""
     task_description: str
     """タスクの説明を表す文字列"""
+    candidate_output: NotRequired[TaskSplitterOutput]
+    """一次分割結果。"""
+    refined_output: NotRequired[TaskSplitterOutput]
+    """整形済みの分割結果。"""
+    error_output: NotRequired[ErrorAgentOutput]
+    """エラー結果。"""
 
 
 class TaskSplitterOutput(BaseModel):

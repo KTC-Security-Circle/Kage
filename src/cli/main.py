@@ -11,29 +11,29 @@ from rich.console import Console
 from rich.panel import Panel
 
 from cli.commands import (
-    agent,  # 新規エージェントコマンド
+    # agent,  # 新規エージェントコマンド
     memo,
-    project,
-    settings,
-    tag,
-    task,
-    task_qa,  # 新規クイックアクションコマンド
-    task_status,  # 新規ステータス/ボード表示コマンド
-    task_tag,
+    # project,
+    # settings,
+    # tag,
+    # task,
+    # task_qa,  # 新規クイックアクションコマンド
+    # task_status,  # 新規ステータス/ボード表示コマンド
+    # task_tag,
 )
 
 app = typer.Typer(help="Kage project command line interface", invoke_without_command=True)
 console = Console()
 
-app.add_typer(project.app, name="project")
-app.add_typer(task.app, name="task")
-app.add_typer(tag.app, name="tag")
-app.add_typer(task_tag.app, name="task-tag")
+# app.add_typer(project.app, name="project")
+# app.add_typer(task.app, name="task")
+# app.add_typer(tag.app, name="tag")
+# app.add_typer(task_tag.app, name="task-tag")
 app.add_typer(memo.app, name="memo")
-app.add_typer(task_qa.app, name="task-qa")
-app.add_typer(task_status.app, name="task-status")
-app.add_typer(agent.app, name="agent")
-app.add_typer(settings.app, name="settings")
+# app.add_typer(task_qa.app, name="task-qa")
+# app.add_typer(task_status.app, name="task-status")
+# app.add_typer(agent.app, name="agent")
+# app.add_typer(settings.app, name="settings")
 
 
 @app.callback()

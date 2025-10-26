@@ -2,10 +2,10 @@
 
 import flet as ft
 
-from models.terminology import TerminologyStatus
+from views_new.sample import SampleTermStatus
 
 
-class TermStatusTabs(ft.Control):
+class TermStatusTabs(ft.Tabs):
     """Status tabs for filtering terms by their approval status."""
 
     def __init__(
@@ -28,40 +28,46 @@ class TermStatusTabs(ft.Control):
         self.draft_count = draft_count
         self.deprecated_count = deprecated_count
         self.on_status_change = on_status_change
-        self.selected_status = TerminologyStatus.APPROVED
+        self.selected_status = SampleTermStatus.APPROVED
+
+        # 初期化時にタブを構築
+        self._build_tabs()
+        self.on_change = self._on_tab_change
+        self.selected_index = 0
+
+    def _build_tabs(self) -> None:
+        """Build the tabs."""
+        self.tabs = [
+            ft.Tab(
+                text=f"承認済み ({self.approved_count})",
+                # contentを削除してTransformLayerエラーを回避
+            ),
+            ft.Tab(
+                text=f"草案 ({self.draft_count})",
+                # contentを削除してTransformLayerエラーを回避
+            ),
+            ft.Tab(
+                text=f"非推奨 ({self.deprecated_count})",
+                # contentを削除してTransformLayerエラーを回避
+            ),
+        ]
 
     def build(self) -> ft.Control:
         """Build the status tabs control."""
-        return ft.Tabs(
-            tabs=[
-                ft.Tab(
-                    text=f"承認済み ({self.approved_count})",
-                    content=ft.Container(),
-                ),
-                ft.Tab(
-                    text=f"草案 ({self.draft_count})",
-                    content=ft.Container(),
-                ),
-                ft.Tab(
-                    text=f"非推奨 ({self.deprecated_count})",
-                    content=ft.Container(),
-                ),
-            ],
-            on_change=self._on_tab_change,
-            selected_index=0,
-        )
+        # この方法は使用しない（ft.Tabsを継承しているため）
+        return self
 
     def _on_tab_change(self, e: ft.ControlEvent) -> None:
         """Handle tab change event."""
         tab_index = e.control.selected_index
 
         status_map = {
-            0: TerminologyStatus.APPROVED,
-            1: TerminologyStatus.DRAFT,
-            2: TerminologyStatus.DEPRECATED,
+            0: SampleTermStatus.APPROVED,
+            1: SampleTermStatus.DRAFT,
+            2: SampleTermStatus.DEPRECATED,
         }
 
-        self.selected_status = status_map.get(tab_index, TerminologyStatus.APPROVED)
+        self.selected_status = status_map.get(tab_index, SampleTermStatus.APPROVED)
 
         if self.on_status_change:
             self.on_status_change(self.selected_status)
@@ -84,14 +90,14 @@ class TermStatusTabs(ft.Control):
         self.deprecated_count = deprecated_count
 
         # Update tab text
-        tabs = self.controls[0]
-        tabs.tabs[0].text = f"承認済み ({approved_count})"
-        tabs.tabs[1].text = f"草案 ({draft_count})"
-        tabs.tabs[2].text = f"非推奨 ({deprecated_count})"
+        if self.tabs:
+            self.tabs[0].text = f"承認済み ({approved_count})"
+            self.tabs[1].text = f"草案 ({draft_count})"
+            self.tabs[2].text = f"非推奨 ({deprecated_count})"
 
         self.update()
 
-    def get_selected_status(self) -> TerminologyStatus:
+    def get_selected_status(self) -> SampleTermStatus:
         """Get the currently selected status.
 
         Returns:

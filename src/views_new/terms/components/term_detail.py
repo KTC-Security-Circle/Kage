@@ -2,22 +2,22 @@
 
 import flet as ft
 
-from models.terminology import Terminology, TerminologyStatus
+from views_new.sample import SampleTerm, SampleTermStatus
 
 
-class TermDetail(ft.Control):
+class TermDetail(ft.Container):
     """Detailed view of a terminology entry."""
 
     def __init__(
         self,
-        term: Terminology | None = None,
+        term: SampleTerm | None = None,
         on_edit: ft.OptionalEventCallable = None,
         on_tag_click: ft.OptionalEventCallable = None,
     ) -> None:
         """Initialize term detail view.
 
         Args:
-            term: Terminology entry to display
+            term: SampleTerm entry to display
             on_edit: Callback when edit button is clicked
             on_tag_click: Callback when a tag is clicked
         """
@@ -26,7 +26,29 @@ class TermDetail(ft.Control):
         self.on_edit = on_edit
         self.on_tag_click = on_tag_click
 
+        # 初期化時にコンテンツを構築
+        self._build_container_content()
+
+    def _build_container_content(self) -> None:
+        """Build the content."""
+        if not self.term:
+            self.content = self._build_empty_state()
+        else:
+            self.content = ft.Column(
+                controls=[
+                    self._build_header(),
+                    self._build_content(),
+                    self._build_metadata(),
+                    self._build_edit_button(),
+                ],
+                spacing=16,
+            )
+        self.padding = 24
+
     def build(self) -> ft.Control:
+        """Build the term detail view."""
+        # この方法は使用しない（ft.Containerを継承しているため）
+        return self
         """Build the term detail view."""
         if not self.term:
             return self._build_empty_state()
@@ -71,6 +93,9 @@ class TermDetail(ft.Control):
 
     def _build_header(self) -> ft.Control:
         """Build the header section with title and status."""
+        if not self.term:
+            return ft.Container()  # Return empty container if no term
+
         status_badge = self._get_status_badge()
 
         return ft.Container(
@@ -114,6 +139,9 @@ class TermDetail(ft.Control):
 
     def _build_content(self) -> ft.Control:
         """Build the main content section."""
+        if not self.term:
+            return ft.Container()  # Return empty container if no term
+
         sections = []
 
         # Description section
@@ -138,6 +166,9 @@ class TermDetail(ft.Control):
 
     def _build_description_section(self) -> ft.Control:
         """Build description section."""
+        if not self.term:
+            return ft.Container()
+
         return ft.Column(
             controls=[
                 ft.Text(
@@ -157,6 +188,9 @@ class TermDetail(ft.Control):
 
     def _build_synonyms_section(self) -> ft.Control:
         """Build synonyms section."""
+        if not self.term:
+            return ft.Container()
+
         synonym_chips = [
             ft.Container(
                 content=ft.Text(
@@ -190,6 +224,9 @@ class TermDetail(ft.Control):
 
     def _build_tags_section(self) -> ft.Control:
         """Build tags section."""
+        if not self.term:
+            return ft.Container()
+
         tag_chips = []
         for tag_name in self.term.tags:
             chip = ft.Container(
@@ -254,6 +291,9 @@ class TermDetail(ft.Control):
 
     def _build_metadata(self) -> ft.Control:
         """Build metadata section with dates."""
+        if not self.term:
+            return ft.Container()
+
         created_date = self.term.created_at.strftime("%Y年%m月%d日")
         updated_date = self.term.updated_at.strftime("%Y年%m月%d日")
 
@@ -313,25 +353,28 @@ class TermDetail(ft.Control):
 
     def _get_status_badge(self) -> ft.Control:
         """Get status badge based on term status."""
+        if not self.term:
+            return ft.Container()
+
         status_config = {
-            TerminologyStatus.APPROVED: {
+            SampleTermStatus.APPROVED: {
                 "text": "承認済み",
                 "bgcolor": ft.Colors.PRIMARY,
                 "color": ft.Colors.ON_PRIMARY,
             },
-            TerminologyStatus.DRAFT: {
+            SampleTermStatus.DRAFT: {
                 "text": "草案",
                 "bgcolor": ft.Colors.OUTLINE_VARIANT,
                 "color": ft.Colors.OUTLINE,
             },
-            TerminologyStatus.DEPRECATED: {
+            SampleTermStatus.DEPRECATED: {
                 "text": "非推奨",
                 "bgcolor": ft.Colors.ERROR_CONTAINER,
                 "color": ft.Colors.ON_ERROR_CONTAINER,
             },
         }
 
-        config = status_config.get(self.term.status, status_config[TerminologyStatus.DRAFT])
+        config = status_config.get(self.term.status, status_config[SampleTermStatus.DRAFT])
 
         return ft.Container(
             content=ft.Text(
@@ -361,11 +404,12 @@ class TermDetail(ft.Control):
             # Open URL in browser - this would need platform-specific implementation
             pass
 
-    def update_term(self, term: Terminology | None) -> None:
+    def update_term(self, term: SampleTerm | None) -> None:
         """Update the displayed term.
 
         Args:
-            term: New terminology entry to display
+            term: New SampleTerm entry to display
         """
         self.term = term
+        self._build_container_content()
         self.update()

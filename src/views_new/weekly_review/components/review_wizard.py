@@ -6,7 +6,7 @@ from typing import Any
 import flet as ft
 
 
-class ReviewWizard(ft.Control):
+class ReviewWizard(ft.Container):
     """Step-by-step wizard for conducting weekly reviews."""
 
     def __init__(
@@ -29,7 +29,10 @@ class ReviewWizard(ft.Control):
         self.step_content: ft.Container | None = None
         self.navigation_buttons: ft.Row | None = None
 
-    def build(self) -> ft.Control:
+        # 初期化時にコンテンツを構築
+        self._build_wizard_content()
+
+    def _build_wizard_content(self) -> None:
         """Build the review wizard."""
         # Progress indicator
         self.progress_indicator = ft.ProgressBar(
@@ -109,25 +112,24 @@ class ReviewWizard(ft.Control):
         # Navigation buttons
         self.navigation_buttons = self._build_navigation()
 
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    header,
-                    self.step_content,
-                    self.navigation_buttons,
-                ],
-                spacing=0,
-                expand=True,
-            ),
-            bgcolor=ft.Colors.SURFACE,
-            border_radius=16,
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=8,
-                offset=ft.Offset(0, 4),
-                color=ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE),
-            ),
+        # Containerの設定を行う
+        self.content = ft.Column(
+            controls=[
+                header,
+                self.step_content,
+                self.navigation_buttons,
+            ],
+            spacing=0,
+            expand=True,
+        )
+        self.bgcolor = ft.Colors.SURFACE
+        self.border_radius = 16
+        self.border = ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
+        self.shadow = ft.BoxShadow(
+            spread_radius=1,
+            blur_radius=8,
+            offset=ft.Offset(0, 4),
+            color=ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE),
         )
 
     def _build_current_step(self) -> ft.Control:
@@ -360,14 +362,9 @@ class ReviewWizard(ft.Control):
             on_click=self._handle_next,
         )
 
-        return ft.Container(
-            content=ft.Row(
-                controls=[back_button, next_button],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            ),
-            padding=24,
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
-            border_radius=ft.border_radius.only(bottom_left=16, bottom_right=16),
+        return ft.Row(
+            controls=[back_button, next_button],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
     def _handle_back(self, _: ft.ControlEvent) -> None:
@@ -403,6 +400,7 @@ class ReviewWizard(ft.Control):
 
         # Update navigation
         if self.navigation_buttons:
-            self.navigation_buttons.content = self._build_navigation()
+            new_nav = self._build_navigation()
+            self.navigation_buttons.controls = new_nav.controls
 
         self.update()

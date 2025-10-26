@@ -3,7 +3,7 @@
 import flet as ft
 
 
-class TermActionBar(ft.Control):
+class TermActionBar(ft.Row):
     """Action bar with search and create functionality for terms."""
 
     def __init__(
@@ -25,8 +25,11 @@ class TermActionBar(ft.Control):
         self.search_placeholder = search_placeholder
         self.search_field: ft.TextField | None = None
 
-    def build(self) -> ft.Control:
-        """Build the action bar."""
+        # 初期化時にコントロールを構築
+        self._build_controls()
+
+    def _build_controls(self) -> None:
+        """Build and setup controls."""
         self.search_field = ft.TextField(
             hint_text=self.search_placeholder,
             prefix_icon=ft.Icons.SEARCH,
@@ -41,14 +44,17 @@ class TermActionBar(ft.Control):
             on_click=self._handle_create,
         )
 
-        return ft.Row(
-            controls=[
-                self.search_field,
-                create_button,
-            ],
-            spacing=16,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        )
+        self.controls = [
+            self.search_field,
+            create_button,
+        ]
+        self.spacing = 16
+        self.alignment = ft.MainAxisAlignment.SPACE_BETWEEN
+
+    def build(self) -> ft.Control:
+        """Build the action bar."""
+        # この方法は使用しない（ft.Rowを継承しているため）
+        return self
 
     def _handle_search(self, e: ft.ControlEvent) -> None:
         """Handle search input change."""
@@ -72,4 +78,4 @@ class TermActionBar(ft.Control):
         Returns:
             Current search query string
         """
-        return self.search_field.value if self.search_field else ""
+        return self.search_field.value or "" if self.search_field else ""

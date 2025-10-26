@@ -12,7 +12,9 @@ from .components.review_components import (
     TaskCompletionChart,
     WeeklyStatsCard,
 )
-from .components.review_wizard import ReviewWizard
+
+# ReviewWizardは一時的に無効化
+# from .components.review_wizard import ReviewWizard
 
 
 class WeeklyReviewView(BaseView):
@@ -194,19 +196,33 @@ class WeeklyReviewView(BaseView):
             bgcolor=ft.Colors.SECONDARY_CONTAINER,
         )
 
-        # Wizard component
-        wizard = ReviewWizard(
-            on_complete=self._handle_wizard_complete,
+        # 一時的にシンプルなプレースホルダーを表示
+        placeholder = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "週次振り返りウィザードは準備中です",
+                        size=18,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Text(
+                        "現在開発中のため、しばらくお待ちください。",
+                        size=14,
+                        color=ft.Colors.OUTLINE,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=16,
+            ),
+            padding=ft.padding.all(48),
+            alignment=ft.alignment.center,
         )
 
         return ft.Column(
             controls=[
                 header,
-                ft.Container(
-                    content=wizard,
-                    padding=ft.padding.all(24),
-                    expand=True,
-                ),
+                placeholder,
             ],
             expand=True,
         )

@@ -6,7 +6,7 @@ from typing import Any
 import flet as ft
 
 
-class WeeklyStatsCard(ft.Control):
+class WeeklyStatsCard(ft.Container):
     """Beautiful stats card showing weekly achievements."""
 
     def __init__(
@@ -36,7 +36,10 @@ class WeeklyStatsCard(ft.Control):
         self.color = color
         self.trend = trend
 
-    def build(self) -> ft.Control:
+        # 初期化時にコンテンツを構築
+        self._build_card_content()
+
+    def _build_card_content(self) -> None:
         """Build the stats card with gradient background."""
         # Main value with large font
         value_text = ft.Text(
@@ -95,40 +98,39 @@ class WeeklyStatsCard(ft.Control):
             alignment=ft.alignment.center,
         )
 
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Row(
-                        controls=[icon_container, trend_chip],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                    ft.Container(height=16),
-                    value_text,
-                    title_text,
-                    subtitle_text,
-                ],
-                spacing=4,
-                tight=True,
-            ),
-            padding=24,
-            width=280,
-            height=180,
-            border_radius=16,
-            gradient=ft.LinearGradient(
-                begin=ft.alignment.top_left,
-                end=ft.alignment.bottom_right,
-                colors=[self.color, f"{self.color}80"],
-            ),
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=8,
-                offset=ft.Offset(0, 4),
-                color=ft.Colors.with_opacity(0.2, self.color),
-            ),
+        # Containerの設定を行う
+        self.content = ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[icon_container, trend_chip],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+                ft.Container(height=16),
+                value_text,
+                title_text,
+                subtitle_text,
+            ],
+            spacing=4,
+            tight=True,
+        )
+        self.padding = 24
+        self.width = 280
+        self.height = 180
+        self.border_radius = 16
+        self.gradient = ft.LinearGradient(
+            begin=ft.alignment.top_left,
+            end=ft.alignment.bottom_right,
+            colors=[self.color, f"{self.color}80"],
+        )
+        self.shadow = ft.BoxShadow(
+            spread_radius=1,
+            blur_radius=8,
+            offset=ft.Offset(0, 4),
+            color=ft.Colors.with_opacity(0.2, self.color),
         )
 
 
-class TaskCompletionChart(ft.Control):
+class TaskCompletionChart(ft.Container):
     """Visual chart showing task completion over the week."""
 
     def __init__(
@@ -143,7 +145,10 @@ class TaskCompletionChart(ft.Control):
         super().__init__()
         self.daily_data = daily_data or self._generate_sample_data()
 
-    def build(self) -> ft.Control:
+        # 初期化時にコンテンツを構築
+        self._build_chart_content()
+
+    def _build_chart_content(self) -> None:
         """Build the task completion chart."""
         chart_bars = []
         max_tasks = max(day["completed"] + day["pending"] for day in self.daily_data)
@@ -188,59 +193,58 @@ class TaskCompletionChart(ft.Control):
 
             chart_bars.append(bar_column)
 
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        "📊 週間タスク完了状況",
-                        size=18,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                    ft.Container(height=12),
-                    ft.Row(
-                        controls=chart_bars,
-                        alignment=ft.MainAxisAlignment.SPACE_AROUND,
-                    ),
-                    ft.Container(height=16),
-                    # Legend
-                    ft.Row(
-                        controls=[
-                            ft.Row(
-                                controls=[
-                                    ft.Container(
-                                        width=16,
-                                        height=16,
-                                        bgcolor=ft.Colors.GREEN_400,
-                                        border_radius=4,
-                                    ),
-                                    ft.Text("完了", size=14),
-                                ],
-                                spacing=8,
-                            ),
-                            ft.Row(
-                                controls=[
-                                    ft.Container(
-                                        width=16,
-                                        height=16,
-                                        bgcolor=ft.Colors.ORANGE_300,
-                                        border_radius=4,
-                                    ),
-                                    ft.Text("未完了", size=14),
-                                ],
-                                spacing=8,
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=24,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            padding=24,
-            border_radius=16,
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+        # Containerの設定を行う
+        self.content = ft.Column(
+            controls=[
+                ft.Text(
+                    "📊 週間タスク完了状況",
+                    size=18,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                ft.Container(height=12),
+                ft.Row(
+                    controls=chart_bars,
+                    alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                ),
+                ft.Container(height=16),
+                # Legend
+                ft.Row(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                ft.Container(
+                                    width=16,
+                                    height=16,
+                                    bgcolor=ft.Colors.GREEN_400,
+                                    border_radius=4,
+                                ),
+                                ft.Text("完了", size=14),
+                            ],
+                            spacing=8,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.Container(
+                                    width=16,
+                                    height=16,
+                                    bgcolor=ft.Colors.ORANGE_300,
+                                    border_radius=4,
+                                ),
+                                ft.Text("未完了", size=14),
+                            ],
+                            spacing=8,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=24,
+                ),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
+        self.padding = 24
+        self.border_radius = 16
+        self.bgcolor = ft.Colors.SECONDARY_CONTAINER
+        self.border = ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
 
     def _generate_sample_data(self) -> list[dict[str, Any]]:
         """Generate sample data for demonstration."""
@@ -255,14 +259,17 @@ class TaskCompletionChart(ft.Control):
         ]
 
 
-class ProductivityInsights(ft.Control):
+class ProductivityInsights(ft.Container):
     """Insights panel showing productivity analysis."""
 
     def __init__(self) -> None:
         """Initialize productivity insights."""
         super().__init__()
 
-    def build(self) -> ft.Control:
+        # 初期化時にコンテンツを構築
+        self._build_insights_content()
+
+    def _build_insights_content(self) -> None:
         """Build the insights panel."""
         insights = [
             {
@@ -302,23 +309,22 @@ class ProductivityInsights(ft.Control):
                             bgcolor=insight["color"],
                             alignment=ft.alignment.center,
                         ),
-                        ft.Expanded(
-                            child=ft.Column(
-                                controls=[
-                                    ft.Text(
-                                        insight["title"],
-                                        size=16,
-                                        weight=ft.FontWeight.BOLD,
-                                    ),
-                                    ft.Text(
-                                        insight["description"],
-                                        size=14,
-                                        color=ft.Colors.ON_SURFACE_VARIANT,
-                                    ),
-                                ],
-                                spacing=4,
-                                tight=True,
-                            ),
+                        ft.Column(
+                            controls=[
+                                ft.Text(
+                                    insight["title"],
+                                    size=16,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                                ft.Text(
+                                    insight["description"],
+                                    size=14,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
+                                ),
+                            ],
+                            spacing=4,
+                            tight=True,
+                            expand=True,
                         ),
                     ],
                     spacing=16,
@@ -330,27 +336,26 @@ class ProductivityInsights(ft.Control):
             )
             insight_cards.append(card)
 
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        "💡 今週のインサイト",
-                        size=18,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                    ft.Container(height=12),
-                    *insight_cards,
-                ],
-                spacing=12,
-            ),
-            padding=24,
-            border_radius=16,
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+        # Containerの設定を行う
+        self.content = ft.Column(
+            controls=[
+                ft.Text(
+                    "💡 今週のインサイト",
+                    size=18,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                ft.Container(height=12),
+                *insight_cards,
+            ],
+            spacing=12,
         )
+        self.padding = 24
+        self.border_radius = 16
+        self.bgcolor = ft.Colors.SURFACE
+        self.border = ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
 
 
-class ReflectionCard(ft.Control):
+class ReflectionCard(ft.Container):
     """Interactive card for weekly reflection and planning."""
 
     def __init__(
@@ -367,7 +372,10 @@ class ReflectionCard(ft.Control):
         self.reflection_text = ""
         self.goals_text = ""
 
-    def build(self) -> ft.Control:
+        # 初期化時にコンテンツを構築
+        self._build_reflection_content()
+
+    def _build_reflection_content(self) -> None:
         """Build the reflection card."""
         reflection_field = ft.TextField(
             label="今週の振り返り",
@@ -399,41 +407,40 @@ class ReflectionCard(ft.Control):
             on_click=self._handle_save,
         )
 
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Icon(
-                                ft.Icons.PSYCHOLOGY,
-                                size=24,
-                                color=ft.Colors.PRIMARY,
-                            ),
-                            ft.Text(
-                                "🤔 週次振り返り",
-                                size=18,
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                        ],
-                        spacing=8,
-                    ),
-                    ft.Container(height=16),
-                    reflection_field,
-                    ft.Container(height=16),
-                    goals_field,
-                    ft.Container(height=20),
-                    ft.Row(
-                        controls=[save_button],
-                        alignment=ft.MainAxisAlignment.END,
-                    ),
-                ],
-                spacing=8,
-            ),
-            padding=24,
-            border_radius=16,
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+        # Containerの設定を行う
+        self.content = ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[
+                        ft.Icon(
+                            ft.Icons.PSYCHOLOGY,
+                            size=24,
+                            color=ft.Colors.PRIMARY,
+                        ),
+                        ft.Text(
+                            "🤔 週次振り返り",
+                            size=18,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                    ],
+                    spacing=8,
+                ),
+                ft.Container(height=16),
+                reflection_field,
+                ft.Container(height=16),
+                goals_field,
+                ft.Container(height=20),
+                ft.Row(
+                    controls=[save_button],
+                    alignment=ft.MainAxisAlignment.END,
+                ),
+            ],
+            spacing=8,
         )
+        self.padding = 24
+        self.border_radius = 16
+        self.bgcolor = ft.Colors.SURFACE
+        self.border = ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
 
     def _on_reflection_change(self, e: ft.ControlEvent) -> None:
         """Handle reflection text change."""

@@ -1,5 +1,9 @@
 """Terms management view implementation."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import flet as ft
 
 from views_new.sample import SampleTerm, SampleTermStatus, get_sample_terms
@@ -7,7 +11,9 @@ from views_new.shared.base_view import BaseView
 
 from .components.action_bar import TermActionBar
 from .components.status_tabs import TermStatusTabs
-from .components.term_detail import TermDetail
+
+if TYPE_CHECKING:
+    from .components.term_detail import TermDetail
 
 
 class TermsView(BaseView):
@@ -37,6 +43,14 @@ class TermsView(BaseView):
         self.term_list_container: ft.Container | None = None
 
         self._load_sample_data()
+
+    def build(self) -> ft.Control:
+        """Build the main content area."""
+        from loguru import logger
+
+        logger.info("TermsView.build() called")
+        logger.info(f"Terms loaded: {len(self.terms)} items")
+        return self.build_content()
 
     def build_content(self) -> ft.Control:
         """Build the main content area."""
@@ -77,9 +91,10 @@ class TermsView(BaseView):
 
         # Main content area with list and detail
         self._filter_terms()
+
+        # GitHubイシュー#2793の解決策を適用：Rowにexpand=Trueを設定
         main_content = ft.Row(
             controls=[
-                # Terms list (left side)
                 ft.Container(
                     content=ft.Column(
                         controls=[
@@ -87,20 +102,12 @@ class TermsView(BaseView):
                             self._build_term_list(),
                         ],
                         spacing=16,
-                        expand=True,
                     ),
-                    width=400,
-                    padding=ft.padding.all(16),
-                ),
-                # Term detail (right side)
-                ft.Container(
-                    content=self._build_term_detail(),
                     expand=True,
                     padding=ft.padding.all(16),
                 ),
             ],
-            expand=True,
-            spacing=16,
+            expand=True,  # この設定が重要
         )
 
         return ft.Column(
@@ -110,12 +117,9 @@ class TermsView(BaseView):
                     content=self.action_bar,
                     padding=ft.padding.symmetric(horizontal=24),
                 ),
-                ft.Container(
-                    content=main_content,
-                    expand=True,
-                ),
+                main_content,
             ],
-            expand=True,
+            expand=True,  # GitHubイシューの解決策：親のColumnにもexpandを設定
         )
 
     def _build_term_list(self) -> ft.Control:
@@ -156,7 +160,6 @@ class TermsView(BaseView):
                 spacing=8,
                 scroll=ft.ScrollMode.AUTO,
             ),
-            expand=True,
         )
 
         return self.term_list_container
@@ -263,12 +266,11 @@ class TermsView(BaseView):
 
     def _build_term_detail(self) -> ft.Control:
         """Build the term detail panel."""
-        self.term_detail = TermDetail(
-            term=self.selected_term,
-            on_edit=self._handle_edit_term,
-            on_tag_click=self._handle_tag_click,
+        # 現在は詳細パネルを非表示にして、リストのみ表示
+        return ft.Container(
+            content=ft.Text("詳細表示は準備中です", color=ft.Colors.OUTLINE),
+            padding=24,
         )
-        return self.term_detail
 
     def _get_status_icon(self, status: SampleTermStatus) -> ft.Control:
         """Get status icon for term status."""
@@ -311,7 +313,7 @@ class TermsView(BaseView):
             self.term_detail.update_term(term)
         self._refresh_term_list()
 
-    def _handle_create_term(self) -> None:
+    def _handle_create_term(self, _: ft.ControlEvent | None = None) -> None:
         """Handle create term button click."""
         # TODO: Implement term creation dialog
         self.show_snack_bar("用語作成機能は準備中です")
@@ -348,8 +350,9 @@ class TermsView(BaseView):
 
     def _refresh_term_list(self) -> None:
         """Refresh the term list display."""
-        if hasattr(self, "_content") and self._content:
-            self.update()
+        # ページ全体を更新
+        if self.page:
+            self.page.update()
 
     def _update_status_counts(self) -> None:
         """Update status counts for tabs."""

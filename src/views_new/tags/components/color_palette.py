@@ -34,7 +34,7 @@ def create_color_palette(
             content=ft.Text(
                 color["name"],
                 style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.colors.WHITE,
+                color=ft.Colors.WHITE,
                 text_align=ft.TextAlign.CENTER,
             ),
             bgcolor=color["value"],

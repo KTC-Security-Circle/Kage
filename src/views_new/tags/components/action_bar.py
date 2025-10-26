@@ -40,8 +40,8 @@ def create_action_bar(
                     text="新規タグ",
                     icon=ft.Icons.ADD,
                     on_click=on_create,
-                    bgcolor=ft.colors.BLUE,
-                    color=ft.colors.WHITE,
+                    bgcolor=ft.Colors.BLUE,
+                    color=ft.Colors.WHITE,
                 ),
                 ft.Container(expand=True),  # Spacer
                 ft.TextField(

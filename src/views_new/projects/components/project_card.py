@@ -52,7 +52,7 @@ def create_project_card(
                                     ft.Text(
                                         project["description"],
                                         style=ft.TextThemeStyle.BODY_MEDIUM,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                         max_lines=2,
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
@@ -64,7 +64,7 @@ def create_project_card(
                                 content=ft.Text(
                                     project["status"],
                                     style=ft.TextThemeStyle.LABEL_SMALL,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 bgcolor=status_color,
@@ -81,7 +81,7 @@ def create_project_card(
                     # Divider
                     ft.Divider(
                         height=1,
-                        color=ft.colors.GREY_300,
+                        color=ft.Colors.GREY_300,
                     ),
                     # Footer with metadata and actions
                     ft.Row(
@@ -92,12 +92,12 @@ def create_project_card(
                                     ft.Icon(
                                         ft.Icons.TASK_ALT,
                                         size=16,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                     ft.Text(
                                         f"{project['tasks_count']} タスク",
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                 ],
                                 spacing=4,
@@ -108,12 +108,12 @@ def create_project_card(
                                     ft.Icon(
                                         ft.Icons.CALENDAR_TODAY,
                                         size=16,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                     ft.Text(
                                         project["created_at"],
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                 ],
                                 spacing=4,
@@ -127,14 +127,14 @@ def create_project_card(
                                         tooltip="編集",
                                         icon_size=20,
                                         on_click=lambda e, p=project: on_edit(e, p),
-                                        icon_color=ft.colors.GREY_600,
+                                        icon_color=ft.Colors.GREY_600,
                                     ),
                                     ft.IconButton(
                                         icon=ft.Icons.DELETE_OUTLINE,
                                         tooltip="削除",
                                         icon_size=20,
                                         on_click=lambda e, p=project: on_delete(e, p),
-                                        icon_color=ft.colors.RED,
+                                        icon_color=ft.Colors.RED,
                                     ),
                                 ],
                                 spacing=0,

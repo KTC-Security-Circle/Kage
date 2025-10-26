@@ -7,12 +7,22 @@ AppBarは使用せず、サイドバーベースの設計となっています�
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import flet as ft
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 from views_new.home import HomeView
+from views_new.memos import MemosView
 from views_new.projects import ProjectsView
+from views_new.settings import SettingsView
 from views_new.shared.sidebar import build_sidebar
 from views_new.tags import TagsView
+from views_new.tasks import TasksView
+from views_new.terms import TermsView
+from views_new.weekly_review import WeeklyReviewView
 
 
 def build_layout(page: ft.Page, route: str) -> ft.View:
@@ -68,23 +78,24 @@ def _get_view_content(page: ft.Page, route: str) -> ft.Control:
     Returns:
         対応するViewコンテンツ
     """
-    # Route to view mapping
-    if route == "/":
-        # Home view is fully implemented
-        return HomeView(page)
+    # Route to view mapping (factory pattern to reduce returns)
+    view_factory: dict[str, Callable[[ft.Page], ft.Control]] = {
+        "/": lambda p: HomeView(p).build(),
+        "/projects": lambda p: ProjectsView(p).build(),
+        "/tags": lambda p: TagsView(p).build(),
+        "/tasks": lambda p: TasksView(p).build(),
+        "/settings": lambda p: SettingsView(p).build(),
+        "/memos": lambda p: MemosView(p).build(),
+        "/terms": lambda p: TermsView(p).build(),
+        "/weekly-review": lambda p: WeeklyReviewView(p).build(),
+    }
 
-    if route == "/projects":
-        # Projects view is now implemented
-        return ProjectsView(page)
-
-    if route == "/tags":
-        # Tags view is now implemented
-        return TagsView(page)
+    factory = view_factory.get(route)
+    if factory:
+        return factory(page)
 
     # Other views are still placeholders
-    # TODO: 各View実装完了後に対応するViewクラスを追加
-    # 理由: ProjectsView、TagsView等が未実装のため
-    # 置換先: 各Viewモジュールからインポートして使用
+    # TODO: 未実装ルートに対しては随時追加
     return _create_placeholder_content(route)
 
 

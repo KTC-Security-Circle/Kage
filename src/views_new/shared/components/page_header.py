@@ -37,7 +37,7 @@ def create_page_header(title: str, subtitle: str) -> ft.Control:  # type: ignore
                         ft.Text(
                             subtitle,
                             style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.colors.GREY_600,
+                            color=ft.Colors.GREY_600,
                         ),
                     ],
                     spacing=8,

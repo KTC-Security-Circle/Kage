@@ -45,7 +45,7 @@ def create_tag_card(
                                         content=ft.Text(
                                             tag["name"],
                                             style=ft.TextThemeStyle.LABEL_MEDIUM,
-                                            color=ft.colors.WHITE,
+                                            color=ft.Colors.WHITE,
                                             weight=ft.FontWeight.W_500,
                                         ),
                                         bgcolor=tag["color"],
@@ -61,7 +61,7 @@ def create_tag_card(
                                             ft.Text(
                                                 tag["description"],
                                                 style=ft.TextThemeStyle.BODY_MEDIUM,
-                                                color=ft.colors.GREY_600,
+                                                color=ft.Colors.GREY_600,
                                             ),
                                         ],
                                         spacing=4,
@@ -78,14 +78,14 @@ def create_tag_card(
                                         tooltip="編集",
                                         icon_size=20,
                                         on_click=lambda e, t=tag: on_edit(e, t),
-                                        icon_color=ft.colors.GREY_600,
+                                        icon_color=ft.Colors.GREY_600,
                                     ),
                                     ft.IconButton(
                                         icon=ft.Icons.DELETE_OUTLINE,
                                         tooltip="削除",
                                         icon_size=20,
                                         on_click=lambda e, t=tag: on_delete(e, t),
-                                        icon_color=ft.colors.RED,
+                                        icon_color=ft.Colors.RED,
                                     ),
                                 ],
                                 spacing=0,
@@ -97,7 +97,7 @@ def create_tag_card(
                     # Divider
                     ft.Divider(
                         height=1,
-                        color=ft.colors.GREY_300,
+                        color=ft.Colors.GREY_300,
                     ),
                     # Footer with metadata
                     ft.Row(
@@ -108,12 +108,12 @@ def create_tag_card(
                                     ft.Icon(
                                         ft.Icons.TASK_ALT,
                                         size=16,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                     ft.Text(
                                         f"{tag['task_count']} タスク",
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                 ],
                                 spacing=4,
@@ -124,12 +124,12 @@ def create_tag_card(
                                     ft.Icon(
                                         ft.Icons.CALENDAR_TODAY,
                                         size=16,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                     ft.Text(
                                         tag["created_at"],
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.colors.GREY_600,
+                                        color=ft.Colors.GREY_600,
                                     ),
                                 ],
                                 spacing=4,
@@ -140,14 +140,14 @@ def create_tag_card(
                                 content=ft.Text(
                                     tag["color"].upper(),
                                     style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=ft.colors.GREY_600,
+                                    color=ft.Colors.GREY_600,
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 padding=ft.padding.symmetric(
                                     horizontal=8,
                                     vertical=2,
                                 ),
-                                border=ft.border.all(1, ft.colors.GREY_300),
+                                border=ft.border.all(1, ft.Colors.GREY_300),
                                 border_radius=ft.border_radius.all(4),
                             ),
                         ],

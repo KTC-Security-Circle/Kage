@@ -59,7 +59,7 @@ class ErrorHandlingMixin:
         """
         snack_bar = ft.SnackBar(
             content=ft.Text(message),
-            bgcolor=ft.colors.ERROR,
+            bgcolor=ft.Colors.ERROR,
         )
         page.snack_bar = snack_bar
         snack_bar.open = True
@@ -76,7 +76,7 @@ class ErrorHandlingMixin:
         """
         snack_bar = ft.SnackBar(
             content=ft.Text(message),
-            bgcolor=ft.colors.BLUE,
+            bgcolor=ft.Colors.BLUE,
         )
         self.page.snack_bar = snack_bar
         snack_bar.open = True
@@ -93,7 +93,26 @@ class ErrorHandlingMixin:
         """
         snack_bar = ft.SnackBar(
             content=ft.Text(message),
-            bgcolor=ft.colors.GREEN,
+            bgcolor=ft.Colors.GREEN,
+        )
+        self.page.snack_bar = snack_bar
+        snack_bar.open = True
+        self.page.update()
+
+    def show_snack_bar(
+        self,
+        message: str,
+        bgcolor: str | None = None,
+    ) -> None:
+        """汎用スナックバーを表示する。
+
+        Args:
+            message: 表示メッセージ
+            bgcolor: 背景色（デフォルトはPRIMARY）
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=bgcolor or ft.Colors.PRIMARY,
         )
         self.page.snack_bar = snack_bar
         snack_bar.open = True
@@ -208,9 +227,35 @@ class BaseView(ft.Container, ErrorHandlingMixin):
             構築されたコントロール
 
         Notes:
-            サブクラスで必ずオーバーライドしてください。
+            サブクラスでbuild_contentをオーバーライドしてください。
         """
-        return ft.Text("BaseView - サブクラスでオーバーライドしてください")
+        try:
+            if hasattr(self, "build_content"):
+                return self.build_content()
+            return ft.Text("BaseView - サブクラスでbuild_contentをオーバーライドしてください")
+        except Exception as e:
+            logger.error(f"Error building view {self.__class__.__name__}: {e}")
+            return ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR, size=48),
+                        ft.Text(
+                            "ビューの読み込み中にエラーが発生しました",
+                            size=16,
+                            color=ft.Colors.ERROR,
+                        ),
+                        ft.Text(
+                            str(e),
+                            size=12,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                ),
+                padding=ft.padding.all(32),
+                alignment=ft.alignment.center,
+            )
 
     def safe_update(self) -> None:
         """安全にページを更新する。
@@ -276,7 +321,7 @@ class LoadingMixin:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             alignment=ft.alignment.center,
-            bgcolor=ft.colors.with_opacity(0.7, ft.colors.BLACK),
+            bgcolor=ft.Colors.with_opacity(0.7, ft.Colors.BLACK),
             expand=True,
         )
 

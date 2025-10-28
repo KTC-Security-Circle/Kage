@@ -159,10 +159,39 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
     _fake_responses = cast("list[BaseModel]", list(_DEFAULT_FAKE_RESPONSES))
 
-    def __init__(self, provider: LLMProvider = LLMProvider.FAKE, **kwargs: KwargsAny) -> None:
+    def __init__(
+        self,
+        provider: LLMProvider = LLMProvider.FAKE,
+        *,
+        persist_on_finalize: bool = False,
+        **kwargs: KwargsAny,
+    ) -> None:
+        """エージェント初期化。
+
+        Args:
+            provider: 利用するLLMプロバイダ
+            persist_on_finalize: finalize時にApplication Service経由で永続化を行うか（テスト用）
+            **kwargs: 親クラス引数（model_name等）
+        """
+        self._persist_on_finalize = persist_on_finalize
         super().__init__(provider, **kwargs)
 
     def create_graph(self, graph_builder: StateGraph) -> StateGraph:
+        """エージェントの状態遷移グラフを構築する。
+
+        このエージェントは、自由形式のメモからタスク案を導出するために
+        複数の評価・生成ステップを順に実行する。ここでは各ステップをノード
+        として登録し、条件分岐（エッジ）を設定している。
+
+        成功/失敗やLLM出力の妥当性に応じて、次に進むノードが切り替わる。
+        最終的には `finalize_response` で `MemoToTaskAgentOutput` を構築して終了する。
+
+        Args:
+            graph_builder: langgraph の `StateGraph` ビルダー
+
+        Returns:
+            遷移ノードとエッジを組み上げた `StateGraph` インスタンス
+        """
         graph_builder.add_node("classify_memo", self._classify_memo)
         graph_builder.add_node("handle_idea", self._handle_idea)
         graph_builder.add_node("plan_project", self._plan_project)
@@ -219,6 +248,22 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         prompt: ChatPromptTemplate,
         schema: type[BaseModel],
     ) -> RunnableSerializable:
+        """構造化出力用の実行ランナーを取得/生成する。
+
+        指定された `attr_name` に対応するランナーが既に存在すれば再利用し、
+        なければプロバイダ種別に応じて新規に構築してキャッシュする。
+
+        - FAKE プロバイダ: 事前定義の疑似ファクトリを使うダミーRunner
+        - それ以外: LLMに Pydantic スキーマの構造化出力を要求するRunner
+
+        Args:
+            attr_name: インスタンス属性名（キャッシュキー）
+            prompt: 実行に用いるチャットプロンプト
+            schema: 期待する構造化出力の Pydantic モデル型
+
+        Returns:
+            構造化出力を返す `RunnableSerializable` 実装
+        """
         runner = getattr(self, attr_name, None)
         if runner is not None:
             return runner
@@ -232,6 +277,21 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return runner
 
     def _build_fake_runner(self, schema: type[BaseModel]) -> RunnableSerializable:
+        """FAKEプロバイダ向けの簡易Runnerを構築する。
+
+        スキーマに対応する疑似出力ファクトリを見つけ、`invoke(params)` で
+        直接Pydanticモデルを返すシンプルなRunnerを返す。
+
+        Args:
+            schema: 期待する構造化出力の Pydantic モデル型
+
+        Returns:
+            疑似出力を返す `RunnableSerializable` 実装
+
+        Raises:
+            ValueError: 指定スキーマに対応する疑似ファクトリが未定義の場合
+        """
+
         class _FakeRunner:
             def __init__(self, factory: Callable[[dict[str, object]], BaseModel]) -> None:
                 self._factory = factory
@@ -254,10 +314,21 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         base_params: dict[str, object],
         retry_hint: str,
     ) -> BaseModel | ErrorAgentOutput:
-        """構造化出力に対して1回だけ再試行する薄いヘルパー。
+        """構造化出力の検証に失敗した場合に限り、1回だけ再試行する。
 
-        1回目: retry_hint="" で実行→検証
-        失敗時: retry_hint に修正指示を渡して再実行→検証
+        1回目は `retry_hint` を空にして実行し、スキーマ検証に通れば返す。
+        失敗した場合のみ、与えられた `retry_hint` を追加して2回目を実行し、
+        その結果を検証して返却する。
+
+        Args:
+            runner_attr: キャッシュに用いるランナー属性名
+            prompt: 実行に用いるチャットプロンプト
+            schema: 期待する構造化出力の Pydantic モデル型
+            base_params: プロンプトへ渡す共通パラメータ
+            retry_hint: 2回目の実行時にLLMへ与える修正指示
+
+        Returns:
+            検証済みの Pydantic モデル、またはエラー出力
         """
         runner = self._get_structured_runner(runner_attr, prompt, schema)
         first_params = {**base_params, "retry_hint": ""}
@@ -274,7 +345,18 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         self,
         raw_response: object,
     ) -> MemoClassification | ErrorAgentOutput:
-        """Attempt to coerce a non-conforming classification payload."""
+        """メモ分類の非整合な出力を、可能な範囲で補正して復元する。
+
+        LLMの出力が `MemoClassification` に合致しない場合でも、辞書形状から
+        意図を推定し、`decision` や `project_title` を補うなどのヒューリスティクスで
+        復旧を試みる。最終的にスキーマ検証が通らなければ `ErrorAgentOutput` を返す。
+
+        Args:
+            raw_response: LLM等から受け取った生の分類出力
+
+        Returns:
+            復旧済みの `MemoClassification` もしくは `ErrorAgentOutput`
+        """
         if isinstance(raw_response, MemoClassification):
             return raw_response
         if isinstance(raw_response, dict):
@@ -321,7 +403,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
     @staticmethod
     def _infer_decision_from_reason(reason: object) -> MemoProcessingDecision | None:
-        """Infer memo classification decision from reasoning text."""
+        """理由テキストから分類方針を推定する単純なヒューリスティクス。"""
         if not isinstance(reason, str):
             return None
         normalized = reason.lower()
@@ -334,6 +416,21 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return None
 
     def _classify_memo(self, state: MemoToTaskState) -> dict[str, object]:
+        """メモ本文の性質を分類し、後続の分岐条件を決める。
+
+        LLMに対し `MemoClassification` の構造化出力を要求し、
+        - task: 単発タスクとして処理
+        - project: プロジェクト計画へ
+        - idea: アイデア（保留）
+        のいずれかを判断する。必要に応じて補正関数で復旧を試みる。
+
+        Args:
+            state: 現在のメモ処理状態
+
+        Returns:
+            次ノードに必要なフラグと `classification` を含む辞書。
+            検証失敗時は `error_output` を含む。
+        """
         runner = self._get_structured_runner("_classifier_runner", classification_prompt, MemoClassification)
         response = runner.invoke(
             {
@@ -359,12 +456,34 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return {"error_output": classification}
 
     def _handle_idea(self, state: MemoToTaskState) -> dict[str, object]:
+        """アイデア扱いのメモをそのまま保持する。
+
+        Args:
+            state: 現在のメモ処理状態
+
+        Returns:
+            空の `routed_tasks` と `suggested_status="idea"` を含む辞書
+        """
         classification = state.get("classification")
         if isinstance(classification, MemoClassification) and classification.reason:
             agents_logger.debug("IDEA判定理由: %s", classification.reason)
         return {"routed_tasks": [], "suggested_status": "idea"}
 
     def _plan_project(self, state: MemoToTaskState) -> dict[str, object]:
+        """プロジェクト前提のメモに対し、最初のアクション群を提案する。
+
+        LLMから `ProjectPlanSuggestion` を取得・検証し、必要に応じて
+        - 出力のサニタイズ
+        - リトライ（`retry_hint`付き）
+        を行った上で、`next_actions` をタスク案にマッピングする。
+
+        Args:
+            state: 現在のメモ処理状態
+
+        Returns:
+            `project_plan` と `routed_tasks`、`suggested_status` を含む辞書。
+            検証失敗時は `error_output` を含む。
+        """
         classification = state.get("classification")
         if not isinstance(classification, MemoClassification):
             return {"routed_tasks": [], "suggested_status": "idea"}
@@ -434,6 +553,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
     @staticmethod
     def _is_valid_iso8601(value: str) -> bool:
+        """与えられた文字列が `datetime.fromisoformat` で解釈可能か判定する。"""
         try:
             datetime.fromisoformat(value)
         except ValueError:
@@ -468,6 +588,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return payload
 
     def _sanitize_action_dict(self, item: dict[str, object]) -> dict[str, object]:
+        """辞書形のタスク案から、不正な期日とルート値を除去/修正する。"""
         action = dict(item)
         due = action.get("due_date")
         if isinstance(due, str) and due and not self._is_valid_iso8601(due):
@@ -478,6 +599,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return action
 
     def _sanitize_action_model(self, item: TaskDraft) -> TaskDraft:
+        """`TaskDraft` モデルのフィールドを検証し、不正値を無害化する。"""
         # Pydanticモデル(TaskDraft)が来る場合を想定
         new_item = item
         if isinstance(item.due_date, str) and item.due_date and not self._is_valid_iso8601(item.due_date):
@@ -487,6 +609,17 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return new_item
 
     def _generate_task_seed(self, state: MemoToTaskState) -> dict[str, object]:
+        """メモからタスク素案 `TaskDraftSeed` を生成する。
+
+        LLMに title/description/tags の最小セットをJSONで生成させ、
+        1回の再試行ロジック付きで検証を行う。
+
+        Args:
+            state: 現在のメモ処理状態
+
+        Returns:
+            `task_seed` を含む辞書。検証失敗時は `error_output` を返す。
+        """
         params = {
             "memo_text": state["memo_text"],
             "existing_tags": state["existing_tags"],
@@ -502,6 +635,18 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return {"error_output": seed}
 
     def _evaluate_quick_action(self, state: MemoToTaskState) -> dict[str, object]:
+        """タスクが数分で終わる「クイックアクション」かを判定する。
+
+        `QuickActionAssessment` の構造化出力を用い、真であれば
+        以降の分岐で即時実行（`apply_quick_action`）へ誘導する。
+
+        Args:
+            state: 現在のメモ処理状態
+
+        Returns:
+            `quick_assessment` と `is_quick_action` を含む辞書。
+            検証失敗時は `error_output` を返す。
+        """
         task_context = self._get_task_context(state)
         hint = (
             "JSON 出力は is_quick_action(boolean), reason(string) のみ。"
@@ -522,12 +667,14 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return {"error_output": assessment}
 
     def _apply_quick_action(self, state: MemoToTaskState) -> dict[str, object]:
+        """クイックアクションとして実行可能なタスクの案を確定する。"""
         task = self._build_task_from_seed(state, {"route": "progress"})
         if task.estimate_minutes is None:
             task = task.model_copy(update={"estimate_minutes": QUICK_ACTION_THRESHOLD_MINUTES})
         return {"routed_tasks": [task], "suggested_status": "active"}
 
     def _evaluate_responsibility(self, state: MemoToTaskState) -> dict[str, object]:
+        """委譲すべきか（自分以外に任せるべきか）を評価する。"""
         task_context = self._get_task_context(state)
         hint = "JSON 出力は should_delegate(boolean), reason(string) のみ。余計なキーは含めないでください。"
         assessment = self._invoke_schema_with_retry(
@@ -545,10 +692,12 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return {"error_output": assessment}
 
     def _apply_delegate(self, state: MemoToTaskState) -> dict[str, object]:
+        """委譲が適切なタスクとして、`waiting` ルートに割り当てる。"""
         task = self._build_task_from_seed(state, {"route": "waiting"})
         return {"routed_tasks": [task], "suggested_status": "active"}
 
     def _evaluate_schedule(self, state: MemoToTaskState) -> dict[str, object]:
+        """特定日時（期日）が必要かを評価し、必要なら値も提案させる。"""
         task_context = self._get_task_context(state)
         task_context["current_datetime_iso"] = state["current_datetime_iso"]
         hint = (
@@ -570,6 +719,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return {"error_output": assessment}
 
     def _apply_schedule(self, state: MemoToTaskState) -> dict[str, object]:
+        """期日ベースのタスクとして `calendar` ルートに割り当てる。"""
         assessment = state.get("schedule_assessment")
         due_date = assessment.due_date if isinstance(assessment, ScheduleAssessment) else None
         overrides: dict[str, object] = {"route": "calendar"}
@@ -579,10 +729,12 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return {"routed_tasks": [task], "suggested_status": "active"}
 
     def _prepare_next_action(self, state: MemoToTaskState) -> dict[str, object]:
+        """次に取るべきアクションとして `next_action` ルートを付与する。"""
         task = self._build_task_from_seed(state, {"route": "next_action"})
         return {"routed_tasks": [task], "suggested_status": "active"}
 
     def _get_task_context(self, state: MemoToTaskState) -> dict[str, object]:
+        """下流の判定で必要となるタスク文脈（タイトル・説明等）を生成する。"""
         task = self._build_task_from_seed(state)
         return {
             "task_title": task.title,
@@ -591,6 +743,18 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         }
 
     def _build_task_from_seed(self, state: MemoToTaskState, overrides: dict[str, object] | None = None) -> TaskDraft:
+        """`TaskDraftSeed` や分類情報を用い、完成形 `TaskDraft` を構築する。
+
+        `overrides` で route/priority/due_date 等を上書きできる。不正な値は
+        サニタイズされる（未定義扱いに落とす）。
+
+        Args:
+            state: 現在のメモ処理状態
+            overrides: 生成物に対する上書き指定
+
+        Returns:
+            完成した `TaskDraft`
+        """
         overrides = overrides or {}
         seed_obj = state.get("task_seed")
         seed = seed_obj if isinstance(seed_obj, TaskDraftSeed) else None
@@ -643,6 +807,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         )
 
     def _route_after_classification(self, state: MemoToTaskState) -> str:
+        """分類結果とエラー有無に基づき、次のノード名を返す。"""
         error_output = state.get("error_output")
         if isinstance(error_output, ErrorAgentOutput):
             return "finalize_response"
@@ -656,15 +821,30 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         return "generate_task_seed"
 
     def _route_after_quick_action(self, state: MemoToTaskState) -> str:
+        """クイックアクション判定の真偽で分岐を返す。"""
         return "apply_quick_action" if state.get("is_quick_action") else "evaluate_responsibility"
 
     def _route_after_responsibility(self, state: MemoToTaskState) -> str:
+        """委譲判定の真偽で分岐を返す。"""
         return "apply_delegate" if state.get("should_delegate") else "evaluate_schedule"
 
     def _route_after_schedule(self, state: MemoToTaskState) -> str:
+        """期日必要性の真偽で分岐を返す。"""
         return "apply_schedule" if state.get("requires_specific_date") else "prepare_next_action"
 
     def _finalize_response(self, state: MemoToTaskState) -> dict[str, MemoToTaskAgentOutput | ErrorAgentOutput]:
+        """最終出力 `MemoToTaskAgentOutput` を組み立てて返す。
+
+        - 途中で `error_output` が設定されていればそれを返す
+        - タスク案をクリーンアップし、`suggested_memo_status` を補完
+        - テスト用途フラグが有効なら Application Service 経由で永続化（ベストエフォート）
+
+        Args:
+            state: 現在のメモ処理状態
+
+        Returns:
+            `final_response` キーに最終出力またはエラーを入れた辞書
+        """
         error_output = state.get("error_output")
         if isinstance(error_output, ErrorAgentOutput):
             return {"final_response": error_output}
@@ -684,9 +864,73 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
             tasks=cleaned_tasks,
             suggested_memo_status=suggested_status,
         )
+
+        # [AI GENERATED] テスト用途: フラグが有効なら永続化を実行
+        try:
+            if self._persist_on_finalize and cleaned_tasks:
+                created_ids = self._persist_tasks_via_app(cleaned_tasks)
+                agents_logger.info("Persisted tasks via Tool: {}", created_ids)
+        except Exception as _exc:  # pragma: no cover - safety guard for local runs
+            agents_logger.exception("Persisting tasks failed: {}", str(_exc))
         return {"final_response": final_output}
 
+    def _persist_tasks_via_app(self, tasks: list[TaskDraft]) -> list[str]:
+        """Application Service 経由でタスクを永続化する（簡易版）。
+
+        Args:
+            tasks: 永続化対象のタスク候補
+
+        Returns:
+            作成されたタスクID（文字列）のリスト
+        """
+        from datetime import date
+
+        from logic.application.apps import ApplicationServices
+        from logic.application.task_application_service import TaskApplicationService
+        from models import TaskStatus, TaskUpdate
+
+        # 最小実装: 生成タスクはまず DRAFT として保存（レビュー前提）。
+        # 必要なら後段で route→運用ステータスに更新する設計に拡張可能。
+        status_map = {
+            "next_action": TaskStatus.DRAFT,
+            "progress": TaskStatus.DRAFT,
+            "waiting": TaskStatus.DRAFT,
+            "calendar": TaskStatus.DRAFT,
+        }
+
+        created_ids: list[str] = []
+        # DIコンテナから TaskApplicationService を取得
+        apps = ApplicationServices.create()
+        app = apps.get_service(TaskApplicationService)
+        for t in tasks:
+            status = status_map.get(t.route or "", TaskStatus.DRAFT)
+            created = app.create(title=t.title, description=t.description or None, status=status)
+            created_ids.append(str(created.id))
+
+            # TaskCreate では due_date を直接指定できないため、必要に応じて更新で反映する
+            if t.due_date:
+                try:
+                    due = date.fromisoformat((t.due_date.split("T", 1)[0]).strip())
+                    app.update(created.id, TaskUpdate(due_date=due))
+                except Exception as exc:
+                    # 期日の変換や更新に失敗してもエラーにはしない（ログのみ）
+                    agents_logger.warning("Failed to set due_date for '{}': {}", t.title, str(exc))
+
+        return created_ids
+
     def _post_process(self, output: MemoToTaskAgentOutput, state: MemoToTaskState) -> MemoToTaskAgentOutput:
+        """出力後処理。
+
+        タスクが空であれば `clarify` を提案し、存在する場合はタグや期日を
+        クリーンアップして `active` を提案する。
+
+        Args:
+            output: 一旦生成した出力
+            state: 現在のメモ処理状態
+
+        Returns:
+            後処理を施した `MemoToTaskAgentOutput`
+        """
         if not output.tasks:
             return output.model_copy(update={"suggested_memo_status": "clarify"})
 
@@ -699,12 +943,14 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         )
 
     def _clean_task(self, task: TaskDraft, state: MemoToTaskState) -> TaskDraft:
+        """タグ・期日などの冗長/不正値を整形してから返す。"""
         matched_tags = self._classify_tags(task, state)
         sanitized_tags = matched_tags if matched_tags else None
         due_date = task.due_date or None
         return task.model_copy(update={"tags": sanitized_tags, "due_date": due_date})
 
     def _classify_tags(self, task: TaskDraft, state: MemoToTaskState) -> list[str]:
+        """メモ本文/タイトル/説明に基づき、利用可能な既存タグをマッチングする。"""
         available = {tag.lower(): tag for tag in state["existing_tags"]}
         texts = [state["memo_text"], task.title, task.description or ""]
         from_llm = task.tags or []
@@ -737,44 +983,28 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     EnvSettings.init_environment()
     setup_logger()
 
-    agent = MemoToTaskAgent(
-        LLMProvider.OPENVINO, model_name=HuggingFaceModel.QWEN_3_8B_INT4, verbose=True, error_response=False
-    )
+    # [AI GENERATED] 最終的な確認は HuggingFaceModel(OpenVINO) で実施。
+    # 実行環境に依存するため、失敗時は FAKE へフォールバックします。
+    try:
+        agent = MemoToTaskAgent(
+            LLMProvider.OPENVINO,
+            model_name=HuggingFaceModel.QWEN_3_8B_INT4,
+            verbose=True,
+            error_response=False,
+            persist_on_finalize=True,
+        )
+    except Exception as exc:
+        agents_logger.warning("Falling back to FAKE provider due to init error: {}", str(exc))
+        agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=True, error_response=False, persist_on_finalize=True)
 
     current_datetime = "2025-10-25T10:00:00+09:00"
-    sample_inputs: list[tuple[str, MemoToTaskState]] = [
-        (
-            "delegate_waiting",
-            {
-                "memo_text": "来週のプロジェクト会議の準備をする。議題は予算案の確認と新規メンバーの紹介。",
-                "existing_tags": ["仕事", "会議", "準備"],
-                "current_datetime_iso": current_datetime,
-                "final_response": "",
-            },
-        ),
+    # [AI GENERATED] 少数シナリオで手動確認。
+    all_samples: list[tuple[str, MemoToTaskState]] = [
         (
             "quick_action",
             {
                 "memo_text": "Slackで田中さんに承認状況を確認するメッセージを送る。",
                 "existing_tags": ["連絡", "フォロー"],
-                "current_datetime_iso": current_datetime,
-                "final_response": "",
-            },
-        ),
-        (
-            "idea_capture",
-            {
-                "memo_text": "将来的に試したい新サービスのアイデアを箇条書きで記録しておく。",
-                "existing_tags": ["アイデア", "リサーチ"],
-                "current_datetime_iso": current_datetime,
-                "final_response": "",
-            },
-        ),
-        (
-            "schedule_needed",
-            {
-                "memo_text": "木曜日の15時に顧客とのデモ準備ミーティングを開催する。場所と資料を整える必要あり。",
-                "existing_tags": ["会議", "顧客", "調整"],
                 "current_datetime_iso": current_datetime,
                 "final_response": "",
             },
@@ -791,6 +1021,10 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
             },
         ),
     ]
+    # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）
+    # 必要に応じて下記のラベル配列を書き換えて、1件ずつ確認してください。
+    selected_labels = ["quick_action"]  # 例: ["project_planning"] に変更
+    sample_inputs = [item for item in all_samples if item[0] in selected_labels]
 
     for label, sample_state in sample_inputs:
         scenario_thread_id = str(uuid4())

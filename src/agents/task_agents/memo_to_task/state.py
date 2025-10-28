@@ -2,22 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NotRequired
+from typing import NotRequired
 
 from agents.base import BaseAgentState, ErrorAgentOutput
-
-if TYPE_CHECKING:
-    from agents.task_agents.memo_to_task.schema import (
-        MemoClassification,
-        MemoStatusSuggestion,
-        MemoToTaskAgentOutput,
-        ProjectPlanSuggestion,
-        QuickActionAssessment,
-        ResponsibilityAssessment,
-        ScheduleAssessment,
-        TaskDraft,
-        TaskDraftSeed,
-    )
+from agents.task_agents.memo_to_task.schema import (  # noqa: TC001
+    MemoClassification,
+    MemoStatusSuggestion,
+    MemoToTaskAgentOutput,
+    ProjectPlanSuggestion,
+    QuickActionAssessment,
+    ResponsibilityAssessment,
+    ScheduleAssessment,
+    TaskDraft,
+    TaskDraftSeed,
+)
 
 
 class MemoToTaskState(BaseAgentState):

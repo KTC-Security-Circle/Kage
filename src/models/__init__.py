@@ -131,6 +131,7 @@ class TaskStatus(str, Enum):
     """
 
     TODO = "todo"
+    DRAFT = "draft"
     TODAYS = "todays"
     PROGRESS = "progress"
     WAITING = "waiting"

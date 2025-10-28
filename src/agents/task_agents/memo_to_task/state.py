@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import NotRequired
 
-from agents.base import BaseAgentState, ErrorAgentOutput
+from agents.base import AgentError, BaseAgentResponse, BaseAgentState
 from agents.task_agents.memo_to_task.schema import (  # noqa: TC001
     MemoClassification,
     MemoStatusSuggestion,
@@ -72,5 +73,16 @@ class MemoToTaskState(BaseAgentState):
     suggested_status: NotRequired[MemoStatusSuggestion]
     """メモに対して提案されるステータス。"""
 
-    error_output: NotRequired[ErrorAgentOutput]
-    """エラー応答が発生した場合の内容。"""
+    error: NotRequired[AgentError]
+    """エラーが発生した場合の例外インスタンス。"""
+
+    # 最終応答は最終ノードで構築され、BaseAgent/_create_return_response で取り出されるため、
+    # State での final_response は不要（互換フィールドを削除）。
+
+
+@dataclass
+class MemoToTaskResult(BaseAgentResponse[MemoToTaskState]):
+    """メモ解析エージェントの結果モデル（最終応答）。"""
+
+    tasks: list[TaskDraft]
+    suggested_memo_status: MemoStatusSuggestion

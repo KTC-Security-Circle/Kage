@@ -120,7 +120,6 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             overdue_task_count=len(task_app.list_by_status(TaskStatus.OVERDUE)),
             progress_summary="",  # 未使用
             user_name=user_name,
-            final_response="",
         )
 
     def _generate_with_agent(
@@ -129,7 +128,9 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     ) -> str:
         thread_id = str(uuid4())
         result = self._agent.invoke(cast("OneLinerState", state), thread_id)
-        if not result or not getattr(result, "response", ""):
+        from agents.base import AgentError
+
+        if isinstance(result, AgentError) or not getattr(result, "response", ""):
             logger.warning("OneLinerAgent が期待する応答を返しませんでした。デフォルトに置換します。")
             return self._get_default_message()
         return cast("str", result.response)  # type: ignore[attr-defined]

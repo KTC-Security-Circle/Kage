@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, cast
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
-from agents.base import BaseAgent, ErrorAgentOutput, KwargsAny
+from agents.base import AgentError, BaseAgent, KwargsAny
 from agents.task_agents.memo_to_task.prompt import (
     classification_prompt,
     project_plan_prompt,
@@ -32,7 +32,7 @@ from agents.task_agents.memo_to_task.schema import (
     TaskPriority,
     TaskRoute,
 )
-from agents.task_agents.memo_to_task.state import MemoToTaskState
+from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
 from agents.utils import LLMProvider, agents_logger
 
 if TYPE_CHECKING:
@@ -150,7 +150,7 @@ _FAKE_SCHEMA_FACTORIES: dict[type[BaseModel], Callable[[dict[str, object]], Base
 }
 
 
-class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
+class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
     """メモから TaskDraft を抽出するエージェント。"""
 
     _name = "MemoToTaskAgent"
@@ -242,6 +242,48 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
         return graph_builder
 
+    def _create_return_response(
+        self, final_response: dict[str, KwargsAny] | KwargsAny
+    ) -> MemoToTaskResult | AgentError:
+        """レスポンスをReturnTypeに変換するメソッド.
+
+        Args:
+            final_response (dict[str, Any] | Any): グラフからの生のレスポンス
+
+        Returns:
+            ReturnType: 変換されたレスポンス
+        """
+        # BaseAgent は互換抽出を行わないため、ここで辞書から取り出す
+        if isinstance(final_response, dict):
+            # エラーが state に格納されていれば優先的に返す
+            err = final_response.get("error")
+            if isinstance(err, AgentError):
+                return err
+            # フォールバック: 状態辞書から最終出力を再構築する
+            tasks = final_response.get("routed_tasks") or []
+            suggested = final_response.get("suggested_status") or ("idea" if not tasks else "active")
+            try:
+                rebuilt = MemoToTaskAgentOutput(tasks=tasks, suggested_memo_status=suggested)
+            except Exception:
+                rebuilt = None
+            if rebuilt is not None:
+                final_response = rebuilt
+        if isinstance(final_response, MemoToTaskAgentOutput):
+            return MemoToTaskResult(
+                tasks=final_response.tasks,
+                suggested_memo_status=final_response.suggested_memo_status,
+                processed_data=self._state,
+            )
+        if isinstance(final_response, AgentError):
+            return final_response
+        return AgentError("Invalid final response format")
+
+    # 互換: 旧テストが monkeypatch するフック。デフォルトは None を返す。
+    def _create_agent(self) -> RunnableSerializable | None:  # pragma: no cover - 互換用
+        return None
+
+    # 旧互換エントリは撤去済み
+
     def _get_structured_runner(
         self,
         attr_name: str,
@@ -313,7 +355,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         schema: type[BaseModel],
         base_params: dict[str, object],
         retry_hint: str,
-    ) -> BaseModel | ErrorAgentOutput:
+    ) -> BaseModel | AgentError:
         """構造化出力の検証に失敗した場合に限り、1回だけ再試行する。
 
         1回目は `retry_hint` を空にして実行し、スキーマ検証に通れば返す。
@@ -341,21 +383,21 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         second = runner.invoke(second_params)
         return self.validate_output(second, schema)
 
-    def _repair_classification_response(
+    def _repair_classification_response(  # noqa: C901
         self,
         raw_response: object,
-    ) -> MemoClassification | ErrorAgentOutput:
-        """メモ分類の非整合な出力を、可能な範囲で補正して復元する。
+    ) -> MemoClassification | AgentError:
+        """メモ分類の非整合な出力を可能な範囲で補正して復元する。
 
         LLMの出力が `MemoClassification` に合致しない場合でも、辞書形状から
         意図を推定し、`decision` や `project_title` を補うなどのヒューリスティクスで
-        復旧を試みる。最終的にスキーマ検証が通らなければ `ErrorAgentOutput` を返す。
+        復旧を試みる。最終的にスキーマ検証が通らなければ `AgentError` を返す。
 
         Args:
             raw_response: LLM等から受け取った生の分類出力
 
         Returns:
-            復旧済みの `MemoClassification` もしくは `ErrorAgentOutput`
+            復旧済みの `MemoClassification` もしくは `AgentError`
         """
         if isinstance(raw_response, MemoClassification):
             return raw_response
@@ -399,7 +441,11 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                     classification.decision,
                 )
                 return classification
-        return self.validate_output(raw_response, MemoClassification)
+        validated = self.validate_output(raw_response, MemoClassification)
+        if isinstance(validated, (MemoClassification, AgentError)):
+            return validated
+        # ErrorAgentOutput の場合はメッセージを AgentError に変換
+        return AgentError(getattr(validated, "message", "classification validation failed"))
 
     @staticmethod
     def _infer_decision_from_reason(reason: object) -> MemoProcessingDecision | None:
@@ -429,7 +475,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
         Returns:
             次ノードに必要なフラグと `classification` を含む辞書。
-            検証失敗時は `error_output` を含む。
+            検証失敗時は `error` を含む。
         """
         runner = self._get_structured_runner("_classifier_runner", classification_prompt, MemoClassification)
         response = runner.invoke(
@@ -453,7 +499,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                 update["requires_action"] = False
                 update["suggested_status"] = "idea"
             return update
-        return {"error_output": classification}
+        return {"error": classification}
 
     def _handle_idea(self, state: MemoToTaskState) -> dict[str, object]:
         """アイデア扱いのメモをそのまま保持する。
@@ -482,7 +528,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
         Returns:
             `project_plan` と `routed_tasks`、`suggested_status` を含む辞書。
-            検証失敗時は `error_output` を含む。
+            検証失敗時は `error` を含む。
         """
         classification = state.get("classification")
         if not isinstance(classification, MemoClassification):
@@ -513,7 +559,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                     second = runner.invoke({**base_params, "retry_hint": retry_hint})
                     suggestion3 = self.validate_output(second, ProjectPlanSuggestion)
                     if not isinstance(suggestion3, ProjectPlanSuggestion):
-                        return {"error_output": suggestion3}
+                        return {"error": suggestion3}
                     suggestion = suggestion3
             else:
                 # 直接リトライ
@@ -525,7 +571,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                 second = runner.invoke({**base_params, "retry_hint": retry_hint})
                 suggestion2 = self.validate_output(second, ProjectPlanSuggestion)
                 if not isinstance(suggestion2, ProjectPlanSuggestion):
-                    return {"error_output": suggestion2}
+                    return {"error": suggestion2}
                 suggestion = suggestion2
 
         tasks: list[TaskDraft] = []
@@ -618,7 +664,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
             state: 現在のメモ処理状態
 
         Returns:
-            `task_seed` を含む辞書。検証失敗時は `error_output` を返す。
+            `task_seed` を含む辞書。検証失敗時は `error` を返す。
         """
         params = {
             "memo_text": state["memo_text"],
@@ -632,7 +678,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         seed = self._invoke_schema_with_retry("_task_seed_runner", task_seed_prompt, TaskDraftSeed, params, hint)
         if isinstance(seed, TaskDraftSeed):
             return {"task_seed": seed, "requires_action": True, "suggested_status": "active"}
-        return {"error_output": seed}
+        return {"error": seed}
 
     def _evaluate_quick_action(self, state: MemoToTaskState) -> dict[str, object]:
         """タスクが数分で終わる「クイックアクション」かを判定する。
@@ -645,7 +691,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
         Returns:
             `quick_assessment` と `is_quick_action` を含む辞書。
-            検証失敗時は `error_output` を返す。
+            検証失敗時は `error` を返す。
         """
         task_context = self._get_task_context(state)
         hint = (
@@ -664,7 +710,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                 "quick_assessment": assessment,
                 "is_quick_action": assessment.is_quick_action,
             }
-        return {"error_output": assessment}
+        return {"error": assessment}
 
     def _apply_quick_action(self, state: MemoToTaskState) -> dict[str, object]:
         """クイックアクションとして実行可能なタスクの案を確定する。"""
@@ -689,7 +735,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                 "responsibility_assessment": assessment,
                 "should_delegate": assessment.should_delegate,
             }
-        return {"error_output": assessment}
+        return {"error": assessment}
 
     def _apply_delegate(self, state: MemoToTaskState) -> dict[str, object]:
         """委譲が適切なタスクとして、`waiting` ルートに割り当てる。"""
@@ -716,7 +762,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                 "schedule_assessment": assessment,
                 "requires_specific_date": assessment.requires_specific_date,
             }
-        return {"error_output": assessment}
+        return {"error": assessment}
 
     def _apply_schedule(self, state: MemoToTaskState) -> dict[str, object]:
         """期日ベースのタスクとして `calendar` ルートに割り当てる。"""
@@ -808,8 +854,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
 
     def _route_after_classification(self, state: MemoToTaskState) -> str:
         """分類結果とエラー有無に基づき、次のノード名を返す。"""
-        error_output = state.get("error_output")
-        if isinstance(error_output, ErrorAgentOutput):
+        error_output = state.get("error")
+        if isinstance(error_output, AgentError):
             return "finalize_response"
         classification = state.get("classification")
         if not isinstance(classification, MemoClassification):
@@ -832,7 +878,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
         """期日必要性の真偽で分岐を返す。"""
         return "apply_schedule" if state.get("requires_specific_date") else "prepare_next_action"
 
-    def _finalize_response(self, state: MemoToTaskState) -> dict[str, MemoToTaskAgentOutput | ErrorAgentOutput]:
+    def _finalize_response(self, state: MemoToTaskState) -> dict[str, object]:
         """最終出力 `MemoToTaskAgentOutput` を組み立てて返す。
 
         - 途中で `error_output` が設定されていればそれを返す
@@ -843,11 +889,11 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
             state: 現在のメモ処理状態
 
         Returns:
-            `final_response` キーに最終出力またはエラーを入れた辞書
+            エラー時は {"error": AgentError}、正常時は {"routed_tasks": [...], "suggested_status": str}
         """
-        error_output = state.get("error_output")
-        if isinstance(error_output, ErrorAgentOutput):
-            return {"final_response": error_output}
+        error_output = state.get("error")
+        if isinstance(error_output, AgentError):
+            return {"error": error_output}
 
         tasks = state.get("routed_tasks") or []
         cleaned_tasks = [self._clean_task(task, state) for task in tasks]
@@ -860,10 +906,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
             else:
                 suggested_status = "active" if cleaned_tasks else "clarify"
 
-        final_output = MemoToTaskAgentOutput(
-            tasks=cleaned_tasks,
-            suggested_memo_status=suggested_status,
-        )
+        # ここで最終出力モデルは生成可能だが、stateに戻すのは最低限の情報に留める
+        # （上位の _create_return_response で型付き出力へ変換する）
 
         # [AI GENERATED] テスト用途: フラグが有効なら永続化を実行
         try:
@@ -872,7 +916,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskAgentOutput]):
                 agents_logger.info("Persisted tasks via Tool: {}", created_ids)
         except Exception as _exc:  # pragma: no cover - safety guard for local runs
             agents_logger.exception("Persisting tasks failed: {}", str(_exc))
-        return {"final_response": final_output}
+        # final_response を廃止し、最終的に必要なキーだけ返す
+        return {"routed_tasks": cleaned_tasks, "suggested_status": suggested_status}
 
     def _persist_tasks_via_app(self, tasks: list[TaskDraft]) -> list[str]:
         """Application Service 経由でタスクを永続化する（簡易版）。
@@ -1006,7 +1051,6 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
                 "memo_text": "Slackで田中さんに承認状況を確認するメッセージを送る。",
                 "existing_tags": ["連絡", "フォロー"],
                 "current_datetime_iso": current_datetime,
-                "final_response": "",
             },
         ),
         (
@@ -1017,7 +1061,6 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
                 ),
                 "existing_tags": ["プロジェクト", "マーケティング"],
                 "current_datetime_iso": current_datetime,
-                "final_response": "",
             },
         ),
     ]
@@ -1031,11 +1074,15 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
         state_payload = deepcopy(sample_state)
         agents_logger.info("=== Scenario: {} ===", label)
         result = agent.invoke(state_payload, scenario_thread_id)
-        if result:
+        if isinstance(result, AgentError):
+            agents_logger.error("Assistant({}) Error: {}", label, str(result))
+        else:
+            payload = {
+                "tasks": [t.model_dump(mode="json") for t in result.tasks],
+                "suggested_memo_status": result.suggested_memo_status,
+            }
             agents_logger.info(
                 "Assistant({}): {}",
                 label,
-                json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2),
+                json.dumps(payload, ensure_ascii=False, indent=2),
             )
-        else:
-            agents_logger.warning("Assistant({}): No response returned", label)

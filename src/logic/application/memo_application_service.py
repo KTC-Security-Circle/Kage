@@ -11,7 +11,6 @@ from uuid import uuid4
 
 from loguru import logger
 
-from agents.base import ErrorAgentOutput
 from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
 from logic.services.memo_service import MemoService
@@ -24,9 +23,10 @@ if TYPE_CHECKING:
     import uuid
 
     from agents.agent_conf import LLMProvider
+    from agents.base import AgentError
     from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
     from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
-    from agents.task_agents.memo_to_task.state import MemoToTaskState
+    from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
 
 logger_msg = "{msg} - (ID={memo_id})"
 
@@ -184,20 +184,26 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             "memo_text": memo_text,
             "existing_tags": existing_tags,
             "current_datetime_iso": self._current_datetime_iso(),
-            "final_response": "",
         }
 
         response = self._invoke_memo_to_task_agent(state)
         if response is None:
             msg = "memo_to_taskエージェントから応答を取得できませんでした"
             raise MemoApplicationError(msg)
-        if isinstance(response, ErrorAgentOutput):
-            msg = f"memo_to_taskエージェントがエラーを返しました: {response.message}"
+        # 新契約: dataclass 結果 or AgentError
+        from agents.base import AgentError
+        from agents.task_agents.memo_to_task.state import MemoToTaskResult
+
+        if isinstance(response, AgentError):
+            msg = f"memo_to_taskエージェントがエラーを返しました: {response}"
             raise MemoApplicationError(msg)
-        if not isinstance(response, OutputModel):
-            msg = "memo_to_taskエージェントの応答形式が不正です"
-            raise MemoApplicationError(msg)
-        return response
+        if isinstance(response, MemoToTaskResult):
+            return OutputModel(tasks=response.tasks, suggested_memo_status=response.suggested_memo_status)
+        # 互換: テストが直接 OutputModel を返すようにモンキーパッチする場合を許容
+        if isinstance(response, OutputModel):
+            return response
+        msg = "memo_to_taskエージェントの応答形式が不正です"
+        raise MemoApplicationError(msg)
 
     def generate_tasks_from_memo(self, memo_text: str) -> list[TaskDraft]:
         """メモ本文からタスク案だけを抽出する。
@@ -236,7 +242,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     def _invoke_memo_to_task_agent(
         self,
         state: MemoToTaskState,
-    ) -> MemoToTaskAgentOutput | ErrorAgentOutput | None:
+    ) -> MemoToTaskResult | AgentError | None:
         """エージェントを実行し応答を取得する。"""
         agent = self._get_memo_to_task_agent()
         thread_id = str(uuid4())

@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from agents.base import ErrorAgentOutput
+from agents.base import AgentError
 from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
 from agents.task_agents.memo_to_task.state import MemoToTaskState
 from logic.application.memo_application_service import (
@@ -226,12 +226,12 @@ class TestMemoApplicationService:
 
         monkeypatch.setattr(MemoApplicationService, "_collect_existing_tag_names", lambda _self: [])
 
-        error_response = ErrorAgentOutput(message="failure", raw="err")
+        error_response = AgentError("failure")
 
         def _fake_invoke_error(
             self: MemoApplicationService,
             _state: MemoToTaskState,
-        ) -> ErrorAgentOutput:
+        ) -> AgentError:
             return error_response
 
         monkeypatch.setattr(MemoApplicationService, "_invoke_memo_to_task_agent", _fake_invoke_error)

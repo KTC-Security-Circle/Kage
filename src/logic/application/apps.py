@@ -7,6 +7,9 @@ from typing import Any, TypeVar, cast
 from loguru import logger
 
 from logic.application.memo_application_service import MemoApplicationService
+from logic.application.memo_to_task_application_service import (
+    MemoToTaskApplicationService,
+)
 from logic.application.one_liner_application_service import OneLinerApplicationService
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.tag_application_service import TagApplicationService
@@ -18,6 +21,36 @@ _S = TypeVar("_S")
 
 class ApplicationServicesError(Exception):
     """ApplicationServicesコンテナで発生するエラー。"""
+
+
+@dataclass
+class TestApplicationManager:
+    """テスト用のApplication Serviceマネージャ。
+
+    テスト時に特定のApplication Serviceインスタンスを差し替えるために使用します。
+    """
+
+    memo: MemoApplicationService | None
+    project: ProjectApplicationService | None
+    tag: TagApplicationService | None
+    task: TaskApplicationService | None
+    one_liner: OneLinerApplicationService | None
+    memo_to_task: MemoToTaskApplicationService | None
+
+    def register_cache(self, cache: dict[type[Any], Any]) -> None:
+        """キャッシュ辞書に登録する。"""
+        if self.memo is not None:
+            cache[MemoApplicationService] = self.memo
+        if self.project is not None:
+            cache[ProjectApplicationService] = self.project
+        if self.tag is not None:
+            cache[TagApplicationService] = self.tag
+        if self.task is not None:
+            cache[TaskApplicationService] = self.task
+        if self.one_liner is not None:
+            cache[OneLinerApplicationService] = self.one_liner
+        if self.memo_to_task is not None:
+            cache[MemoToTaskApplicationService] = self.memo_to_task
 
 
 @dataclass
@@ -42,10 +75,12 @@ class ApplicationServices:
 
     # ---------- Factory ----------
     @classmethod
-    def create(
+    def create(  # noqa: PLR0913
         cls,
         *,
         unit_of_work_factory: type[UnitOfWork] = SqlModelUnitOfWork,
+        manager: TestApplicationManager | None = None,
+        # 互換: 直接サービスを注入できるキーワード引数（テスト用）
         memo: MemoApplicationService | None = None,
         project: ProjectApplicationService | None = None,
         tag: TagApplicationService | None = None,
@@ -56,16 +91,22 @@ class ApplicationServices:
 
         Args:
             unit_of_work_factory: UoWファクトリ（既定はSqlModelUnitOfWork）
-            memo: テストや差し替え用のMemoApplicationServiceインスタンス
-            project: 同上（ProjectApplicationService）
-            tag: 同上（TagApplicationService）
-            task: 同上（TaskApplicationService）
-            one_liner: 同上（OneLinerApplicationService）
+            manager: テスト用マネージャ（既定はNone）
+            memo: 直接注入するMemoApplicationService（テスト用オプション）
+            project: 直接注入するProjectApplicationService（テスト用オプション）
+            tag: 直接注入するTagApplicationService（テスト用オプション）
+            task: 直接注入するTaskApplicationService（テスト用オプション）
+            one_liner: 直接注入するOneLinerApplicationService（テスト用オプション）
 
         Returns:
             ApplicationServices: 構築済みコンテナ
         """
         cache: dict[type[Any], Any] = {}
+
+        if manager is not None:
+            manager.register_cache(cache)
+
+        # 直接注入されたサービスをキャッシュへ登録
         if memo is not None:
             cache[MemoApplicationService] = memo
         if project is not None:
@@ -214,3 +255,8 @@ class ApplicationServices:
     def one_liner(self) -> OneLinerApplicationService:
         """OneLinerサービスを取得。"""
         return self.get_service(OneLinerApplicationService)
+
+    @property
+    def memo_to_task(self) -> MemoToTaskApplicationService:
+        """MemoToTaskサービスを取得。"""
+        return self.get_service(MemoToTaskApplicationService)

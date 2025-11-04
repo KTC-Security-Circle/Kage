@@ -23,6 +23,19 @@ def test_memo_to_task_handles_non_actionable(thread_id: str) -> None:
     assert result.suggested_memo_status == "idea"
 
 
+def test_memo_to_task_handles_empty_memo(thread_id: str) -> None:
+    """空メモでもFAKEシード生成が失敗せずデフォルトタイトルでタスク化される。"""
+    agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=False, error_response=False)
+    state = _build_state("")
+
+    result = agent.invoke(state, thread_id)
+
+    assert isinstance(result, MemoToTaskResult)
+    assert result.tasks, "タスクが1件以上生成されること"
+    assert result.tasks[0].title == "メモの整理"
+    assert result.suggested_memo_status == "active"
+
+
 def test_memo_to_task_routes_quick_action(thread_id: str) -> None:
     """タイトルに「確認」を含むとクイックアクションとして progress にルーティングされる。"""
     agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=False, error_response=False)
@@ -54,6 +67,21 @@ def test_memo_to_task_schedules_calendar(thread_id: str) -> None:
     agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=False, error_response=False)
     current_datetime = "2025-11-01T09:00:00+09:00"
     state = _build_state("会議の準備メモ", current_datetime)
+
+    result = agent.invoke(state, thread_id)
+
+    assert isinstance(result, MemoToTaskResult)
+    assert result.tasks, "タスクが1件以上生成されること"
+    assert result.tasks[0].route == "calendar"
+    assert result.tasks[0].due_date == current_datetime
+    assert result.suggested_memo_status == "active"
+
+
+def test_memo_to_task_keeps_utc_z_due_date(thread_id: str) -> None:
+    """UTCのZ付きISO8601期日がサニタイズで破棄されない。"""
+    agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=False, error_response=False)
+    current_datetime = "2025-03-10T09:00:00Z"
+    state = _build_state("会議の予定を整理する", current_datetime)
 
     result = agent.invoke(state, thread_id)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -39,9 +40,7 @@ class TaskDraft(BaseModel):
             return None
 
         try:
-            from datetime import datetime
-
-            datetime.fromisoformat(text)
+            _ensure_iso8601(text)
         except ValueError as exc:
             msg = "due_date には ISO8601 形式の文字列を指定してください。"
             raise ValueError(msg) from exc
@@ -100,3 +99,26 @@ class ProjectPlanSuggestion(BaseModel):
 
     project_title: str = Field(description="推奨されるプロジェクト名称")
     next_actions: list[TaskDraft] = Field(description="直近で着手すべきタスク候補一覧")
+
+
+def _ensure_iso8601(value: str) -> None:
+    """与えられた文字列が ISO8601 として解釈できるか検証する。"""
+    normalized = _normalize_iso8601(value)
+    datetime.fromisoformat(normalized)
+
+
+def _normalize_iso8601(value: str) -> str:
+    """`datetime.fromisoformat` が読み取れる形式に補正した文字列を返す。"""
+    text = value.strip()
+    if text.endswith(("Z", "z")):
+        return f"{text[:-1]}+00:00"
+    return text
+
+
+def is_iso8601_string(value: str) -> bool:
+    """ISO8601として解釈できる場合に True を返す。"""
+    try:
+        _ensure_iso8601(value)
+    except ValueError:
+        return False
+    return True

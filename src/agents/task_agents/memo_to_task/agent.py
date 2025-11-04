@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
 from itertools import chain
 from typing import TYPE_CHECKING, cast
 
@@ -31,6 +30,7 @@ from agents.task_agents.memo_to_task.schema import (
     TaskDraftSeed,
     TaskPriority,
     TaskRoute,
+    is_iso8601_string,
 )
 from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
 from agents.utils import LLMProvider, agents_logger
@@ -100,8 +100,11 @@ def _fake_classification_factory(params: dict[str, object]) -> MemoClassificatio
 
 def _fake_seed_factory(params: dict[str, object]) -> TaskDraftSeed:
     memo_text = str(params.get("memo_text", ""))
-    title = memo_text.splitlines()[0][:30] or "メモの整理"
-    description = memo_text[:120] if memo_text else None
+    stripped_text = memo_text.strip()
+    lines = [line for line in memo_text.splitlines() if line.strip()]
+    first_line = lines[0] if lines else stripped_text
+    title = first_line[:30] if first_line else "メモの整理"
+    description = memo_text[:120] if stripped_text else None
     return TaskDraftSeed(title=title, description=description, tags=None)
 
 
@@ -600,12 +603,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
     @staticmethod
     def _is_valid_iso8601(value: str) -> bool:
         """与えられた文字列が `datetime.fromisoformat` で解釈可能か判定する。"""
-        try:
-            datetime.fromisoformat(value)
-        except ValueError:
-            return False
-        else:
-            return True
+        return is_iso8601_string(value)
 
     def _sanitize_project_plan_payload(self, raw: object) -> object:
         """LLMの出力（辞書想定）から、検証で弾かれる可能性の高い箇所をサニタイズする。
@@ -1063,10 +1061,26 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
                 "current_datetime_iso": current_datetime,
             },
         ),
+        (
+            "idea_handling",
+            {
+                "memo_text": "次の週末に家族とピクニックに行くアイデアを考える。",
+                "existing_tags": ["プライベート", "アイデア"],
+                "current_datetime_iso": current_datetime,
+            },
+        ),
+        (
+            "task_with_schedule",
+            {
+                "memo_text": "来週の月曜日までにクライアントへの提案書を作成する。",
+                "existing_tags": ["仕事", "提案書"],
+                "current_datetime_iso": current_datetime,
+            },
+        ),
     ]
     # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）
     # 必要に応じて下記のラベル配列を書き換えて、1件ずつ確認してください。
-    selected_labels = ["quick_action"]  # 例: ["project_planning"] に変更
+    selected_labels = ["task_with_schedule"]  # 例: ["project_planning"] に変更
     sample_inputs = [item for item in all_samples if item[0] in selected_labels]
 
     for label, sample_state in sample_inputs:

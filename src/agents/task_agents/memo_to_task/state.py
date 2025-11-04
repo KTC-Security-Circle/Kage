@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import NotRequired
+from typing import TYPE_CHECKING, NotRequired
 
+import models
 from agents.base import AgentError, BaseAgentResponse, BaseAgentState
 from agents.task_agents.memo_to_task.schema import (  # noqa: TC001
     MemoClassification,
@@ -18,12 +19,17 @@ from agents.task_agents.memo_to_task.schema import (  # noqa: TC001
     TaskDraftSeed,
 )
 
+if TYPE_CHECKING:
+    from models import MemoRead
+else:  # pragma: no cover - runtime annotation support
+    MemoRead = models.MemoRead
+
 
 class MemoToTaskState(BaseAgentState):
     """メモ解析に必要な入力情報。"""
 
-    memo_text: str
-    """ユーザーが入力したメモ本文。"""
+    memo: MemoRead
+    """解析対象のメモ情報。"""
 
     existing_tags: list[str]
     """既存タグ名の一覧。タグ推定はこの集合内でのみ行う。"""

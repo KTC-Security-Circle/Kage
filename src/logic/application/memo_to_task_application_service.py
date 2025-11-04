@@ -2,7 +2,7 @@
 
 `agents.task_agents.memo_to_task.MemoToTaskAgent` をアプリケーション層から直接扱うサービス。
 
-利用側は `MemoToTaskApplicationService.clarify_memo(memo_text)` を呼ぶだけで、
+利用側は `MemoToTaskApplicationService.clarify_memo(memo)` を呼ぶだけで、
 内部で既存タグの収集や現在時刻(ISO8601)の組み立てなどのコンテキスト準備を行い、
 エージェントの応答(`MemoToTaskAgentOutput`)を返します。
 
@@ -22,6 +22,7 @@ from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskSt
 from errors import ApplicationError
 from logic.application.base import BaseApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
+from models import MemoRead
 from settings.manager import get_config_manager
 
 
@@ -56,11 +57,11 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
     def get_instance(cls, *args: Any, **kwargs: Any) -> MemoToTaskApplicationService: ...
 
     # Public API ---------------------------------------------------------
-    def clarify_memo(self, memo_text: str) -> MemoToTaskAgentOutput:
+    def clarify_memo(self, memo: MemoRead) -> MemoToTaskAgentOutput:
         """自由記述メモを解析し、タスク候補とメモ状態の提案を返す。
 
         Args:
-            memo_text: ユーザーが入力したメモ本文
+            memo: 解析対象のメモ情報
 
         Returns:
             MemoToTaskAgentOutput: 推定タスクとメモ状態の提案
@@ -70,11 +71,12 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         )
 
         # 空入力は Clarify 継続を提案
-        if not memo_text.strip():
+        memo_content = getattr(memo, "content", "")
+        if not str(memo_content).strip():
             return OutputModel(tasks=[], suggested_memo_status="clarify")
 
         state: MemoToTaskState = {
-            "memo_text": memo_text,
+            "memo": memo,
             "existing_tags": self._collect_existing_tag_names(),
             "current_datetime_iso": self._current_datetime_iso(),
         }
@@ -94,9 +96,9 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         msg_invalid = "エージェント応答の型が不正です"
         raise MemoToTaskServiceError(msg_invalid)
 
-    def generate_tasks_from_memo(self, memo_text: str) -> list[TaskDraft]:
+    def generate_tasks_from_memo(self, memo: MemoRead) -> list[TaskDraft]:
         """メモ本文からタスク案だけを抽出するヘルパー。"""
-        output = self.clarify_memo(memo_text)
+        output = self.clarify_memo(memo)
         return list(output.tasks)
 
     # Internal helpers --------------------------------------------------
@@ -144,6 +146,7 @@ if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
     from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
     from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
     from agents.task_agents.memo_to_task.state import MemoToTaskState
+    from models import MemoRead
 
 __all__ = [
     "MemoToTaskApplicationService",

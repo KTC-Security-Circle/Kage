@@ -162,11 +162,11 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.get_all(with_details=with_details)
 
-    def clarify_memo(self, memo_text: str) -> MemoToTaskAgentOutput:
+    def clarify_memo(self, memo: MemoRead) -> MemoToTaskAgentOutput:
         """自由記述メモを解析し、タスク候補とメモ状態の提案を返す。
 
         Args:
-            memo_text: ユーザーが入力したメモ本文
+            memo: 解析対象のメモ情報
 
         Returns:
             MemoToTaskAgentOutput: 推定タスクとメモ状態の提案
@@ -176,12 +176,13 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         """
         from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput as OutputModel
 
-        if not memo_text.strip():
+        memo_content = getattr(memo, "content", "")
+        if not str(memo_content).strip():
             return OutputModel(tasks=[], suggested_memo_status="clarify")
 
         existing_tags = self._collect_existing_tag_names()
         state: MemoToTaskState = {
-            "memo_text": memo_text,
+            "memo": memo,
             "existing_tags": existing_tags,
             "current_datetime_iso": self._current_datetime_iso(),
         }
@@ -205,16 +206,16 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         msg = "memo_to_taskエージェントの応答形式が不正です"
         raise MemoApplicationError(msg)
 
-    def generate_tasks_from_memo(self, memo_text: str) -> list[TaskDraft]:
+    def generate_tasks_from_memo(self, memo: MemoRead) -> list[TaskDraft]:
         """メモ本文からタスク案だけを抽出する。
 
         Args:
-            memo_text: ユーザーが入力したメモ本文
+            memo: 解析対象のメモ情報
 
         Returns:
             list[TaskDraft]: 抽出されたタスク案のリスト
         """
-        result = self.clarify_memo(memo_text)
+        result = self.clarify_memo(memo)
         return list(result.tasks)
 
     def _collect_existing_tag_names(self) -> list[str]:

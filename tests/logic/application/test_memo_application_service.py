@@ -178,7 +178,9 @@ class TestMemoApplicationService:
 
         monkeypatch.setattr(MemoApplicationService, "_collect_existing_tag_names", lambda _self: [])
 
-        result = memo_app_service.clarify_memo("   ")
+        empty_memo = MemoRead(id=uuid.uuid4(), title="空メモ", content="   ", status=MemoStatus.INBOX)
+
+        result = memo_app_service.clarify_memo(empty_memo)
 
         assert result.tasks == []
         assert result.suggested_memo_status == "clarify"
@@ -192,6 +194,13 @@ class TestMemoApplicationService:
 
         existing_tags = ["レポート", "買い物"]
         monkeypatch.setattr(MemoApplicationService, "_collect_existing_tag_names", lambda _self: existing_tags)
+
+        memo = MemoRead(
+            id=uuid.uuid4(),
+            title="レポート整理",
+            content="レポートをまとめる",
+            status=MemoStatus.INBOX,
+        )
 
         agent_output = MemoToTaskAgentOutput(
             tasks=[
@@ -207,11 +216,13 @@ class TestMemoApplicationService:
         )
 
         def _fake_invoke(self: MemoApplicationService, _state: MemoToTaskState) -> MemoToTaskAgentOutput:
+            assert _state["memo"] is memo
+            assert getattr(_state["memo"], "title", "") == memo.title
             return agent_output
 
         monkeypatch.setattr(MemoApplicationService, "_invoke_memo_to_task_agent", _fake_invoke)
 
-        result = memo_app_service.clarify_memo("レポートをまとめる")
+        result = memo_app_service.clarify_memo(memo)
 
         assert result.suggested_memo_status == "active"
         assert result.tasks[0].due_date == "2025-11-10"
@@ -236,8 +247,15 @@ class TestMemoApplicationService:
 
         monkeypatch.setattr(MemoApplicationService, "_invoke_memo_to_task_agent", _fake_invoke_error)
 
+        failing_memo = MemoRead(
+            id=uuid.uuid4(),
+            title="エラーになる入力",
+            content="エラーになる入力",
+            status=MemoStatus.INBOX,
+        )
+
         with pytest.raises(MemoApplicationError):
-            memo_app_service.clarify_memo("エラーになる入力")
+            memo_app_service.clarify_memo(failing_memo)
 
     def test_generate_tasks_from_memo_returns_only_task_list(
         self,
@@ -257,10 +275,12 @@ class TestMemoApplicationService:
         monkeypatch.setattr(
             MemoApplicationService,
             "clarify_memo",
-            lambda _self, _memo_text: agent_output,
+            lambda _self, _memo: agent_output,
         )
 
-        tasks = memo_app_service.generate_tasks_from_memo("買い物リスト")
+        memo = MemoRead(id=uuid.uuid4(), title="買い物リスト", content="買い物リスト", status=MemoStatus.INBOX)
+
+        tasks = memo_app_service.generate_tasks_from_memo(memo)
 
         assert tasks == agent_output.tasks
         assert tasks is not agent_output.tasks

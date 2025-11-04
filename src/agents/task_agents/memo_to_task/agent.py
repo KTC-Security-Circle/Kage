@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from langchain_core.runnables import RunnableSerializable
     from pydantic import BaseModel
 
+    from models import MemoRead
+
 
 QUICK_ACTION_THRESHOLD_MINUTES = 2
 
@@ -351,6 +353,35 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
 
         return cast("RunnableSerializable", _FakeRunner(factory))
 
+    def _get_memo_context(self, state: MemoToTaskState) -> tuple[MemoRead | object, str, dict[str, str]]:
+        """状態からメモ本文とメタデータを抽出する。"""
+        memo = state.get("memo")
+        memo_text = ""
+        meta = {
+            "memo_id": "",
+            "memo_title": "",
+            "memo_status": "",
+        }
+
+        if memo is None:
+            return memo, memo_text, meta
+
+        content = getattr(memo, "content", "")
+        memo_text = str(content or "")
+
+        memo_id = getattr(memo, "id", None)
+        if memo_id:
+            meta["memo_id"] = str(memo_id)
+
+        title = getattr(memo, "title", "")
+        meta["memo_title"] = str(title or "")
+
+        status = getattr(memo, "status", "")
+        status_value = getattr(status, "value", status)
+        meta["memo_status"] = str(status_value or "")
+
+        return memo, memo_text, meta
+
     def _invoke_schema_with_retry(
         self,
         runner_attr: str,
@@ -480,10 +511,12 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             次ノードに必要なフラグと `classification` を含む辞書。
             検証失敗時は `error` を含む。
         """
+        _, memo_text, memo_meta = self._get_memo_context(state)
         runner = self._get_structured_runner("_classifier_runner", classification_prompt, MemoClassification)
         response = runner.invoke(
             {
-                "memo_text": state["memo_text"],
+                "memo_text": memo_text,
+                **memo_meta,
                 "existing_tags": state["existing_tags"],
                 "current_datetime_iso": state["current_datetime_iso"],
                 "retry_hint": "",
@@ -536,8 +569,10 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         classification = state.get("classification")
         if not isinstance(classification, MemoClassification):
             return {"routed_tasks": [], "suggested_status": "idea"}
+        _, memo_text, memo_meta = self._get_memo_context(state)
         base_params = {
-            "memo_text": state["memo_text"],
+            "memo_text": memo_text,
+            **memo_meta,
             "existing_tags": state["existing_tags"],
             "current_datetime_iso": state["current_datetime_iso"],
             "project_title_hint": classification.project_title or classification.reason,
@@ -664,8 +699,10 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         Returns:
             `task_seed` を含む辞書。検証失敗時は `error` を返す。
         """
+        _, memo_text, memo_meta = self._get_memo_context(state)
         params = {
-            "memo_text": state["memo_text"],
+            "memo_text": memo_text,
+            **memo_meta,
             "existing_tags": state["existing_tags"],
             "current_datetime_iso": state["current_datetime_iso"],
         }
@@ -780,10 +817,12 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
     def _get_task_context(self, state: MemoToTaskState) -> dict[str, object]:
         """下流の判定で必要となるタスク文脈（タイトル・説明等）を生成する。"""
         task = self._build_task_from_seed(state)
+        _, memo_text, memo_meta = self._get_memo_context(state)
         return {
             "task_title": task.title,
             "task_description": task.description or "",
-            "memo_text": state["memo_text"],
+            "memo_text": memo_text,
+            **memo_meta,
         }
 
     def _build_task_from_seed(self, state: MemoToTaskState, overrides: dict[str, object] | None = None) -> TaskDraft:
@@ -807,13 +846,17 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         classification = classification_obj if isinstance(classification_obj, MemoClassification) else None
         project_title = classification.project_title if classification and classification.project_title else None
 
+        _, memo_text, memo_meta = self._get_memo_context(state)
+
         if seed is not None:
             title = seed.title
             description = seed.description
             tags = list(seed.tags) if seed.tags else None
         else:
-            memo_text = state["memo_text"]
             first_line = memo_text.splitlines()[0].strip() if memo_text else ""
+            if not first_line:
+                memo_title = memo_meta.get("memo_title", "")
+                first_line = str(memo_title).strip()
             fallback_title = first_line[:60] or "未定義タスク"
             title = classification.project_title if classification and classification.project_title else fallback_title
             description = None
@@ -995,7 +1038,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
     def _classify_tags(self, task: TaskDraft, state: MemoToTaskState) -> list[str]:
         """メモ本文/タイトル/説明に基づき、利用可能な既存タグをマッチングする。"""
         available = {tag.lower(): tag for tag in state["existing_tags"]}
-        texts = [state["memo_text"], task.title, task.description or ""]
+        _, memo_text, memo_meta = self._get_memo_context(state)
+        texts = [memo_text, memo_meta.get("memo_title", ""), task.title, task.description or ""]
         from_llm = task.tags or []
         candidates = list(chain(from_llm, available.values()))
 
@@ -1021,6 +1065,7 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
 
     from agents.agent_conf import HuggingFaceModel
     from logging_conf import setup_logger
+    from models import MemoRead, MemoStatus
     from settings.models import EnvSettings
 
     EnvSettings.init_environment()
@@ -1041,41 +1086,48 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
         agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=True, error_response=False, persist_on_finalize=True)
 
     current_datetime = "2025-10-25T10:00:00+09:00"
+
+    def _build_sample_state(content: str, tags: list[str], *, title: str | None = None) -> MemoToTaskState:
+        memo_title = title if title is not None else (content.splitlines()[0].strip() or "サンプルメモ")
+        return {
+            "memo": MemoRead(id=uuid4(), title=memo_title, content=content, status=MemoStatus.INBOX),
+            "existing_tags": tags,
+            "current_datetime_iso": current_datetime,
+        }
+
     # [AI GENERATED] 少数シナリオで手動確認。
     all_samples: list[tuple[str, MemoToTaskState]] = [
         (
             "quick_action",
-            {
-                "memo_text": "Slackで田中さんに承認状況を確認するメッセージを送る。",
-                "existing_tags": ["連絡", "フォロー"],
-                "current_datetime_iso": current_datetime,
-            },
+            _build_sample_state(
+                "Slackで田中さんに承認状況を確認するメッセージを送る。",
+                ["連絡", "フォロー"],
+                title="承認状況の確認",
+            ),
         ),
         (
             "project_planning",
-            {
-                "memo_text": (
-                    "新しいキャンペーンサイトを来月中に公開するためのプロジェクトを立ち上げる。必要なタスクを洗い出す。"
-                ),
-                "existing_tags": ["プロジェクト", "マーケティング"],
-                "current_datetime_iso": current_datetime,
-            },
+            _build_sample_state(
+                "新しいキャンペーンサイトを来月中に公開するためのプロジェクトを立ち上げる。必要なタスクを洗い出す。",
+                ["プロジェクト", "マーケティング"],
+                title="キャンペーンサイト構築",
+            ),
         ),
         (
             "idea_handling",
-            {
-                "memo_text": "次の週末に家族とピクニックに行くアイデアを考える。",
-                "existing_tags": ["プライベート", "アイデア"],
-                "current_datetime_iso": current_datetime,
-            },
+            _build_sample_state(
+                "次の週末に家族とピクニックに行くアイデアを考える。",
+                ["プライベート", "アイデア"],
+                title="週末ピクニック案",
+            ),
         ),
         (
             "task_with_schedule",
-            {
-                "memo_text": "来週の月曜日までにクライアントへの提案書を作成する。",
-                "existing_tags": ["仕事", "提案書"],
-                "current_datetime_iso": current_datetime,
-            },
+            _build_sample_state(
+                "来週の月曜日までにクライアントへの提案書を作成する。",
+                ["仕事", "提案書"],
+                title="提案書作成",
+            ),
         ),
     ]
     # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）

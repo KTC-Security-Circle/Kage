@@ -1,11 +1,21 @@
+import uuid
+
 from agents.agent_conf import LLMProvider
 from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
 from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
+from models import MemoRead, MemoStatus
 
 
 def _build_state(memo_text: str, current_datetime: str = "2025-10-25T10:00:00+09:00") -> MemoToTaskState:
+    title_source = next((line.strip() for line in memo_text.splitlines() if line.strip()), "タイトル未設定")
+    memo = MemoRead(
+        id=uuid.uuid4(),
+        title=title_source,
+        content=memo_text,
+        status=MemoStatus.INBOX,
+    )
     return {
-        "memo_text": memo_text,
+        "memo": memo,
         "existing_tags": ["仕事", "プライベート"],
         "current_datetime_iso": current_datetime,
     }

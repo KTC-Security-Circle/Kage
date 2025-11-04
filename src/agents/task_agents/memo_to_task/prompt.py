@@ -16,7 +16,10 @@ classification_prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            """メモ本文:
+            """メモID: {memo_id}
+メモタイトル: {memo_title}
+メモステータス: {memo_status}
+メモ本文:
 {memo_text}
 
 参考タグ: {existing_tags}
@@ -38,7 +41,10 @@ task_seed_prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            """メモ本文:
+            """メモID: {memo_id}
+メモタイトル: {memo_title}
+メモステータス: {memo_status}
+メモ本文:
 {memo_text}
 
 provided_tags: {existing_tags}
@@ -63,6 +69,9 @@ quick action としてください。
             "human",
             """タスクタイトル: {task_title}
 タスク説明: {task_description}
+メモID: {memo_id}
+メモタイトル: {memo_title}
+メモステータス: {memo_status}
 メモ全文:
 {memo_text}
 
@@ -85,6 +94,9 @@ responsibility_prompt = ChatPromptTemplate.from_messages(
             "human",
             """タスクタイトル: {task_title}
 タスク説明: {task_description}
+メモID: {memo_id}
+メモタイトル: {memo_title}
+メモステータス: {memo_status}
 メモ全文:
 {memo_text}
 
@@ -109,6 +121,9 @@ ISO8601 例: "2025-10-25T10:00:00+09:00"（日時含む）または "2025-10-25"
             "human",
             """タスクタイトル: {task_title}
 タスク説明: {task_description}
+メモID: {memo_id}
+メモタイトル: {memo_title}
+メモステータス: {memo_status}
 メモ全文:
 {memo_text}
 
@@ -134,7 +149,10 @@ route は次のいずれかのみ: "next_action" | "progress" | "waiting" | "cal
         ),
         (
             "human",
-            """メモ本文:
+            """メモID: {memo_id}
+メモタイトル: {memo_title}
+メモステータス: {memo_status}
+メモ本文:
 {memo_text}
 
 参考タグ: {existing_tags}

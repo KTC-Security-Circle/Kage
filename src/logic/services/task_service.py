@@ -224,7 +224,7 @@ class TaskService(ServiceBase):
             by_desc = self.task_repo.search_by_description(query, with_details=with_details)
         except NotFoundError:
             by_desc = []
-        merged: dict | dict[uuid.UUID, Task] = {}
+        merged: dict[uuid.UUID, Task] = {}
         for t in by_title + by_desc:
             if t.id is not None:
                 merged[t.id] = t

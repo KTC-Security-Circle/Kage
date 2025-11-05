@@ -201,3 +201,18 @@ class ProjectService(ServiceBase):
         projects = self.project_repo.list_by_status(status)
         logger.debug(f"ステータス '{status}' のプロジェクトを {len(projects)} 件取得しました。")
         return projects
+
+    @handle_service_errors(SERVICE_NAME, "検索", ProjectServiceError)
+    @convert_read_model(ProjectRead, is_list=True)
+    def search_projects(self, query: str) -> list[Project]:
+        """タイトルでプロジェクトを検索する
+
+        Args:
+            query: 検索クエリ
+
+        Returns:
+            list[ProjectRead]: 検索結果のプロジェクト一覧
+        """
+        projects = self.project_repo.search_by_title(query)
+        logger.debug(f"クエリ '{query}' に一致するプロジェクトを {len(projects)} 件取得しました。")
+        return projects

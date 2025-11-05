@@ -183,3 +183,18 @@ class TestTerminologyApplicationService:
 
         assert count == EXPECTED_CSV_EXPORT_COUNT
         mock_term_service.export_to_csv.assert_called_once()
+
+    def test_search_delegates(
+        self,
+        term_application_service: TerminologyApplicationService,
+        mock_unit_of_work: Mock,
+        sample_term_read: TermRead,
+    ) -> None:
+        mock_term_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_term_service.search.return_value = [sample_term_read]
+
+        out = term_application_service.search(
+            "llm", tags=[uuid.uuid4()], status=TermStatus.APPROVED, include_synonyms=False
+        )
+        assert out == [sample_term_read]
+        mock_term_service.search.assert_called_once()

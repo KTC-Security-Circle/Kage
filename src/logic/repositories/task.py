@@ -7,7 +7,7 @@ from sqlmodel import Session, func, select
 
 from errors import NotFoundError
 from logic.repositories.base import BaseRepository
-from models import Tag, Task, TaskCreate, TaskStatus, TaskUpdate
+from models import Tag, Task, TaskCreate, TaskStatus, TaskTagLink, TaskUpdate
 
 
 class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
@@ -182,6 +182,43 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         """
         stmt = select(Task).where(func.lower(Task.title).like(f"%{title_query.lower()}%"))
 
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)
+
+    def search_by_description(self, description_query: str, *, with_details: bool = False) -> list[Task]:
+        """説明でタスクを検索する
+
+        Args:
+            description_query: 説明の検索クエリ（部分一致・大文字小文字無視）
+            with_details: 関連エンティティを含めるかどうか
+
+        Returns:
+            list[Task]: 指定された条件に一致するタスク一覧
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+        """
+        stmt = select(Task).where(func.lower(Task.description).like(f"%{description_query.lower()}%"))
+
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)
+
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Task]:
+        """指定されたタグが付与されたタスク一覧を取得する
+
+        Args:
+            tag_id: タグID
+            with_details: 関連エンティティを含めるかどうか
+
+        Returns:
+            list[Task]: 指定された条件に一致するタスク一覧
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+        """
+        stmt = select(Task).join(TaskTagLink).join(Tag).where(Tag.id == tag_id)
         if with_details:
             stmt = self._apply_eager_loading(stmt)
         return self._gets_by_statement(stmt)

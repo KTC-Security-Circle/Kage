@@ -185,6 +185,31 @@ class TerminologyApplicationService(BaseApplicationService[type[SqlModelUnitOfWo
             term_service = uow.service_factory.get_service(TerminologyService)
             return term_service.get_all()
 
+    def search(
+        self,
+        query: str | None = None,
+        *,
+        tags: list[uuid.UUID] | None = None,
+        status: TermStatus | None = None,
+        include_synonyms: bool = True,
+    ) -> list[TermRead]:
+        """用語検索
+
+        Serviceのsearchに委譲し、同義語を含めるか等のオプションを指定できる。
+
+        Args:
+            query: 検索クエリ（None可）
+            tags: タグIDのリスト
+            status: ステータスフィルタ
+            include_synonyms: 同義語も検索対象に含めるか
+
+        Returns:
+            list[TermRead]: 検索結果
+        """
+        with self._unit_of_work_factory() as uow:
+            term_service = uow.service_factory.get_service(TerminologyService)
+            return term_service.search(query=query, tags=tags, status=status, include_synonyms=include_synonyms)
+
     # インポート/エクスポート
 
     def import_from_csv(self, file_path: Path | str) -> dict[str, Any]:

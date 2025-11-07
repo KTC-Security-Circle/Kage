@@ -53,11 +53,11 @@ ApplicationServices.invalidate_all()
 Mermaid フロー（概念図）:
 
 ```mermaid
-description LR
-  A[Settings 編集 (UI/CLI)] --> B[保存: YAML / .env]
-  B --> C[ApplicationServices.invalidate_all()]
-  C --> D[サービスキャッシュ破棄]
-  D --> E[次回 get_instance() で再構築]
+flowchart TD
+  A["Settings 編集 (UI/CLI)"] --> B["保存: YAML / .env"]
+  B --> C["ApplicationServices.invalidate_all()"]
+  C --> D["サービスキャッシュ破棄"]
+  D --> E["次回 get_instance() で再構築"]
 ```
 
 ---

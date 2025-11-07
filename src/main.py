@@ -42,7 +42,7 @@ def main(page: ft.Page) -> None:
         font_family="default",
     )
 
-    # 新しいviews_newシステムを使用したルーティング設定
+    # 新しいviewsシステムを使用したルーティング設定
     configure_routes(page)
 
     logger.info("セッションが開始されました。設定適用済み。")

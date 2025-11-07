@@ -1,6 +1,6 @@
 """ページルーティングの管理 - 新Views対応版
 
-Fletのネイティブルーティング機能を活用し、新しいviews_newレイアウトシステムと統合。
+Fletのネイティブルーティング機能を活用し、新しいviewsレイアウトシステムと統合。
 AppBarを使用しない、サイドバーベースのナビゲーション体験を提供する。
 """
 
@@ -23,7 +23,7 @@ def configure_routes(page: ft.Page) -> None:  # type: ignore[name-defined]
         page: Fletのページオブジェクト
 
     Notes:
-        新しいviews_newレイアウトシステムを使用し、
+        新しいviewsレイアウトシステムを使用し、
         build_layout関数でサイドバー統合レイアウトを構築する。
     """
     import flet as ft  # noqa: F401
@@ -75,4 +75,4 @@ def configure_routes(page: ft.Page) -> None:  # type: ignore[name-defined]
     # Navigate to initial route
     page.go(page.route or "/")
 
-    logger.info("New routing system initialized with views_new layout")
+    logger.info("New routing system initialized with views layout")

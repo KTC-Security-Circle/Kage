@@ -44,3 +44,12 @@ class BaseApplicationService[T: type[UnitOfWork] | None]:
         else:
             cls._instance.__init__(*args, **kwargs)
         return cls._instance
+
+    @classmethod
+    def invalidate(cls) -> None:
+        """インスタンスキャッシュを無効化する。
+
+        設定変更などにより再初期化が必要な場合に呼び出し、
+        次回の get_instance() で新規インスタンスが生成されるようにする。
+        """
+        cls._instance = None

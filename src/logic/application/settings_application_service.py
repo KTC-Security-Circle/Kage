@@ -11,6 +11,7 @@ from loguru import logger
 
 from logic.application.base import BaseApplicationService
 from logic.services.settings_service import SettingsService
+from settings.manager import invalidate_config_manager
 
 if TYPE_CHECKING:
     from settings.models import AgentsSettings, AppSettings, DatabaseSettings, UserSettings, WindowSettings
@@ -28,6 +29,15 @@ class SettingsApplicationService(BaseApplicationService[None]):
         """SettingsApplicationServiceの初期化"""
         super().__init__()
         self._settings_service = SettingsService()
+
+    @classmethod
+    def invalidate(cls) -> None:  # type: ignore[override]
+        """共有インスタンスと ConfigManager を無効化する。
+
+        次回 get_instance() で新しい設定マネージャー/サービスが構築される。
+        """
+        invalidate_config_manager()
+        super().invalidate()
 
     def get_all_settings(self) -> AppSettings:
         """全設定取得

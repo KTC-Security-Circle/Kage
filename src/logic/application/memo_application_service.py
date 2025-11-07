@@ -13,11 +13,11 @@ from loguru import logger
 
 from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
+from logic.application.settings_application_service import SettingsApplicationService
 from logic.services.memo_service import MemoService
 from logic.services.tag_service import TagService
 from logic.unit_of_work import SqlModelUnitOfWork
-from models import MemoCreate, MemoRead, MemoUpdate
-from settings.manager import get_config_manager
+from models import MemoCreate, MemoRead, MemoStatus, MemoUpdate
 
 if TYPE_CHECKING:
     import uuid
@@ -49,20 +49,23 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         self,
         unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork,
         *,
-        provider: LLMProvider | None = None,
         memo_to_task_agent: MemoToTaskAgent | None = None,
     ) -> None:
         """MemoApplicationServiceの初期化
 
         Args:
             unit_of_work_factory: Unit of Workファクトリー
-            provider: LLMプロバイダー。未指定の場合は設定値を利用する。
             memo_to_task_agent: 既存のMemoToTaskエージェントを注入する場合に指定。
         """
         super().__init__(unit_of_work_factory)
 
-        settings = get_config_manager().settings
-        self._provider: LLMProvider = provider if provider is not None else settings.agents.provider
+        # 設定値は SettingsApplicationService 経由で初期化時に読み取りキャッシュ。
+        # invalidate_all() によりサービス再構築時に最新値へ更新される。
+        from typing import cast
+
+        settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+        settings = settings_app.get_agents_settings()
+        self._provider: LLMProvider = settings.provider
         self._memo_to_task_agent: MemoToTaskAgent | None = memo_to_task_agent
 
     @classmethod
@@ -252,6 +255,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     def _current_datetime_iso(self) -> str:
         """現在日時のISO8601文字列を返す。"""
         return datetime.now(UTC).isoformat()
+
     def search(
         self,
         query: str,

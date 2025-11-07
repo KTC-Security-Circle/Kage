@@ -18,11 +18,11 @@ from router import (
     logging_middleware,
     performance_middleware,
 )
-from views.home.view import HomeView
-from views.memo.components import MemoDetailView
-from views.memo.view import MemoCreateView, MemoView
-from views.shared import app_bar
-from views.task.view import TaskView
+from views_old.home.view import HomeView
+from views_old.memo.components import MemoDetailView
+from views_old.memo.view import MemoCreateView, MemoView
+from views_old.shared import app_bar
+from views_old.task.view import TaskView
 
 
 def setup_enhanced_routing(page: ft.Page) -> None:

@@ -13,7 +13,7 @@ from loguru import logger
 if TYPE_CHECKING:
     import flet as ft
 
-from views_new.layout import build_layout
+from views.layout import build_layout
 
 
 def configure_routes(page: ft.Page) -> None:  # type: ignore[name-defined]

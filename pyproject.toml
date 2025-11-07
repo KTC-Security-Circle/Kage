@@ -108,6 +108,7 @@ run = "flet run"
 dev = "flet run -dr"
 web = "flet run --web"
 cli = "kage-cli"
+component = "uv run python scripts/component_launcher.py"
 
 # == Code Quality ==
 check = ["_lint", "_format-check", "_type-check"]

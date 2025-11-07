@@ -136,6 +136,30 @@ uv run flet run -rd
 uv run flet run --web
 ```
 
+### Component Launcher (単体コンポーネント検証)
+
+特定の Flet コンポーネントだけを迅速にプレビューしたい場合は、`scripts/component_launcher.py` を利用できます。poethepoet のタスク `component` が登録されています。
+
+```powershell
+# モジュール指定 + レイアウトラップ
+poe component --target views.home.view:create_home_view --wrap-layout
+
+# ファイルパス指定
+poe component --target src/views/home/view.py:create_home_view --wrap-layout
+
+# 追加 props を渡す
+poe component --target some.module:create_control --props '{"title":"Preview"}'
+```
+
+オプション概要:
+
+- `--target`: `module:Attr` または `path/to/file.py:Attr` (必須)
+- `--class`: `:Attr` を明示的に指定する場合
+- `--props`: JSON オブジェクトでコンストラクタ/ファクトリへ渡す追加引数
+- `--wrap-layout`: 共通レイアウト (`views/layout.py` の `get_layout`) でラップ表示
+
+内部でログ初期化、ページ設定、テーマ/フォント適用を行い、本番アプリと近い見た目で確認できます。
+
 ## 🗂️ プロジェクト設計・開発ガイド
 
 開発に参加する際は、以下のドキュメントを参照してください：

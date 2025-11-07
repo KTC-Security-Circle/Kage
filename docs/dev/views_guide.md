@@ -962,8 +962,11 @@ from typing import TYPE_CHECKING, Callable, Optional
 
 import flet as ft
 
+from logic.task import TaskService
+from models.task import Task
+
 if TYPE_CHECKING:
-    from models.example import ExampleModel
+    from models.user import User
 
 class ComponentName(ft.Column):  # またはft.Container, ft.Row等
     """コンポーネントの説明
@@ -1118,43 +1121,22 @@ class ExampleComponent(ft.Column):
 
 ```python
 def _on_save_clicked(self, _: ft.ControlEvent) -> None:
-    """保存ボタンクリック時の処理"""
+    # エラーハンドリングなし
+    result = self.service.save_data(self.input_field.value)
+    self._show_success()
+```
+
+#### ✅ 正しい例
+
+```python
+def _on_save_clicked(self, _: ft.ControlEvent) -> None:
     try:
-        # バリデーション
         if not self._validate_input():
             return
-
-        # 実際の処理
         result = self.service.save_data(self.input_field.value)
-
-        # 成功時の処理
-        self._show_success_message()
-
-    except ValueError as e:
-        self._show_error(f"入力エラー: {e}")
+        self._show_success()
     except Exception as e:
-        self._show_error(f"予期しないエラーが発生しました: {e}")
-
-def _validate_input(self) -> bool:
-    """入力値のバリデーション"""
-    if not self.input_field.value:
-        self._show_error("値を入力してください")
-        return False
-    return True
-
-def _show_error(self, message: str) -> None:
-    """エラーメッセージを表示"""
-    self._page.open(ft.SnackBar(
-        content=ft.Text(message, color=ft.colors.WHITE),
-        bgcolor=ft.colors.RED_400,
-    ))
-
-def _show_success_message(self) -> None:
-    """成功メッセージを表示"""
-    self._page.open(ft.SnackBar(
-        content=ft.Text("保存しました", color=ft.colors.WHITE),
-        bgcolor=ft.colors.GREEN_400,
-    ))
+        self._show_error(f"保存に失敗しました: {e}")
 ```
 
 ### 4. 状態管理
@@ -1397,3 +1379,53 @@ View レイヤーの実装では以下のポイントを意識してください
 13. **拡張性**: 新機能追加に対応できる柔軟な設計
 
 これらの指針に従うことで、GTD の思想を適切に反映し、保守性が高く理解しやすい View レイヤーを構築できます。特に、Application Service 層との適切な連携により、Views 層は UI 表示に専念でき、ビジネスロジックの複雑さから分離された設計を実現できます。
+
+## Component Launcher を使った単体起動
+
+Flet コンポーネントをアプリ全体を起動せずに単体でプレビューしたい場合は、`scripts/component_launcher.py` を利用できます。共通設定（ログ / テーマ / フォント）を最小限適用した状態で指定コンポーネントのみを起動します。
+
+### 概要
+
+- 目的: UI コンポーネントの高速な開発・検証
+- 対象: `ft.Control` / `ft.UserControl` のサブクラス、または `create_control(page, **props)` 互換ファクトリ関数
+- ターゲット指定形式:
+  - モジュールパス: `views.home.view:create_home_view`
+  - ファイルパス: `src/views/home/view.py:create_home_view`
+- 属性未指定時: モジュール内の `create_control` 関数を自動探索
+
+### 使用例 (PowerShell / poethepoet 経由)
+
+```powershell
+# モジュール指定 + レイアウトラップ
+poe component --target views.home.view:create_home_view --wrap-layout
+
+# ファイルパス指定
+poe component --target src/views/home/view.py:create_home_view --wrap-layout
+
+# 追加プロパティ (JSON) をコンストラクタ/ファクトリに渡す
+poe component --target some.module:create_control --props '{"title":"Preview"}'
+```
+
+### 主なオプション
+
+| オプション      | 説明                                                             |
+| --------------- | ---------------------------------------------------------------- |
+| `--target`      | 必須。`module:Attr` または `path/to/file.py:Attr`                |
+| `--class`       | `:Attr` を明示的に上書き指定する場合                             |
+| `--props`       | JSON 文字列（オブジェクト）。コンストラクタ/ファクトリへ渡す引数 |
+| `--wrap-layout` | 共通レイアウト (`views/layout.py` の `get_layout`) でラップ表示  |
+
+### 自動適用されるもの
+
+- ログ初期化 (`logging_conf.setup_logger`)
+- ページ設定 (`settings.manager.apply_page_settings`)
+- テーマ・フォント（`main.py` に準拠）
+
+### 注意点 / エラー
+
+- JSON が不正な場合は終了コード 7 (JSON_ERROR)
+- 属性未指定かつ `create_control` が存在しない場合は 4 (ATTR_NOT_FOUND)
+- Control 型不一致は 5 (TYPE_MISMATCH)
+- その他 import 失敗や実行時例外は 3 / 6 を返します
+
+開発中はコンポーネントの引数インターフェイス変更に伴う例外を確認しやすく、フルアプリ起動より高速に UI 改善サイクルを回せます。

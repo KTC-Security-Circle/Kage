@@ -31,7 +31,7 @@ def reset_dummy_agent() -> None:
 
 def _service_with_dummy_agent(monkeypatch: pytest.MonkeyPatch) -> MemoApplicationService:
     svc = MemoApplicationService()
-    monkeypatch.setattr(svc, "_get_memo_to_task_agent", lambda: _DummyAgent())
+    monkeypatch.setattr(svc, "_get_memo_to_task_agent", _DummyAgent)
     # 既存タグ収集は DB 依存のためスタブ
     monkeypatch.setattr(svc, "_collect_existing_tag_names", lambda: ["a", "b"])  # 既存タグ収集をスタブ
     return svc

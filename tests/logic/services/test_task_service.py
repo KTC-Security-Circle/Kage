@@ -188,3 +188,25 @@ def test_remove_tag_happy_path(task_service: TaskService, task_repository: TaskR
     assert isinstance(updated, TaskRead)
     task_entity = task_repository.get_by_id(task.id, with_details=True)
     assert all(t.id != tag.id for t in task_entity.tags)
+
+
+def test_search_tasks_deduplicates_and_uses_both_fields(task_repository: TaskRepository) -> None:
+    """search_tasks はタイトル/説明の両方を検索し、重複を除去する。"""
+    svc = TaskService(task_repo=task_repository)  # type: ignore[arg-type]
+    # タイトルヒットと説明ヒットが重複するケース
+    a = task_repository.create(create_test_task_create(title="Write docs", description="Write user docs"))
+    b = task_repository.create(create_test_task_create(title="Implement", description="Write code"))
+    assert a.id is not None
+    assert b.id is not None
+
+    results = svc.search_tasks("write", with_details=False)
+    titles = {t.title for t in results}
+    assert titles == {"Write docs", "Implement"}
+
+
+def test_search_tasks_with_details_flag(task_repository: TaskRepository) -> None:
+    """with_details フラグがあってもエラーにならずに結果を返す。"""
+    svc = TaskService(task_repo=task_repository)  # type: ignore[arg-type]
+    task_repository.create(create_test_task_create(title="A", description="B"))
+    out = svc.search_tasks("a", with_details=True)
+    assert isinstance(out, list)

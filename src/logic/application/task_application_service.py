@@ -130,3 +130,57 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
             return task_service.list_by_status(status, with_details=with_details)
+
+    def search(
+        self,
+        query: str,
+        *,
+        with_details: bool = False,
+        status: TaskStatus | None = None,
+        tags: list[uuid.UUID] | None = None,
+    ) -> list[TaskRead]:
+        """タスク検索
+
+        タイトル・説明を横断検索し、必要に応じてステータスやタグで絞り込む。
+
+        Args:
+            query: 検索クエリ（空文字・空白のみなら空配列）
+            with_details: 関連情報を含めるかどうか
+            status: ステータスでの追加フィルタ
+            tags: タグIDのリスト（いずれかを含むOR条件）
+
+        Returns:
+            list[TaskRead]: 検索結果
+        """
+        if not query or not query.strip():
+            return []
+
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.get_service(TaskService)
+            results = task_service.search_tasks(query, with_details=with_details)
+
+            # ステータスフィルタ
+            if status is not None:
+                status_items = task_service.list_by_status(status, with_details=with_details)
+                status_ids = {t.id for t in status_items}
+                results = [t for t in results if t.id in status_ids]
+
+            # タグフィルタ（OR条件）
+            if tags:
+                # RepositoryのJOINを活用（直接TaskRepositoryを生成）
+                from logic.repositories import TaskRepository as _TaskRepo
+
+                task_repo = uow.repository_factory.create(_TaskRepo)
+                matched_ids: set[uuid.UUID] = set()
+                for tag_id in tags:
+                    try:
+                        for t in task_repo.list_by_tag(tag_id, with_details=with_details):
+                            if t.id is not None:
+                                matched_ids.add(t.id)
+                    except Exception as exc:
+                        # タグが存在しない場合などは単にスキップ
+                        logger.debug(f"タグフィルタ処理中に例外: {exc}")
+                        continue
+                results = [t for t in results if t.id in matched_ids]
+
+            return results

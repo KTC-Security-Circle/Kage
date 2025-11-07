@@ -62,6 +62,14 @@ class DummyProjectRepo:
             raise NotFoundError(msg)
         return items
 
+    # 新規追加: タイトル検索
+    def search_by_title(self, title_query: str) -> list[Project]:  # type: ignore[override]
+        items = [p for p in self.storage.values() if title_query.lower() in p.title.lower()]
+        if not items:
+            msg = "not found"
+            raise NotFoundError(msg)
+        return items
+
 
 class RepoRaiser(DummyProjectRepo):
     def create(self, data: ProjectCreate) -> Project:  # type: ignore[override]
@@ -182,3 +190,17 @@ def test_remove_task_success() -> None:
 
     result = service.remove_task(project.id, task_id)
     assert isinstance(result, ProjectRead)
+
+
+def test_search_projects() -> None:
+    repo = DummyProjectRepo()
+    svc = ProjectService(project_repo=repo)  # type: ignore[arg-type]
+    a = repo.create(ProjectCreate(title="Alpha"))
+    b = repo.create(ProjectCreate(title="Beta"))
+    assert a.id is not None
+    assert b.id is not None
+
+    res = svc.search_projects("alp")
+    assert isinstance(res, list)
+    assert len(res) == 1
+    assert res[0].title == "Alpha"

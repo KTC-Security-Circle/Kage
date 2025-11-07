@@ -83,3 +83,30 @@ class ProjectApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]
         with self._unit_of_work_factory() as uow:
             proj_service = uow.service_factory.get_service(ProjectService)
             return proj_service.list_by_status(status)
+
+    def search(
+        self,
+        query: str,
+        *,
+        status: ProjectStatus | None = None,
+    ) -> list[ProjectRead]:
+        """プロジェクト検索
+
+        Args:
+            query: 検索クエリ（空文字・空白のみなら空配列）
+            status: 追加のステータスフィルタ
+
+        Returns:
+            list[ProjectRead]: 検索結果
+        """
+        if not query or not query.strip():
+            return []
+
+        with self._unit_of_work_factory() as uow:
+            proj_service = uow.service_factory.get_service(ProjectService)
+            results = proj_service.search_projects(query)
+            if status is not None:
+                status_items = proj_service.list_by_status(status)
+                status_ids = {p.id for p in status_items}
+                results = [p for p in results if p.id in status_ids]
+            return results

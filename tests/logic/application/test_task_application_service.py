@@ -254,3 +254,37 @@ class TestTaskApplicationService:
 
         args, _ = mock_task_service.create.call_args
         assert args[0].status is TaskStatus.PROGRESS
+
+    # 追加: 検索API
+    def test_search_empty_query_returns_empty(self, task_application_service: TaskApplicationService) -> None:
+        assert task_application_service.search("") == []
+
+    def test_search_delegates_and_filters_status(
+        self, task_application_service: TaskApplicationService, mock_unit_of_work: Mock, sample_task_read: TaskRead
+    ) -> None:
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        other = sample_task_read.model_copy(update={"id": uuid.uuid4(), "status": TaskStatus.COMPLETED})
+        mock_task_service.search_tasks.return_value = [sample_task_read, other]
+        mock_task_service.list_by_status.return_value = [sample_task_read]
+
+        out = task_application_service.search("x", status=TaskStatus.TODO)
+        assert out == [sample_task_read]
+        mock_task_service.search_tasks.assert_called_once_with("x", with_details=False)
+        mock_task_service.list_by_status.assert_called_once_with(TaskStatus.TODO, with_details=False)
+
+    def test_search_filters_by_tags_using_repository(
+        self, task_application_service: TaskApplicationService, mock_unit_of_work: Mock, sample_task_read: TaskRead
+    ) -> None:
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        other = sample_task_read.model_copy(update={"id": uuid.uuid4()})
+        mock_task_service.search_tasks.return_value = [sample_task_read, other]
+
+        # TaskRepositoryモックでタグにマッチするのは sample_task_read のみ
+        task_repo_mock = Mock()
+        task_repo_mock.list_by_tag.return_value = [sample_task_read]
+        repo_factory_mock = Mock()
+        repo_factory_mock.create.return_value = task_repo_mock
+        mock_unit_of_work.repository_factory = repo_factory_mock
+
+        out = task_application_service.search("x", tags=[uuid.uuid4()])
+        assert out == [sample_task_read]

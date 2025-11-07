@@ -13,7 +13,7 @@ from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
 from logic.services.memo_service import MemoService
 from logic.unit_of_work import SqlModelUnitOfWork
-from models import MemoCreate, MemoRead, MemoUpdate
+from models import MemoCreate, MemoRead, MemoStatus, MemoUpdate
 
 if TYPE_CHECKING:
     import uuid
@@ -139,3 +139,55 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         with self._unit_of_work_factory() as uow:
             memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.get_all(with_details=with_details)
+
+    def search(
+        self,
+        query: str,
+        *,
+        with_details: bool = False,
+        status: MemoStatus | None = None,
+        tags: list[uuid.UUID] | None = None,
+    ) -> list[MemoRead]:
+        """メモ検索
+
+        タイトル・本文を横断検索し、必要に応じてステータスやタグで絞り込む。
+
+        Args:
+            query: 検索クエリ（空文字・空白のみなら空配列）
+            with_details: 関連情報を含めるかどうか
+            status: ステータスでの追加フィルタ
+            tags: タグIDのリスト（OR条件）
+
+        Returns:
+            list[MemoRead]: 検索結果
+        """
+        if not query or not query.strip():
+            return []
+
+        with self._unit_of_work_factory() as uow:
+            memo_service = uow.get_service(MemoService)
+            results = memo_service.search_memos(query, with_details=with_details)
+
+            # ステータスフィルタ
+            if status is not None:
+                status_items = memo_service.list_by_status(status, with_details=with_details)
+                status_ids = {m.id for m in status_items}
+                results = [m for m in results if m.id in status_ids]
+
+            # タグフィルタ（リポジトリのJOIN利用、OR条件）
+            if tags:
+                from logic.repositories import MemoRepository as _MemoRepo
+
+                memo_repo = uow.repository_factory.create(_MemoRepo)
+                matched_ids: set[uuid.UUID] = set()
+                for tag_id in tags:
+                    try:
+                        for m in memo_repo.list_by_tag(tag_id, with_details=with_details):
+                            if m.id is not None:
+                                matched_ids.add(m.id)
+                    except Exception as exc:
+                        logger.debug(f"メモのタグフィルタ処理中に例外: {exc}")
+                        continue
+                results = [m for m in results if m.id in matched_ids]
+
+            return results

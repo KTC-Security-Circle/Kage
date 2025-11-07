@@ -226,3 +226,17 @@ class TestTagApplicationService:
         # 実行と検証
         result = tag_application_service.delete(tag_id)
         assert result is False
+
+    def test_search_alias(
+        self,
+        tag_application_service: TagApplicationService,
+        mock_unit_of_work: Mock,
+        sample_tag_read: TagRead,
+    ) -> None:
+        """search は search_by_name のエイリアスとして動作する"""
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_tag_service.search_by_name.return_value = [sample_tag_read]
+
+        res = tag_application_service.search("x")
+        assert res == [sample_tag_read]
+        mock_tag_service.search_by_name.assert_called_once_with("x")

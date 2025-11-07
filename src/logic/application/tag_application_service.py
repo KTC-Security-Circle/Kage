@@ -89,3 +89,14 @@ class TagApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         with self._unit_of_work_factory() as uow:
             tag_service = uow.service_factory.get_service(TagService)
             return tag_service.search_by_name(query)
+
+    def search(self, query: str) -> list[TagRead]:
+        """タグ検索（エイリアス）
+
+        Args:
+            query: 検索クエリ
+
+        Returns:
+            list[TagRead]: 検索結果
+        """
+        return self.search_by_name(query)

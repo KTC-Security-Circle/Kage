@@ -284,3 +284,43 @@ class TestMemoApplicationService:
 
         assert tasks == agent_output.tasks
         assert tasks is not agent_output.tasks
+    # 追加: 検索API
+    def test_search_empty_query_returns_empty(self, memo_app_service: MemoApplicationService) -> None:
+        """空クエリは空配列を返す"""
+        assert memo_app_service.search("") == []
+
+    def test_search_delegates_to_service_and_filters_status(
+        self, memo_app_service: MemoApplicationService, mock_unit_of_work: Mock
+    ) -> None:
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
+        m1 = MemoRead(id=uuid.uuid4(), title="t1", content="c1", status=MemoStatus.INBOX)
+        m2 = MemoRead(id=uuid.uuid4(), title="t2", content="c2", status=MemoStatus.ARCHIVE)
+        mock_memo_service.search_memos.return_value = [m1, m2]
+        mock_memo_service.list_by_status.return_value = [m1]
+
+        out = memo_app_service.search("t", status=MemoStatus.INBOX)
+
+        assert out == [m1]
+        mock_memo_service.search_memos.assert_called_once_with("t", with_details=False)
+        mock_memo_service.list_by_status.assert_called_once_with(MemoStatus.INBOX, with_details=False)
+
+    def test_search_filters_by_tags_using_repository(
+        self, memo_app_service: MemoApplicationService, mock_unit_of_work: Mock
+    ) -> None:
+        # 準備: サービス検索は2件返る
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
+        t1 = uuid.uuid4()
+        t2 = uuid.uuid4()
+        m1 = MemoRead(id=t1, title="x", content="x", status=MemoStatus.INBOX)
+        m2 = MemoRead(id=t2, title="y", content="y", status=MemoStatus.INBOX)
+        mock_memo_service.search_memos.return_value = [m1, m2]
+
+        # リポジトリファクトリとメモリポジトリのモック
+        memo_repo_mock = Mock()
+        memo_repo_mock.list_by_tag.return_value = [m1]
+        repo_factory_mock = Mock()
+        repo_factory_mock.create.return_value = memo_repo_mock
+        mock_unit_of_work.repository_factory = repo_factory_mock
+
+        out = memo_app_service.search("x", tags=[uuid.uuid4()])
+        assert out == [m1]

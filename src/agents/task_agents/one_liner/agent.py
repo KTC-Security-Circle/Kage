@@ -11,16 +11,14 @@ if __package__ is None:  # pragma: no cover
 from langgraph.graph import START, StateGraph
 
 from agents.agent_conf import LLMProvider
-from agents.base import BaseAgent, KwargsAny
+from agents.base import AgentError, BaseAgent, KwargsAny
 from agents.task_agents.one_liner.prompt import one_liner_prompt
-from agents.task_agents.one_liner.state import OneLinerOutput, OneLinerState
+from agents.task_agents.one_liner.state import OneLinerOutput, OneLinerResult, OneLinerState
 from agents.utils import agents_logger
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableSerializable
     from pydantic import BaseModel
-
-    from agents.base import ErrorAgentOutput
 
 _fake_responses: list[BaseModel] = [
     OneLinerOutput(response="こんにちは！私は Kage AI です。"),
@@ -28,7 +26,7 @@ _fake_responses: list[BaseModel] = [
 ]
 
 
-class OneLinerAgent(BaseAgent[OneLinerState, OneLinerOutput]):
+class OneLinerAgent(BaseAgent[OneLinerState, OneLinerResult]):
     """シンプルな1ターン/メモリ付きチャットエージェント.
 
     現状は1ノード構成でタスク統計 (today / completed / overdue 等) を受け取り
@@ -56,7 +54,7 @@ class OneLinerAgent(BaseAgent[OneLinerState, OneLinerOutput]):
         structured_llm = self._model.with_structured_output(OneLinerOutput)
         return one_liner_prompt | structured_llm
 
-    def chatbot(self, state: OneLinerState) -> dict[str, OneLinerOutput | ErrorAgentOutput]:
+    def chatbot(self, state: OneLinerState) -> dict[str, object]:
         """チャットボットノードの処理."""
         self._agent = self._create_agent()
         response = self._agent.invoke(
@@ -69,7 +67,33 @@ class OneLinerAgent(BaseAgent[OneLinerState, OneLinerOutput]):
             }
         )
         output = self.validate_output(response, OneLinerOutput)
-        return {"final_response": output}
+        # validate_output は AgentError か Pydantic モデルを返す契約
+        if isinstance(output, AgentError):
+            # エラーは明示キーで返す（final_response 廃止）
+            return {"error": output}
+        # 正常時は最小キーのみ返し、上位で型へ復元
+        return {"response": output.response}
+
+    # BaseAgent からの最終変換
+    def _create_return_response(self, final_response: dict | OneLinerOutput) -> OneLinerResult | AgentError:
+        # BaseAgent は互換抽出を行わないため、ここで辞書から取り出す
+        if isinstance(final_response, dict):
+            # エラー優先
+            err = final_response.get("error")
+            if isinstance(err, AgentError):
+                return err
+            # 最小キーからの復元（final_response互換は廃止）
+            if "response" in final_response:
+                # 失敗しても致命的ではないので、抑制して後段の分岐へ
+                from contextlib import suppress
+
+                with suppress(Exception):
+                    final_response = OneLinerOutput(response=str(final_response["response"]))
+        if isinstance(final_response, OneLinerOutput):
+            return OneLinerResult(response=final_response.response, processed_data=self._state)
+        if isinstance(final_response, AgentError):
+            return final_response
+        return AgentError("Invalid final response format")
 
 
 if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
@@ -93,8 +117,9 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
         "overdue_task_count": 0,
         "progress_summary": "午前中に主要タスクを進行",
         "user_name": "ユーザー",
-        "final_response": "",
     }
     result = agent.invoke(state, thread_id)
-    if result:
-        agents_logger.debug("Assistant: " + result.model_dump_json())
+    if isinstance(result, AgentError):
+        agents_logger.error("Assistant Error: {}", str(result))
+    else:
+        agents_logger.debug("Assistant: {}", result.response)

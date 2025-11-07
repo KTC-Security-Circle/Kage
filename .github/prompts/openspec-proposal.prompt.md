@@ -2,6 +2,10 @@
 description: Scaffold a new OpenSpec change and validate strictly.
 ---
 
+以下の内容に沿って、新しいOpenSpec変更の提案を作成してください。
+ユーザーからコードを作成してくださいと指示されるまで、実際のコードファイル編集は行わないでください。
+ただし以下の指示にあるmdファイルは編集してよいものとします。
+
 $ARGUMENTS
 <!-- OPENSPEC:START -->
 **Guardrails**

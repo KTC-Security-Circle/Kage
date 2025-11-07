@@ -94,7 +94,7 @@ class TasksView(BaseView):
             self._initialize_mock_data()
             return
 
-            # 各ステータスごにタスクを取得
+            # 各ステータスごとにタスクを取得
             status_mapping = {
                 "計画中": TaskStatus.TODO,
                 "進行中": TaskStatus.PROGRESS,

@@ -14,8 +14,8 @@ from logic.application.task_application_service import TaskApplicationService
 from logic.commands.memo_commands import CreateMemoCommand, DeleteMemoCommand
 from logic.queries.memo_queries import GetAllMemosQuery, SearchMemosQuery
 from logic.queries.task_queries import GetAllTasksByStatusDictQuery
-from views.memo.components import MemoListSection, MemoSearchSection
-from views.shared import BaseView, ErrorHandlingMixin
+from views_old.memo.components import MemoListSection, MemoSearchSection
+from views_old.shared import BaseView, ErrorHandlingMixin
 
 if TYPE_CHECKING:
     from models import MemoRead, TaskRead

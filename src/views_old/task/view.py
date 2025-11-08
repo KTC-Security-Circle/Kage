@@ -15,11 +15,11 @@ from loguru import logger
 from logic.application.task_application_service import TaskApplicationService
 from logic.commands.task_commands import DeleteTaskCommand
 from models import QuickActionCommand, TaskStatus
-from views.shared import BaseView, ErrorHandlingMixin
-from views.task.components.projects_placeholder import ProjectsPlaceholder
-from views.task.components.quick_actions import QuickActions
-from views.task.components.task_dialog import TaskDialog
-from views.task.components.tasks_board import TasksBoard
+from views_old.shared import BaseView, ErrorHandlingMixin
+from views_old.task.components.projects_placeholder import ProjectsPlaceholder
+from views_old.task.components.quick_actions import QuickActions
+from views_old.task.components.task_dialog import TaskDialog
+from views_old.task.components.tasks_board import TasksBoard
 
 if TYPE_CHECKING:
     from models import TaskRead

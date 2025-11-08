@@ -21,9 +21,9 @@ from agents.base import AgentError
 from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
 from errors import ApplicationError
 from logic.application.base import BaseApplicationService
+from logic.application.settings_application_service import SettingsApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
 from models import MemoRead
-from settings.manager import get_config_manager
 
 
 class MemoToTaskServiceError(ApplicationError):
@@ -43,13 +43,9 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         self,
         unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork,
         *,
-        provider: LLMProvider | None = None,
         agent: MemoToTaskAgent | None = None,
     ) -> None:
         super().__init__(unit_of_work_factory)
-
-        settings = get_config_manager().settings
-        self._provider: LLMProvider = provider if provider is not None else settings.agents.provider
         self._agent: MemoToTaskAgent | None = agent
 
     @classmethod
@@ -106,13 +102,21 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         if self._agent is None:
             from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
 
-            self._agent = MemoToTaskAgent(provider=self._provider)
+            self._agent = MemoToTaskAgent(provider=self._get_provider())
         return self._agent
 
     def _invoke_agent(self, state: MemoToTaskState) -> MemoToTaskResult | AgentError:
         agent = self._get_agent()
         thread_id = str(uuid4())
         return agent.invoke(state, thread_id)
+
+    # --- settings accessors -------------------------------------------
+    def _get_provider(self) -> LLMProvider:
+        """現在の LLM プロバイダを取得する（常に設定から）。"""
+        from typing import cast
+
+        settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+        return settings_app.get_agents_settings().provider
 
     def _collect_existing_tag_names(self) -> list[str]:
         """既存タグの名称一覧を取得する。"""

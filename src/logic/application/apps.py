@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from threading import Lock
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from loguru import logger
 
@@ -15,6 +15,9 @@ from logic.application.project_application_service import ProjectApplicationServ
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork, UnitOfWork
+
+if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
+    from logic.application.settings_application_service import SettingsApplicationService
 
 _S = TypeVar("_S")
 
@@ -219,6 +222,25 @@ class ApplicationServices:
         with self._lock:
             self._services.clear()
 
+    # --- invalidate API -------------------------------------------------
+    def invalidate_all(self) -> None:
+        """全 ApplicationService のキャッシュを無効化する。
+
+        OpenSpec Option C: 設定変更イベント後に呼び出し、
+        次回アクセス時に各サービスを再構築できるようにする。
+        SettingsApplicationService など BaseApplicationService 継承型は
+        invalidate() を持つため、そちらも呼び出し可能。
+        現段階では単純にキャッシュ辞書をクリアする最小実装。
+        """
+        self.reset()
+        # 共有シングルトン型の invalidate 呼び出し（存在すれば）
+        from logic.application.settings_application_service import SettingsApplicationService
+
+        try:
+            SettingsApplicationService.invalidate()
+        except Exception as e:  # pragma: no cover - 万一の互換エラー
+            logger.debug(f"SettingsApplicationService.invalidate 失敗(無視): {e}")
+
     def configure(self, *, unit_of_work_factory: type[UnitOfWork] | None = None) -> None:
         """設定の変更（UoW差し替えなど、テストや特殊用途で使用）。
 
@@ -260,3 +282,10 @@ class ApplicationServices:
     def memo_to_task(self) -> MemoToTaskApplicationService:
         """MemoToTaskサービスを取得。"""
         return self.get_service(MemoToTaskApplicationService)
+
+    @property
+    def settings(self) -> SettingsApplicationService:  # type: ignore[override]
+        """SettingsApplicationService を取得。"""
+        from logic.application.settings_application_service import SettingsApplicationService
+
+        return self.get_service(SettingsApplicationService)

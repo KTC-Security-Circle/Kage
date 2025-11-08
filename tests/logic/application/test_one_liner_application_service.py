@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
 import logic.application.one_liner_application_service as one_liner_module
 from agents.agent_conf import HuggingFaceModel, LLMProvider
-from agents.task_agents.one_liner.state import OneLinerState
 from logic.application.one_liner_application_service import (
     OneLinerApplicationService,
     OneLinerServiceError,
 )
 from models import TaskStatus
+
+if TYPE_CHECKING:  # 型チェック専用のインポート
+    from agents.task_agents.one_liner.state import OneLinerState
 
 
 @pytest.fixture
@@ -47,7 +49,7 @@ def _stub_config(
     model: HuggingFaceModel | str | None,
     user_name: str = "Tester",
 ) -> None:
-    """設定マネージャーを差し替えて、テスト用設定を返す。"""
+    """SettingsApplicationService を差し替えて、テスト用設定を返す。"""
 
     class AgentsStub:
         def __init__(self, provider_value: LLMProvider, model_value: HuggingFaceModel | str | None) -> None:
@@ -57,21 +59,32 @@ def _stub_config(
         def get_model_name(self, _: str) -> HuggingFaceModel | str | None:
             return self._model_value
 
-    settings = SimpleNamespace(
-        agents=AgentsStub(provider, model),
-        user=SimpleNamespace(user_name=user_name),
-    )
-    config_manager = SimpleNamespace(settings=settings)
-    monkeypatch.setattr(one_liner_module, "get_config_manager", lambda: config_manager)
+    class UserStub:
+        def __init__(self, name: str) -> None:
+            self.user_name = name
+
+    class SettingsAppStub:
+        def __init__(self) -> None:
+            self._agents = AgentsStub(provider, model)
+            self._user = UserStub(user_name)
+
+        def get_agents_settings(self) -> AgentsStub:
+            return self._agents
+
+        def get_user_settings(self) -> UserStub:
+            return self._user
+
+    monkeypatch.setattr(one_liner_module.SettingsApplicationService, "get_instance", lambda: SettingsAppStub())
 
 
 def test_openvino_string_model_raises_service_error(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
     """OPENVINO で文字列モデルを指定した場合に例外が送出されることを検証する。"""
 
-    _stub_config(monkeypatch, provider=LLMProvider.FAKE, model=HuggingFaceModel.QWEN_3_8B_INT4)
+    # 設定側で OPENVINO を指定し、文字列モデルを与えたときに例外となることを検証
+    _stub_config(monkeypatch, provider=LLMProvider.OPENVINO, model=HuggingFaceModel.QWEN_3_8B_INT4)
 
     with pytest.raises(OneLinerServiceError) as exc:
-        OneLinerApplicationService(provider=LLMProvider.OPENVINO, model_name="invalid-model")
+        OneLinerApplicationService(model_name="invalid-model")
 
     assert "Enum 型で指定してください" in str(exc.value)
     assert stub_agent.last_init is None
@@ -100,14 +113,14 @@ def test_generate_one_liner_returns_agent_response(monkeypatch: pytest.MonkeyPat
 
     service = OneLinerApplicationService()
 
-    query = OneLinerState(
-        today_task_count=1,
-        completed_task_count=0,
-        overdue_task_count=0,
-        progress_summary="",
-        user_name="Bob",
-        final_response="",
-    )
+    # OneLinerState は TypedDict なので dict リテラルで生成する
+    query: OneLinerState = {
+        "today_task_count": 1,
+        "completed_task_count": 0,
+        "overdue_task_count": 0,
+        "progress_summary": "",
+        "user_name": "Bob",
+    }
     result = service.generate_one_liner(query)
 
     assert result == "こんにちは"

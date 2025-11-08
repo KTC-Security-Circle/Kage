@@ -7,15 +7,13 @@
 # [tool.uv.sources]
 # kage = { path = "../", editable = true }
 # ///
-"""Flet コンポーネント単体起動用ランチャー。
+"""Flet コンポーネント単体起動用ランチャー（簡潔版）。
 
-最小要件:
-- 動的 import: "path/to/mod.py:Attr" または "pkg.mod:Attr"
-- CLI: --target (必須), --class (任意), --props JSON (任意), --wrap-layout (任意)
-- 既存設定再利用: ログ設定、テーマ適用、フォント設定
-- インターフェイス: 以下のいずれか
-  - Attr が ft.Control/ft.UserControl のサブクラス: インスタンス化
-  - Attr が create_control(page, **props) 互換の callable: 呼び出し結果を使用
+ポリシー（本ランチャーの挙動）:
+- ターゲットは "path/to/mod.py:Class" または "pkg.mod:Class" のみを受け付ける。
+- Class は flet.ft.Control のサブクラスかつ `@classmethod def preview(cls, ...)` を必須とする。
+- preview の内部でインスタンス生成に必要な引数を組み立てる前提とし、外部からの props 指定は不可。
+- レイアウトでの簡易ラップはデフォルトで有効。`--no-wrap` または `-nw` 指定時のみ無効化。
 
 戻り値や例外は CLI としての終了コードに反映する。
 """
@@ -24,8 +22,8 @@ from __future__ import annotations
 
 import argparse
 import inspect
-import json
 import sys
+from contextlib import suppress
 from dataclasses import dataclass
 from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
@@ -55,7 +53,6 @@ class ExitCode:
     ATTR_NOT_FOUND = 4
     TYPE_MISMATCH = 5
     RUNTIME_ERROR = 6
-    JSON_ERROR = 7
 
 
 class InvalidTargetError(ValueError):
@@ -63,13 +60,6 @@ class InvalidTargetError(ValueError):
 
     def __init__(self, reason: str) -> None:
         super().__init__(f"無効なターゲット指定: {reason}")
-
-
-class InvalidPropsError(ValueError):
-    """--props の指定が不正な場合の例外。"""
-
-    def __init__(self, reason: str) -> None:
-        super().__init__(f"--props の指定が不正です: {reason}")
 
 
 class ControlTypeError(TypeError):
@@ -88,12 +78,11 @@ class TargetSpec:
     attr: str | None
 
 
-def parse_target(target: str, explicit_class: str | None = None) -> TargetSpec:
+def parse_target(target: str) -> TargetSpec:
     """ターゲット表現をパースして `TargetSpec` を返す。
 
     Args:
         target: "path/to/mod.py[:Attr]" または "pkg.mod[:Attr]" 形式の文字列。
-        explicit_class: --class による明示指定 (省略可)。指定時は優先。
 
     Returns:
         TargetSpec: 解釈結果。
@@ -106,7 +95,7 @@ def parse_target(target: str, explicit_class: str | None = None) -> TargetSpec:
         raise InvalidTargetError(msg)
 
     mod_part, _, attr_part = target.partition(":")
-    attr = explicit_class or (attr_part or None)
+    attr = attr_part or None
 
     is_file = mod_part.endswith((".py", ".pyw"))
     if is_file:
@@ -140,25 +129,6 @@ def resolve_target(spec: TargetSpec) -> tuple[ModuleType, str | None]:
     return module, spec.attr
 
 
-def parse_props(props_json: str | None) -> dict[str, Any]:
-    """JSON 文字列から dict を生成する。空や None は {}。
-
-    Raises:
-        ValueError: JSON デコード失敗時。
-    """
-    if not props_json:
-        return {}
-    try:
-        val = json.loads(props_json)
-    except json.JSONDecodeError as exc:
-        msg = f"JSON デコードに失敗しました: {exc}"
-        raise InvalidPropsError(msg) from exc
-    if not isinstance(val, dict):
-        msg = "JSON オブジェクトを指定してください"
-        raise InvalidPropsError(msg)
-    return {str(k): v for k, v in val.items()}
-
-
 def _is_control_subclass(obj: object) -> bool:
     try:
         import flet as ft
@@ -168,41 +138,50 @@ def _is_control_subclass(obj: object) -> bool:
         return False
 
 
-def _is_factory_callable(obj: object) -> bool:
-    return callable(obj)
+def build_control_from_preview(target_obj: object, page: ft.Page) -> ft.Control:
+    """`ft.Control` サブクラスかつ `@classmethod preview` を持つクラスのみを受理して起動する。
 
-
-def build_control(target_obj: object, page: ft.Page, props: dict[str, Any]) -> ft.Control:
-    """ターゲットオブジェクトから Flet Control を生成する。
-
-    優先順位:
-    1) target_obj が ft.Control のサブクラス: target_obj(**props)
-    2) target_obj が callable: target_obj(page=page, **props)
-
-    Raises:
-        TypeError: インターフェイス不一致。
+    - 条件を満たさない場合は例外を送出する。
+    - preview メソッドは `page` 引数を受け取る場合と受け取らない場合の両方を許容する。
     """
     import flet as ft
 
-    # クラス定義ならそのままインスタンス化
-    if _is_control_subclass(target_obj):
-        instance = target_obj(**props)  # type: ignore[misc]
-        if not isinstance(instance, ft.Control):
-            msg = "生成物が ft.Control ではありません"
-            raise ControlTypeError(msg)
-        return instance
+    if not _is_control_subclass(target_obj) or not inspect.isclass(target_obj):
+        msg = "ターゲットは ft.Control のサブクラスである必要があります"
+        raise ControlTypeError(msg)
 
-    # ファクトリ関数なら page を渡して生成
-    if _is_factory_callable(target_obj):
-        instance = target_obj(page=page, **props)  # type: ignore[misc]
-        if not isinstance(instance, ft.Control):
-            msg = "ファクトリの戻り値が ft.Control ではありません"
-            raise ControlTypeError(msg)
-        return instance
+    cls: type = target_obj  # type: ignore[assignment]
 
-    # いずれにも該当しない
-    msg = "サポートされていないターゲットタイプです"
-    raise ControlTypeError(msg)
+    # classmethod `preview` を強制
+    try:
+        static_attr = inspect.getattr_static(cls, "preview")
+    except AttributeError as exc:
+        msg = "preview classmethod が見つかりません"
+        raise ControlTypeError(msg) from exc
+
+    if not isinstance(static_attr, classmethod):
+        msg = "preview は @classmethod で定義してください"
+        raise ControlTypeError(msg)
+
+    # バウンドメソッドを取得
+    preview_fn = cls.preview
+    if not callable(preview_fn):
+        msg = "preview は呼び出し可能である必要があります"
+        raise ControlTypeError(msg)
+
+    # page を渡すかどうかをシグネチャで判定
+    try:
+        sig = inspect.signature(preview_fn)
+        kwargs: dict[str, Any] = {"page": page} if "page" in sig.parameters else {}
+        built = preview_fn(**kwargs)
+    except TypeError as exc:
+        msg = f"preview 呼び出しに失敗しました: {exc}"
+        raise ControlTypeError(msg) from exc
+
+    if not isinstance(built, ft.Control):
+        msg = "preview の戻り値が ft.Control ではありません"
+        raise ControlTypeError(msg)
+    return built
 
 
 def _apply_common_page_settings(page: ft.Page) -> None:
@@ -244,26 +223,36 @@ def _apply_common_page_settings(page: ft.Page) -> None:
         logger.warning(f"フォント/テーマ設定に失敗しました (続行します): {exc}")
 
 
-def _wrap_with_layout_if_needed(page: ft.Page, control: ft.Control, *, wrap: bool) -> ft.Control | ft.View:
+def _wrap_with_layout_if_needed(control: ft.Control, *, wrap: bool) -> ft.Control:
+    """シンプルなラッパーで Control を View 相当に包む。
+
+    以前の `views.layout.get_layout` は廃止されたため、最小の View 風コンテナで包む。
+    本格的な全体レイアウトを表示したい場合は、`views.layout:build_layout` を直接ターゲットに指定し、
+    `--props '{"route":"/"}'` のように引数を渡してください。
+    """
     if not wrap:
         return control
     try:
-        from views.layout import get_layout
+        import flet as ft
 
-        return get_layout(page, control)
+        return ft.View(route="/", controls=[ft.Container(content=control, expand=True, padding=16)])
     except Exception as exc:
         from loguru import logger
 
-        logger.warning(f"レイアウトのラップに失敗しました。素のコンポーネントを表示します: {exc}")
+        logger.warning(f"簡易ラップに失敗しました。素のコンポーネントを表示します: {exc}")
         return control
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="component-launcher", add_help=True)
-    parser.add_argument("--target", required=True, help="'path/to/mod.py:Attr' または 'pkg.mod:Attr'")
-    parser.add_argument("--class", dest="class_name", required=False, help="ターゲット属性名を明示指定")
-    parser.add_argument("--props", required=False, help="コンストラクタ/ファクトリに渡す JSON")
-    parser.add_argument("--wrap-layout", action="store_true", help="共通レイアウトでラップして表示")
+    parser.add_argument("--target", required=True, help="'path/to/mod.py:Class' または 'pkg.mod:Class'")
+    parser.add_argument(
+        "--no-wrap",
+        "-nw",
+        dest="no_wrap",
+        action="store_true",
+        help="簡易レイアウトでのラップを無効化",
+    )
     return parser.parse_args(argv)
 
 
@@ -278,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     _init_logger()
-    spec = _safe_parse_target(args.target, args.class_name)
+    spec = _safe_parse_target(args.target)
     if spec is None:
         return ExitCode.INVALID_ARGS
     module, attr_name = _safe_import(spec)
@@ -287,10 +276,8 @@ def main(argv: list[str] | None = None) -> int:
     target_obj = _get_target_object(module, attr_name)
     if target_obj is None:
         return ExitCode.ATTR_NOT_FOUND
-    props = _safe_parse_props(args.props)
-    if props is None:
-        return ExitCode.JSON_ERROR
-    return _run_flet(target_obj, props, wrap_layout=args.wrap_layout)
+    wrap_layout = not bool(getattr(args, "no_wrap", False))
+    return _run_flet(target_obj, wrap_layout=wrap_layout)
 
 
 # --- helpers (main を単純化) -----------------------------------------
@@ -306,9 +293,9 @@ def _init_logger() -> None:
         logger.warning("ロガー初期化に失敗しました (fallback)")
 
 
-def _safe_parse_target(target: str, class_name: str | None) -> TargetSpec | None:
+def _safe_parse_target(target: str) -> TargetSpec | None:
     try:
-        return parse_target(target, class_name)
+        return parse_target(target)
     except Exception as exc:
         logger.error(str(exc))
         return None
@@ -324,37 +311,43 @@ def _safe_import(spec: TargetSpec) -> tuple[ModuleType | None, str | None]:
 
 
 def _get_target_object(module: ModuleType, attr_name: str | None) -> object | None:
-    if attr_name:
-        if not hasattr(module, attr_name):
-            logger.error(f"属性が見つかりません: {attr_name}")
-            return None
-        return getattr(module, attr_name)
-    if hasattr(module, "create_control"):
-        return module.create_control  # type: ignore[attr-defined]
-    logger.error("属性が未指定で、create_control も見つかりません")
-    return None
-
-
-def _safe_parse_props(props_json: str | None) -> dict[str, Any] | None:
-    try:
-        return parse_props(props_json)
-    except InvalidPropsError as exc:
-        logger.error(str(exc))
+    if not attr_name:
+        logger.error("Class を 'module:Class' 形式で指定してください")
         return None
+    if not hasattr(module, attr_name):
+        logger.error(f"属性が見つかりません: {attr_name}")
+        return None
+    return getattr(module, attr_name)
 
 
-def _run_flet(target_obj: object, props: dict[str, Any], *, wrap_layout: bool) -> int:
+def _run_flet(target_obj: object, *, wrap_layout: bool) -> int:
     def _flet_main(page: ft.Page) -> None:
         _apply_common_page_settings(page)
-        control = build_control(target_obj, page, props)
-        control_or_view = _wrap_with_layout_if_needed(page, control, wrap=wrap_layout)
-        page.add(control_or_view)
-        logger.info("コンポーネントを起動しました")
+        control = build_control_from_preview(target_obj, page)
+        control_or_view = _wrap_with_layout_if_needed(control, wrap=wrap_layout)
+
+        # View は page.add ではなく page.views へ追加し、update を明示
+        # Control は通常通り add して update。
+        try:
+            import flet as ft
+
+            if isinstance(control_or_view, ft.View):
+                # 既存スタックを置き換え（単体表示用途）
+                with suppress(Exception):
+                    # [AI GENERATED] 一部環境で clear 未実装でも致命ではないため握りつぶす
+                    page.views.clear()
+                page.views.append(control_or_view)
+                page.update()
+            else:
+                page.add(control_or_view)
+                page.update()
+        finally:
+            logger.info("コンポーネントを起動しました")
 
     try:
         import flet as ft
 
-        ft.app(target=_flet_main, assets_dir=str(SRC_DIR / "assets"))
+        ft.app(target=_flet_main, assets_dir=str(SRC_DIR / "assets"), view=ft.AppView.WEB_BROWSER, port=8000)
     except TypeError as exc:
         logger.error(f"インターフェイス不一致: {exc}")
         return ExitCode.TYPE_MISMATCH

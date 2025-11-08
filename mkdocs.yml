@@ -45,6 +45,7 @@ nav:
   - 開発ガイド:
       - セットアップ: dev/setup.md
       - アーキテクチャ: dev/architecture-design.md
+      - アプリ層の設定アクセス: dev/application-settings.md
       - 画面設計: dev/views_guide.md
       - エージェント: dev/agents_guide.md
       - マイグレーション: dev/migrations.md

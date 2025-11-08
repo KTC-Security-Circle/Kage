@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.home.components.task_stats_card import TaskStatsCard
+from views_old.home.components.task_stats_card import TaskStatsCard
 
 if TYPE_CHECKING:
     from logic.application.task_application_service import TaskApplicationService

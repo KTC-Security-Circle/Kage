@@ -13,7 +13,7 @@ from logic.application.memo_application_service import MemoApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from logic.queries.memo_queries import GetMemoByIdQuery
 from logic.queries.task_queries import GetTaskByIdQuery
-from views.shared import BaseView, ErrorHandlingMixin
+from views_old.shared import BaseView, ErrorHandlingMixin
 
 if TYPE_CHECKING:
     from models import MemoRead

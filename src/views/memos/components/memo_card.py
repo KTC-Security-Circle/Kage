@@ -181,6 +181,29 @@ class MemoCard(ft.Container):
         self.content = self._build_card_content()
         self.update()
 
+    @classmethod
+    def preview(cls) -> MemoCard:
+        """単体プレビュー用のインスタンスを生成する。
+
+        Args:
+            なし（インスタンス生成に必要な情報は内部で完結）
+
+        Returns:
+            サンプルデータを含む MemoCard
+        """
+        from datetime import datetime
+        from uuid import uuid4
+
+        from views.sample import SampleMemo
+
+        sample = SampleMemo(
+            id=uuid4(),
+            title="プレビュー用メモ",
+            content="これは MemoCard 単体プレビューのダミーコンテンツです。",
+            created_at=datetime.now(),
+        )
+        return cls(memo=sample, is_selected=True)
+
 
 class MemoCardList(ft.Column):
     """メモカードのリストコンテナ。
@@ -302,3 +325,39 @@ class MemoCardList(ft.Column):
         )
         if target_memo:
             self._handle_memo_select(target_memo)
+
+
+def create_memo_card_list(_page: ft.Page) -> MemoCardList:
+    """メモカードリストコンポーネントを作成。
+
+    Args:
+        page: Fletのページオブジェクト
+
+    Returns:
+        作成されたメモカードリストコンポーネント
+    """
+    from datetime import datetime
+    from uuid import uuid4
+
+    from views.sample import SampleMemo
+
+    # サンプルデータを使用して初期化
+    sample_memos: list[SampleMemo] = [
+        SampleMemo(
+            id=uuid4(),
+            title="サンプルメモ1",
+            content="これはサンプルメモ1の内容です。",
+            created_at=datetime.now(),
+        ),
+        SampleMemo(
+            id=uuid4(),
+            title="サンプルメモ2",
+            content="これはサンプルメモ2の内容です。",
+            created_at=datetime.now(),
+        ),
+    ]
+
+    return MemoCardList(
+        memos=sample_memos,
+        empty_message="まだメモがありません。新しいメモを作成してください。",
+    )

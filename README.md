@@ -136,6 +136,68 @@ uv run flet run -rd
 uv run flet run --web
 ```
 
+### Component Launcher (単体コンポーネント検証 / Preview Strict Mode)
+
+Flet コンポーネントを最小構成で素早くプレビューするためのランチャー `scripts/component_launcher.py` を用意しています。現在は **厳格モード** で動作し、以下の条件を満たすクラスのみ起動可能です:
+
+1. `ft.Control` を継承している
+2. `@classmethod preview(cls, ...) -> ft.Control` を実装している
+
+`preview` メソッド内部でダミーデータ等を組み立て、テスト用インスタンスを返してください。引数注入機能（`--props` / `--props-file`）やフォールバックファクトリは削除されました。
+
+```powershell
+# 基本: クラス指定（デフォルトで簡易レイアウトに包まれて表示）
+poe component --target views.memos.components.memo_card:MemoCard
+
+# ラップを外して純粋な Control のみ表示
+poe component --target views.memos.components.memo_card:MemoCard -nw
+```
+
+起動時はブラウザで表示されます（`view=WEB_BROWSER`）。ポート固定 (`8000`) のため複数同時起動には注意してください。
+
+オプション概要（簡略化後）:
+
+- `--target`: `module:Class` または `path/to/file.py:Class` (必須)
+- `--no-wrap` / `-nw`: レイアウトラップを無効化（既定はラップ有効）
+
+旧オプション (`--class`, `--props`, `--props-file`, `--wrap-layout`) は廃止されました。利用中のドキュメントやスクリプトからの削除を推奨します。
+
+#### preview メソッドサンプル
+
+```python
+class MemoCard(ft.Container):
+    @classmethod
+    def preview(cls) -> "MemoCard":  # from __future__ import annotations 前提で文字列許容
+        from datetime import datetime
+        from uuid import uuid4
+        from views.sample import SampleMemo
+        sample = SampleMemo(
+            id=uuid4(),
+            title="プレビュー用メモ",
+            content="ダミーコンテンツ",
+            created_at=datetime.now(),
+        )
+        return cls(memo=sample, is_selected=True)
+```
+
+#### 移行ガイド
+
+| 旧機能                   | 新仕様                            | 対応方法                |
+| ------------------------ | --------------------------------- | ----------------------- |
+| 任意ファクトリ関数起動   | サポート外                        | クラス化 + preview 追加 |
+| 引数注入 (`--props` 等)  | サポート外                        | preview 内で値組み立て  |
+| フォールバック探索       | サポート外                        | preview を必ず定義      |
+| `--wrap-layout` 指定     | 既定ラップ / `-nw` で解除         | 必要に応じて `-nw` 使用 |
+| ネイティブウィンドウ表示 | ブラウザ表示 (WEB_BROWSER) に統一 | 必要ならスクリプト改変  |
+
+#### 拡張のヒント
+
+- 追加表示モード（ネイティブ / ポート指定変更）が必要なら `ft.app(... view=...)` の第 3 引数を差し替え。
+- コンポーネントギャラリーを作る場合は `Gallery(ft.Column)` の `preview()` で内部に各コンポーネントを並べる。
+- 共通のモック生成が増えたら `src/views/_preview_data.py` のような専用ヘルパーモジュールを検討。
+
+内部処理ではログ初期化・ページ設定（フォント/テーマ）・簡易 View ラップ（任意）を行い、本番アプリに近い外観を再現します。
+
 ## 🗂️ プロジェクト設計・開発ガイド
 
 開発に参加する際は、以下のドキュメントを参照してください：

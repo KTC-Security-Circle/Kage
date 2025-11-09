@@ -13,7 +13,8 @@ if TYPE_CHECKING:
 
     import flet as ft
 
-from views.theme import get_status_color
+# [ToDo: 実装機能] テーマカラー取得機能
+# from views.theme import get_status_color
 
 
 def create_project_card(
@@ -33,7 +34,15 @@ def create_project_card(
     """
     import flet as ft
 
-    status_color = get_status_color(project["status"])
+    # [ToDo: 実装機能] プロジェクトステータスに応じた色の管理
+    # status_color = get_status_color(project["status"])
+    status_colors = {
+        "進行中": ft.Colors.BLUE,
+        "完了": ft.Colors.GREEN,
+        "保留": ft.Colors.ORANGE,
+        "キャンセル": ft.Colors.GREY,
+    }
+    status_color = status_colors.get(project["status"], ft.Colors.GREY)
 
     return ft.Card(
         content=ft.Container(

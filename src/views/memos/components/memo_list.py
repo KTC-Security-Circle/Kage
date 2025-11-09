@@ -2,19 +2,50 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import flet as ft
 
-from .memo_card import MemoCard
+from views.memos import presenter
+
+from .memo_card import MemoCard, MemoCardData
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from models import MemoRead
 
+
+# ========================================
+# データモデル
+# ========================================
+
+
+@dataclass(frozen=True, slots=True)
+class MemoListData:
+    """メモリスト表示用データ
+
+    Attributes:
+        cards: 表示するメモカードデータのリスト
+        empty_message: リストが空の場合のメッセージ
+    """
+
+    cards: tuple[MemoCardData, ...]
+    empty_message: str | None = None
+
+
+# ========================================
+# 定数
+# ========================================
+
 _EMPTY_ICON_SIZE = 48
 _EMPTY_PADDING = 40
+
+
+# ========================================
+# コンポーネント
+# ========================================
 
 
 class MemoCardList(ft.Column):
@@ -32,7 +63,7 @@ class MemoCardList(ft.Column):
         self.on_memo_select = on_memo_select
         self.empty_message = empty_message
         self.selected_memo_id = selected_memo_id
-        self._index: dict[str, MemoCard] = {}
+        self._memo_index: dict[str, MemoRead] = {}
 
         super().__init__(
             controls=self._build_controls(),
@@ -42,13 +73,13 @@ class MemoCardList(ft.Column):
         )
 
     def _build_controls(self) -> list[ft.Control]:
-        self._index.clear()
+        self._memo_index.clear()
         if not self.memos:
             return [self._build_empty_state()]
         cards: list[ft.Control] = []
         for memo in self.memos:
             card = self._create_card(memo)
-            self._index[str(memo.id)] = card
+            self._memo_index[str(memo.id)] = memo
             cards.append(card)
         return cards
 
@@ -73,11 +104,12 @@ class MemoCardList(ft.Column):
         )
 
     def _create_card(self, memo: MemoRead) -> MemoCard:
-        return MemoCard(
+        card_data = presenter.create_memo_card_data(
             memo=memo,
             is_selected=self.selected_memo_id == str(memo.id),
-            on_click=self._handle_memo_select,
+            on_click=lambda: self._handle_memo_select(memo),
         )
+        return MemoCard(card_data)
 
     def _handle_memo_select(self, memo: MemoRead) -> None:
         if self.on_memo_select:
@@ -90,38 +122,33 @@ class MemoCardList(ft.Column):
 
         if not memos:
             self.controls = [self._build_empty_state()]
-            self._index.clear()
+            self._memo_index.clear()
         else:
+            # 全てのカードを再作成（MemoCardは不変なので）
             updated_controls: list[ft.Control] = []
-            new_index: dict[str, MemoCard] = {}
+            new_index: dict[str, MemoRead] = {}
             for memo in memos:
                 memo_id = str(memo.id)
-                existing_card = self._index.get(memo_id)
-                if existing_card is not None:
-                    existing_card.refresh(memo, is_selected=self.selected_memo_id == memo_id)
-                    updated_controls.append(existing_card)
-                    new_index[memo_id] = existing_card
-                else:
-                    new_card = self._create_card(memo)
-                    updated_controls.append(new_card)
-                    new_index[memo_id] = new_card
+                card = self._create_card(memo)
+                updated_controls.append(card)
+                new_index[memo_id] = memo
             self.controls = updated_controls
-            self._index = new_index
+            self._memo_index = new_index
 
         if getattr(self, "page", None) is not None:
             self.update()
 
     def set_selected_memo(self, memo_id: str | None) -> None:
+        """選択されたメモを変更（全カードを再構築）。"""
         self.selected_memo_id = memo_id
-        # まず全てのカードの選択状態を更新（数が多い場合の最適化余地あり）
-        for card in self._index.values():
-            is_selected = memo_id is not None and str(card.memo.id) == memo_id
-            card.update_selection(is_selected=is_selected)
+        # 全カードを再作成（MemoCardは不変なので）
+        self.controls = [self._create_card(memo) for memo in self.memos] if self.memos else [self._build_empty_state()]
         if getattr(self, "page", None) is not None:
             self.update()
 
     def _find_card(self, memo_id: str) -> MemoCard | None:
-        for control in self.controls:
-            if isinstance(control, MemoCard) and str(control.memo.id) == memo_id:
-                return control
+        """指定されたIDのメモカードを検索（MemoReadから再作成）。"""
+        memo = self._memo_index.get(memo_id)
+        if memo:
+            return self._create_card(memo)
         return None

@@ -94,10 +94,11 @@ class MemosView(BaseView):
     def build_content(self) -> ft.Control:  # BaseView.build が呼ぶ
         """メモビューのUIを構築。"""
         # アクションバー
-        self._action_bar = MemoActionBar(
+        action_bar_data = presenter.create_action_bar_data(
             on_create_memo=self._handle_create_memo,
             on_search=self._handle_search,
         )
+        self._action_bar = MemoActionBar(action_bar_data)
 
         # ステータスタブ
         self._status_tabs = MemoStatusTabs(

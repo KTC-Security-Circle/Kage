@@ -15,6 +15,48 @@ if TYPE_CHECKING:
 _TabCounts = dict[MemoStatus, int]
 
 
+# ========================================
+# データモデル
+# ========================================
+
+
+@dataclass(frozen=True, slots=True)
+class TabData:
+    """単一タブの表示データ
+
+    Attributes:
+        status: タブのステータス
+        label: タブのラベルテキスト
+        icon: タブのアイコン名
+        count: タブに表示する件数
+        is_active: アクティブ状態
+    """
+
+    status: MemoStatus
+    label: str
+    icon: str
+    count: int
+    is_active: bool
+
+
+@dataclass(frozen=True, slots=True)
+class StatusTabsData:
+    """ステータスタブバー全体の表示データ
+
+    Attributes:
+        tabs: 各タブのデータリスト
+        on_tab_change: タブ切り替え時のコールバック
+    """
+
+    tabs: tuple[TabData, ...]
+    on_tab_change: Callable[[MemoStatus], None] | None = None
+
+
+# ========================================
+# 内部データモデル
+# ========================================
+
+
 @dataclass(slots=True)
 class _TabDefinition:
     status: MemoStatus

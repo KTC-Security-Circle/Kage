@@ -1,6 +1,43 @@
-"""状態管理モジュール.
+"""Memo State Layer.
 
-MemosView で使用する状態データおよび派生データ計算を切り出す。
+【責務】
+    State層は表示状態の保持と派生データ計算を担う。
+    Viewが必要とする全ての状態を一元管理し、整合性を保証する。
+
+    - 表示状態の保持（current_tab, search_query, selected_memo_id 等）
+    - 全メモデータの保持（all_memos）
+    - 検索結果の保持（search_results）
+    - 派生データの計算（フィルタリング済みメモ一覧、ステータス別件数）
+    - メモIDインデックスの管理（高速検索用）
+    - 選択状態の整合性保証（reconcile）
+
+【責務外（他層の担当）】
+    - データの取得・永続化 → Controller/ApplicationService
+    - UI要素の構築 → Presenter
+    - イベントハンドリング → View
+    - 並び順の決定 → ordering モジュール
+
+【設計上の特徴】
+    - Immutableなデータクラス（dataclass with slots）
+    - 副作用を排除したsetter設計（reconcile()で整合性保証）
+    - インデックス（_by_id）による高速検索
+    - 派生データのメソッド化（derived_memos, counts_by_status）
+
+【アーキテクチャ上の位置づけ】
+    Controller → State.set_xxx()
+                    ↓
+                State.reconcile()
+                    ↓
+    View → State.derived_memos()
+        → State.selected_memo()
+        → State.counts_by_status()
+
+【主な機能】
+    - タブ・検索条件に基づくメモ一覧の派生
+    - 選択メモの高速取得（O(1)）
+    - ステータス別件数の集計
+    - 選択整合性の自動調整（reconcile）
+    - 単一メモの追加・更新（upsert_memo）
 """
 
 from __future__ import annotations
@@ -38,7 +75,6 @@ class MemosViewState:
         self.all_memos = list(memos)
         # 一貫性のため、全件からインデックスを再構築
         self._rebuild_index()
-        self._reset_selection_if_missing()
 
     def set_search_result(self, query: str, results: list[MemoRead] | None) -> None:
         """検索クエリと結果を保存する。
@@ -49,7 +85,6 @@ class MemosViewState:
         """
         self.search_query = query
         self.search_results = results
-        self._reset_selection_if_missing()
 
     def set_current_tab(self, tab: MemoStatus | None) -> None:
         """アクティブなタブを設定する。
@@ -59,7 +94,6 @@ class MemosViewState:
         """
         self.current_tab = tab
         self.selected_memo_id = None
-        self._reset_selection_if_missing()
 
     def set_selected_memo(self, memo_id: UUID | None) -> None:
         """選択中のメモIDを更新する。
@@ -68,7 +102,6 @@ class MemosViewState:
             memo_id: 選択したメモのUUID
         """
         self.selected_memo_id = memo_id
-        self._reset_selection_if_missing()
 
     def derived_memos(self) -> list[MemoRead]:
         """現在のタブと検索条件に基づくメモ一覧を返す。
@@ -113,8 +146,12 @@ class MemosViewState:
             return list(memos)
         return [memo for memo in memos if memo.status == self.current_tab]
 
-    def _reset_selection_if_missing(self) -> None:
-        """選択中のメモが現在の一覧に存在しない場合は選択を解除する。"""
+    def reconcile(self) -> None:
+        """選択状態の整合性を確保する。
+
+        選択中のメモが現在の表示対象に存在しない場合、選択を解除する。
+        状態変更後に Controller から明示的に呼び出される。
+        """
         if self.selected_memo_id is None:
             return
         if not any(memo.id == self.selected_memo_id for memo in self.derived_memos()):
@@ -140,5 +177,3 @@ class MemosViewState:
                 break
         else:
             self.all_memos.append(memo)
-        # 選択が外れる条件は従来通りに委ねる
-        self._reset_selection_if_missing()

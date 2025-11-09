@@ -1,13 +1,38 @@
-"""メモビュー
+"""Memo View Layer.
 
-メモ管理のメインハブビュー。
-Reactテンプレートを参考に、4つのステータス（Inbox、Active、Idea、Archive）
-タブでのメモ管理機能を提供。
+【責務】
+    View層はMVPパターンにおける「View」の役割を担う。
+    UIレイアウトの構築、イベントハンドラーの配線、Controllerへの処理委譲を行う。
+
+    - UIコンポーネントの配置とレイアウト構築
+    - ユーザーイベント（クリック、検索等）のハンドリング
+    - Controllerへのユースケース実行依頼
+    - Presenterを使用したUI要素の生成・更新
+    - BaseViewを継承したエラーハンドリングとローディング表示
+
+【責務外（他層の担当）】
+    - データのフォーマット変換 → Presenter
+    - 状態の保持と派生計算 → State
+    - ビジネスロジックの実行 → Controller
+    - ApplicationServiceの呼び出し → Controller
+    - UI要素の生成ロジック → Presenter
+
+【アーキテクチャ上の位置づけ】
+    User → View → Controller → ApplicationService
+                ↓
+            Presenter (UI構築支援)
+                ↓
+            State (状態参照)
+
+【主な機能】
+    - 4つのステータスタブ（Inbox/Active/Idea/Archive）の表示
+    - メモ一覧と詳細パネルの2カラムレイアウト
+    - 検索・フィルタ機能
+    - メモ選択と詳細表示
+    - CRUD操作の起点（統合フェーズで実装予定）
 """
 
 from __future__ import annotations
-
-from datetime import datetime
 
 import flet as ft
 from loguru import logger
@@ -16,6 +41,7 @@ from logic.application.apps import ApplicationServices
 from models import MemoRead, MemoStatus
 from views.shared.base_view import BaseView
 
+from . import presenter
 from .components import MemoActionBar, MemoCardList, MemoFilters, MemoStatusTabs
 from .controller import MemoApplicationPort, MemosController
 from .state import MemosViewState
@@ -107,11 +133,11 @@ class MemosView(BaseView):
         """
         # メモリスト
         current_memos = self.controller.current_memos()
-        selected_memo_id = self._selected_memo_id_str()
+        selected_memo_id = presenter.memo_id_to_str(self.memos_state.selected_memo_id)
         self._memo_list = MemoCardList(
             memos=current_memos,
             on_memo_select=self._handle_memo_select,
-            empty_message=self._get_empty_message(),
+            empty_message=presenter.get_empty_message_for_status(self.memos_state.current_tab),
             selected_memo_id=selected_memo_id,
         )
 
@@ -148,191 +174,13 @@ class MemosView(BaseView):
         """
         selected_memo = self.controller.current_selection()
         if selected_memo is None:
-            return ft.Container(content=self._build_empty_detail_panel())
-        memo = selected_memo
+            return ft.Container(content=presenter.build_empty_detail_panel())
 
-        # 日付表示の安全な整形（Noneや欠損に対応）
-        created_text = self._format_datetime(getattr(memo, "created_at", None))
-        updated_text = self._format_datetime(getattr(memo, "updated_at", None))
-
-        # メモ詳細カード
-        detail_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        # ヘッダー
-                        ft.Row(
-                            controls=[
-                                ft.Text(
-                                    memo.title or "無題のメモ",
-                                    style=ft.TextThemeStyle.HEADLINE_SMALL,
-                                    weight=ft.FontWeight.BOLD,
-                                    expand=True,
-                                ),
-                                # ステータスバッジ（実際のステータスに基づく）
-                                self._build_memo_status_badge(memo.status),
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        ),
-                        # 内容
-                        ft.Container(
-                            content=ft.Text(
-                                memo.content,
-                                style=ft.TextThemeStyle.BODY_MEDIUM,
-                                selectable=True,
-                            ),
-                            padding=ft.padding.all(16),
-                            bgcolor=ft.Colors.SECONDARY_CONTAINER,
-                            border_radius=8,
-                        ),
-                        # メタデータ
-                        self._build_detail_metadata(created_text, updated_text),
-                        # アクションボタン
-                        self._build_detail_actions(),
-                    ],
-                    spacing=16,
-                ),
-                padding=ft.padding.all(20),
-            ),
-        )
-
-        return ft.Container(
-            content=ft.Column(
-                controls=[detail_card],
-                scroll=ft.ScrollMode.AUTO,
-                expand=True,
-            ),
-        )
-
-    def _build_empty_detail_panel(self) -> ft.Control:
-        """空の詳細パネルを構築。
-
-        Returns:
-            空の詳細パネルコントロール
-        """
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.DESCRIPTION, size=64, color=ft.Colors.OUTLINE),
-                    ft.Text(
-                        "メモを選択して詳細を表示",
-                        style=ft.TextThemeStyle.HEADLINE_SMALL,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        "左側のリストからメモを選択すると、\nここに詳細が表示されます。",
-                        style=ft.TextThemeStyle.BODY_MEDIUM,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=16,
-            ),
-            alignment=ft.alignment.center,
-            expand=True,
-        )
-
-    def _build_memo_status_badge(self, status: MemoStatus) -> ft.Container:
-        """メモステータスバッジを構築（実際のステータスに基づく）。"""
-        label_map = {
-            MemoStatus.INBOX: "Inbox",
-            MemoStatus.ACTIVE: "Active",
-            MemoStatus.IDEA: "Idea",
-            MemoStatus.ARCHIVE: "Archived",
-        }
-        color_map = {
-            MemoStatus.INBOX: ft.Colors.PRIMARY,
-            MemoStatus.ACTIVE: ft.Colors.SECONDARY,
-            MemoStatus.IDEA: ft.Colors.TERTIARY,
-            # アーカイブは少し控えめな色
-            MemoStatus.ARCHIVE: ft.Colors.OUTLINE_VARIANT,
-        }
-        text_color_map = {
-            MemoStatus.ARCHIVE: ft.Colors.ON_SURFACE,
-        }
-
-        label = label_map.get(status, "Memo")
-        bgcolor = color_map.get(status, ft.Colors.PRIMARY)
-        text_color = text_color_map.get(status, ft.Colors.ON_PRIMARY)
-        return ft.Container(
-            content=ft.Text(label, size=12, color=text_color, weight=ft.FontWeight.BOLD),
-            padding=ft.padding.symmetric(horizontal=12, vertical=4),
-            bgcolor=bgcolor,
-            border_radius=12,
-        )
-
-    def _build_detail_metadata(self, created_text: str, updated_text: str) -> ft.Control:
-        """詳細メタデータ行（作成日・更新日）を構築。"""
-        return ft.Row(
-            controls=[
-                ft.Column(
-                    controls=[
-                        ft.Text("作成日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                        ft.Text(created_text, style=ft.TextThemeStyle.BODY_SMALL),
-                    ],
-                    spacing=4,
-                ),
-                ft.Column(
-                    controls=[
-                        ft.Text("更新日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                        ft.Text(updated_text, style=ft.TextThemeStyle.BODY_SMALL),
-                    ],
-                    spacing=4,
-                ),
-            ],
-            spacing=32,
-        )
-
-    def _format_datetime(self, value: object) -> str:
-        """日付表示を安全に整形。datetime 以外や None はダッシュで返す。"""
-        return value.strftime("%Y年%m月%d日 %H:%M") if isinstance(value, datetime) else "—"
-
-    def _build_detail_actions(self) -> ft.Control:
-        """詳細パネルのアクションボタンを構築。
-
-        Returns:
-            アクションボタンコントロール
-        """
-        return ft.Column(
-            controls=[
-                # TODO: AI提案機能を統合フェーズで実装
-                ft.Row(
-                    controls=[
-                        ft.ElevatedButton(
-                            content=ft.Row(
-                                controls=[
-                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=16),
-                                    ft.Text("AIでタスクを生成"),
-                                ],
-                                spacing=8,
-                                tight=True,
-                            ),
-                            on_click=self._handle_ai_suggestion,
-                            expand=True,
-                        ),
-                    ],
-                ),
-                ft.Row(
-                    controls=[
-                        ft.OutlinedButton(
-                            "編集",
-                            icon=ft.Icons.EDIT,
-                            on_click=self._handle_edit_memo,
-                            expand=True,
-                        ),
-                        ft.OutlinedButton(
-                            "削除",
-                            icon=ft.Icons.DELETE,
-                            on_click=self._handle_delete_memo,
-                            expand=True,
-                        ),
-                    ],
-                    spacing=8,
-                ),
-            ],
-            spacing=8,
+        return presenter.build_detail_panel(
+            selected_memo,
+            on_ai_suggestion=self._handle_ai_suggestion,
+            on_edit=self._handle_edit_memo,
+            on_delete=self._handle_delete_memo,
         )
 
     def _get_tab_counts(self) -> dict[MemoStatus, int]:
@@ -342,23 +190,6 @@ class MemosView(BaseView):
             タブ別メモ数辞書
         """
         return self.controller.status_counts()
-
-    def _get_empty_message(self) -> str:
-        """空のメッセージを取得。
-
-        Returns:
-            現在のタブに応じた空メッセージ
-        """
-        messages = {
-            MemoStatus.INBOX: "Inboxメモはありません",
-            MemoStatus.ACTIVE: "アクティブなメモはありません",
-            MemoStatus.IDEA: "アイデアメモはありません",
-            MemoStatus.ARCHIVE: "アーカイブされたメモはありません",
-        }
-        current_tab = self.memos_state.current_tab
-        if current_tab is None:
-            return "メモはありません"
-        return messages.get(current_tab, "メモはありません")
 
     def _load_initial_memos(self) -> None:
         """DB から初期メモ一覧を読み込む (Inbox を優先)。"""
@@ -374,7 +205,7 @@ class MemosView(BaseView):
         """メモリストを更新。"""
         if self._memo_list:
             current_memos = self.controller.current_memos()
-            selected_memo_id = self._selected_memo_id_str()
+            selected_memo_id = presenter.memo_id_to_str(self.memos_state.selected_memo_id)
             try:
                 self._memo_list.update_memos(
                     current_memos,
@@ -449,7 +280,7 @@ class MemosView(BaseView):
             memo: 選択されたメモ
         """
         self.controller.select_memo(memo)
-        selected_memo_id = self._selected_memo_id_str()
+        selected_memo_id = presenter.memo_id_to_str(self.memos_state.selected_memo_id)
         # リストの選択ハイライトを更新（詳細パネルと同時に切り替える）
         if self._memo_list:
             try:
@@ -489,19 +320,12 @@ class MemosView(BaseView):
         """詳細パネルを更新。"""
         if hasattr(self, "_detail_panel") and self._detail_panel:
             new_detail_panel = self._build_detail_panel()
-            self._detail_panel.content = new_detail_panel.content
-            self._detail_panel.update()
+            presenter.update_detail_panel_content(self._detail_panel, new_detail_panel)
 
     def _refresh(self) -> None:
         """ビューの差分更新を一括適用する。"""
         self._update_memo_list()
         self._update_detail_panel()
-
-    def _selected_memo_id_str(self) -> str | None:
-        """選択中のメモIDを文字列に変換する。"""
-        if self.memos_state.selected_memo_id is None:
-            return None
-        return str(self.memos_state.selected_memo_id)
 
 
 # ユーティリティ関数

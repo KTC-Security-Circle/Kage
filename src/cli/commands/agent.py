@@ -17,7 +17,7 @@ from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 
 if TYPE_CHECKING:  # pragma: no cover
     from logic.application.one_liner_application_service import OneLinerApplicationService
-    from logic.queries.one_liner_queries import OneLinerContext
+    # from logic.queries.one_liner_queries import OneLinerContext
 
 app = typer.Typer(help="エージェント (one-liner) コマンド")
 
@@ -92,25 +92,25 @@ def _get_one_liner_service(
     return OneLinerApplicationService(provider=resolved_provider, model_name=resolved_model)
 
 
-@with_spinner("Building context...")
-def _build_context_auto() -> OneLinerContext:  # [AI GENERATED]
-    from logic.queries.one_liner_queries import build_one_liner_context_auto
+# @with_spinner("Building context...")
+# def _build_context_auto() -> OneLinerContext:  # [AI GENERATED]
+#     from logic.queries.one_liner_queries import build_one_liner_context_auto
 
-    return build_one_liner_context_auto()
+#     return build_one_liner_context_auto()
 
 
-def _build_context_interactive() -> OneLinerContext:  # [AI GENERATED]
-    """Questionary を用いて手動でカウント値を入力しコンテキスト構築 [AI GENERATED]"""
-    today = int(questionary.text("today_task_count?", default="0").ask() or 0)
-    completed = int(questionary.text("completed_task_count?", default="0").ask() or 0)
-    overdue = int(questionary.text("overdue_task_count?", default="0").ask() or 0)
-    from logic.queries.one_liner_queries import build_one_liner_context
+# def _build_context_interactive() -> OneLinerContext:  # [AI GENERATED]
+#     """Questionary を用いて手動でカウント値を入力しコンテキスト構築 [AI GENERATED]"""
+#     today = int(questionary.text("today_task_count?", default="0").ask() or 0)
+#     completed = int(questionary.text("completed_task_count?", default="0").ask() or 0)
+#     overdue = int(questionary.text("overdue_task_count?", default="0").ask() or 0)
+#     from logic.queries.one_liner_queries import build_one_liner_context
 
-    return build_one_liner_context(
-        today_task_count=today,
-        completed_task_count=completed,
-        overdue_task_count=overdue,
-    )
+#     return build_one_liner_context(
+#         today_task_count=today,
+#         completed_task_count=completed,
+#         overdue_task_count=overdue,
+#     )
 
 
 def _interactive_select_provider_model() -> tuple[LLMProvider | None, str | None]:  # [AI GENERATED]
@@ -155,20 +155,20 @@ def _interactive_select_provider_model() -> tuple[LLMProvider | None, str | None
     return provider, model
 
 
-@elapsed_time()
-@with_spinner("Generating one-liner...")
-def _generate_one_liner(
-    ctx: OneLinerContext,
-    provider: LLMProvider | None = None,
-    model: str | None = None,
-) -> str:  # [AI GENERATED] TimingResult[str]
-    """One-liner 生成 (TimingResult[str] 相当オブジェクトを返却) [AI GENERATED]"""
-    service = _get_one_liner_service(provider=provider, model=model)
-    from logic.application.one_liner_application_service import OneLinerContext
+# @elapsed_time()
+# @with_spinner("Generating one-liner...")
+# def _generate_one_liner(
+#     ctx: OneLinerContext,
+#     provider: LLMProvider | None = None,
+#     model: str | None = None,
+# ) -> str:  # [AI GENERATED] TimingResult[str]
+#     """One-liner 生成 (TimingResult[str] 相当オブジェクトを返却) [AI GENERATED]"""
+#     service = _get_one_liner_service(provider=provider, model=model)
+#     from logic.application.one_liner_application_service import OneLinerContext
 
-    if isinstance(ctx, OneLinerContext):
-        return service.generate_one_liner(ctx)
-    return service.generate_one_liner()
+#     if isinstance(ctx, OneLinerContext):
+#         return service.generate_one_liner(ctx)
+#     return service.generate_one_liner()
 
 
 def _print_one_liner(
@@ -260,9 +260,9 @@ def save_one_liner_as_task(
     gen_res = _generate_one_liner(ctx, provider=provider, model=model)
     text = gen_res.result
     from logic.application.task_application_service import TaskApplicationService
-    from logic.commands.task_commands import CreateTaskCommand
-    from logic.container import service_container
-    from models import TaskStatus
+    # from logic.commands.task_commands import CreateTaskCommand
+    # from logic.container import service_container
+    # from models import TaskStatus
 
     try:
         task_status = TaskStatus(status)

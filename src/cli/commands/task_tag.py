@@ -130,11 +130,10 @@ def add(task_id: str, tag_id: str) -> None:  # [AI GENERATED]
         task_id: タスク UUID
         tag_id: タグ UUID
     """
-    from logic.commands.task_tag_commands import CreateTaskTagCommand
-
     t_uuid = uuid.UUID(task_id)
     tag_uuid = uuid.UUID(tag_id)
-    created = _create_relation(CreateTaskTagCommand(task_id=t_uuid, tag_id=tag_uuid))
+    cmd = [task_id, tag_id]
+    created = _create_relation(cmd)
     console.print(
         f"[green]Linked:[/green] task={created.result.task_id} tag={created.result.tag_id} "
         f"Elapsed: {created.elapsed:.2f}s"
@@ -150,11 +149,10 @@ def remove(task_id: str, tag_id: str) -> None:  # [AI GENERATED]
         task_id: タスク UUID
         tag_id: タグ UUID
     """
-    from logic.commands.task_tag_commands import DeleteTaskTagCommand
-
     t_uuid = uuid.UUID(task_id)
     tag_uuid = uuid.UUID(tag_id)
-    deleted = _delete_relation(DeleteTaskTagCommand(task_id=t_uuid, tag_id=tag_uuid))
+    cmd = [task_id, tag_id]
+    deleted = _delete_relation(cmd)
     console.print(f"[red]Removed:[/red] task={t_uuid} tag={tag_uuid} Elapsed: {deleted.elapsed:.2f}s")
 
 
@@ -170,12 +168,6 @@ def list_relations(
         task: タスク UUID (フィルタ)
         tag: タグ UUID (フィルタ)
     """
-    from logic.queries.task_tag_queries import (
-        GetAllTaskTagsQuery,
-        GetTaskTagsByTagIdQuery,
-        GetTaskTagsByTaskIdQuery,
-    )
-
     if task and tag:
         console.print("[yellow]--task と --tag は同時指定できません[/yellow]")
         raise typer.Exit(code=1)

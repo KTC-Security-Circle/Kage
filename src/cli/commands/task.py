@@ -16,45 +16,38 @@ from rich.console import Console
 from rich.table import Table
 
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
-from models import TaskRead, TaskStatus
+from logic.application.apps import ApplicationServices
+from models import TaskRead, TaskStatus, TaskUpdate
 
 if TYPE_CHECKING:
     from logic.application.task_application_service import TaskApplicationService
-    from logic.commands.task_commands import CreateTaskCommand, DeleteTaskCommand, UpdateTaskCommand
-    from logic.queries.task_queries import GetTaskByIdQuery
 
 app = typer.Typer(help="タスク CRUD / ステータス操作")
 console = Console()
 
 
 def _get_service() -> TaskApplicationService:
-    from logic.application.task_application_service import TaskApplicationService
-    from logic.container import service_container
-
-    return service_container.get_service(TaskApplicationService)
+    apps = ApplicationServices.create()
+    return apps.task
 
 
 @elapsed_time()
 @with_spinner("Loading tasks...")
 def _load_tasks(status: TaskStatus) -> list[TaskRead]:
-    from logic.queries.task_queries import GetTasksByStatusQuery
-
     service = _get_service()
-    return service.get_tasks_by_status(GetTasksByStatusQuery(status=status))
+    return service.list_by_status(status=status)
 
 
 @elapsed_time()
 @with_spinner("Loading all tasks...")
-def _list_all_tasks() -> dict[TaskStatus, list[TaskRead]]:
-    from logic.queries.task_queries import GetAllTasksByStatusDictQuery
-
+def _list_all_tasks() -> list[TaskRead]:
     service = _get_service()
-    return service.get_all_tasks_by_status_dict(GetAllTasksByStatusDictQuery())
+    return service.get_all_tasks()
 
 
 @elapsed_time()
 @with_spinner("Creating task...")
-def _create_task(cmd: CreateTaskCommand) -> TaskRead:
+def _create_task(title: str, description: str) -> TaskRead:
     """タスク作成サービス呼び出し [AI GENERATED]
 
     Args:
@@ -64,12 +57,12 @@ def _create_task(cmd: CreateTaskCommand) -> TaskRead:
         TaskRead: 作成されたタスク
     """
     service = _get_service()
-    return service.create_task(cmd)
+    return service.create(title, description)
 
 
 @elapsed_time()
 @with_spinner("Fetching task...")
-def _get_task(query: GetTaskByIdQuery) -> TaskRead | None:
+def _get_task(task_id) -> TaskRead | None:
     """IDでタスク取得サービス呼び出し [AI GENERATED]
 
     Args:
@@ -79,12 +72,12 @@ def _get_task(query: GetTaskByIdQuery) -> TaskRead | None:
         TaskRead | None: 取得結果（存在しない場合 None）
     """
     service = _get_service()
-    return service.get_task_by_id(query)
+    return service.get_by_id(task_id)
 
 
 @elapsed_time()
 @with_spinner("Updating task...")
-def _update_task(cmd: UpdateTaskCommand) -> TaskRead:
+def _update_task(task_id, update_data: TaskUpdate) -> TaskRead:
     """タスク更新サービス呼び出し [AI GENERATED]
 
     Args:
@@ -94,24 +87,25 @@ def _update_task(cmd: UpdateTaskCommand) -> TaskRead:
         TaskRead: 更新後タスク
     """
     service = _get_service()
-    return service.update_task(cmd)
+    return service.update(task_id, update_data)
 
 
 @elapsed_time()
 @with_spinner("Deleting task...")
-def _delete_task(cmd: DeleteTaskCommand) -> None:
+def _delete_task(task_id) -> bool:
     """タスク削除サービス呼び出し [AI GENERATED]
 
     Args:
         cmd (DeleteTaskCommand): 削除コマンド
     """
     service = _get_service()
-    service.delete_task(cmd)
+    success = service.delete(task_id)
+    return success
 
 
 @elapsed_time()
 @with_spinner("Changing status...")
-def _change_status(cmd: UpdateTaskCommand) -> TaskRead:
+def _change_status(task_id, update_data) -> TaskRead:
     """ステータス変更（更新再利用）サービス呼び出し [AI GENERATED]
 
     Args:
@@ -121,7 +115,7 @@ def _change_status(cmd: UpdateTaskCommand) -> TaskRead:
         TaskRead: 更新後タスク
     """
     service = _get_service()
-    return service.update_task(cmd)
+    return service.update(task_id, update_data)
 
 
 # ==== Stats Helpers ====
@@ -232,8 +226,6 @@ def create_task(
         status: 初期ステータス
         due: 期限 (YYYY-MM-DD)
     """
-    from logic.commands.task_commands import CreateTaskCommand
-
     if title is None:
         title = questionary.text("Title?").ask()
     if description is None:
@@ -247,8 +239,8 @@ def create_task(
     if title is None:
         msg = "title 必須"
         raise typer.BadParameter(msg)
-    cmd = CreateTaskCommand(title=title, description=description or "", status=status, due_date=due_date)
-    task = _create_task(cmd)
+    # cmd = CreateTaskCommand(title=title, description=description or "", status=status, due_date=due_date)
+    task = _create_task(title, description or "")
     console.print(f"[green]Created:[/green] {task.result.title} ({task.result.id}) Elapsed: {task.elapsed:.2f}s")
 
 
@@ -260,10 +252,8 @@ def get_task(task_id: str) -> None:
     Args:
         task_id: 対象タスク UUID 文字列
     """
-    from logic.queries.task_queries import GetTaskByIdQuery
-
     tid = uuid.UUID(task_id)
-    task = _get_task(GetTaskByIdQuery(task_id=tid))
+    task = _get_task(task_id=tid)
     if task.result is None:
         console.print("[yellow]Not found[/yellow]")
         raise typer.Exit(code=1)
@@ -298,9 +288,6 @@ def update_task(
         status: 新ステータス (None で変更しない)
         due: 新期限文字列 (None で変更しない)
     """
-    from logic.commands.task_commands import UpdateTaskCommand
-    from logic.queries.task_queries import GetTaskByIdQuery
-
     tid = uuid.UUID(task_id)
 
     def prompt_interactive() -> tuple[str | None, str | None, TaskStatus | None, str | None]:
@@ -326,7 +313,7 @@ def update_task(
             due_date = date.fromisoformat(due)
         except ValueError:
             console.print("[yellow]Invalid date -> ignore[/yellow]")
-    current = _get_task(GetTaskByIdQuery(task_id=tid))
+    current = _get_task(task_id=tid)
     if current.result is None:
         console.print("[red]Task not found[/red]")
         raise typer.Exit(code=1)
@@ -337,7 +324,7 @@ def update_task(
     status = status or current_task.status
 
     cmd = UpdateTaskCommand(task_id=tid, title=title, description=description or "", status=status, due_date=due_date)
-    updated = _update_task(cmd)
+    updated = _update_task(task_id, update_data)
     console.print(
         f"[green]Updated:[/green] {updated.result.title} ({updated.result.id}) Elapsed: {updated.elapsed:.2f}s"
     )
@@ -352,13 +339,11 @@ def delete_task(task_id: str, force: bool = typer.Option(default=False, help="�
         task_id: 削除対象 UUID
         force: 確認ダイアログを省略するか
     """
-    from logic.commands.task_commands import DeleteTaskCommand
-
     tid = uuid.UUID(task_id)
     if (not force) and (not questionary.confirm("Delete this task?").ask()):
         console.print("[yellow]Cancelled[/yellow]")
         raise typer.Exit(code=1)
-    deleted = _delete_task(DeleteTaskCommand(task_id=tid))
+    deleted = _delete_task(task_id=tid)
     console.print(f"[red]Deleted:[/red] {tid} Elapsed: {deleted.elapsed:.2f}s")
 
 
@@ -372,10 +357,9 @@ def change_status(task_id: str, new_status: TaskStatus) -> None:
         new_status: 新しいステータス
     """
     from logic.commands.task_commands import UpdateTaskCommand
-    from logic.queries.task_queries import GetTaskByIdQuery
 
     tid = uuid.UUID(task_id)
-    current = _get_task(GetTaskByIdQuery(task_id=tid))
+    current = _get_task(task_id=tid)
     if current.result is None:
         console.print("[red]Not found[/red]")
         raise typer.Exit(code=1)
@@ -386,7 +370,7 @@ def change_status(task_id: str, new_status: TaskStatus) -> None:
         status=new_status,
         due_date=current.result.due_date,
     )
-    updated = _change_status(cmd)
+    updated = _change_status(task_id, cmd)
     console.print(f"[green]Status -> {updated.result.status.value}[/green] Elapsed: {updated.elapsed:.2f}s")
 
 

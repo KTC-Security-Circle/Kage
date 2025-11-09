@@ -48,25 +48,26 @@ def _update_memo(memo_id: str, data: MemoUpdate) -> MemoRead:  # [AI GENERATED]
     return service.update(memo_uuid, data)
 
 
-# @elapsed_time()
-# @with_spinner("Deleting memo...")
-# def _delete_memo() -> bool:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.delete()
+@elapsed_time()
+@with_spinner("Deleting memo...")
+def _delete_memo(memo_id: str) -> bool:  # [AI GENERATED]
+    memo_uuid = uuid.UUID(memo_id)
+    service = _get_service()
+    return service.delete(memo_uuid)
 
 
-# @elapsed_time()
-# @with_spinner("Fetching memo...")
-# def _get_memo() -> MemoRead | None:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.get_by_id()
+@elapsed_time()
+@with_spinner("Fetching memo...")
+def _get_memo(memo_id) -> MemoRead | None:  # [AI GENERATED]
+    service = _get_service()
+    return service.get_by_id(memo_id)
 
 
-# @elapsed_time()
-# @with_spinner("Listing memos...")
-# def _list_all() -> list[MemoRead]:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.get_all_memos()
+@elapsed_time()
+@with_spinner("Listing memos...")
+def _list_all() -> list[MemoRead]:  # [AI GENERATED]
+    service = _get_service()
+    return service.get_all_memos()
 
 
 # @elapsed_time()
@@ -157,79 +158,78 @@ def update(
     console.print(f"[green]Updated:[/green] {updated.result.id} Elapsed: {updated.elapsed:.2f}s")
 
 
-# @app.command("delete", help="メモ削除")
-# @handle_cli_errors()
-# def delete(
-#     memo_id: str,
-#     force: bool = typer.Option(
-#         default=False,
-#         help="確認なし",
-#         rich_help_panel="Danger",
-#     ),
-# ) -> None:  # [AI GENERATED]
-#     """メモを削除するコマンド [AI GENERATED]
+@app.command("delete", help="メモ削除")
+@handle_cli_errors()
+def delete(
+    memo_id: str,
+    force: bool = typer.Option(
+        default=False,
+        help="確認なし",
+        rich_help_panel="Danger",
+    ),
+) -> None:  # [AI GENERATED]
+    """メモを削除するコマンド [AI GENERATED]
 
-#     Args:
-#         memo_id: 対象メモ UUID
-#         force: 確認を省略するか
-#     """
-#     from logic.commands.memo_commands import DeleteMemoCommand
-
-#     m_uuid = uuid.UUID(memo_id)
-#     if (not force) and not questionary.confirm("Delete this memo?").ask():
-#         console.print("[yellow]Cancelled[/yellow]")
-#         raise typer.Exit(code=1)
-#     deleted = _delete_memo(DeleteMemoCommand(memo_id=m_uuid))
-#     console.print(f"[red]Deleted:[/red] {m_uuid} ({'OK' if deleted.result else 'NG'}) Elapsed: {deleted.elapsed:.2f}s")
+    Args:
+        memo_id: 対象メモ UUID
+        force: 確認を省略するか
+    """
+    m_uuid = uuid.UUID(memo_id)
+    if (not force) and not questionary.confirm("Delete this memo?").ask():
+        console.print("[yellow]Cancelled[/yellow]")
+        raise typer.Exit(code=1)
+    deleted = _delete_memo(memo_id)
+    console.print(f"[red]Deleted:[/red] {m_uuid} ({'OK' if deleted.result else 'NG'}) Elapsed: {deleted.elapsed:.2f}s")
 
 
-# @app.command("get", help="IDで取得")
-# @handle_cli_errors()
-# def get_memo(memo_id: str) -> None:  # [AI GENERATED]
-#     """ID 指定でメモ詳細 (Markdown レンダリング含む) を取得するコマンド [AI GENERATED]
+@app.command("get", help="IDで取得")
+@handle_cli_errors()
+def get_memo(memo_id: str) -> None:  # [AI GENERATED]
+    """ID 指定でメモ詳細 (Markdown レンダリング含む) を取得するコマンド [AI GENERATED]
 
-#     Args:
-#         memo_id: メモ UUID
-#     """
-#     from logic.queries.memo_queries import GetMemoByIdQuery
+    Args:
+        memo_id: メモ UUID
+    """
+    # from logic.queries.memo_queries import GetMemoByIdQuery
 
-#     m_uuid = uuid.UUID(memo_id)
-#     memo = _get_memo(GetMemoByIdQuery(memo_id=m_uuid))
-#     if memo.result is None:
-#         console.print("[yellow]Not found[/yellow]")
-#         raise typer.Exit(code=1)
-#     table = Table(title="Memo Detail", box=box.MINIMAL_DOUBLE_HEAD, caption=f"Elapsed: {memo.elapsed:.2f}s")
-#     table.add_column("Field")
-#     table.add_column("Value")
-#     table.add_row("ID", str(memo.result.id))
-#     table.add_row("Task ID", str(memo.result.task_id))
-#     # 本文は Markdown として別レンダリング (テーブル内は省略)  # [AI GENERATED]
-#     snippet = memo.result.content.splitlines()[0][:DETAIL_PREVIEW_LEN] + (
-#         "..." if len(memo.result.content) > DETAIL_PREVIEW_LEN else ""
-#     )
-#     table.add_row("Content (preview)", snippet)
-#     console.print(table)
-#     console.print(Markdown(memo.result.content))
+    m_uuid = uuid.UUID(memo_id)
+    memo = _get_memo(memo_id=m_uuid)
+    if memo.result is None:
+        console.print("[yellow]Not found[/yellow]")
+        raise typer.Exit(code=1)
+    table = Table(title="Memo Detail", box=box.MINIMAL_DOUBLE_HEAD, caption=f"Elapsed: {memo.elapsed:.2f}s")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("ID", str(memo.result.id))
+    # table.add_row("Task ID", str(memo.result.task_id))
+    # 本文は Markdown として別レンダリング (テーブル内は省略)  # [AI GENERATED]
+    # snippet = memo.result.content.splitlines()[0][:DETAIL_PREVIEW_LEN] + (
+    #     "..." if len(memo.result.content) > DETAIL_PREVIEW_LEN else ""
+    # )
+    # table.add_row("Content (preview)", snippet)
+    console.print(table)
+    console.print(Markdown(memo.result.content))
 
 
-# @app.command("list", help="メモ一覧 (フィルタ対応)")
-# @handle_cli_errors()
-# def list_memos(
-#     task: str | None = typer.Option(None, "--task", help="特定タスクIDで絞り込み"),
-# ) -> None:  # [AI GENERATED]
-#     """メモ一覧を表示 (タスクIDフィルタ対応) するコマンド [AI GENERATED]
+@app.command("list", help="メモ一覧 (フィルタ対応)")
+@handle_cli_errors()
+def list_memos(
+    task: str | None = typer.Option(None, "--task", help="特定タスクIDで絞り込み"),
+) -> None:  # [AI GENERATED]
+    """メモ一覧を表示 (タスクIDフィルタ対応) するコマンド [AI GENERATED]
 
-#     Args:
-#         task: タスク UUID フィルタ
-#     """
-#     from logic.queries.memo_queries import GetAllMemosQuery, GetMemosByTaskIdQuery
+    Args:
+        task: タスク UUID フィルタ
+    """
+    # from logic.queries.memo_queries import GetAllMemosQuery, GetMemosByTaskIdQuery
 
-#     if task:
-#         rows = _list_by_task(GetMemosByTaskIdQuery(task_id=uuid.UUID(task)))
-#         _print_memos(rows.result, f"task={task}", rows.elapsed)
-#         return
-#     rows = _list_all(GetAllMemosQuery())
-#     _print_memos(rows.result, "all", rows.elapsed)
+    # if task:
+    #     rows = _list_by_task(GetMemosByTaskIdQuery(task_id=uuid.UUID(task)))
+    #     _print_memos(rows.result, f"task={task}", rows.elapsed)
+    #     return
+    # rows = _list_all()
+    # _print_memos(rows.result, "all", rows.elapsed)
+    return
 
 
 # @app.command("search", help="メモ全文検索 (部分一致)")

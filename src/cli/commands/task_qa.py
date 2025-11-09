@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.table import Table
 
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
-from models import QuickActionCommand
+from logic.application.apps import ApplicationServices
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェックのみ
     from logic.application.task_application_service import TaskApplicationService
@@ -27,20 +27,13 @@ console = Console()
 
 
 def _get_service() -> TaskApplicationService:
-    """TaskApplicationService を取得 [AI GENERATED]
+    apps = ApplicationServices.create()
+    return apps.task
 
-    Returns:
-        TaskApplicationService: タスクアプリケーションサービス
-    """
-    from logic.application.task_application_service import TaskApplicationService
-    from logic.container import service_container
-
-    return service_container.get_service(TaskApplicationService)
+    # return service_container.get_service(TaskApplicationService)
 
 
 # === Helpers ===
-
-
 @elapsed_time()
 @with_spinner("Loading quick actions...")
 def _load_quick_actions() -> list[QuickActionCommand]:  # [AI GENERATED]

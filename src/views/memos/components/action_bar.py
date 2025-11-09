@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+_MIN_SEARCH_LEN = 2
+
+
 class MemoActionBar(ft.Container):
     """メモ操作用のアクションバー。
 
@@ -134,8 +137,17 @@ class MemoActionBar(ft.Container):
 
     def _handle_search_change(self, _: ft.ControlEvent) -> None:
         """検索フィールド変更時のハンドラー."""
-        if self.on_search and self._search_field:
-            self.on_search(self._search_field.value or "")
+        if not (self.on_search and self._search_field):
+            return
+        query = (self._search_field.value or "").strip()
+        # 入力が空: 検索解除を即時反映
+        if not query:
+            self.on_search("")
+            return
+        # 入力が短すぎる場合はノイズを抑制（ライブサーチは2文字以上）
+        if len(query) < _MIN_SEARCH_LEN:
+            return
+        self.on_search(query)
 
     def _handle_search_submit(self, _: ft.ControlEvent) -> None:
         """検索フィールド送信時のハンドラー."""
@@ -170,149 +182,3 @@ class MemoActionBar(ft.Container):
         if self._search_field:
             self._search_field.value = query
             self._search_field.update()
-
-
-class MemoStatusTabs(ft.Container):
-    """メモステータスタブコンポーネント。
-
-    Inbox、Active、Idea、Archiveの4つのステータスタブを提供。
-    テンプレートのTabsListを参考に実装。
-    """
-
-    def __init__(
-        self,
-        *,
-        on_tab_change: Callable[[str], None] | None = None,
-        active_tab: str = "inbox",
-        tab_counts: dict[str, int] | None = None,
-    ) -> None:
-        """メモステータスタブを初期化。
-
-        Args:
-            on_tab_change: タブ変更時のコールバック
-            active_tab: アクティブなタブ
-            tab_counts: 各タブのメモ数
-        """
-        self.on_tab_change = on_tab_change
-        self.active_tab = active_tab
-        self.tab_counts = tab_counts or {}
-        self._tab_buttons: dict[str, ft.Control] = {}
-
-        super().__init__(
-            content=self._build_tabs(),
-            padding=ft.padding.symmetric(horizontal=16, vertical=8),
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
-        )
-
-    def _build_tabs(self) -> ft.Control:
-        """タブを構築。
-
-        Returns:
-            構築されたタブコントロール
-        """
-        tab_definitions = [
-            ("inbox", "Inbox", ft.Icons.INBOX),
-            ("active", "アクティブ", ft.Icons.AUTO_AWESOME),
-            ("idea", "アイデア", ft.Icons.LIGHTBULB),
-            ("archive", "アーカイブ", ft.Icons.ARCHIVE),
-        ]
-
-        tab_controls = []
-        for tab_id, label, icon in tab_definitions:
-            tab_button = self._create_tab_button(tab_id, label, icon)
-            self._tab_buttons[tab_id] = tab_button
-            tab_controls.append(tab_button)
-
-        return ft.Row(
-            controls=tab_controls,
-            spacing=0,
-            expand=True,
-        )
-
-    def _create_tab_button(self, tab_id: str, label: str, icon: str) -> ft.Control:
-        """タブボタンを作成。
-
-        Args:
-            tab_id: タブID
-            label: タブラベル
-            icon: タブアイコン
-
-        Returns:
-            作成されたタブボタン
-        """
-        is_active = tab_id == self.active_tab
-        count = self.tab_counts.get(tab_id, 0)
-
-        # タブボタンの内容
-        content_controls = [
-            ft.Icon(icon, size=18),
-            ft.Text(label, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL),
-        ]
-
-        # カウントバッジを追加
-        if count > 0:
-            content_controls.append(
-                ft.Container(
-                    content=ft.Text(
-                        str(count),
-                        size=12,
-                        color=ft.Colors.ON_SECONDARY,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                    bgcolor=ft.Colors.SECONDARY,
-                    border_radius=10,
-                ),
-            )
-
-        return ft.Container(
-            content=ft.Row(
-                controls=content_controls,
-                spacing=8,
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if is_active else ft.Colors.TRANSPARENT,
-            border_radius=8,
-            ink=True,
-            on_click=lambda _, tid=tab_id: self._handle_tab_click(tid),
-            expand=True,
-        )
-
-    def _handle_tab_click(self, tab_id: str) -> None:
-        """タブクリック時のハンドラー。
-
-        Args:
-            tab_id: クリックされたタブのID
-        """
-        if tab_id != self.active_tab:
-            self.active_tab = tab_id
-            self._update_tab_styles()
-            if self.on_tab_change:
-                self.on_tab_change(tab_id)
-
-    def _update_tab_styles(self) -> None:
-        """タブのスタイルを更新。"""
-        self.content = self._build_tabs()
-        if hasattr(self, "page") and self.page:
-            self.update()
-
-    def update_counts(self, tab_counts: dict[str, int]) -> None:
-        """タブのカウントを更新。
-
-        Args:
-            tab_counts: 新しいタブカウント
-        """
-        self.tab_counts = tab_counts
-        self._update_tab_styles()
-
-    def set_active_tab(self, tab_id: str) -> None:
-        """アクティブタブを設定。
-
-        Args:
-            tab_id: アクティブにするタブのID
-        """
-        if tab_id != self.active_tab:
-            self.active_tab = tab_id
-            self._update_tab_styles()

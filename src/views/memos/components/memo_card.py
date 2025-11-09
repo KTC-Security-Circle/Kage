@@ -184,6 +184,16 @@ class MemoCard(ft.Container):
         self.content = self._build_card_content()
         self.update()
 
+    def refresh(self, memo: MemoRead, *, is_selected: bool) -> None:
+        """メモ内容と選択状態をまとめて更新する。
+
+        Args:
+            memo: 最新のメモデータ
+            is_selected: 選択状態
+        """
+        self.memo = memo
+        self.update_selection(is_selected=is_selected)
+
     @classmethod
     def preview(cls) -> MemoCard:
         """単体プレビュー用のインスタンスを生成する。
@@ -204,144 +214,3 @@ class MemoCard(ft.Container):
             content="これは MemoCard 単体プレビューのダミーコンテンツです。",
         )
         return cls(memo=sample, is_selected=True)
-
-
-class MemoCardList(ft.Column):
-    """メモカードのリストコンテナ（親制御型）。
-
-    選択状態は親ビューで管理し、props として渡す。
-    クリック時は on_memo_select をコールバックする。
-    """
-
-    def __init__(
-        self,
-        memos: list[MemoRead],
-        *,
-        on_memo_select: Callable[[MemoRead], None] | None = None,
-        empty_message: str = "メモがありません",
-        selected_memo_id: str | None = None,
-    ) -> None:
-        """メモカードリストを初期化。
-
-        Args:
-            memos: 表示するメモのリスト
-            on_memo_select: メモ選択時のコールバック
-            empty_message: メモが空の場合のメッセージ
-            selected_memo_id: 選択中メモのID（親制御）
-        """
-        self.memos = memos
-        self.on_memo_select = on_memo_select
-        self.empty_message = empty_message
-        self.selected_memo_id: str | None = selected_memo_id
-
-        super().__init__(
-            controls=self._build_memo_cards(),
-            spacing=0,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
-        )
-
-    def _build_memo_cards(self) -> list[ft.Control]:
-        """メモカードリストを構築。
-
-        Returns:
-            構築されたコントロールのリスト
-        """
-        if not self.memos:
-            return [
-                ft.Container(
-                    content=ft.Column(
-                        controls=[
-                            ft.Icon(ft.Icons.NOTE_ADD, size=48, color=ft.Colors.OUTLINE),
-                            ft.Text(
-                                self.empty_message,
-                                style=ft.TextThemeStyle.BODY_LARGE,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
-                                text_align=ft.TextAlign.CENTER,
-                            ),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=16,
-                    ),
-                    alignment=ft.alignment.center,
-                    expand=True,
-                    padding=ft.padding.all(40),
-                ),
-            ]
-
-        return [
-            MemoCard(
-                memo=memo,
-                is_selected=(self.selected_memo_id == str(memo.id)),
-                on_click=self._handle_memo_select,
-            )
-            for memo in self.memos
-        ]
-
-    def _handle_memo_select(self, memo: MemoRead) -> None:
-        """メモ選択時のハンドラー。
-
-        Args:
-            memo: 選択されたメモ
-        """
-        # 親に通知（選択状態は親が管理）
-        if self.on_memo_select:
-            self.on_memo_select(memo)
-
-    def update_memos(self, memos: list[MemoRead], *, selected_memo_id: str | None = None) -> None:
-        """メモリストと選択状態を更新。
-
-        Args:
-            memos: 新しいメモリスト
-            selected_memo_id: 選択中メモのID（親が制御）
-        """
-        self.memos = memos
-        if selected_memo_id is not None:
-            self.selected_memo_id = selected_memo_id
-        self.controls = self._build_memo_cards()
-        if hasattr(self, "page") and self.page is not None:
-            self.update()
-
-    def set_selected_memo(self, memo_id: str | None) -> None:
-        """選択状態だけを更新（親制御）。
-
-        Args:
-            memo_id: 選択するメモのID（None で未選択）
-        """
-        self.selected_memo_id = memo_id
-        self.controls = self._build_memo_cards()
-        if hasattr(self, "page") and self.page is not None:
-            self.update()
-
-
-def create_memo_card_list(_page: ft.Page) -> MemoCardList:
-    """メモカードリストコンポーネントを作成。
-
-    Args:
-        page: Fletのページオブジェクト
-
-    Returns:
-        作成されたメモカードリストコンポーネント
-    """
-    from uuid import uuid4
-
-    from models import MemoRead
-
-    # サンプルデータを使用して初期化（created_at は未使用でも可）
-    sample_memos: list[MemoRead] = [
-        MemoRead(
-            id=uuid4(),
-            title="サンプルメモ1",
-            content="これはサンプルメモ1の内容です。",
-        ),
-        MemoRead(
-            id=uuid4(),
-            title="サンプルメモ2",
-            content="これはサンプルメモ2の内容です。",
-        ),
-    ]
-
-    return MemoCardList(
-        memos=sample_memos,
-        empty_message="まだメモがありません。新しいメモを作成してください。",
-    )

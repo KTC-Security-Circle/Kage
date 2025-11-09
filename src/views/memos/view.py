@@ -7,7 +7,6 @@ Reactテンプレートを参考に、4つのステータス（Inbox、Active、
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 import flet as ft
@@ -18,19 +17,8 @@ from models import MemoRead, MemoStatus
 from views.shared.base_view import BaseView
 
 from .components import MemoActionBar, MemoCardList, MemoFilters, MemoStatusTabs
-
-
-@dataclass(slots=True)
-class MemosViewData:
-    """MemosView 専用の状態データ。
-
-    BaseView.state (loading / error_message) とは分離し、ドメイン表示用の状態のみを保持する。
-    """
-
-    current_tab: str = "inbox"
-    search_query: str = ""
-    all_memos: list[MemoRead] = field(default_factory=list)
-    selected_memo: MemoRead | None = None
+from .controller import MemoApplicationPort, MemosController
+from .state import MemosViewState
 
 
 class MemosView(BaseView):
@@ -47,16 +35,20 @@ class MemosView(BaseView):
     - AI提案機能（将来実装）
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, *, memo_app: MemoApplicationPort | None = None) -> None:
         """メモビューを初期化。
 
         Args:
             page: Fletページオブジェクト
+            memo_app: テストやDI用に注入するメモアプリケーションサービス
         """
         super().__init__(page)
 
-        # View 専用状態 (BaseView.state は loading / error_message 用)
-        self.view_data: MemosViewData = MemosViewData()
+        self.memos_state = MemosViewState()
+        if memo_app is None:
+            apps = ApplicationServices.create()
+            memo_app = apps.memo
+        self.controller = MemosController(memo_app=memo_app, state=self.memos_state)
 
         # UIコンポーネント
         self._action_bar: MemoActionBar | None = None
@@ -65,12 +57,7 @@ class MemosView(BaseView):
         self._memo_filters: MemoFilters | None = None
         self._detail_panel: ft.Container | None = None
 
-        # 旧仕様互換: コンストラクタで did_mount を呼ぶ
         self.did_mount()
-        # Application Services コンテナから取得
-        apps = ApplicationServices.create()
-        self.memo_app = apps.memo
-        # 初期メモ読み込み (loading 状態表示)
         self.with_loading(self._load_initial_memos, user_error_message="メモの読み込みに失敗しました")
 
     def did_mount(self) -> None:
@@ -89,7 +76,7 @@ class MemosView(BaseView):
         # ステータスタブ
         self._status_tabs = MemoStatusTabs(
             on_tab_change=self._handle_tab_change,
-            active_tab=self.view_data.current_tab,
+            active_status=self.memos_state.current_tab or MemoStatus.INBOX,
             tab_counts=self._get_tab_counts(),
         )
 
@@ -119,12 +106,13 @@ class MemosView(BaseView):
             メインコンテンツコントロール
         """
         # メモリスト
-        current_memos = self._get_current_tab_memos()
+        current_memos = self.controller.current_memos()
+        selected_memo_id = self._selected_memo_id_str()
         self._memo_list = MemoCardList(
             memos=current_memos,
             on_memo_select=self._handle_memo_select,
             empty_message=self._get_empty_message(),
-            selected_memo_id=(str(self.view_data.selected_memo.id) if self.view_data.selected_memo else None),
+            selected_memo_id=selected_memo_id,
         )
 
         # 詳細パネル
@@ -158,15 +146,14 @@ class MemosView(BaseView):
         Returns:
             詳細パネルコントロール
         """
-        if not self.view_data.selected_memo:
+        selected_memo = self.controller.current_selection()
+        if selected_memo is None:
             return ft.Container(content=self._build_empty_detail_panel())
-        memo = self.view_data.selected_memo
+        memo = selected_memo
 
         # 日付表示の安全な整形（Noneや欠損に対応）
-        created_val = getattr(memo, "created_at", None)
-        created_text = created_val.strftime("%Y年%m月%d日 %H:%M") if isinstance(created_val, datetime) else "—"
-        updated_val = getattr(memo, "updated_at", None)
-        updated_text = updated_val.strftime("%Y年%m月%d日 %H:%M") if isinstance(updated_val, datetime) else "—"
+        created_text = self._format_datetime(getattr(memo, "created_at", None))
+        updated_text = self._format_datetime(getattr(memo, "updated_at", None))
 
         # メモ詳細カード
         detail_card = ft.Card(
@@ -182,8 +169,8 @@ class MemosView(BaseView):
                                     weight=ft.FontWeight.BOLD,
                                     expand=True,
                                 ),
-                                # TODO: AI提案バッジを統合フェーズで実装
-                                self._build_memo_status_badge(),
+                                # ステータスバッジ（実際のステータスに基づく）
+                                self._build_memo_status_badge(memo.status),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
@@ -199,33 +186,7 @@ class MemosView(BaseView):
                             border_radius=8,
                         ),
                         # メタデータ
-                        ft.Row(
-                            controls=[
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "作成日",
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            weight=ft.FontWeight.BOLD,
-                                        ),
-                                        ft.Text(created_text, style=ft.TextThemeStyle.BODY_SMALL),
-                                    ],
-                                    spacing=4,
-                                ),
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "更新日",
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            weight=ft.FontWeight.BOLD,
-                                        ),
-                                        ft.Text(updated_text, style=ft.TextThemeStyle.BODY_SMALL),
-                                    ],
-                                    spacing=4,
-                                ),
-                            ],
-                            spacing=32,
-                        ),
+                        self._build_detail_metadata(created_text, updated_text),
                         # アクションボタン
                         self._build_detail_actions(),
                     ],
@@ -273,24 +234,60 @@ class MemosView(BaseView):
             expand=True,
         )
 
-    def _build_memo_status_badge(self) -> ft.Container:
-        """メモステータスバッジを構築。
+    def _build_memo_status_badge(self, status: MemoStatus) -> ft.Container:
+        """メモステータスバッジを構築（実際のステータスに基づく）。"""
+        label_map = {
+            MemoStatus.INBOX: "Inbox",
+            MemoStatus.ACTIVE: "Active",
+            MemoStatus.IDEA: "Idea",
+            MemoStatus.ARCHIVE: "Archived",
+        }
+        color_map = {
+            MemoStatus.INBOX: ft.Colors.PRIMARY,
+            MemoStatus.ACTIVE: ft.Colors.SECONDARY,
+            MemoStatus.IDEA: ft.Colors.TERTIARY,
+            # アーカイブは少し控えめな色
+            MemoStatus.ARCHIVE: ft.Colors.OUTLINE_VARIANT,
+        }
+        text_color_map = {
+            MemoStatus.ARCHIVE: ft.Colors.ON_SURFACE,
+        }
 
-        Returns:
-            ステータスバッジコントロール
-        """
-        # TODO: 実際のメモステータスに基づいた実装に変更
+        label = label_map.get(status, "Memo")
+        bgcolor = color_map.get(status, ft.Colors.PRIMARY)
+        text_color = text_color_map.get(status, ft.Colors.ON_PRIMARY)
         return ft.Container(
-            content=ft.Text(
-                "新規",
-                size=12,
-                color=ft.Colors.ON_PRIMARY,
-                weight=ft.FontWeight.BOLD,
-            ),
+            content=ft.Text(label, size=12, color=text_color, weight=ft.FontWeight.BOLD),
             padding=ft.padding.symmetric(horizontal=12, vertical=4),
-            bgcolor=ft.Colors.PRIMARY,
+            bgcolor=bgcolor,
             border_radius=12,
         )
+
+    def _build_detail_metadata(self, created_text: str, updated_text: str) -> ft.Control:
+        """詳細メタデータ行（作成日・更新日）を構築。"""
+        return ft.Row(
+            controls=[
+                ft.Column(
+                    controls=[
+                        ft.Text("作成日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
+                        ft.Text(created_text, style=ft.TextThemeStyle.BODY_SMALL),
+                    ],
+                    spacing=4,
+                ),
+                ft.Column(
+                    controls=[
+                        ft.Text("更新日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
+                        ft.Text(updated_text, style=ft.TextThemeStyle.BODY_SMALL),
+                    ],
+                    spacing=4,
+                ),
+            ],
+            spacing=32,
+        )
+
+    def _format_datetime(self, value: object) -> str:
+        """日付表示を安全に整形。datetime 以外や None はダッシュで返す。"""
+        return value.strftime("%Y年%m月%d日 %H:%M") if isinstance(value, datetime) else "—"
 
     def _build_detail_actions(self) -> ft.Control:
         """詳細パネルのアクションボタンを構築。
@@ -338,45 +335,13 @@ class MemosView(BaseView):
             spacing=8,
         )
 
-    def _get_tab_counts(self) -> dict[str, int]:
+    def _get_tab_counts(self) -> dict[MemoStatus, int]:
         """各タブのメモ数を取得。
 
         Returns:
             タブ別メモ数辞書
         """
-        # all_memos を基準に集計（検索や表示状態に依存しない）
-        inbox = sum(1 for m in self.view_data.all_memos if m.status == MemoStatus.INBOX)
-        active = sum(1 for m in self.view_data.all_memos if m.status == MemoStatus.ACTIVE)
-        idea = sum(1 for m in self.view_data.all_memos if m.status == MemoStatus.IDEA)
-        archive = sum(1 for m in self.view_data.all_memos if m.status == MemoStatus.ARCHIVE)
-        return {
-            "inbox": inbox,
-            "active": active,
-            "idea": idea,
-            "archive": archive,
-        }
-
-    def _get_current_tab_memos(self) -> list[MemoRead]:
-        """現在のタブと検索クエリに基づいてメモ一覧を算出する(派生データ)。
-
-        派生データは state に永続化せず、その都度計算する。
-        """
-        tab_status = self._status_from_tab_id(self.view_data.current_tab)
-        query = (self.view_data.search_query or "").strip()
-
-        if query:
-            try:
-                return self.memo_app.search(query, with_details=False, status=tab_status)
-            except Exception as e:
-                # 表示側では空配列を返し、上位で通知する
-                logger.error(f"Search failed: {type(e).__name__}: {e}")
-                return []
-
-        # 検索なし: all_memos からタブで絞り込み
-        base = self.view_data.all_memos
-        if tab_status is None:
-            return list(base)
-        return [m for m in base if m.status == tab_status]
+        return self.controller.status_counts()
 
     def _get_empty_message(self) -> str:
         """空のメッセージを取得。
@@ -385,35 +350,35 @@ class MemosView(BaseView):
             現在のタブに応じた空メッセージ
         """
         messages = {
-            "inbox": "Inboxメモはありません",
-            "active": "アクティブなメモはありません",
-            "idea": "アイデアメモはありません",
-            "archive": "アーカイブされたメモはありません",
+            MemoStatus.INBOX: "Inboxメモはありません",
+            MemoStatus.ACTIVE: "アクティブなメモはありません",
+            MemoStatus.IDEA: "アイデアメモはありません",
+            MemoStatus.ARCHIVE: "アーカイブされたメモはありません",
         }
-        return messages.get(self.view_data.current_tab, "メモはありません")
+        current_tab = self.memos_state.current_tab
+        if current_tab is None:
+            return "メモはありません"
+        return messages.get(current_tab, "メモはありません")
 
     def _load_initial_memos(self) -> None:
         """DB から初期メモ一覧を読み込む (Inbox を優先)。"""
         try:
-            # まず全件取得（軽量化が必要なら pagination 導入予定）
-            all_memos = self.memo_app.get_all_memos(with_details=False)
-            # 状態別に並べ替え: INBOX 優先、その後 ACTIVE, IDEA, ARCHIVE
-            order = {MemoStatus.INBOX: 0, MemoStatus.ACTIVE: 1, MemoStatus.IDEA: 2, MemoStatus.ARCHIVE: 3}
-            ordered: list[MemoRead] = sorted(all_memos, key=lambda m: order.get(m.status, 99))
-            self.view_data = replace(self.view_data, all_memos=ordered)
-            self._update_memo_list()
-            logger.info(f"Loaded {len(self._get_current_tab_memos())} memos from DB")
+            self.controller.load_initial_memos()
+            self._refresh()
+            memo_count = len(self.controller.current_memos())
+            logger.info(f"Loaded {memo_count} memos from DB")
         except Exception as e:
             self.notify_error("メモの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
 
     def _update_memo_list(self) -> None:
         """メモリストを更新。"""
         if self._memo_list:
-            current_memos = self._get_current_tab_memos()
+            current_memos = self.controller.current_memos()
+            selected_memo_id = self._selected_memo_id_str()
             try:
                 self._memo_list.update_memos(
                     current_memos,
-                    selected_memo_id=(str(self.view_data.selected_memo.id) if self.view_data.selected_memo else None),
+                    selected_memo_id=selected_memo_id,
                 )
             except AssertionError as e:
                 if "Control must be added to the page first" in str(e):
@@ -424,6 +389,7 @@ class MemosView(BaseView):
         if self._status_tabs:
             try:
                 self._status_tabs.update_counts(self._get_tab_counts())
+                self._status_tabs.set_active(self.memos_state.current_tab or MemoStatus.INBOX)
             except AssertionError as e:
                 if "Control must be added to the page first" in str(e):
                     # Component not yet added to page, skip update
@@ -445,49 +411,27 @@ class MemosView(BaseView):
         Args:
             query: 検索クエリ
         """
-        # 不変更新: 検索クエリ更新
-        self.view_data = replace(self.view_data, search_query=query)
-        # 現在の派生リストに選択中メモが含まれない場合は解除
-        current = self._get_current_tab_memos()
-        if self.view_data.selected_memo and all(self.view_data.selected_memo.id != m.id for m in current):
-            self.view_data = replace(self.view_data, selected_memo=None)
-        # 再描画
         try:
-            self._update_memo_list()
+            self.controller.update_search(query)
+            self._refresh()
         except Exception as e:
             self.notify_error("検索に失敗しました", details=f"{type(e).__name__}: {e}")
-        logger.debug(f"Search query: '{query}' (tab={self.view_data.current_tab})")
+        logger.debug(f"Search query: '{query}' (tab={self.memos_state.current_tab})")
 
-    def _handle_tab_change(self, tab_id: str) -> None:
+    def _handle_tab_change(self, status: MemoStatus) -> None:
         """タブ変更ハンドラー。
 
         Args:
-            tab_id: 選択されたタブID
+            status: 選択されたタブのステータス
         """
-        # 不変更新: タブ変更と選択解除
-        self.view_data = replace(self.view_data, current_tab=tab_id, selected_memo=None)
         try:
-            self._update_memo_list()
+            self.controller.update_tab(status)
+            if self.memos_state.search_query:
+                self.controller.update_search(self.memos_state.search_query)
+            self._refresh()
         except Exception as e:
             self.notify_error("タブ切替に失敗しました", details=f"{type(e).__name__}: {e}")
-        self._update_detail_panel()
-        logger.debug(f"Tab changed to: {tab_id}")
-
-    # ------------------------------------------------------------
-    # フィルタ適用ロジック（タブ + 検索）
-    # ------------------------------------------------------------
-    def _status_from_tab_id(self, tab_id: str) -> MemoStatus | None:
-        if tab_id == MemoStatus.INBOX.value:
-            return MemoStatus.INBOX
-        if tab_id == MemoStatus.ACTIVE.value:
-            return MemoStatus.ACTIVE
-        if tab_id == MemoStatus.IDEA.value:
-            return MemoStatus.IDEA
-        if tab_id == MemoStatus.ARCHIVE.value:
-            return MemoStatus.ARCHIVE
-        return None
-
-    # 以前の _apply_filters は派生データを state に保持していたため削除
+        logger.debug(f"Tab changed to: {status}")
 
     def _handle_filter_change(self, filter_data: dict[str, object]) -> None:
         """フィルタ変更ハンドラー。
@@ -504,12 +448,12 @@ class MemosView(BaseView):
         Args:
             memo: 選択されたメモ
         """
-        # 選択状態を不変更新
-        self.view_data = replace(self.view_data, selected_memo=memo)
+        self.controller.select_memo(memo)
+        selected_memo_id = self._selected_memo_id_str()
         # リストの選択ハイライトを更新（詳細パネルと同時に切り替える）
         if self._memo_list:
             try:
-                self._memo_list.set_selected_memo(str(memo.id))
+                self._memo_list.set_selected_memo(selected_memo_id)
             except AssertionError as e:
                 if "Control must be added to the page first" in str(e):
                     # まだページに追加されていない場合はスキップ
@@ -527,15 +471,17 @@ class MemosView(BaseView):
 
     def _handle_edit_memo(self, _: ft.ControlEvent) -> None:
         """メモ編集ハンドラー。"""
-        if self.view_data.selected_memo:
-            logger.info(f"Edit memo requested: {self.view_data.selected_memo.id}")
+        selected_memo = self.controller.current_selection()
+        if selected_memo:
+            logger.info(f"Edit memo requested: {selected_memo.id}")
             # TODO: メモ編集ダイアログまたは画面遷移を実装
             self.show_info_snackbar("メモ編集機能は統合フェーズで実装予定です")
 
     def _handle_delete_memo(self, _: ft.ControlEvent) -> None:
         """メモ削除ハンドラー。"""
-        if self.view_data.selected_memo:
-            logger.info(f"Delete memo requested: {self.view_data.selected_memo.id}")
+        selected_memo = self.controller.current_selection()
+        if selected_memo:
+            logger.info(f"Delete memo requested: {selected_memo.id}")
             # TODO: 削除確認ダイアログと実際の削除処理を実装
             self.show_info_snackbar("メモ削除機能は統合フェーズで実装予定です")
 
@@ -545,6 +491,17 @@ class MemosView(BaseView):
             new_detail_panel = self._build_detail_panel()
             self._detail_panel.content = new_detail_panel.content
             self._detail_panel.update()
+
+    def _refresh(self) -> None:
+        """ビューの差分更新を一括適用する。"""
+        self._update_memo_list()
+        self._update_detail_panel()
+
+    def _selected_memo_id_str(self) -> str | None:
+        """選択中のメモIDを文字列に変換する。"""
+        if self.memos_state.selected_memo_id is None:
+            return None
+        return str(self.memos_state.selected_memo_id)
 
 
 # ユーティリティ関数

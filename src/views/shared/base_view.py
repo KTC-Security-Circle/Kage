@@ -242,7 +242,7 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         """
         # state 更新
         self.state = replace(self.state, error_message=message)
-        logger.exception(details or message)  # spec: exception レベル
+        logger.error(details or message)
         # SnackBar で通知 (ダイアログ等への差し替えは将来拡張)
         self.show_snack_bar(message=message, bgcolor=ft.Colors.ERROR)
         self.safe_update()

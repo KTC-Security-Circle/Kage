@@ -13,7 +13,7 @@ import flet as ft
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from views.sample import SampleMemo
+    from models import MemoRead
 
 # 定数
 MAX_CONTENT_PREVIEW_LENGTH = 200
@@ -28,10 +28,10 @@ class MemoCard(ft.Container):
 
     def __init__(
         self,
-        memo: SampleMemo,
+        memo: MemoRead,
         *,
         is_selected: bool = False,
-        on_click: Callable[[SampleMemo], None] | None = None,
+        on_click: Callable[[MemoRead], None] | None = None,
         show_ai_badge: bool = True,
         max_content_lines: int = 3,
     ) -> None:
@@ -62,6 +62,7 @@ class MemoCard(ft.Container):
             bgcolor=ft.Colors.SECONDARY_CONTAINER if is_selected else ft.Colors.SURFACE,
             on_click=self._handle_click if on_click else None,
             ink=True,
+            key=str(self.memo.id),
         )
 
     def _build_card_content(self) -> ft.Control:
@@ -114,10 +115,12 @@ class MemoCard(ft.Container):
         # TODO: タグバッジを統合フェーズで実装
         # 理由: Tag連携仕様が未確定のため
 
-        # 作成日
+        # 作成日（型上は存在しない可能性があるためガード）
+        created_at = getattr(self.memo, "created_at", None)
+        created_at_text = created_at.strftime("%Y/%m/%d") if created_at else "—"
         footer_controls.append(
             ft.Text(
-                self.memo.created_at.strftime("%Y/%m/%d"),
+                created_at_text,
                 style=ft.TextThemeStyle.BODY_SMALL,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
@@ -191,32 +194,32 @@ class MemoCard(ft.Container):
         Returns:
             サンプルデータを含む MemoCard
         """
-        from datetime import datetime
         from uuid import uuid4
 
-        from views.sample import SampleMemo
+        from models import MemoRead
 
-        sample = SampleMemo(
+        sample = MemoRead(
             id=uuid4(),
             title="プレビュー用メモ",
             content="これは MemoCard 単体プレビューのダミーコンテンツです。",
-            created_at=datetime.now(),
         )
         return cls(memo=sample, is_selected=True)
 
 
 class MemoCardList(ft.Column):
-    """メモカードのリストコンテナ。
+    """メモカードのリストコンテナ（親制御型）。
 
-    複数のメモカードを管理し、選択状態の制御を行う。
+    選択状態は親ビューで管理し、props として渡す。
+    クリック時は on_memo_select をコールバックする。
     """
 
     def __init__(
         self,
-        memos: list[SampleMemo],
+        memos: list[MemoRead],
         *,
-        on_memo_select: Callable[[SampleMemo], None] | None = None,
+        on_memo_select: Callable[[MemoRead], None] | None = None,
         empty_message: str = "メモがありません",
+        selected_memo_id: str | None = None,
     ) -> None:
         """メモカードリストを初期化。
 
@@ -224,12 +227,12 @@ class MemoCardList(ft.Column):
             memos: 表示するメモのリスト
             on_memo_select: メモ選択時のコールバック
             empty_message: メモが空の場合のメッセージ
+            selected_memo_id: 選択中メモのID（親制御）
         """
         self.memos = memos
         self.on_memo_select = on_memo_select
         self.empty_message = empty_message
-        self.selected_memo: SampleMemo | None = None
-        self.memo_cards: dict[str, MemoCard] = {}
+        self.selected_memo_id: str | None = selected_memo_id
 
         super().__init__(
             controls=self._build_memo_cards(),
@@ -266,65 +269,49 @@ class MemoCardList(ft.Column):
                 ),
             ]
 
-        cards = []
-        for memo in self.memos:
-            card = MemoCard(
+        return [
+            MemoCard(
                 memo=memo,
+                is_selected=(self.selected_memo_id == str(memo.id)),
                 on_click=self._handle_memo_select,
             )
-            self.memo_cards[str(memo.id)] = card
-            cards.append(card)
+            for memo in self.memos
+        ]
 
-        return cards
-
-    def _handle_memo_select(self, memo: SampleMemo) -> None:
+    def _handle_memo_select(self, memo: MemoRead) -> None:
         """メモ選択時のハンドラー。
 
         Args:
             memo: 選択されたメモ
         """
-        # 前の選択をクリア
-        if self.selected_memo:
-            old_card = self.memo_cards.get(str(self.selected_memo.id))
-            if old_card:
-                old_card.update_selection(is_selected=False)
-
-        # 新しい選択を設定
-        self.selected_memo = memo
-        new_card = self.memo_cards.get(str(memo.id))
-        if new_card:
-            new_card.update_selection(is_selected=True)
-
-        # コールバック実行
+        # 親に通知（選択状態は親が管理）
         if self.on_memo_select:
             self.on_memo_select(memo)
 
-    def update_memos(self, memos: list[SampleMemo]) -> None:
-        """メモリストを更新。
+    def update_memos(self, memos: list[MemoRead], *, selected_memo_id: str | None = None) -> None:
+        """メモリストと選択状態を更新。
 
         Args:
             memos: 新しいメモリスト
+            selected_memo_id: 選択中メモのID（親が制御）
         """
         self.memos = memos
-        self.selected_memo = None
-        self.memo_cards.clear()
+        if selected_memo_id is not None:
+            self.selected_memo_id = selected_memo_id
         self.controls = self._build_memo_cards()
-        # Only update if the control is already added to a page
         if hasattr(self, "page") and self.page is not None:
             self.update()
 
-    def select_memo(self, memo_id: str) -> None:
-        """指定されたIDのメモを選択。
+    def set_selected_memo(self, memo_id: str | None) -> None:
+        """選択状態だけを更新（親制御）。
 
         Args:
-            memo_id: 選択するメモのID
+            memo_id: 選択するメモのID（None で未選択）
         """
-        target_memo = next(
-            (memo for memo in self.memos if str(memo.id) == memo_id),
-            None,
-        )
-        if target_memo:
-            self._handle_memo_select(target_memo)
+        self.selected_memo_id = memo_id
+        self.controls = self._build_memo_cards()
+        if hasattr(self, "page") and self.page is not None:
+            self.update()
 
 
 def create_memo_card_list(_page: ft.Page) -> MemoCardList:
@@ -336,24 +323,21 @@ def create_memo_card_list(_page: ft.Page) -> MemoCardList:
     Returns:
         作成されたメモカードリストコンポーネント
     """
-    from datetime import datetime
     from uuid import uuid4
 
-    from views.sample import SampleMemo
+    from models import MemoRead
 
-    # サンプルデータを使用して初期化
-    sample_memos: list[SampleMemo] = [
-        SampleMemo(
+    # サンプルデータを使用して初期化（created_at は未使用でも可）
+    sample_memos: list[MemoRead] = [
+        MemoRead(
             id=uuid4(),
             title="サンプルメモ1",
             content="これはサンプルメモ1の内容です。",
-            created_at=datetime.now(),
         ),
-        SampleMemo(
+        MemoRead(
             id=uuid4(),
             title="サンプルメモ2",
             content="これはサンプルメモ2の内容です。",
-            created_at=datetime.now(),
         ),
     ]
 

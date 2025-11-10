@@ -1,10 +1,6 @@
-"""Simple chat agent package exports."""
+"""SimpleChat agent package is deprecated and kept only for legacy path references.
 
-from agents.task_agents.simple_chat.agent import SimpleChatAgent
-from agents.task_agents.simple_chat.state import SimpleChatOutput, SimpleChatState
+No public symbols are exported.
+"""
 
-__all__ = [
-    "SimpleChatAgent",
-    "SimpleChatState",
-    "SimpleChatOutput",
-]
+__all__: list[str] = []

@@ -21,10 +21,10 @@ from agents.task_agents.one_liner.agent import OneLinerAgent
 from agents.task_agents.one_liner.state import OneLinerState
 from errors import ApplicationError
 from logic.application import BaseApplicationService
+from logic.application.settings_application_service import SettingsApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
 from models import TaskStatus
-from settings.manager import get_config_manager
 
 
 class OneLinerServiceError(ApplicationError):
@@ -44,18 +44,19 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
         self,
         unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork,
         *,
-        provider: LLMProvider | None = None,
         model_name: HuggingFaceModel | str | None = None,
     ) -> None:
         super().__init__(unit_of_work_factory)
+        from typing import cast
 
-        cfg = get_config_manager().settings
-        self._provider = provider if provider else cfg.agents.provider
+        settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+        agents_cfg = settings_app.get_agents_settings()
+        self._provider = agents_cfg.provider
         self._use_llm = True  # 常時 LLM 経路
 
         raw_model = None
         try:  # 設定から one_liner 用モデル名を取得
-            raw_model = model_name if model_name else cfg.agents.get_model_name("one_liner")
+            raw_model = model_name if model_name else agents_cfg.get_model_name("one_liner")
         except Exception as e:  # pragma: no cover - 設定未整備時は黙って続行
             logger.debug(f"モデル名取得失敗(無視): {e}")
 
@@ -110,7 +111,8 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
         task_app = apps.get_service(TaskApplicationService)
 
         try:
-            user_name = get_config_manager().settings.user.user_name or ""
+            settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+            user_name = settings_app.get_user_settings().user_name or ""
         except Exception:  # pragma: no cover
             user_name = ""
 
@@ -120,7 +122,6 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             overdue_task_count=len(task_app.list_by_status(TaskStatus.OVERDUE)),
             progress_summary="",  # 未使用
             user_name=user_name,
-            final_response="",
         )
 
     def _generate_with_agent(
@@ -129,7 +130,9 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     ) -> str:
         thread_id = str(uuid4())
         result = self._agent.invoke(cast("OneLinerState", state), thread_id)
-        if not result or not getattr(result, "response", ""):
+        from agents.base import AgentError
+
+        if isinstance(result, AgentError) or not getattr(result, "response", ""):
             logger.warning("OneLinerAgent が期待する応答を返しませんでした。デフォルトに置換します。")
             return self._get_default_message()
         return cast("str", result.response)  # type: ignore[attr-defined]

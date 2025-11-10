@@ -200,3 +200,34 @@ class TaskService(ServiceBase):
         tasks = self.task_repo.list_by_status(status, with_details=with_details)
         logger.info(f"ステータス '{status}' のタスクを取得しました: {len(tasks)} 件")
         return tasks
+
+    @handle_service_errors(SERVICE_NAME, "検索", TaskServiceError)
+    @convert_read_model(TaskRead, is_list=True)
+    def search_tasks(self, query: str, *, with_details: bool = False) -> list[Task]:
+        """クエリでタスクを検索する
+
+        タイトルと説明の双方を部分一致・大文字小文字無視で検索し、重複を除去して返す。
+
+        Args:
+            query: 検索クエリ
+            with_details: 関連エンティティを含めるかどうか
+
+        Returns:
+            list[TaskRead]: 検索結果のタスク一覧
+        """
+        # タイトルと説明の両方を検索し、IDで重複排除
+        try:
+            by_title = self.task_repo.search_by_title(query, with_details=with_details)
+        except NotFoundError:
+            by_title = []
+        try:
+            by_desc = self.task_repo.search_by_description(query, with_details=with_details)
+        except NotFoundError:
+            by_desc = []
+        merged: dict[uuid.UUID, Task] = {}
+        for t in by_title + by_desc:
+            if t.id is not None:
+                merged[t.id] = t
+        results = list(merged.values())
+        logger.debug(f"クエリ '{query}' に一致するタスクを {len(results)} 件取得しました。")
+        return results

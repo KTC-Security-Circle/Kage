@@ -147,3 +147,21 @@ def test_list_by_status(
     project_app_service.list_by_status(ProjectStatus.COMPLETED)
 
     mock_proj_service.list_by_status.assert_called_once_with(ProjectStatus.COMPLETED)
+
+
+def test_search_empty_returns_empty(project_app_service: ProjectApplicationService) -> None:
+    assert project_app_service.search("") == []
+
+
+def test_search_delegates_and_can_filter_status(
+    project_app_service: ProjectApplicationService, mock_unit_of_work: Mock, sample_project_read: ProjectRead
+) -> None:
+    mock_proj_service = mock_unit_of_work.service_factory.get_service.return_value
+    other = sample_project_read.model_copy(update={"id": uuid.uuid4(), "status": ProjectStatus.COMPLETED})
+    mock_proj_service.search_projects.return_value = [sample_project_read, other]
+    mock_proj_service.list_by_status.return_value = [sample_project_read]
+
+    res = project_app_service.search("p", status=ProjectStatus.ACTIVE)
+    assert res == [sample_project_read]
+    mock_proj_service.search_projects.assert_called_once_with("p")
+    mock_proj_service.list_by_status.assert_called_once_with(ProjectStatus.ACTIVE)

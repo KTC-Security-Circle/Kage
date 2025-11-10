@@ -1,14 +1,21 @@
-"""共有Viewコンポーネント
+"""共通UI部品とヘルパークラス。
 
-すべてのViewで使用できる共通コンポーネントとミックスインを提供します。
+このパッケージは、全てのViewで使用される共通コンポーネント、
+基底クラス、ミックスイン等を提供します。
 """
 
-from .app_bar import app_bar
-from .base_view import BaseView
-from .error_handling_mixin import ErrorHandlingMixin
+from __future__ import annotations
+
+# TODO: 各共通コンポーネント実装完了後にエクスポートを追加
+# from .base_view import BaseView, ErrorHandlingMixin, LoadingMixin
+# from .sidebar import build_sidebar
+# from .dialogs import BaseDialog, ConfirmDialog
 
 __all__ = [
-    "app_bar",
-    "BaseView",
-    "ErrorHandlingMixin",
+    # "BaseView",
+    # "ErrorHandlingMixin",
+    # "LoadingMixin",
+    # "build_sidebar",
+    # "BaseDialog",
+    # "ConfirmDialog",
 ]

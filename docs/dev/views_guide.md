@@ -1,97 +1,10 @@
 # Views の書き方ガイド
 
-このドキュメントでは、Kage プロジェクトにおける View レイヤーの実装方法について説明します。Python 初学者がメンバーに入った際に読んで理解できるように、基本的な考え方から具体的な実装方法まで体系的に解説しています。
+このガイドでは View レイヤーの設計・実装パターンと最新の Component Launcher (Strict Preview Mode) 仕様をまとめます。
 
-## View レイヤーとは
+---
 
-View レイヤーは MVC アーキテクチャにおける「V」に相当する部分で、ユーザーインターフェース（UI）を担当します。このプロジェクトでは、Flet ライブラリで GUI アプリケーションを構築するため、View レイヤーが画面の表示とユーザーインタラクションを管理します。
-
-### 役割と責務
-
-- **表示（Display）**: データを画面に表示する
-- **相互作用（Interaction）**: ユーザーの操作（クリック、入力）に対応する
-- **レイアウト（Layout）**: UI コンポーネントの配置と構成を管理する
-
-### 他のレイヤーとの関係
-
-```plain text
-┌─────────────────┐
-│     Views       │ ← UIの表示とユーザーインタラクション
-├─────────────────┤
-│   Application   │ ← ワークフロー調整、トランザクション管理
-├─────────────────┤
-│     Logic       │ ← ビジネスロジック、ドメインサービス
-├─────────────────┤
-│     Models      │ ← データベースモデル、ドメインモデル
-└─────────────────┘
-```
-
-**Views 層の責務**：
-
-- **UI 表示**: Flet コンポーネントを使った画面描画
-- **ユーザーインタラクション**: クリック、入力、選択等のイベント処理
-- **状態管理**: UI 固有の状態（選択状態、表示フィルター等）
-- **バリデーション**: フロントエンド側の入力検証
-
-**Application 層との連携**：
-
-- Application Service を通じてビジネスロジックを呼び出し
-- エラーハンドリングとユーザーフィードバック
-- トランザクション境界の意識（Application Service 側で管理）
-
-## プロジェクトのディレクトリ構造
-
-```plain text
-src/views/
-├── __init__.py           # ビューのエクスポート定義
-├── layout.py             # 共通レイアウト（ヘッダー等）
-├── shared/               # 共有コンポーネント
-│   ├── __init__.py
-│   ├── base_view.py      # ベースビュークラス
-│   ├── app_bar.py        # アプリケーションバー
-│   └── error_handling_mixin.py  # エラーハンドリングMixin
-├── home/                 # ホーム画面
-│   ├── __init__.py
-│   └── view.py           # メインビュー
-└── task/                 # タスク管理画面
-    ├── __init__.py
-    ├── view.py           # メインビュー（TaskView）
-    └── components/       # タスク関連コンポーネント
-        ├── __init__.py
-        ├── task_dialog.py         # タスク作成/編集ダイアログ
-        ├── tasks_board.py         # タスクボード
-        ├── quick_actions.py       # クイックアクションボタン
-        └── projects_placeholder.py # プロジェクトエリア
-```
-
-### ディレクトリ構造の考え方
-
-1. **機能ごとの分割**: `home/`, `task/` のように機能ごとにディレクトリを分ける
-2. **共通要素の分離**: `shared/` ディレクトリに再利用可能なコンポーネントと基底クラスを配置
-3. **役割による分離**: `view.py` (メインビュー) と `components/` (個別コンポーネント) に分ける
-4. **Clean Architecture**: `BaseView` と `ErrorHandlingMixin` によりレイヤー分離を実現
-
-## ApplicationService 層との連携
-
-Views 層では、直接 Logic 層（ドメインサービス）を呼び出すのではなく、Application Service 層を経由してビジネスロジックにアクセスします。これにより、セッション管理とトランザクション境界の責任が Application Service 側に移り、View 層は UI 表示に集中できます。
-
-### 1. Application Service の取得と注入
-
-```python
-# views/task/view.py - 実際のプロジェクト実装例
-from logic.application.task_application_service import TaskApplicationService
-
-class TaskView(BaseView, ErrorHandlingMixin):
-    """タスク管理のメインビュー"""
-
-    def __init__(self, page: ft.Page) -> None:
-        super().__init__(page)
-
-        # Application Service Containerから取得
-        self._task_app_service: TaskApplicationService = self.container.get_task_application_service()
-```
-
-### 2. CRUD 操作の実装パターン
+## CRUD 操作の実装パターン
 
 ```python
 # タスク作成の例
@@ -132,7 +45,7 @@ def _on_task_status_change(self, task_id: str, new_status: TaskStatus) -> None:
         self.tasks_board.revert_task_status(task_id)
 ```
 
-### 3. コマンド/クエリパターンの活用
+## コマンド/クエリパターンの活用
 
 ```python
 # Command（状態変更）とQuery（状態取得）を明確に分離
@@ -161,7 +74,7 @@ def _load_tasks_by_status(self, status: TaskStatus) -> list[TaskRead]:
         return []
 ```
 
-### 4. GTD 特化のワークフロー実装
+## GTD 特化のワークフロー実装
 
 ```python
 # GTD Inbox Reviewの一括処理例
@@ -194,76 +107,83 @@ def _start_weekly_review(self) -> None:
         self._show_error_message(f"週次レビューの準備に失敗しました: {e}")
 ```
 
-## GTD 特化 UI コンポーネント設計
+## Component Launcher（Strict Preview Mode）
 
-GTD（Getting Things Done）の概念を反映した専用 UI コンポーネントの設計方法について説明します。
+現在の Component Launcher は **`@classmethod preview` を持つ `ft.Control` サブクラスのみ** を対象にした厳格モードです。
 
-### 1. TaskStatus に基づく視覚的分類
+必須条件:
 
-```python
-# views/task/components/task_card.py - GTD固有のタスクカード
-class GTDTaskCard(ft.Container):
-    """GTDタスクステータスに応じた視覚的表現を提供するカード"""
+- クラスが `ft.Control` を継承
+- `@classmethod preview(cls) -> ft.Control` を実装（内部でダミーデータ生成）
 
-    def __init__(self, task: TaskRead, on_click: Callable[[TaskRead], None]):
-        super().__init__()
-        self.task = task
-        self.on_click = on_click
+削除された旧仕様:
 
-        # GTDステータスに応じた色とアイコンを設定
-        self._setup_gtd_appearance()
+- 任意ファクトリ関数 (`create_control` など)
+- 引数注入オプション (`--props`, `--props-file`)
+- フォールバック命名探索
+- `--wrap-layout` 明示フラグ（ラップは既定で有効 / `-nw` で解除）
 
-    def _setup_gtd_appearance(self) -> None:
-        """GTDステータスに応じた外観設定"""
-        status_config = {
-            TaskStatus.INBOX: {
-                "color": ft.colors.ORANGE_100,
-                "border_color": ft.colors.ORANGE_400,
-                "icon": ft.icons.INBOX,
-                "label": "📥 Inbox"
-            },
-            TaskStatus.NEXT_ACTION: {
-                "color": ft.colors.GREEN_100,
-                "border_color": ft.colors.GREEN_400,
-                "icon": ft.icons.TRENDING_FLAT,
-                "label": "⚡ Next Action"
-            },
-            TaskStatus.WAITING: {
-                "color": ft.colors.YELLOW_100,
-                "border_color": ft.colors.YELLOW_400,
-                "icon": ft.icons.SCHEDULE,
-                "label": "⏳ Waiting For"
-            },
-            TaskStatus.SCHEDULED: {
-                "color": ft.colors.BLUE_100,
-                "border_color": ft.colors.BLUE_400,
-                "icon": ft.icons.EVENT,
-                "label": "📅 Scheduled"
-            },
-            TaskStatus.SOMEDAY_MAYBE: {
-                "color": ft.colors.PURPLE_100,
-                "border_color": ft.colors.PURPLE_400,
-                "icon": ft.icons.LIGHTBULB_OUTLINE,
-                "label": "🤔 Someday/Maybe"
-            },
-            TaskStatus.DONE: {
-                "color": ft.colors.GREY_100,
-                "border_color": ft.colors.GREY_400,
-                "icon": ft.icons.CHECK_CIRCLE,
-                "label": "✅ Done"
-            }
-        }
+### 使用例
 
-        config = status_config.get(self.task.status, status_config[TaskStatus.INBOX])
+```powershell
+# プレビュー（簡易レイアウト付き）
+poe component --target views.memos.components.memo_card:MemoCard
 
-        # カード外観の設定
-        self.bgcolor = config["color"]
-        self.border = ft.border.all(1, config["border_color"])
-        self.border_radius = 8
-        self.padding = 12
+# レイアウト無し表示
+poe component --target views.memos.components.memo_card:MemoCard -nw
 ```
 
-### 2. Context（コンテキスト）ベースのフィルタリング UI
+### オプション (現行)
+
+| オプション          | 説明                                                 |
+| ------------------- | ---------------------------------------------------- |
+| `--target`          | `module:Class` または `path/to/file.py:Class` (必須) |
+| `--no-wrap` / `-nw` | 簡易レイアウトラップを無効化（既定はラップ有効）     |
+
+### 自動適用
+
+- ログ初期化
+- ページ設定（フォント/テーマ）
+- 簡易 View ラップ（除去時は `-nw`）
+- ブラウザ起動 (AppView.WEB_BROWSER, port=8000)
+
+### preview 実装例
+
+```python
+class MemoCard(ft.Container):
+    @classmethod
+    def preview(cls) -> "MemoCard":
+        from datetime import datetime
+        from uuid import uuid4
+        from views.sample import SampleMemo
+        sample = SampleMemo(
+            id=uuid4(),
+            title="プレビュー用メモ",
+            content="これは MemoCard 単体プレビューのダミーコンテンツです。",
+            created_at=datetime.now(),
+        )
+        return cls(memo=sample, is_selected=True)
+```
+
+### 移行ガイド
+
+| 旧機能                      | 新仕様                    | 対応方法                    |
+| --------------------------- | ------------------------- | --------------------------- |
+| `create_control` ファクトリ | 廃止                      | クラスへ統合し preview 実装 |
+| `--props` / `--props-file`  | 廃止                      | preview 内でデータ生成      |
+| フォールバック命名探索      | 廃止                      | preview を必ず定義          |
+| `--wrap-layout`             | 既定ラップ / `-nw` で解除 | 必要なら `-nw` 使用         |
+| ネイティブウィンドウ表示    | ブラウザ表示に統一        | スクリプト変更で復帰可      |
+
+### 拡張のヒント
+
+- コンポーネントギャラリー: `ComponentsGallery(ft.Column)` に複数子コンポーネントを配置し preview で返す。
+- 共通モックデータ: `views/_preview_data.py` 等を新設して再利用性向上。
+- 表示モード切替: `ft.app(... view=ft.AppView.FLET_APP)` に変更してネイティブ復帰。
+
+旧オプションを利用している既存ドキュメントやスクリプトは削除・更新してください。
+
+## Context（コンテキスト）ベースのフィルタリング UI
 
 ```python
 # views/shared/context_filter.py - GTDコンテキストフィルター
@@ -307,7 +227,7 @@ class ContextFilter(ft.Row):
         ]
 ```
 
-### 3. 2-Minute Rule (2 分ルール) サポート
+## 2-Minute Rule (2 分ルール) サポート
 
 ```python
 # views/task/components/quick_actions.py - クイックアクション
@@ -360,7 +280,7 @@ class QuickActionButton(ft.ElevatedButton):
         self.style = ft.ButtonStyle(color=ft.colors.WHITE)
 ```
 
-### 4. Project 階層表示コンポーネント
+## Project 階層表示コンポーネント
 
 ```python
 # views/task/components/project_tree.py - プロジェクト階層表示
@@ -422,13 +342,13 @@ class ProjectTreeView(ft.Container):
 
 関数ベースのアプローチは、単純な機能や再利用可能なコンポーネントに適しています。
 
-### 特徴
+### 関数ベースの特徴
 
 - **シンプル**: 理解しやすく、書きやすい
 - **軽量**: 状態管理が不要な場合に最適
 - **再利用性**: 純粋関数として設計しやすい
 
-### 実装例
+### 関数ベースの実装例
 
 ```python
 import flet as ft
@@ -479,7 +399,7 @@ def create_action_button(
     )
 ```
 
-### 使用場面
+### 関数ベースの使用場面
 
 - 単純な UI コンポーネント
 - 状態を持たない表示要素
@@ -490,13 +410,13 @@ def create_action_button(
 
 クラスベースのアプローチは、複雑な状態管理やライフサイクル管理が必要な場合に適しています。
 
-### 特徴
+### クラスベースの特徴
 
 - **状態管理**: インスタンス変数で状態を保持できる
 - **ライフサイクル**: 初期化、更新、破棄のタイミングを制御できる
 - **カプセル化**: 関連する機能をまとめて管理できる
 
-### 実装例
+### クラスベースの実装例
 
 ```python
 import flet as ft
@@ -585,7 +505,7 @@ class TaskCreateForm(ft.Column):
         self._page.open(ft.SnackBar(content=ft.Text(message)))
 ```
 
-### 使用場面
+### クラスベースの使用場面
 
 - 複雑な状態管理が必要な場合
 - フォームやリストなどのインタラクティブなコンポーネント
@@ -962,8 +882,11 @@ from typing import TYPE_CHECKING, Callable, Optional
 
 import flet as ft
 
+from logic.task import TaskService
+from models.task import Task
+
 if TYPE_CHECKING:
-    from models.example import ExampleModel
+    from models.user import User
 
 class ComponentName(ft.Column):  # またはft.Container, ft.Row等
     """コンポーネントの説明
@@ -1118,43 +1041,22 @@ class ExampleComponent(ft.Column):
 
 ```python
 def _on_save_clicked(self, _: ft.ControlEvent) -> None:
-    """保存ボタンクリック時の処理"""
+    # エラーハンドリングなし
+    result = self.service.save_data(self.input_field.value)
+    self._show_success()
+```
+
+#### ✅ 正しい例
+
+```python
+def _on_save_clicked(self, _: ft.ControlEvent) -> None:
     try:
-        # バリデーション
         if not self._validate_input():
             return
-
-        # 実際の処理
         result = self.service.save_data(self.input_field.value)
-
-        # 成功時の処理
-        self._show_success_message()
-
-    except ValueError as e:
-        self._show_error(f"入力エラー: {e}")
+        self._show_success()
     except Exception as e:
-        self._show_error(f"予期しないエラーが発生しました: {e}")
-
-def _validate_input(self) -> bool:
-    """入力値のバリデーション"""
-    if not self.input_field.value:
-        self._show_error("値を入力してください")
-        return False
-    return True
-
-def _show_error(self, message: str) -> None:
-    """エラーメッセージを表示"""
-    self._page.open(ft.SnackBar(
-        content=ft.Text(message, color=ft.colors.WHITE),
-        bgcolor=ft.colors.RED_400,
-    ))
-
-def _show_success_message(self) -> None:
-    """成功メッセージを表示"""
-    self._page.open(ft.SnackBar(
-        content=ft.Text("保存しました", color=ft.colors.WHITE),
-        bgcolor=ft.colors.GREEN_400,
-    ))
+        self._show_error(f"保存に失敗しました: {e}")
 ```
 
 ### 4. 状態管理
@@ -1238,7 +1140,7 @@ class ChildForm(ft.Column):
 
 ## よくある間違いとその解決策
 
-### 1. 状態管理の問題
+### ケース 1: 状態管理の問題
 
 #### ❌ 間違った例
 
@@ -1261,7 +1163,7 @@ class UserProfile(ft.Column):
         self.user = user  # インスタンス変数として管理
 ```
 
-### 2. エラーハンドリングの問題
+### ケース 2: エラーハンドリングの問題
 
 #### ❌ 間違った例
 
@@ -1285,7 +1187,7 @@ def _on_save_clicked(self, _: ft.ControlEvent) -> None:
         self._show_error(f"保存に失敗しました: {e}")
 ```
 
-### 3. レイアウトの問題
+### ケース 3: レイアウトの問題
 
 #### ❌ 間違った例
 
@@ -1323,7 +1225,7 @@ def _build_layout(self) -> None:
     ]
 ```
 
-### 4. import の問題
+### ケース 4: import の問題
 
 #### ❌ 間違った例
 
@@ -1343,7 +1245,7 @@ if TYPE_CHECKING:
     from models.user import User  # 型チェック時のみインポート
 ```
 
-### 5. 命名の問題
+### ケース 5: 命名の問題
 
 #### ❌ 間違った例
 
@@ -1379,21 +1281,34 @@ View レイヤーの実装では以下のポイントを意識してください
 
 ### GTD 固有の設計
 
-4. **GTD 概念の視覚化**: TaskStatus、コンテキスト、プロジェクト階層の適切な表現
-5. **ワークフロー対応**: Inbox Review、週次レビュー等の GTD プロセスを UI 化
-6. **2 分ルールサポート**: クイックアクションによる即座の判断・実行
+1. **GTD 概念の視覚化**: TaskStatus、コンテキスト、プロジェクト階層の適切な表現
+2. **ワークフロー対応**: Inbox Review、週次レビュー等の GTD プロセスを UI 化
+3. **2 分ルールサポート**: クイックアクションによる即座の判断・実行
 
 ### 技術的品質
 
-7. **依存性注入**: Service Container パターンによるテスタブルな設計
-8. **エラーハンドリング**: ユーザーフレンドリーなエラー表示とリカバリー
-9. **リアルタイム更新**: 楽観的 UI 更新によるレスポンシブな体験
-10. **テスタビリティ**: MVP패턴とインターフェース分離によるユニットテスト対応
+1. **依存性注入**: Service Container パターンによるテスタブルな設計
+2. **エラーハンドリング**: ユーザーフレンドリーなエラー表示とリカバリー
+3. **リアルタイム更新**: 楽観的 UI 更新によるレスポンシブな体験
+4. **テスタビリティ**: MVP 패턴とインターフェース分離によるユニットテスト対応
 
 ### 開発効率
 
-11. **再利用性**: 共通コンポーネントと Mixin の活用
-12. **保守性**: 明確なファイル構造とコーディング規約
-13. **拡張性**: 新機能追加に対応できる柔軟な設計
+1. **再利用性**: 共通コンポーネントと Mixin の活用
+2. **保守性**: 明確なファイル構造とコーディング規約
+3. **拡張性**: 新機能追加に対応できる柔軟な設計
 
 これらの指針に従うことで、GTD の思想を適切に反映し、保守性が高く理解しやすい View レイヤーを構築できます。特に、Application Service 層との適切な連携により、Views 層は UI 表示に専念でき、ビジネスロジックの複雑さから分離された設計を実現できます。
+
+## 旧 Component Launcher 記述の削除について
+
+このセクションは旧仕様（`create_control` / `--props` / `--props-file` / `--wrap-layout` など）に基づく内容だったため Strict Preview Mode 移行に伴い削除されました。最新仕様は本ファイル前半の「現在の Component Launcher は ... 厳格モードです」節を参照してください。
+
+主な変更点要約:
+
+- 旧: ファクトリ関数や JSON 経由の引数注入を許容 → 新: `@classmethod preview` に統一
+- 旧: PowerShell クォート回避策 (`--props-file`) → 新: preview 内でダミーデータ生成
+- 旧: 明示 `--wrap-layout` → 新: デフォルトラップ / `-nw` で解除
+- 旧: 多数の終了コード (JSON_ERROR など) → 新: 簡素化されたエラーセット
+
+ドキュメント更新時は旧オプションの記述を再導入しないでください。

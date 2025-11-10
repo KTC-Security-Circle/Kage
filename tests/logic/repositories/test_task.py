@@ -229,3 +229,33 @@ class TestTaskRepository:
         # 存在しないタスクIDへの追加は NotFoundError
         with pytest.raises(NotFoundError):
             task_repository.add_tag(uuid.uuid4(), tag_id)
+
+    def test_search_by_description(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """説明による検索（部分一致・大文字小文字無視）"""
+        t1 = create_test_task(title="A", description="Implement feature X")
+        t2 = create_test_task(title="B", description="implement integration tests")
+        t3 = create_test_task(title="C", description="Review PR")
+        test_session.add_all([t1, t2, t3])
+        test_session.commit()
+
+        hits = task_repository.search_by_description("implement")
+        titles = {t.title for t in hits}
+        assert titles == {"A", "B"}
+
+    def test_search_by_description_no_hit(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """説明検索でヒットなしは NotFoundError"""
+        t = create_test_task(title="Z", description="Something else")
+        test_session.add(t)
+        test_session.commit()
+
+        with pytest.raises(NotFoundError):
+            task_repository.search_by_description("nope")
+
+    def test_search_by_description_with_details(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """with_details=True 分岐を通す"""
+        t = create_test_task(title="D", description="Document work")
+        test_session.add(t)
+        test_session.commit()
+        res = task_repository.search_by_description("doc", with_details=True)
+        assert len(res) == 1
+        assert res[0].title == "D"

@@ -106,8 +106,9 @@ sync-all = "uv sync --extra openvino"
 # == Application Execution ==
 run = "flet run"
 dev = "flet run -dr"
-web = "flet run --web"
+web = "flet run --web --port 8080"
 cli = "kage-cli"
+component = "uv run python scripts/component_launcher.py"
 
 # == Code Quality ==
 check = ["_lint", "_format-check", "_type-check"]
@@ -137,8 +138,10 @@ clean = "uv cache clean"
 
 # == Internal Commands (prefixed with _) ==
 _lint = "uv run ruff check ."
-_lint-fix = "uv run ruff check . --fix"
-_format = "uv run ruff format ."
+# _lint-fix = "uv run ruff check . --fix"
+_lint-fix = "uv run ruff check src/views --fix"
+# _format = "uv run ruff format ."
+_format = "uv run ruff format src/views"
 _format-check = "uv run ruff format . --check"
 _type-check = "uv run pyright src/ tests/"
 _docs-serve = "uv run mkdocs serve -a 127.0.0.1:8000"

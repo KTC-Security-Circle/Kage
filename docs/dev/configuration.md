@@ -65,15 +65,15 @@ EnvVarDef(name="OPENAI_API_KEY", category="ai", required=False, description="Ope
 
 <!-- BEGIN:ENV_VARS_TABLE -->
 
-| キー | 型 | カテゴリ | デフォルト | コメント |
-|---|---|---|---|---|
-| FLET_SECRET_KEY | str | flet |  |  |
-| GOOGLE_API_KEY | str | ai |  |  |
-| LANGSMITH_API_KEY | str | ai |  |  |
-| LANGSMITH_TRACING | bool | ai | false | false/true |
-| KAGE_USE_LLM_ONE_LINER | bool | ai | false | false/true |
-| HUGGINGFACEHUB_API_TOKEN | str | ai |  |  |
-| DATABASE_URL | str | db |  |  |
+| キー                     | 型   | カテゴリ | デフォルト | コメント   |
+| ------------------------ | ---- | -------- | ---------- | ---------- |
+| FLET_SECRET_KEY          | str  | flet     |            |            |
+| GOOGLE_API_KEY           | str  | ai       |            |            |
+| LANGSMITH_API_KEY        | str  | ai       |            |            |
+| LANGSMITH_TRACING        | bool | ai       | false      | false/true |
+| KAGE_USE_LLM_ONE_LINER   | bool | ai       | false      | false/true |
+| HUGGINGFACEHUB_API_TOKEN | str  | ai       |            |            |
+| DATABASE_URL             | str  | db       |            |            |
 
 <!-- END:ENV_VARS_TABLE -->
 
@@ -154,6 +154,8 @@ database:
 - 一時的な上書きは環境変数で行い、永続変更は編集コンテキストで行う
 - 必須キーは CI で空チェック（将来的に追加予定）
 - 直接 `os.getenv` を使用せず `ConfigManager`/`EnvSettings` 経由に統一
+- アプリケーション層からの設定アクセスは `SettingsApplicationService` を利用（集中管理）
+  - 使い方と再読込手順は「開発ガイド > アプリケーション層の設定アクセス」を参照
 
 ## 今後の改善候補
 
@@ -164,4 +166,4 @@ database:
 
 ---
 
-最終更新: 2025-08-31
+最終更新: 2025-11-07

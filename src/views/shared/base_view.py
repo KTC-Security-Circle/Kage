@@ -1,139 +1,342 @@
-"""ベースViewクラス
+"""共通のベースViewクラスとエラーハンドリングミックスイン。
 
-すべてのViewクラスの基底となるクラスを提供します。
-共通機能とライフサイクル管理を担当します。
+このモジュールは、全てのViewクラスが継承する基底クラスと、
+エラーハンドリング、ライフサイクル管理等の共通機能を提供します。
 """
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+import traceback
 
 import flet as ft
 from loguru import logger
 
-from logic.factory import get_application_service_container
 
+class ErrorHandlingMixin:
+    """エラーハンドリング機能を提供するミックスイン。
 
-class BaseView(ft.Container, ABC):
-    """すべてのViewの基底クラス
-
-    共通機能:
-    - ライフサイクル管理（mount/unmount）
-    - デフォルトスタイル設定
-    - ログ出力の統一
-    - ApplicationServiceContainerへのアクセス
-
-    ErrorHandlingMixinとの組み合わせ:
-        ErrorHandlingMixinと組み合わせることで、統一されたエラーハンドリング機能を利用できます。
-
-        使用例:
-            class TaskView(BaseView, ErrorHandlingMixin):
-                def __init__(self, page: ft.Page) -> None:
-                    super().__init__(page)
-                    # self.show_success(), self.show_error()等が利用可能
+    このミックスインは、統一されたエラー表示とログ記録機能を提供します。
+    例外処理、ユーザー通知、デバッグログの出力を一元化します。
     """
 
-    def __init__(self, page: ft.Page, **kwargs) -> None:  # type: ignore[misc] # noqa: ANN003
-        """BaseViewのコンストラクタ
+    def show_error_dialog(
+        self,
+        page: ft.Page,
+        title: str = "エラー",
+        message: str = "予期しないエラーが発生しました。",
+    ) -> None:
+        """エラーダイアログを表示する。
 
         Args:
-            page: Fletのページオブジェクト
-            **kwargs: ft.Containerに渡す追加引数
+            page: Fletページオブジェクト
+            title: ダイアログのタイトル
+            message: エラーメッセージ
         """
-        super().__init__(**kwargs)
-        self._page = page
-        self._is_mounted = False
-        self._view_name = self.__class__.__name__
+        dialog = ft.AlertDialog(
+            title=ft.Text(title),
+            content=ft.Text(message),
+            actions=[
+                ft.TextButton(
+                    "OK",
+                    on_click=lambda _: self._close_dialog(page),
+                ),
+            ],
+        )
+        page.dialog = dialog
+        dialog.open = True
+        page.update()
 
-        # デフォルトスタイルの設定
-        self._setup_default_style()
+    def show_error_snackbar(
+        self,
+        page: ft.Page,
+        message: str = "エラーが発生しました",
+    ) -> None:
+        """エラースナックバーを表示する。
 
-        self.container = get_application_service_container()
+        Args:
+            page: Fletページオブジェクト
+            message: エラーメッセージ
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=ft.Colors.ERROR,
+        )
+        page.snack_bar = snack_bar
+        snack_bar.open = True
+        page.update()
 
-        logger.info(f"{self._view_name} 初期化開始")
+    def show_info_snackbar(
+        self,
+        message: str = "情報",
+    ) -> None:
+        """情報スナックバーを表示する。
 
-    def _setup_default_style(self) -> None:
-        """デフォルトスタイルの設定"""
-        self.padding = 20
-        self.expand = True
-        self.bgcolor = ft.Colors.GREY_50
+        Args:
+            message: 情報メッセージ
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=ft.Colors.BLUE,
+        )
+        self.page.snack_bar = snack_bar
+        snack_bar.open = True
+        self.page.update()
 
-    @abstractmethod
-    def build_content(self) -> ft.Control:
-        """コンテンツを構築
+    def show_success_snackbar(
+        self,
+        message: str = "成功しました",
+    ) -> None:
+        """成功スナックバーを表示する。
 
-        サブクラスで実装必須。
-        このメソッドでViewの具体的なUIを構築する。
+        Args:
+            message: 成功メッセージ
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=ft.Colors.GREEN,
+        )
+        self.page.snack_bar = snack_bar
+        snack_bar.open = True
+        self.page.update()
+
+    def show_snack_bar(
+        self,
+        message: str,
+        bgcolor: str | None = None,
+    ) -> None:
+        """汎用スナックバーを表示する。
+
+        Args:
+            message: 表示メッセージ
+            bgcolor: 背景色（デフォルトはPRIMARY）
+        """
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=bgcolor or ft.Colors.PRIMARY,
+        )
+        self.page.snack_bar = snack_bar
+        snack_bar.open = True
+        self.page.update()
+
+    def handle_exception_with_dialog(
+        self,
+        page: ft.Page,
+        exception: Exception,
+        user_message: str | None = None,
+    ) -> None:
+        """例外を処理し、ダイアログでユーザーに通知する。
+
+        Args:
+            page: Fletページオブジェクト
+            exception: 発生した例外
+            user_message: ユーザーに表示するメッセージ
+        """
+        # ログ記録
+        logger.error(
+            f"Exception occurred: {type(exception).__name__}: {exception}\nTraceback: {traceback.format_exc()}"
+        )
+
+        # ダイアログでユーザー通知
+        display_message = user_message or f"エラーが発生しました: {exception!s}"
+        self.show_error_dialog(page, message=display_message)
+
+    def handle_exception_with_snackbar(
+        self,
+        page: ft.Page,
+        exception: Exception,
+        user_message: str | None = None,
+    ) -> None:
+        """例外を処理し、スナックバーでユーザーに通知する。
+
+        Args:
+            page: Fletページオブジェクト
+            exception: 発生した例外
+            user_message: ユーザーに表示するメッセージ
+        """
+        # ログ記録
+        logger.error(
+            f"Exception occurred: {type(exception).__name__}: {exception}\nTraceback: {traceback.format_exc()}"
+        )
+
+        # スナックバーでユーザー通知
+        display_message = user_message or f"エラーが発生しました: {exception!s}"
+        self.show_error_snackbar(page, message=display_message)
+
+    def _close_dialog(self, page: ft.Page) -> None:
+        """ダイアログを閉じる。
+
+        Args:
+            page: Fletページオブジェクト
+        """
+        if page.dialog:
+            page.dialog.open = False
+            page.update()
+
+
+class BaseView(ft.Container, ErrorHandlingMixin):
+    """全Viewの共通基底クラス。
+
+    このクラスは、ライフサイクル管理、エラーハンドリング、
+    共通のUI管理機能を提供します。全てのViewはこのクラスを継承します。
+
+    Attributes:
+        page: Fletページオブジェクト
+        is_mounted: マウント状態を表すフラグ
+    """
+
+    def __init__(self, page: ft.Page) -> None:
+        """BaseViewを初期化する。
+
+        Args:
+            page: Fletページオブジェクト
+        """
+        super().__init__()
+        self.page = page
+        self.is_mounted = False
+
+    def did_mount(self) -> None:  # type: ignore[override]
+        """マウント時に呼び出される。
+
+        ViewがUIツリーに追加された際の初期化処理を行います。
+        必要に応じてサブクラスでオーバーライドしてください。
+        """
+        self.is_mounted = True
+        logger.debug(f"{self.__class__.__name__} mounted")
+
+        # TODO: グローバルメッセージ購読機能を統合フェーズで追加
+        # 理由: Pub/Subシステムが未実装のため
+        # 置換先: page.pubsub.subscribe(self._on_global_message)
+
+    def will_unmount(self) -> None:  # type: ignore[override]
+        """アンマウント時に呼び出される。
+
+        ViewがUIツリーから削除される際のクリーンアップ処理を行います。
+        必要に応じてサブクラスでオーバーライドしてください。
+        """
+        self.is_mounted = False
+        logger.debug(f"{self.__class__.__name__} unmounted")
+
+        # TODO: グローバルメッセージ購読解除機能を統合フェーズで追加
+        # 理由: Pub/Subシステムが未実装のため
+        # 置換先: page.pubsub.unsubscribe(self._on_global_message)
+
+    def build(self) -> ft.Control:
+        """UIを構築する。
 
         Returns:
-            ft.Control: 構築されたコンテンツ
-        """
+            構築されたコントロール
 
-    def mount(self) -> None:
-        """コンポーネントのマウント処理
-
-        初回のみ実行される初期化処理。
-        build_content()を呼び出してコンテンツを構築する。
+        Notes:
+            サブクラスでbuild_contentをオーバーライドしてください。
         """
-        if not self._is_mounted:
+        try:
+            if hasattr(self, "build_content"):
+                return self.build_content()
+            return ft.Text("BaseView - サブクラスでbuild_contentをオーバーライドしてください")
+        except Exception as e:
+            logger.error(f"Error building view {self.__class__.__name__}: {e}")
+            return ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR, size=48),
+                        ft.Text(
+                            "ビューの読み込み中にエラーが発生しました",
+                            size=16,
+                            color=ft.Colors.ERROR,
+                        ),
+                        ft.Text(
+                            str(e),
+                            size=12,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                ),
+                padding=ft.padding.all(32),
+                alignment=ft.alignment.center,
+            )
+
+    def safe_update(self) -> None:
+        """安全にページを更新する。
+
+        マウント状態をチェックしてからページ更新を実行します。
+        """
+        if self.is_mounted and self.page:
             try:
-                self.content = self.build_content()
-                self._is_mounted = True
-                logger.info(f"{self._view_name} マウント完了")
+                self.page.update()
             except Exception as e:
-                logger.error(f"{self._view_name} マウントエラー: {e}")
-                # エラー時は簡単なエラー表示
-                self.content = ft.Text(
-                    f"ビューの読み込みに失敗しました: {e}",
-                    color=ft.Colors.RED,
-                )
-                raise
+                logger.error(f"Failed to update page: {e}")
 
-    def unmount(self) -> None:
-        """コンポーネントのアンマウント処理
-
-        リソースのクリーンアップやイベントリスナーの解除を行う。
-        """
-        if self._is_mounted:
-            self._is_mounted = False
-            logger.info(f"{self._view_name} アンマウント完了")
-
-    def refresh(self) -> None:
-        """ビューの再読み込み
-
-        データの更新やUIの再構築を行う。
-        サブクラスでオーバーライドして具体的な更新処理を実装する。
-        """
-        logger.info(f"{self._view_name} リフレッシュ")
-        if self._page and self._is_mounted:
-            import contextlib
-
-            with contextlib.suppress(Exception):
-                self.update()
-
-    @property
-    def is_mounted(self) -> bool:
-        """マウント状態を取得
-
-        Returns:
-            bool: マウント済みの場合True
-        """
-        return self._is_mounted
-
-    @property
-    def page(self) -> ft.Page:
-        """Fletページオブジェクトを取得
-
-        Returns:
-            ft.Page: Fletのページオブジェクト
-        """
-        return self._page
-
-    @page.setter
-    def page(self, value: ft.Page) -> None:
-        """Fletページオブジェクトを設定
+    def _on_global_message(self, message: object) -> None:
+        """グローバルメッセージを受信する。
 
         Args:
-            value: 設定するFletのページオブジェクト
+            message: 受信したメッセージ
+
+        Notes:
+            必要に応じてサブクラスでオーバーライドしてください。
         """
-        self._page = value
+        # TODO: 統合フェーズで実装
+        # 理由: グローバル通信仕様が未定義のため
+        # 置換先: 具体的なメッセージハンドリングロジック
+        logger.debug(f"Global message received: {message}")
+
+
+class LoadingMixin:
+    """ローディング状態管理を提供するミックスイン。
+
+    このミックスインは、非同期処理中のローディング表示機能を提供します。
+    """
+
+    def __init__(self) -> None:
+        """LoadingMixinを初期化する。"""
+        self._is_loading = False
+        self._loading_overlay: ft.Control | None = None
+
+    @property
+    def is_loading(self) -> bool:
+        """ローディング状態を取得する。
+
+        Returns:
+            ローディング中の場合True
+        """
+        return self._is_loading
+
+    def show_loading(self, page: ft.Page, message: str = "読み込み中...") -> None:
+        """ローディング表示を開始する。
+
+        Args:
+            page: Fletページオブジェクト
+            message: ローディングメッセージ
+        """
+        self._is_loading = True
+
+        self._loading_overlay = ft.Container(
+            content=ft.Column(
+                [
+                    ft.ProgressRing(),
+                    ft.Text(message),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            alignment=ft.alignment.center,
+            bgcolor=ft.Colors.with_opacity(0.7, ft.Colors.BLACK),
+            expand=True,
+        )
+
+        # TODO: より適切なローディングオーバーレイ表示方法を統合フェーズで実装
+        # 理由: 現在は単純な実装のため、より高度なUX改善が必要
+        # 置換先: モーダルオーバーレイやプログレスバー等の実装
+
+        page.update()
+
+    def hide_loading(self, page: ft.Page) -> None:
+        """ローディング表示を終了する。
+
+        Args:
+            page: Fletページオブジェクト
+        """
+        self._is_loading = False
+        self._loading_overlay = None
+        page.update()

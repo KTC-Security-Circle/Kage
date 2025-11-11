@@ -370,6 +370,9 @@ class ProjectsView(BaseView):
                                                     weight=ft.FontWeight.BOLD,
                                                 ),
                                                 ft.Text(
+                                                    # TODO: 日付表示の整形
+                                                    # - ロケール/タイムゾーン/相対表現の方針は Presenter で統一し、
+                                                    #   View は整形済み文字列のみを表示する。
                                                     f"{project.created_at} 作成",
                                                     style=ft.TextThemeStyle.BODY_MEDIUM,
                                                     color=ft.Colors.GREY_600,
@@ -653,7 +656,8 @@ def build_projects_sample_data(items: list[dict[str, str]]) -> list[dict[str, st
             # 日本語ステータス想定（Presenter/Controller側での表示には支障なし）
             "status": str(item.get("status", "")),
             "created_at": str(item.get("created_at", item.get("start_date", ""))),
-            # updated_at が無いので created_at を暫定利用（実データ導入時に差し替え）
+            # TODO: updated_at の暫定値
+            # - updated_at が無いため created_at を暫定利用しています（実データ導入時に差し替え）。
             "updated_at": str(item.get("created_at", item.get("start_date", ""))),
             # due_date は sample 側 end_date をマッピング
             "due_date": str(item.get("end_date", "")),

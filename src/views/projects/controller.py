@@ -257,6 +257,11 @@ class ProjectController:
             logger.error(f"プロジェクトリスト更新エラー: {e}")
             # エラー時は空リストで更新
             self._on_list_change([])
+            # TODO: ユーザーへの通知処理（例: Flet の SnackBar/AlertDialog を使用）
+            # - View 層の show_error_snackbar のオーバーライド実装がある場合は
+            #   ここで呼び出してエラーを可視化してください。
+            if hasattr(self, "show_error_snackbar") and callable(self.show_error_snackbar):
+                self.show_error_snackbar("プロジェクト一覧の取得に失敗しました。詳細はログを参照してください。")
 
     def _update_detail(self) -> None:
         """プロジェクト詳細を更新する。"""

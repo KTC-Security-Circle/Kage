@@ -51,6 +51,19 @@ class ProjectController:
         self._on_list_change = on_list_change
         self._on_detail_change = on_detail_change
 
+    def show_error_snackbar(self, message: str) -> None:
+        """ユーザー向けにエラーを通知する。
+
+        デフォルト実装では loguru にエラーを記録するだけで、実際の UI 表示
+        (例: Flet の SnackBar/AlertDialog) は View 層でこのメソッドをオーバーライド
+        して実装してください。
+
+        Args:
+            message: ユーザーに表示するエラーメッセージ
+        """
+        # デフォルトはログ出力のみ
+        logger.error(message)
+
     @property
     def state(self) -> ProjectState:
         """現在のUI状態を取得する。
@@ -190,6 +203,7 @@ class ProjectController:
         except Exception as e:
             logger.exception(f"プロジェクト追加中に予期しないエラーが発生しました: {e}")
             # TODO: ユーザーへの通知処理（例: Fletの AlertDialog や SnackBar を使用）
+
     def _update_and_render(self, new_state: ProjectState) -> None:
         """状態を更新してUIを再描画する。
 
@@ -271,10 +285,14 @@ class ProjectController:
                 self._on_detail_change(None)
 
         except Exception as e:
-            logger.exception(f"プロジェクト詳細更新中にエラーが発生しました: project_id={self._state.selected_id}, error={e}")
+            # ログ出力（長文を分割して可読性と行長制限を両立）
+            msg = f"プロジェクト詳細更新中にエラーが発生しました: project_id={self._state.selected_id}, error={e}"
+            logger.exception(msg)
             # [AI GENERATED] ユーザーにエラー内容を通知
             if hasattr(self, "show_error_snackbar") and callable(self.show_error_snackbar):
-                self.show_error_snackbar(
-                    f"プロジェクト詳細の取得中にエラーが発生しました（ID: {self._state.selected_id}）。詳細はログを参照してください。"
+                user_msg = (
+                    f"プロジェクト詳細の取得中にエラーが発生しました（ID: {self._state.selected_id}）。"
+                    "詳細はログを参照してください。"
                 )
+                self.show_error_snackbar(user_msg)
             self._on_detail_change(None)

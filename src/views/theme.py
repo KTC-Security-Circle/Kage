@@ -165,12 +165,23 @@ TAG_COLOR_PALETTE = [
 ]
 
 # Status color mapping for projects and tasks
+# 備考:
+# - 表示ラベル(日本語)と内部コード(英語: active/completed/on_hold/cancelled)の両方を許容する
+# - 既存画面では「キャンセル」という日本語表記も使われているため、同義語として扱う
 STATUS_COLOR_MAP = {
+    # Japanese display labels
     "進行中": STATUS_COLORS.in_progress,
     "計画中": STATUS_COLORS.planned,
     "完了": STATUS_COLORS.completed,
     "保留": STATUS_COLORS.on_hold,
     "中止": STATUS_COLORS.cancelled,
+    "キャンセル": STATUS_COLORS.cancelled,
+    # Internal English codes
+    "active": STATUS_COLORS.in_progress,
+    "planned": STATUS_COLORS.planned,
+    "completed": STATUS_COLORS.completed,
+    "on_hold": STATUS_COLORS.on_hold,
+    "cancelled": STATUS_COLORS.cancelled,
 }
 
 
@@ -273,7 +284,12 @@ def get_status_color(status: str) -> str:
     Returns:
         色コード（HEX形式）
     """
-    return STATUS_COLOR_MAP.get(status, STATUS_COLORS.on_hold)
+    # 英語コードは小文字で来る前提が多いため、まず lower() を試す
+    normalized = status.strip()
+    lower = normalized.lower()
+    if lower in STATUS_COLOR_MAP:
+        return STATUS_COLOR_MAP[lower]
+    return STATUS_COLOR_MAP.get(normalized, STATUS_COLORS.on_hold)
 
 
 def get_tag_color_palette() -> list[dict[str, str]]:

@@ -13,8 +13,7 @@ if TYPE_CHECKING:
 
     import flet as ft
 
-# [ToDo: 実装機能] テーマカラー取得機能
-# from views.theme import get_status_color
+from views.theme import get_status_color
 
 
 def create_project_card(
@@ -34,17 +33,8 @@ def create_project_card(
     """
     import flet as ft
 
-    # [ToDo: 実装機能] プロジェクトステータスに応じた色の管理
-    # - views.theme 等に get_status_color を実装して共通化してください。
-    # - ローカライズ(日本語/英語)どちらの値でも扱えるように内部値へ正規化するのが安全です。
-    # status_color = get_status_color(project["status"])
-    status_colors = {
-        "進行中": ft.Colors.BLUE,
-        "完了": ft.Colors.GREEN,
-        "保留": ft.Colors.ORANGE,
-        "キャンセル": ft.Colors.GREY,
-    }
-    status_color = status_colors.get(project["status"], ft.Colors.GREY)
+    # ステータス色はテーマに集約
+    status_color = get_status_color(project["status"])
 
     return ft.Card(
         content=ft.Container(

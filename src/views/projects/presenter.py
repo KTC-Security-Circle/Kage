@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+from views.theme import get_status_color
 
 
 @dataclass(frozen=True)
@@ -130,7 +131,7 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
 
     # 表示用の値
     subtitle = f"{project.get('created_at', '')} 作成"
-    status_color = _get_status_color(status)
+    status_color = get_status_color(status)
 
     # 説明文の省略（カード表示用）
     max_desc_length = 80
@@ -180,7 +181,7 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     due_date = None if raw_due in (None, "") else str(raw_due)
 
     # 表示用の値
-    status_color = _get_status_color(status)
+    status_color = get_status_color(status)
 
     return ProjectDetailVM(
         id=project_id,
@@ -198,25 +199,4 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     )
 
 
-def _get_status_color(status: str) -> str:
-    """ステータスに対応する色を取得する。
-
-    Args:
-        status: プロジェクトステータス
-
-    Returns:
-        ステータスに対応する色コード
-    """
-    # TODO(実装者向け): ステータス色の集中管理
-    # - views.theme などに定義し、全画面で共通化してください（定数/Enum推奨）。
-    status_colors = {
-        "進行中": "#2196F3",  # Blue
-        "active": "#2196F3",
-        "完了": "#4CAF50",  # Green
-        "completed": "#4CAF50",
-        "保留": "#FF9800",  # Orange
-        "on_hold": "#FF9800",
-        "キャンセル": "#9E9E9E",  # Grey
-        "cancelled": "#9E9E9E",
-    }
-    return status_colors.get(status, "#9E9E9E")  # デフォルトはグレー
+# ステータス色は views.theme.get_status_color に集約

@@ -42,7 +42,7 @@ class ProjectsView(BaseView):
         """
         super().__init__(page)
 
-        # TODO(実装者向け): データ取得の本実装に差し替える
+        # TODO: データ取得の本実装に差し替える
         # - ここでは表示確認のためサンプルデータを InMemory の Query に流し込んでいます。
         # - 本番実装では DI コンテナ (src/logic/container.py) から ProjectQuery 実装
         #   もしくは ProjectApplicationService を解決し、Repository 経由でデータを取得してください。
@@ -75,7 +75,7 @@ class ProjectsView(BaseView):
         self._detail_container = ft.Container(expand=True)
 
         # 初期描画
-        # TODO(実装者向け): 非同期取得にする場合
+        # TODO: 非同期取得にする場合
         # - ApplicationService 側で I/O を行うなら読み込み中インジケータを表示してから
         #   完了時に _controller.refresh() 相当の更新を呼び出してください。
         # - エラー時は snackbar で通知し、空表示/前回キャッシュ表示などの方針を決めるとUXが安定します。
@@ -577,8 +577,12 @@ class ProjectsView(BaseView):
 
             today = datetime.now().strftime("%Y-%m-%d")
 
-            # ステータス値はダイアログから受け取った表示値(Active/On-Hold/Completed)を
-            # 内部表現（lower snake）に正規化する。
+            # ステータス値はダイアログから受け取った表示値(Active/On-Hold/Completed 等)を内部コードに正規化。
+            # TODO: 重複正規化ロジックの最終的な移設
+            #  - normalize_status は現在 views.shared.status_utils にあるが、
+            #    ドメイン境界の明確化のため最終的には models (例: models/project.py) 側で
+            #    ProjectStatus に紐づくユーティリティとして提供し、View 層は直接参照しない設計にする。
+            #  - 関連重複箇所: controller.set_status / project_dialogs.save_project / query.list_projects
             status_display = (data.get("status") or "Active").strip()
             from views.shared.status_utils import normalize_status
 
@@ -588,7 +592,7 @@ class ProjectsView(BaseView):
             due_date_raw = (data.get("due_date") or "").strip()
             due_date = due_date_raw if due_date_raw else None
 
-            # TODO(実装者向け): 作成ロジックの本実装
+            # TODO: 作成ロジックの本実装
             # - 下記は InMemoryQuery 前提の暫定追加です。
             # - 実装では ProjectApplicationService.create_project(...) を呼び出し、
             #   成功時に controller.refresh() で最新状態を再取得してください。
@@ -625,7 +629,7 @@ class ProjectsView(BaseView):
         Returns:
             Presenter が処理可能な正規化済みプロジェクト辞書リスト
         """
-        # TODO(実装者向け): サンプルデータの撤去
+        # TODO: サンプルデータの撤去
         # - 実運用では ProjectApplicationService から取得し、Presenter が期待する
         #   キー構造に合わせてマッピングしてください（可能なら Presenter 側で完結させる）。
         return build_projects_sample_data(get_projects_for_ui())

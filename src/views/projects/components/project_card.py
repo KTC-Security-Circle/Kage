@@ -45,7 +45,7 @@ def create_project_card(
                         controls=[
                             ft.Column(
                                 controls=[
-                                    # TODO(実装者向け): name/title の正規化
+                                    # TODO: name/title の正規化
                                     # - ドメイン層 → Presenter で title に統一する想定です。
                                     ft.Text(
                                         project.get("title", project.get("name", "")),
@@ -113,7 +113,7 @@ def create_project_card(
                                         size=16,
                                         color=ft.Colors.GREY_600,
                                     ),
-                                    # TODO(実装者向け): created_at の表示整形
+                                    # TODO: created_at の表示整形
                                     # - ドメイン/Presenter 側で表示用フォーマットにして渡すと再利用性が高まります。
                                     ft.Text(
                                         project["created_at"],

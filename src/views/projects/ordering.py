@@ -58,7 +58,7 @@ class FieldOrder:
 
 
 # 利用可能な並び替え戦略のマッピング
-# TODO(実装者向け): サーバー/DB 側のフィールドと同期
+# TODO: サーバー/DB 側のフィールドと同期
 # - Repository 層でのソートキーと一致させてください。
 # - クライアント側で未対応のキーが指定された場合のフォールバック方針も検討すると安全です。
 ORDERING_MAP: dict[str, OrderStrategy] = {

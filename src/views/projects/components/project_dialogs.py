@@ -158,7 +158,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
             "task_id": [],
         }
 
-        # TODO(実装者向け): 本保存ロジックの実装
+        # TODO: 本保存ロジックの実装
         # - 現在は on_save コールバックで外側へ返すだけです。
         # - 実装では ProjectApplicationService.create_project(...) を呼び出し、
         #   成功時は snackbar で通知し、一覧の再取得/詳細の自動選択を行ってください。
@@ -403,6 +403,10 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             return
         name_field.error_text = None
 
+        # TODO: 正規化の移設
+        #  - 現在は views.shared.status_utils.normalize_status を利用しているが、
+        #    将来的には models 側で ProjectStatus と一緒に提供する関数に委譲し、
+        #    View 層はドメインのAPIのみを呼び出す。
         from views.shared.status_utils import normalize_status
 
         raw_status = status_dropdown.value or "Active"
@@ -419,7 +423,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             "due_date": due_raw,
         }
         try:
-            # TODO(実装者向け): 本保存ロジックの実装
+            # TODO: 本保存ロジックの実装
             # - 現在は on_save コールバックで外側へ返すだけです。
             # - 実装では ProjectApplicationService.update_project(...) を呼び出し、
             #   成功時にデータを再取得して UI を最新化してください。

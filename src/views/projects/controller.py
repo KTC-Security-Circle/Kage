@@ -93,6 +93,10 @@ class ProjectController:
 
         status_filter = None
         if status:
+            # TODO: 正規化をドメイン層へ
+            #  - normalize_status は現在 views.shared.status_utils にありますが、
+            #    将来的には models 側（例: models/project.py）で ProjectStatus と
+            #    一緒に提供し、UI層はドメインの変換APIのみを利用する設計にする。
             from views.shared.status_utils import normalize_status
 
             normalized = normalize_status(status)
@@ -178,7 +182,7 @@ class ProjectController:
             select: 追加後に選択状態にするかどうか
         """
         try:
-            # TODO(実装者向け): 作成処理の本実装
+            # TODO: 作成処理の本実装
             # - 現状は InMemory 用の add_project があれば呼び出す暫定実装です。
             # - 実装では ApplicationService.create_project(...) を呼び出し、
             #   成功時に refresh() で再取得してください（ID で選択維持する場合は応答の ID を使用）。
@@ -230,7 +234,7 @@ class ProjectController:
         """プロジェクトリストを更新する。"""
         try:
             # データ取得
-            # TODO(実装者向け): ページング/ソートをサーバーサイドへ委譲する検討
+            # TODO: ページング/ソートをサーバーサイドへ委譲する検討
             # - 件数が増える場合は list_projects に cursor/limit 等の引数を追加し、
             #   ApplicationService → Repository で最適化してください。
             items = self._query.list_projects(
@@ -264,7 +268,7 @@ class ProjectController:
                 return
 
             # 選択されたプロジェクトを検索
-            # TODO(実装者向け): ID 取得 API の利用
+            # TODO: ID 取得 API の利用
             # - list → 探索は暫定です。ProjectQuery に get_project_by_id を追加し、
             #   Repository で最適に取得してください。
             items = self._query.list_projects()

@@ -4,7 +4,7 @@
 BaseViewパターンを採用し、一貫したUIと機能を提供する。
 """
 
-# TODO(実装者向け): このファイルはレガシーパターンの暫定版です
+# TODO: このファイルはレガシーパターンの暫定版です
 # - 新しい Controller/Presenter 版 (views/projects/view.py) に移行後は削除予定です。
 # - サンプルデータ呼び出し (get_enhanced_projects_sample_data) は
 #   ApplicationService 経由の取得に置き換えてください。

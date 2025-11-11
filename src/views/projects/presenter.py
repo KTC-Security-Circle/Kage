@@ -116,7 +116,7 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
     """
     # 基本情報
     project_id = str(project.get("id", ""))
-    # TODO(実装者向け): フィールド名の統一
+    # TODO: フィールド名の統一
     # - サンプル互換のため title/name フォールバックを残していますが、
     #   本実装ではドメインモデル → Presenter で title に正規化してください。
     title = str(project.get("title", project.get("name", "")))
@@ -163,7 +163,7 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     """
     # 基本情報
     project_id = str(project.get("id", ""))
-    # TODO(実装者向け): フィールド名の統一（上記カードと同様）
+    # TODO: フィールド名の統一（上記カードと同様）
     title = str(project.get("title", project.get("name", "")))
     description = str(project.get("description", ""))
     status = str(project.get("status", ""))

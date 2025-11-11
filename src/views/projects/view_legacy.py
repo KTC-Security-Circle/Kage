@@ -741,17 +741,9 @@ class ProjectsView(BaseView):
         Args:
             project_data: 保存するプロジェクトデータ
         """
-        # [ToDo: 実装機能] 実際の実装では ProjectApplicationService を使用する
-        # if existing_project:
-        #     result = project_application_service.update_project(project_data)
-        # else:
-        #     result = project_application_service.create_project(project_data)
-        #
-        # if result.success:
-        #     self.show_success_snackbar(result.message)
-        #     self._refresh_project_data()
-        # else:
-        #     self.show_error_snackbar(result.error_message)
+        # [ToDo: 実装機能] 実際の実装では ProjectApplicationService を使用して
+        # プロジェクトの新規作成・更新処理を行う予定です。
+        # 例: project_application_service.create_project(project_data) など
 
         # 暫定実装（サンプルデータ操作）
         existing_project = None

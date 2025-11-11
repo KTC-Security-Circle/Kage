@@ -216,7 +216,8 @@ exclude = ["**/node_modules",
     "**/__pycache__",
     "src/experimental",
     "src/typestubs",
-    "src/models/migrations/versions"
+    "src/models/migrations/versions",
+    "src/views_old",
 ]
 typeCheckingMode = "basic"
 venvPath = "."

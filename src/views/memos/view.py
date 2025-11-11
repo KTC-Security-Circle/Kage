@@ -234,8 +234,13 @@ class MemosView(BaseView):
     def _handle_create_memo(self) -> None:
         """新規メモ作成ハンドラー。"""
         logger.info("Create memo requested")
-        # TODO: メモ作成ダイアログまたは画面遷移を実装
-        self.show_info_snackbar("メモ作成機能は統合フェーズで実装予定です")
+        # TODO: ダイアログ版のクイック作成（テンプレートの CreateMemoDialog 相当）を後続で併存させる。
+        #       現状はページ遷移でフルスクリーンの CreateMemoView を表示。
+        # メモ作成ページへ遷移
+        try:
+            self.page.go("/memos/create")
+        except Exception as e:
+            self.notify_error("メモ作成ページへの遷移に失敗しました", details=f"{type(e).__name__}: {e}")
 
     def _handle_search(self, query: str) -> None:
         """検索ハンドラー。

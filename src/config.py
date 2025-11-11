@@ -20,7 +20,8 @@ def create_db_and_tables() -> None:
     # この関数は main.py の最初で一度だけ呼び出す
     from sqlmodel import SQLModel
 
-    from models import __all__  # これで全てのモデルがインポートされる # noqa: F401
+    # from models import __all__  # これで全てのモデルがインポートされる noqa: F401
+    import models  # noqa: F401  # メタデータ登録のため副作用インポート
 
     SQLModel.metadata.create_all(engine)
 

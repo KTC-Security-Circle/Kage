@@ -60,18 +60,18 @@ def _search_projects(query, status: ProjectStatus | None) -> list[ProjectRead]: 
     return service.search(query, status=status)
 
 
-# @elapsed_time()
-# @with_spinner("Updating project...")
-# def _update_project(cmd: UpdateProjectCommand) -> ProjectRead:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.update_project(cmd)
+@elapsed_time()
+@with_spinner("Updating project...")
+def _update_project(project_id, update_data) -> ProjectRead:  # [AI GENERATED]
+    service = _get_service()
+    return service.update(project_id, update_data)
 
 
-# @elapsed_time()
-# @with_spinner("Deleting project...")
-# def _delete_project(cmd: DeleteProjectCommand) -> None:  # [AI GENERATED]
-#     service = _get_service()
-#     service.delete_project(cmd)
+@elapsed_time()
+@with_spinner("Deleting project...")
+def _delete_project(project_id) -> None:  # [AI GENERATED]
+    service = _get_service()
+    service.delete(project_id)
 
 
 # @app.command("list", help="全プロジェクト一覧を表示")

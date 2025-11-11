@@ -172,7 +172,8 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     # 日時フォーマット
     created_at = str(project.get("created_at", ""))
     updated_at = str(project.get("updated_at", ""))
-    due_date = project.get("due_date")
+    raw_due = project.get("due_date")
+    due_date = None if raw_due in (None, "") else str(raw_due)
 
     # 表示用の値
     status_color = _get_status_color(status)

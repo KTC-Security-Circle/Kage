@@ -13,10 +13,13 @@ if TYPE_CHECKING:
 
     from .presenter import ProjectCardVM, ProjectDetailVM
 
-from views.shared.base_view import BaseView
+from loguru import logger
 
-from .controller import ProjectController
-from .query import InMemoryProjectQuery
+from views.projects.components.project_dialogs import show_create_project_dialog
+from views.projects.controller import ProjectController
+from views.projects.query import InMemoryProjectQuery
+from views.sample import get_projects_for_ui
+from views.shared.base_view import BaseView
 
 
 class ProjectsView(BaseView):
@@ -551,46 +554,100 @@ class ProjectsView(BaseView):
         Args:
             _: イベント引数（未使用）
         """
-        self.show_info_snackbar("新規プロジェクト作成機能は準備中です")
+        logger.debug("新規プロジェクトダイアログを開きます")
+
+        # 既存の美しいダイアログ実装を利用
+        def _on_save(data: dict[str, str]) -> None:
+            """ダイアログから受け取ったデータを正規化しControllerへ渡す。
+
+            Args:
+                data: ダイアログで入力されたプロジェクト基本情報
+            """
+            import uuid
+            from datetime import datetime
+
+            today = datetime.now().strftime("%Y-%m-%d")
+
+            # ステータス値はダイアログから受け取った表示値(Active/On-Hold/Completed)を
+            # 内部表現（lower snake）に正規化する。
+            status_display = (data.get("status") or "Active").strip()
+            status_map = {
+                "Active": "active",
+                "On-Hold": "on_hold",
+                "Completed": "completed",
+                "Cancelled": "cancelled",
+                # 日本語入力の可能性にも防御的に対応
+                "進行中": "active",
+                "保留": "on_hold",
+                "完了": "completed",
+                "キャンセル": "cancelled",
+            }
+            status_raw = status_map.get(status_display, str(status_display).lower())
+
+            # due_date は未設定時 None へ統一
+            due_date_raw = (data.get("due_date") or "").strip()
+            due_date = due_date_raw if due_date_raw else None
+
+            new_project = {
+                "id": data.get("id", str(uuid.uuid4())),
+                "title": data.get("title", "新規プロジェクト"),
+                "description": data.get("description", ""),
+                "status": status_raw,
+                "created_at": today,
+                "updated_at": today,
+                "due_date": due_date,
+                # task関連は未入力のため初期値（task_id は作成時空リスト）
+                "task_count": "0",
+                "completed_count": "0",
+            }
+            self._controller.create_project(new_project, select=True)
+            self.show_success_snackbar("プロジェクトを追加しました")
+
+        show_create_project_dialog(self.page, on_save=_on_save)  # type: ignore[arg-type]
 
     def _get_sample_data(self) -> list[dict[str, str]]:
-        """サンプルデータを取得する（開発用）。
+        """`views.sample` のサンプルデータをプロジェクトView用形式に変換して取得する。
+
+        `sample.py` 内の `get_projects_for_ui()` は以下のキーを持つ:
+        - id, name, description, status, tasks_count, completed_tasks, created_at, start_date, end_date, priority
+
+        本 View / Presenter 層では以下のキーを期待する:
+        - id, title(or name), description, status, created_at, updated_at, due_date,
+          task_count(or tasks_count), completed_count(or completed_tasks)
+
+        欠損する `updated_at` は `created_at` を流用し、`due_date` は `end_date` をマッピングする。
 
         Returns:
-            サンプルプロジェクトデータ
+            Presenter が処理可能な正規化済みプロジェクト辞書リスト
         """
-        return [
-            {
-                "id": "1",
-                "title": "Webアプリケーション開発",
-                "description": "新しいWebアプリケーションの開発プロジェクトです。",
-                "status": "進行中",
-                "created_at": "2024-01-15",
-                "updated_at": "2024-01-20",
-                "due_date": "2024-03-31",
-                "task_count": "10",
-                "completed_count": "3",
-            },
-            {
-                "id": "2",
-                "title": "システムリニューアル",
-                "description": "既存システムの全面的なリニューアルを行います。",
-                "status": "保留",
-                "created_at": "2024-01-10",
-                "updated_at": "2024-01-18",
-                "due_date": "2024-06-30",
-                "task_count": "25",
-                "completed_count": "5",
-            },
-            {
-                "id": "3",
-                "title": "モバイルアプリ開発",
-                "description": "iOS・Android向けのモバイルアプリケーション開発。",
-                "status": "完了",
-                "created_at": "2023-12-01",
-                "updated_at": "2024-01-05",
-                "due_date": "2024-01-31",
-                "task_count": "15",
-                "completed_count": "15",
-            },
-        ]
+        return build_projects_sample_data(get_projects_for_ui())
+
+
+def build_projects_sample_data(items: list[dict[str, str]]) -> list[dict[str, str]]:
+    """`views.sample.get_projects_for_ui()`の出力をPresenterが扱える形へ正規化する。
+
+    Args:
+        items: sample由来の生データリスト
+
+    Returns:
+        正規化済みのプロジェクト辞書リスト
+    """
+    return [
+        {
+            "id": str(item.get("id", "")),
+            # sample側は name を使用しているが Presenter 側は title も受け付ける
+            "title": str(item.get("title", item.get("name", ""))),
+            "description": str(item.get("description", "")),
+            # 日本語ステータス想定（Presenter/Controller側での表示には支障なし）
+            "status": str(item.get("status", "")),
+            "created_at": str(item.get("created_at", item.get("start_date", ""))),
+            # updated_at が無いので created_at を暫定利用（実データ導入時に差し替え）
+            "updated_at": str(item.get("created_at", item.get("start_date", ""))),
+            # due_date は sample 側 end_date をマッピング
+            "due_date": str(item.get("end_date", "")),
+            # Presenter は tasks_count / completed_tasks もしくは task_count / completed_count を受け付ける
+            "task_count": str(item.get("tasks_count", "0")),
+            "completed_count": str(item.get("completed_tasks", "0")),
+        }
+        for item in items
+    ]

@@ -161,6 +161,35 @@ class ProjectController:
         logger.debug("データ再読み込み")
         self._update_and_render(self._state)
 
+    def create_project(self, project: dict[str, str], *, select: bool = True) -> None:
+        """新規プロジェクトを追加し、必要に応じて選択・再描画する。
+
+        テスト/デモ用の `InMemoryProjectQuery` では `add_project` を持つため、
+        それを利用してデータを追加する。実運用では Repository 経由の作成に置き換える。
+
+        Args:
+            project: 追加するプロジェクト辞書（Presenterが扱えるキーを推奨）
+            select: 追加後に選択状態にするかどうか
+        """
+        try:
+            add_fn = getattr(self._query, "add_project", None)
+            if callable(add_fn):
+                add_fn(project)  # type: ignore[misc]
+            else:
+                logger.warning("クエリが add_project をサポートしていません。")
+
+            # 追加後に選択する場合は state を更新
+            new_state = self._state
+            if select:
+                new_state = new_state.update(selected_id=str(project.get("id", "")))
+
+            # 内部更新関数を用いて強制的にリスト/詳細を再描画
+            self._state = new_state
+            self._update_list()
+            self._update_detail()
+        except Exception as e:
+            logger.error(f"プロジェクト追加エラー: {e}")
+
     def _update_and_render(self, new_state: ProjectState) -> None:
         """状態を更新してUIを再描画する。
 

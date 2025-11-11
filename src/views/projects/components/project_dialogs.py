@@ -14,11 +14,16 @@ if TYPE_CHECKING:
     import flet as ft
 
 
-def show_create_project_dialog(
+DATE_SLICE_LENGTH = 10  # YYYY-MM-DD 長さ
+
+
+def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     page: ft.Page,  # type: ignore[name-defined]
     on_save: Callable[[dict[str, str]], None] | None = None,
 ) -> None:
-    """美しい新規プロジェクト作成ダイアログを表示する。
+    """新規プロジェクト作成ダイアログを表示する（入力/バリデーション統合）。
+
+    複雑度はUI部品配置のため高めだが、ロジック分離は save_project 内で行う。
 
     Args:
         page: Fletページインスタンス
@@ -26,11 +31,10 @@ def show_create_project_dialog(
     """
     import flet as ft
 
-    # フォームフィールドを作成
+    # フォームフィールドを作成（prefix_icon非推奨のためRow構成）
     name_field = ft.TextField(
-        label="プロジェクト名",
+        label="タイトル",
         hint_text="例: ウェブサイトリニューアル",
-        prefix_icon=ft.Icons.WORK,
         border_color=ft.Colors.BLUE_400,
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
@@ -42,7 +46,6 @@ def show_create_project_dialog(
     description_field = ft.TextField(
         label="説明",
         hint_text="プロジェクトの詳細を入力してください",
-        prefix_icon=ft.Icons.DESCRIPTION,
         border_color=ft.Colors.BLUE_400,
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
@@ -55,32 +58,66 @@ def show_create_project_dialog(
 
     status_dropdown = ft.Dropdown(
         label="ステータス",
-        value="進行中",
-        prefix_icon=ft.Icons.FLAG,
+        value="Active",
         border_color=ft.Colors.BLUE_400,
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
         options=[
-            ft.dropdown.Option("進行中", "進行中"),
-            ft.dropdown.Option("計画中", "計画中"),
-            ft.dropdown.Option("完了", "完了"),
-            ft.dropdown.Option("保留", "保留"),
+            ft.dropdown.Option("Active", "Active"),
+            ft.dropdown.Option("On-Hold", "On-Hold"),
+            ft.dropdown.Option("Completed", "Completed"),
         ],
     )
 
-    priority_dropdown = ft.Dropdown(
-        label="優先度",
-        value="標準",
-        prefix_icon=ft.Icons.PRIORITY_HIGH,
+    # DatePicker を用いた期限入力
+    due_date_text = ft.TextField(
+        label="期限",
+        hint_text="YYYY-MM-DD",
+        read_only=True,
         border_color=ft.Colors.BLUE_400,
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        options=[
-            ft.dropdown.Option("低", "低"),
-            ft.dropdown.Option("標準", "標準"),
-            ft.dropdown.Option("高", "高"),
-        ],
+        width=200,
     )
+
+    # DatePicker はページ上で開く。選択時に TextField を更新する。
+    import datetime as _dt
+
+    def _on_date_change(e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        # e.data が '2025-11-27T00:00:00.000' のような日時文字列で来る場合があるため日付部分のみ抽出
+        raw = e.data or ""
+        if raw:
+            # ISO形式の先頭10文字(YYYY-MM-DD)を利用
+            iso_date = raw[:10]
+        elif e.control.value:
+            try:
+                iso_date = e.control.value.strftime("%Y-%m-%d")
+            except Exception:
+                txt = str(e.control.value)
+                iso_date = txt[:DATE_SLICE_LENGTH] if len(txt) >= DATE_SLICE_LENGTH else txt
+        else:
+            iso_date = ""
+        due_date_text.value = iso_date
+        due_date_text.update()
+
+    def _on_date_dismiss(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        # 何も選択されず閉じた場合は変更なし（ログ程度ならここに）
+        pass
+
+    tz = _dt.UTC
+    # locale ja, 範囲を動的(過去1年〜未来2年)へ
+    # タイムゾーン付き現在日付（UTC）を利用して範囲生成
+    today = _dt.datetime.now(tz=tz).date()
+    date_picker = ft.DatePicker(
+        first_date=_dt.datetime.combine(today - _dt.timedelta(days=365), _dt.time.min, tzinfo=tz),
+        last_date=_dt.datetime.combine(today + _dt.timedelta(days=730), _dt.time.min, tzinfo=tz),
+        on_change=_on_date_change,
+        on_dismiss=_on_date_dismiss,
+        # NOTE: locale引数は現行Fletでは未サポートのため除去（将来対応時に再追加）
+    )
+
+    def _open_date_picker(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        page.open(date_picker)
 
     def close_dialog(_: ft.ControlEvent) -> None:
         """ダイアログを閉じる"""
@@ -89,13 +126,36 @@ def show_create_project_dialog(
 
     def save_project(_: ft.ControlEvent) -> None:
         """プロジェクト保存処理"""
-        # プロジェクトデータを作成
+        # タイトル必須バリデーション
+        if not (name_field.value and name_field.value.strip()):
+            name_field.error_text = "タイトルは必須です"
+            name_field.update()
+            return
+        name_field.error_text = None
+
+        # due_date 未設定時は None 表現 + 範囲バリデーション
+        due_date_val = due_date_text.value.strip() if due_date_text.value else None
+        if due_date_val:
+            from views.shared.forms.validators import ValidationRule
+
+            min_str = (_dt.datetime.now(tz=tz).date() - _dt.timedelta(days=365)).strftime("%Y-%m-%d")
+            max_str = (_dt.datetime.now(tz=tz).date() + _dt.timedelta(days=730)).strftime("%Y-%m-%d")
+            valid, error = ValidationRule.date_range(min_str, max_str)(due_date_val)
+            if not valid:
+                due_date_text.error_text = error
+                due_date_text.update()
+                return
+            due_date_text.error_text = None
+
+        # プロジェクトデータを作成（DBスキーマ準拠）
         project_data = {
-            "id": f"project_{hash(name_field.value or 'new')}",  # 仮のID生成
-            "name": name_field.value or "新しいプロジェクト",
-            "description": description_field.value or "",
-            "status": status_dropdown.value or "進行中",
-            "priority": priority_dropdown.value or "標準",
+            "id": str(__import__("uuid").uuid4()),  # uuid4で衝突回避
+            "title": (name_field.value or "新しいプロジェクト").strip(),
+            "description": (description_field.value or "").strip(),
+            "status": (status_dropdown.value or "Active").strip(),
+            "due_date": due_date_val,
+            # tasksは作成時は空リストを基本とする
+            "task_id": [],
         }
 
         # コールバック関数を呼び出してデータを親に渡す
@@ -136,10 +196,44 @@ def show_create_project_dialog(
                     description_field,
                     ft.Row(
                         controls=[
-                            ft.Container(content=status_dropdown, expand=True),
-                            ft.Container(content=priority_dropdown, expand=True),
+                            ft.Container(content=status_dropdown),
+                            ft.Container(
+                                on_click=_open_date_picker,
+                                content=ft.Row(
+                                    controls=[
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.BLUE_600),
+                                                due_date_text,
+                                            ],
+                                            spacing=6,
+                                            alignment=ft.MainAxisAlignment.START,
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.EVENT_AVAILABLE,
+                                            tooltip="期限を選択",
+                                            on_click=_open_date_picker,
+                                            icon_size=26,
+                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.CLEAR,
+                                            tooltip="期限クリア",
+                                            on_click=lambda _: (
+                                                setattr(due_date_text, "value", ""),
+                                                due_date_text.update(),
+                                            ),
+                                            icon_size=22,
+                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
+                                        ),
+                                    ],
+                                    spacing=8,
+                                    alignment=ft.MainAxisAlignment.START,
+                                ),
+                            ),
                         ],
-                        spacing=16,
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        spacing=8,
                     ),
                     # 注意書き
                     ft.Container(
@@ -147,7 +241,7 @@ def show_create_project_dialog(
                             controls=[
                                 ft.Icon(ft.Icons.INFO, color=ft.Colors.BLUE_400, size=16),
                                 ft.Text(
-                                    "プロジェクト名は必須項目です",
+                                    "タイトルは必須項目です",
                                     style=ft.TextThemeStyle.BODY_SMALL,
                                     color=ft.Colors.BLUE_600,
                                 ),
@@ -200,7 +294,7 @@ def show_create_project_dialog(
     page.update()
 
 
-def show_edit_project_dialog(
+def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構築のため許容
     page: ft.Page,  # type: ignore[name-defined]
     project: dict[str, str],
     on_save: Callable[[dict[str, str]], None] | None = None,
@@ -216,9 +310,8 @@ def show_edit_project_dialog(
 
     # 既存データでフォームフィールドを初期化
     name_field = ft.TextField(
-        label="プロジェクト名",
-        value=project.get("name", ""),
-        prefix_icon=ft.Icons.WORK,
+        label="タイトル",
+        value=project.get("title", project.get("name", "")),
         border_color=ft.Colors.ORANGE_400,
         focused_border_color=ft.Colors.ORANGE_600,
         label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
@@ -229,7 +322,6 @@ def show_edit_project_dialog(
     description_field = ft.TextField(
         label="説明",
         value=project.get("description", ""),
-        prefix_icon=ft.Icons.DESCRIPTION,
         border_color=ft.Colors.ORANGE_400,
         focused_border_color=ft.Colors.ORANGE_600,
         label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
@@ -241,32 +333,57 @@ def show_edit_project_dialog(
 
     status_dropdown = ft.Dropdown(
         label="ステータス",
-        value=project.get("status", "進行中"),
-        prefix_icon=ft.Icons.FLAG,
+        value=(project.get("status") or "Active").title().replace("_", "-"),
         border_color=ft.Colors.ORANGE_400,
         focused_border_color=ft.Colors.ORANGE_600,
         label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
         options=[
-            ft.dropdown.Option("進行中", "進行中"),
-            ft.dropdown.Option("計画中", "計画中"),
-            ft.dropdown.Option("完了", "完了"),
-            ft.dropdown.Option("保留", "保留"),
+            ft.dropdown.Option("Active", "Active"),
+            ft.dropdown.Option("On-Hold", "On-Hold"),
+            ft.dropdown.Option("Completed", "Completed"),
+            ft.dropdown.Option("Cancelled", "Cancelled"),
         ],
     )
 
-    priority_dropdown = ft.Dropdown(
-        label="優先度",
-        value=project.get("priority", "標準"),
-        prefix_icon=ft.Icons.PRIORITY_HIGH,
+    # 期限フィールド（編集時は既存値を反映）
+    due_date_text = ft.TextField(
+        label="期限",
+        hint_text="YYYY-MM-DD",
+        read_only=True,
+        value=str(project.get("due_date", "")) if project.get("due_date") else "",
         border_color=ft.Colors.ORANGE_400,
         focused_border_color=ft.Colors.ORANGE_600,
         label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
-        options=[
-            ft.dropdown.Option("低", "低"),
-            ft.dropdown.Option("標準", "標準"),
-            ft.dropdown.Option("高", "高"),
-        ],
+        width=200,
     )
+    import datetime as _dt
+
+    tz = _dt.UTC
+    today = _dt.datetime.now(tz=tz).date()
+
+    def _on_date_change(e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        raw = e.data or ""
+        if raw:
+            iso_date = raw[:10]
+        elif e.control.value:
+            try:
+                iso_date = e.control.value.strftime("%Y-%m-%d")
+            except Exception:
+                txt = str(e.control.value)
+                iso_date = txt[:DATE_SLICE_LENGTH] if len(txt) >= DATE_SLICE_LENGTH else txt
+        else:
+            iso_date = ""
+        due_date_text.value = iso_date
+        due_date_text.update()
+
+    date_picker = ft.DatePicker(
+        first_date=_dt.datetime.combine(today - _dt.timedelta(days=365), _dt.time.min, tzinfo=tz),
+        last_date=_dt.datetime.combine(today + _dt.timedelta(days=730), _dt.time.min, tzinfo=tz),
+        on_change=_on_date_change,
+    )
+
+    def _open_date_picker(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        page.open(date_picker)
 
     def close_dialog(_: ft.ControlEvent) -> None:
         """ダイアログを閉じる"""
@@ -275,20 +392,45 @@ def show_edit_project_dialog(
 
     def save_project(_: ft.ControlEvent) -> None:
         """プロジェクト保存処理"""
-        # 更新されたプロジェクトデータを作成
+        if not (name_field.value and name_field.value.strip()):
+            name_field.error_text = "タイトルは必須です"
+            name_field.update()
+            return
+        name_field.error_text = None
+
+        status_map = {
+            "Active": "active",
+            "On-Hold": "on_hold",
+            "Completed": "completed",
+            "Cancelled": "cancelled",
+            "進行中": "active",
+            "保留": "on_hold",
+            "完了": "completed",
+            "キャンセル": "cancelled",
+        }
+        raw_status = status_dropdown.value or "Active"
+        normalized_status = status_map.get(raw_status, raw_status.lower())
+        due_raw = due_date_text.value.strip() if due_date_text.value else None
+
+        title_val = (name_field.value or project.get("title", "")).strip()
+        desc_val = (description_field.value or project.get("description", "")).strip()
         updated_project = {
             **project,
-            "name": name_field.value or project.get("name", ""),
-            "description": description_field.value or "",
-            "status": status_dropdown.value or "進行中",
-            "priority": priority_dropdown.value or "標準",
+            "title": title_val,
+            "description": desc_val,
+            "status": normalized_status,
+            "due_date": due_raw,
         }
-
-        # コールバック関数を呼び出してデータを親に渡す
-        if on_save:
-            on_save(updated_project)
-
-        close_dialog(_)
+        try:
+            if on_save:
+                on_save(updated_project)
+            close_dialog(_)
+        except Exception as e:
+            # Fallback snackbar (Pageに既存snackbar APIがない場合はDialogで代替)
+            error_bar = ft.SnackBar(ft.Text(f"保存に失敗しました: {e}"), bgcolor=ft.Colors.RED_400)
+            page.overlay.append(error_bar)
+            error_bar.open = True
+            page.update()
 
     # 美しい編集ダイアログを作成
     dialog = ft.AlertDialog(
@@ -322,10 +464,43 @@ def show_edit_project_dialog(
                     description_field,
                     ft.Row(
                         controls=[
-                            ft.Container(content=status_dropdown, expand=True),
-                            ft.Container(content=priority_dropdown, expand=True),
+                            ft.Container(content=status_dropdown),
+                            ft.Container(
+                                on_click=_open_date_picker,
+                                content=ft.Row(
+                                    controls=[
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.ORANGE_600),
+                                                due_date_text,
+                                            ],
+                                            spacing=6,
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.EVENT_AVAILABLE,
+                                            tooltip="期限を選択",
+                                            on_click=_open_date_picker,
+                                            icon_size=26,
+                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.CLEAR,
+                                            tooltip="期限クリア",
+                                            on_click=lambda _: (
+                                                setattr(due_date_text, "value", ""),
+                                                due_date_text.update(),
+                                            ),
+                                            icon_size=22,
+                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
+                                        ),
+                                    ],
+                                    spacing=8,
+                                    alignment=ft.MainAxisAlignment.START,
+                                ),
+                            ),
                         ],
-                        spacing=16,
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        spacing=8,
                     ),
                     # 進捗情報表示
                     ft.Container(

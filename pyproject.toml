@@ -152,6 +152,7 @@ _gen-env-docs = "uv run scripts/generate_env_docs.py"
 line-length = 120
 exclude = [
     "src/models/migrations/versions/",
+    "src/views_old/",
 ]
 
 [tool.ruff.format]

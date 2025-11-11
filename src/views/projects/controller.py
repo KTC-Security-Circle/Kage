@@ -281,5 +281,10 @@ class ProjectController:
                 self._on_detail_change(None)
 
         except Exception as e:
-            logger.error(f"プロジェクト詳細更新エラー: {e}")
+            logger.exception(f"プロジェクト詳細更新中にエラーが発生しました: project_id={self._state.selected_id}, error={e}")
+            # [AI GENERATED] ユーザーにエラー内容を通知
+            if hasattr(self, "show_error_snackbar") and callable(self.show_error_snackbar):
+                self.show_error_snackbar(
+                    f"プロジェクト詳細の取得中にエラーが発生しました（ID: {self._state.selected_id}）。詳細はログを参照してください。"
+                )
             self._on_detail_change(None)

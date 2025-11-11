@@ -579,3 +579,151 @@ class MockTaskService:
         """ステータス別にタスクを取得"""
         all_tasks = get_sample_tasks()
         return [task for task in all_tasks if task.status == status]
+
+
+class MockProjectService:
+    """プロジェクトサービスのモック実装"""
+
+    @staticmethod
+    def get_all_projects() -> list[SampleProject]:
+        """全てのプロジェクトを取得"""
+        return get_sample_projects()
+
+    @staticmethod
+    def get_projects_by_status(status: SampleProjectStatus) -> list[SampleProject]:
+        """ステータス別にプロジェクトを取得"""
+        all_projects = get_sample_projects()
+        return [project for project in all_projects if project.status == status]
+
+    @staticmethod
+    def get_project_tasks(project_id: uuid.UUID) -> list[SampleTask]:
+        """プロジェクトに関連するタスクを取得"""
+        all_tasks = get_sample_tasks()
+        return [task for task in all_tasks if task.project_id == project_id]
+
+    @staticmethod
+    def calculate_project_progress(project_id: uuid.UUID) -> dict[str, int]:
+        """プロジェクトの進捗を計算"""
+        project_tasks = MockProjectService.get_project_tasks(project_id)
+        total_tasks = len(project_tasks)
+        completed_tasks = len([task for task in project_tasks if task.status == SampleTaskStatus.COMPLETED])
+
+        return {
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "progress_percentage": int(completed_tasks / total_tasks * 100) if total_tasks > 0 else 0,
+        }
+
+
+def get_projects_for_ui() -> list[dict[str, str]]:
+    """UI表示用のプロジェクトデータを辞書形式で取得
+
+    既存のSampleProjectデータクラスをUI表示用の辞書形式に変換する。
+    実際の実装では、Repository/ApplicationServiceを通じてデータを取得すべき。
+
+    Returns:
+        UI表示用のプロジェクトデータのリスト
+    """
+    projects = get_sample_projects()
+    project_dicts = []
+
+    # ステータスマッピング（英語→日本語）
+    status_mapping = {
+        SampleProjectStatus.ACTIVE: "進行中",
+        SampleProjectStatus.ON_HOLD: "保留",
+        SampleProjectStatus.COMPLETED: "完了",
+        SampleProjectStatus.CANCELLED: "キャンセル",
+    }
+
+    for project in projects:
+        # プロジェクトに関する進捗を計算
+        progress_data = MockProjectService.calculate_project_progress(project.id)
+
+        project_dict = {
+            "id": str(project.id),
+            "name": project.title,
+            "description": project.description,
+            "status": status_mapping.get(project.status, "不明"),
+            "tasks_count": str(progress_data["total_tasks"]),
+            "completed_tasks": str(progress_data["completed_tasks"]),
+            "created_at": project.created_at.strftime("%Y-%m-%d"),
+            "start_date": project.created_at.strftime("%Y-%m-%d"),  # サンプルでは作成日を開始日として使用
+            "end_date": project.due_date.strftime("%Y-%m-%d") if project.due_date else "",
+            "priority": "normal",  # サンプルデータでは標準優先度
+        }
+        project_dicts.append(project_dict)
+
+    return project_dicts
+
+
+def get_enhanced_projects_sample_data() -> list[dict[str, str]]:
+    """拡張されたプロジェクトサンプルデータを取得
+
+    現在のUI実装に合わせて、より詳細なサンプルデータを提供する。
+    実際の実装では削除し、上記のget_projects_for_ui()を使用すべき。
+
+    Returns:
+        拡張されたプロジェクトサンプルデータ
+    """
+    return [
+        {
+            "id": "1",
+            "name": "ウェブサイトリニューアル",
+            "description": "会社ウェブサイトの全面リニューアルプロジェクト。モダンなデザインとレスポンシブ対応を実装。",
+            "status": "進行中",
+            "tasks_count": "12",
+            "completed_tasks": "8",
+            "created_at": "2024-01-15",
+            "start_date": "2024-01-15",
+            "end_date": "2024-03-15",
+            "priority": "high",
+        },
+        {
+            "id": "2",
+            "name": "モバイルアプリ開発",
+            "description": "iOS/Android向けの新しいモバイルアプリケーション。React Nativeを使用した開発。",
+            "status": "進行中",
+            "tasks_count": "8",
+            "completed_tasks": "3",
+            "created_at": "2024-02-01",
+            "start_date": "2024-02-01",
+            "end_date": "2024-05-01",
+            "priority": "high",
+        },
+        {
+            "id": "3",
+            "name": "データベース最適化",
+            "description": "既存システムのパフォーマンス改善とクエリ最適化。インデックス追加とスロークエリ対応。",
+            "status": "完了",
+            "tasks_count": "5",
+            "completed_tasks": "5",
+            "created_at": "2024-01-01",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-31",
+            "priority": "medium",
+        },
+        {
+            "id": "4",
+            "name": "APIドキュメント作成",
+            "description": "開発者向けAPIドキュメントの整備。OpenAPI仕様書とサンプルコードの作成。",
+            "status": "保留",
+            "tasks_count": "4",
+            "completed_tasks": "1",
+            "created_at": "2024-01-20",
+            "start_date": "2024-01-20",
+            "end_date": "2024-04-20",
+            "priority": "low",
+        },
+        {
+            "id": "5",
+            "name": "レガシーシステム移行",
+            "description": "旧システムから新システムへの移行プロジェクト。データ移行とシステム統合。",
+            "status": "キャンセル",
+            "tasks_count": "15",
+            "completed_tasks": "2",
+            "created_at": "2024-01-05",
+            "start_date": "2024-01-05",
+            "end_date": "2024-06-30",
+            "priority": "medium",
+        },
+    ]

@@ -33,6 +33,7 @@ def create_project_card(
     """
     import flet as ft
 
+    # ステータス色はテーマに集約
     status_color = get_status_color(project["status"])
 
     return ft.Card(
@@ -44,8 +45,10 @@ def create_project_card(
                         controls=[
                             ft.Column(
                                 controls=[
+                                    # TODO: name/title の正規化
+                                    # - ドメイン層 → Presenter で title に統一する想定です。
                                     ft.Text(
-                                        project["name"],
+                                        project.get("title", project.get("name", "")),
                                         style=ft.TextThemeStyle.TITLE_MEDIUM,
                                         weight=ft.FontWeight.W_500,
                                     ),
@@ -110,6 +113,8 @@ def create_project_card(
                                         size=16,
                                         color=ft.Colors.GREY_600,
                                     ),
+                                    # TODO: created_at の表示整形
+                                    # - ドメイン/Presenter 側で表示用フォーマットにして渡すと再利用性が高まります。
                                     ft.Text(
                                         project["created_at"],
                                         style=ft.TextThemeStyle.BODY_SMALL,

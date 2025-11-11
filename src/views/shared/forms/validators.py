@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -98,6 +99,41 @@ class ValidationRule:
         if value and not re.match(pattern, value):
             return False, "YYYY-MM-DD 形式で入力してください"
         return True, ""
+
+    @staticmethod
+    def date_range(min_date: str | None = None, max_date: str | None = None) -> Callable[[str], tuple[bool, str]]:
+        """日付の範囲チェック（文字列型 YYYY-MM-DD 前提）。
+
+        Args:
+            min_date: 最小許容日（None の場合制限なし）
+            max_date: 最大許容日（None の場合制限なし）
+
+        Returns:
+            バリデーション関数（成功/失敗, メッセージ）
+        """
+
+        def _validator(value: str) -> tuple[bool, str]:
+            if not value:
+                return True, ""  # 未設定は許容
+            # 形式チェック
+            pattern = r"^\d{4}-\d{2}-\d{2}$"
+            if not re.match(pattern, value):
+                return False, "YYYY-MM-DD 形式で入力してください"
+            try:
+                dt = datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC).date()
+                if min_date:
+                    min_dt = datetime.strptime(min_date, "%Y-%m-%d").replace(tzinfo=UTC).date()
+                    if dt < min_dt:
+                        return False, f"{min_date} 以降の日付を入力してください"
+                if max_date:
+                    max_dt = datetime.strptime(max_date, "%Y-%m-%d").replace(tzinfo=UTC).date()
+                    if dt > max_dt:
+                        return False, f"{max_date} 以前の日付を入力してください"
+            except ValueError:
+                return False, "日付の解析に失敗しました"
+            return True, ""
+
+        return _validator
 
     @staticmethod
     def url(value: str) -> tuple[bool, str]:

@@ -1,14 +1,9 @@
 """Term card components for displaying terminology entries."""
 
 import flet as ft
-
 from models.terminology import Terminology, TerminologyStatus
 
-# Constants
-MAX_SYNONYMS_DISPLAY = 3
-
-
-# 定数
+# 定数 (表示可能シノニム最大件数)
 MAX_SYNONYMS_DISPLAY = 3
 
 

@@ -83,6 +83,9 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     # DatePicker はページ上で開く。選択時に TextField を更新する。
     import datetime as _dt
 
+    # TODO: 日付抽出ロジックの共通化
+    # - create/edit 双方で _on_date_change が重複しているため、モジュールレベル関数
+    #   _extract_iso_date(e: ft.ControlEvent) -> str に切り出して再利用する。
     def _on_date_change(e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         # e.data が '2025-11-27T00:00:00.000' のような日時文字列で来る場合があるため日付部分のみ抽出
         raw = e.data or ""
@@ -366,6 +369,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     tz = _dt.UTC
     today = _dt.datetime.now(tz=tz).date()
 
+    # TODO: 日付抽出ロジックの共通化
+    # - create/edit 双方で _on_date_change が重複しているため、モジュールレベル関数
+    #   _extract_iso_date(e: ft.ControlEvent) -> str に切り出して再利用する。
     def _on_date_change(e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         raw = e.data or ""
         if raw:

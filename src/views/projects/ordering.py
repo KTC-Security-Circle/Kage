@@ -19,6 +19,10 @@ class OrderStrategy(Protocol):
     各戦略は key メソッドを実装し、sorted() 関数のキー関数として使用される。
     """
 
+    # TODO: 並び替えキー型の拡張
+    # - 現在は戻り値型を str に限定しているため、数値や datetime を文字列化して不自然な辞書順になる恐れがある。
+    # - 今後は SortableKey 型 (str | int | float | datetime) を導入し、FieldOrder.key の実装を更新する。
+    # - None の扱い (先頭/末尾) 方針を決めた上で、必要ならタプル (flag, value) 形式へ拡張する。
     def key(self, item: dict[str, Any]) -> str:
         """並び替えキーを生成する。
 

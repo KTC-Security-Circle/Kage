@@ -14,6 +14,12 @@ release:
 ai:
   - head-branch: ["^copilot", "^ai", "^assistant", "^bot", "^renovate"]
 
+# コミットメッセージに基づくラベル付け
+"BREAKING CHANGE":
+  - pr-commits:
+      - pattern: "BREAKING CHANGE:"
+      - pattern: "!:"
+
 # ファイルの変更に基づくラベル付け
 docs:
   - changed-files:

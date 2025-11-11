@@ -11,14 +11,21 @@ from uuid import UUID
 
 from loguru import logger
 
+from models import ProjectStatus, ProjectUpdate
+
 from .ordering import apply_order, get_order_strategy
-from .presenter import ProjectCardVM, ProjectDetailVM, to_card_vm, to_detail_vm
+from .presenter import (
+    ProjectCardVM,
+    ProjectDetailVM,
+    to_card_vm,
+    to_detail_vm,
+)
 from .state import ProjectState
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from models import ProjectRead, ProjectStatus, ProjectUpdate
+    from models import ProjectRead
 
 
 class ProjectApplicationPort(Protocol):
@@ -126,23 +133,19 @@ class ProjectController:
         """ステータスフィルタを設定する。
 
         Args:
-            status: 新しいステータスフィルタ（None の場合は全て）
+            status: 新しいステータスフィルタ(None の場合は全て)
         """
         from models import ProjectStatus
-        from views.shared.status_utils import is_known_status, normalize_status
 
-        # None / 空値 / 未知の値は「全て」として扱い、フィルタを解除する
         status_filter = None
-        if status:
-            normalized = normalize_status(status)
-            # 既知の値のみ Enum 化、それ以外は None 扱い（全件）
-            if is_known_status(status) or is_known_status(normalized):
-                try:
-                    status_filter = ProjectStatus(normalized)
-                except Exception:
-                    status_filter = None
-            else:
+        if status and status.strip():
+            try:
+                # ドメイン層の parse を使用して統一的に変換
+                status_filter = ProjectStatus.parse(status)
+            except ValueError:
+                # 未知のステータスは全件扱い
                 logger.debug(f"未知のステータス入力を全件扱いに変換: {status}")
+                status_filter = None
 
         logger.debug(f"ステータスフィルタ設定: {status_filter}")
         new_state = self._state.update(status=status_filter)
@@ -218,20 +221,16 @@ class ProjectController:
             project: ダイアログ等から受け取った新規作成データ（title, description, status 等）
             select: 作成後に選択状態にするか
         """
-        from views.shared.status_utils import normalize_status
-
         title = str(project.get("title") or project.get("name") or "").strip()
         description = str(project.get("description") or "").strip() or None
         status_text = str(project.get("status") or "").strip()
 
-        # ステータスは内部コードへ正規化し、Enum に変換（未指定は ACTIVE）
+        # ステータスはドメインのparseで正規化
         status_enum = None
         if status_text:
             try:
-                from models import ProjectStatus  # local import to avoid runtime import cost globally
-
-                status_enum = ProjectStatus(normalize_status(status_text))
-            except Exception:
+                status_enum = ProjectStatus.parse(status_text)
+            except ValueError:
                 status_enum = None
 
         if not title:
@@ -260,9 +259,6 @@ class ProjectController:
             changes: 変更フィールド（title/description/status/due_date など）
         """
         try:
-            from models import ProjectStatus, ProjectUpdate  # local import to reduce import-time cost
-            from views.shared.status_utils import normalize_status
-
             pid = UUID(project_id)
 
             update_kwargs: dict[str, Any] = {}
@@ -272,12 +268,13 @@ class ProjectController:
                 desc_val = changes.get("description")
                 update_kwargs["description"] = None if desc_val in (None, "") else str(desc_val)
             if "status" in changes and changes.get("status"):
-                from contextlib import suppress
-
-                with suppress(Exception):
-                    update_kwargs["status"] = ProjectStatus(normalize_status(str(changes["status"])))
+                try:
+                    # ドメインのparseで正規化
+                    update_kwargs["status"] = ProjectStatus.parse(str(changes["status"]))
+                except ValueError:
+                    logger.warning(f"未知のステータス更新要求: {changes['status']}")
             if "due_date" in changes and changes.get("due_date"):
-                update_kwargs["due_date"] = changes["due_date"]  # accept ISO str; model may coerce
+                update_kwargs["due_date"] = changes["due_date"]
 
             update_data = ProjectUpdate(**update_kwargs)
             updated = self._service.update(pid, update_data)
@@ -353,9 +350,6 @@ class ProjectController:
         """プロジェクトリストを更新する。"""
         try:
             # データ取得
-            # TODO: ページング/ソートをサーバーサイドへ委譲する検討
-            # - 件数が増える場合は list_projects に cursor/limit 等の引数を追加し、
-            #   ApplicationService → Repository で最適化してください。
             if self._state.keyword:
                 items = self._service.search(self._state.keyword, status=self._state.status)
             elif self._state.status is not None:
@@ -363,7 +357,7 @@ class ProjectController:
             else:
                 items = self._service.get_all_projects()
 
-            # 並び替え
+            # 並び替え（ProjectReadのまま辞書化し、並び替えを適用）
             strategy = get_order_strategy(self._state.sort_key)
             ordered_items = apply_order(
                 self._reads_to_presenter_dicts(items),
@@ -371,7 +365,7 @@ class ProjectController:
                 desc=self._state.sort_desc,
             )
 
-            # ViewModel変換
+            # ViewModel変換（辞書経由でのレガシー互換性を維持）
             view_models = to_card_vm(ordered_items)
 
             # UI更新通知
@@ -380,11 +374,7 @@ class ProjectController:
 
         except Exception as e:
             logger.error(f"プロジェクトリスト更新エラー: {e}")
-            # エラー時は空リストで更新
             self._on_list_change([])
-            # TODO: ユーザーへの通知処理（例: Flet の SnackBar/AlertDialog を使用）
-            # - View 層の show_error_snackbar のオーバーライド実装がある場合は
-            #   ここで呼び出してエラーを可視化してください。
             self._notify_error("プロジェクト一覧の取得に失敗しました。詳細はログを参照してください。")
 
     def _update_detail(self) -> None:
@@ -451,19 +441,16 @@ class ProjectController:
         """
         return [self._project_read_to_presenter_dict(p) for p in items]
 
-    def _project_read_to_presenter_dict(self, p: ProjectRead) -> dict[str, str]:  # type: ignore[name-defined]
-        from views.shared.status_utils import display_label
-
+    def _project_read_to_presenter_dict(self, p: ProjectRead) -> dict[str, str]:
         def _s(v: object) -> str:
             return "" if v is None else str(v)
 
         status_value = getattr(p, "status", None)
         status_text = _s(status_value)
-        # Enum の場合は表示ラベルへ
-        try:
-            if hasattr(status_value, "value"):
-                status_text = display_label(status_value.value)  # type: ignore[arg-type]
-        except Exception:
+        # Enum の場合は表示ラベルへ（ドメイン層のメソッドを使用）
+        if isinstance(status_value, ProjectStatus):
+            status_text = ProjectStatus.display_label(status_value)
+        else:
             status_text = _s(status_value)
 
         return {

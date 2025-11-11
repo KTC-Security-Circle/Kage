@@ -17,8 +17,10 @@ from loguru import logger
 
 # Application service (domain access)
 from logic.application.project_application_service import ProjectApplicationService
+from models import ProjectStatus
 
 # View / UI layer components
+from views.projects.components.project_card import create_project_card_from_vm
 from views.projects.components.project_dialogs import (
     show_create_project_dialog,
     show_edit_project_dialog,
@@ -273,83 +275,19 @@ class ProjectsView(BaseView):
     def _build_project_card(self, project: ProjectCardVM) -> ft.Control:
         """プロジェクトカードを構築する。
 
+        コンポーネント関数に委譲し、View層の責務を最小化。
+
         Args:
             project: プロジェクトViewModel
 
         Returns:
             プロジェクトカード
         """
-        import flet as ft
-
         is_selected = self._controller.state.selected_id == project.id
-
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Text(
-                                    project.title,
-                                    style=ft.TextThemeStyle.TITLE_SMALL,
-                                    weight=ft.FontWeight.W_500,
-                                    expand=True,
-                                ),
-                                ft.Container(
-                                    content=ft.Text(
-                                        project.status,
-                                        style=ft.TextThemeStyle.LABEL_SMALL,
-                                        color=ft.Colors.WHITE,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                                    bgcolor=project.status_color,
-                                    border_radius=12,
-                                ),
-                            ],
-                        ),
-                        ft.Text(
-                            project.subtitle,
-                            style=ft.TextThemeStyle.BODY_SMALL,
-                            color=ft.Colors.GREY_600,
-                        ),
-                        ft.Text(
-                            project.description,
-                            style=ft.TextThemeStyle.BODY_SMALL,
-                            color=ft.Colors.GREY_700,
-                            max_lines=2,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        ft.Column(
-                            controls=[
-                                ft.Row(
-                                    controls=[
-                                        ft.Text(
-                                            project.progress_text,
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.Colors.GREY_600,
-                                        ),
-                                    ],
-                                ),
-                                ft.ProgressBar(
-                                    value=project.progress_value,
-                                    color=ft.Colors.BLUE,
-                                    bgcolor=ft.Colors.GREY_300,
-                                    height=6,
-                                ),
-                            ],
-                            spacing=4,
-                        ),
-                    ],
-                    spacing=8,
-                ),
-                padding=16,
-                ink=True,
-                on_click=lambda _: self._controller.select_project(project.id),
-            ),
-            elevation=1 if not is_selected else 3,
-            color=ft.Colors.WHITE if not is_selected else ft.Colors.BLUE_50,
-            surface_tint_color=ft.Colors.BLUE if is_selected else None,
+        return create_project_card_from_vm(
+            vm=project,
+            on_select=self._controller.select_project,
+            is_selected=is_selected,
         )
 
     def _build_project_detail(self, project: ProjectDetailVM) -> ft.Control:
@@ -555,13 +493,19 @@ class ProjectsView(BaseView):
     # ------------------------------------------------------------------
     def _open_edit_dialog(self, vm: ProjectDetailVM) -> None:
         """編集ダイアログを開いて保存時に更新処理を呼び出す。"""
-        from views.shared.status_utils import normalize_status
+        from models import ProjectStatus
+
+        # VMのステータスを内部コードへ逆変換
+        try:
+            status_code = ProjectStatus.parse(vm.status).value
+        except ValueError:
+            status_code = "active"
 
         project_dict: dict[str, str] = {
             "id": vm.id,
             "title": vm.title,
             "description": vm.description,
-            "status": normalize_status(vm.status),  # 内部コードへ正規化
+            "status": status_code,
             "due_date": vm.due_date or "",
             "tasks_count": str(vm.task_count),
             "completed_tasks": str(vm.completed_count),
@@ -667,16 +611,11 @@ class ProjectsView(BaseView):
 
             today = datetime.now().strftime("%Y-%m-%d")
 
-            # ステータス値はダイアログから受け取った表示値(Active/On-Hold/Completed 等)を内部コードに正規化。
-            # TODO: 重複正規化ロジックの最終的な移設
-            #  - normalize_status は現在 views.shared.status_utils にあるが、
-            #    ドメイン境界の明確化のため最終的には models (例: models/project.py) 側で
-            #    ProjectStatus に紐づくユーティリティとして提供し、View 層は直接参照しない設計にする。
-            #  - 関連重複箇所: controller.set_status / project_dialogs.save_project / query.list_projects
             status_display = (data.get("status") or "Active").strip()
-            from views.shared.status_utils import normalize_status
-
-            status_raw = normalize_status(status_display)
+            try:
+                status_raw = ProjectStatus.parse(status_display).value
+            except ValueError:
+                status_raw = "active"
 
             # due_date は未設定時 None へ統一
             due_date_raw = (data.get("due_date") or "").strip()

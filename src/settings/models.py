@@ -16,6 +16,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from agents.agent_conf import HuggingFaceModel, LLMProvider  # [AI GENERATED] Enum によるバリデーション
 
+# テーマ定数
+AVAILABLE_THEMES: Final[list[tuple[str, str]]] = [
+    ("light", "ライト"),
+    ("dark", "ダーク"),
+]
+
 
 class WindowSettings(BaseModel):
     """ウィンドウ表示に関する設定。

@@ -9,6 +9,7 @@ from __future__ import annotations
 import flet as ft
 from loguru import logger
 
+from logic.services.settings_service import SettingsService
 from views.shared.base_view import BaseView
 from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color
@@ -42,7 +43,11 @@ class SettingsView(BaseView):
 
         # State層とController層の初期化
         self.state = SettingsViewState()
-        self.controller = SettingsController(state=self.state)
+        self._settings_service = SettingsService.build_service()
+        self.controller = SettingsController(
+            state=self.state,
+            service=self._settings_service,
+        )
 
         # セクションコンポーネント（ハンドラ注入）
         self.appearance_section = AppearanceSection(page, self._on_setting_changed)
@@ -219,7 +224,7 @@ class SettingsView(BaseView):
 
     def _on_setting_changed(self) -> None:
         """設定値が変更された時の処理。"""
-        self.controller.on_setting_changed()
+        # 状態変更は自動的にhas_unsaved_changesで検知される
         self.save_button.disabled = not self.state.has_unsaved_changes
         self.reset_button.disabled = not self.state.has_unsaved_changes
         if hasattr(self.page, "update"):
@@ -236,8 +241,8 @@ class SettingsView(BaseView):
             self.reset_button.disabled = True
             self.show_success_snackbar("設定を保存しました")
 
-            # ページ設定の適用（テーマ変更等）
-            self._apply_page_settings()
+            # ページ設定の適用（Controllerに委譲）
+            self.controller.apply_runtime_effects(self.page)
 
             logger.info("設定を正常に保存しました")
 
@@ -283,28 +288,11 @@ class SettingsView(BaseView):
 
     def _update_sections_from_state(self) -> None:
         """Stateの値からセクションUIを更新する。"""
+        if self.state.current is None:
+            return
+
         # TODO: セクションコンポーネントに値を反映する実装
         # 現在のセクションコンポーネントはまだ古い実装のため、統合は後で行う
-
-    def _apply_page_settings(self) -> None:
-        """ページに設定を適用する。"""
-        try:
-            # Stateからテーマを取得して適用
-            theme = self.state.appearance_settings.theme
-            if hasattr(self.page, "theme_mode"):
-                self.page.theme_mode = ft.ThemeMode.DARK if theme == "dark" else ft.ThemeMode.LIGHT  # type: ignore[attr-defined]
-
-            # ウィンドウサイズの適用（デスクトップアプリの場合）
-            window_size = self.state.window_settings.size
-            if hasattr(self.page, "window") and hasattr(self.page.window, "width"):  # type: ignore[attr-defined]
-                self.page.window.width = window_size[0]  # type: ignore[attr-defined]
-                self.page.window.height = window_size[1]  # type: ignore[attr-defined]
-
-            if hasattr(self.page, "update"):
-                self.page.update()
-
-        except Exception as e:
-            logger.warning(f"ページ設定の適用に失敗しました: {e}")
 
     def did_mount(self) -> None:
         """ビューがマウントされた時の処理。"""

@@ -5,35 +5,53 @@
     Viewが必要とする全ての状態を一元管理し、整合性を保証する。
 
     - 表示状態の保持（loading, error_message）
-    - 編集中の設定値の保持（appearance, database, window）
-    - 未保存変更フラグの管理（has_unsaved_changes）
+    - 編集中の設定値の保持（current snapshot）
+    - 保存済み設定値の保持（original snapshot）
+    - 未保存変更フラグの自動計算
 
 【責務外（他層の担当）】
-    - データの取得・永続化 → Controller/ApplicationService
+    - データの取得・永続化 → SettingsService
     - UI要素の構築 → Presenter
     - イベントハンドリング → View
-    - 設定値の検証 → Controller
+    - 設定値の検証 → validation.py
 
 【設計上の特徴】
     - BaseViewStateを継承してBaseView契約に準拠
-    - 不変更新パターン（dataclasses.replace）
+    - 不変スナップショットによる差分自動検知
+    - 計算プロパティによる変更検知
 
 【アーキテクチャ上の位置づけ】
-    Controller → State.set_xxx()
+    Controller → State.load_snapshot()
                     ↓
-    View → State.xxx
-        → State.has_unsaved_changes
+    View → State.current
+        → State.has_unsaved_changes (自動計算)
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from settings.models import (
-    EditableUserSettings,
-    EditableWindowSettings,
-)
 from views.shared.base_view import BaseViewState
+
+if TYPE_CHECKING:
+    from settings.models import (
+        EditableUserSettings,
+        EditableWindowSettings,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class SettingsSnapshot:
+    """設定値のスナップショット（不変）。
+
+    現在の編集状態と保存済み状態の両方をこの型で保持し、
+    差分比較により変更検知を行う。
+    """
+
+    appearance: EditableUserSettings
+    window: EditableWindowSettings
+    database_url: str
 
 
 @dataclass(slots=True)
@@ -41,24 +59,47 @@ class SettingsViewState(BaseViewState):
     """SettingsView の表示状態を管理するデータクラス。
 
     BaseViewStateを継承し、loading/error_messageを持つ。
-    編集中の設定値はEditableモデルで保持し、保存時にfrozenモデルへ変換する。
+    スナップショットパターンにより、未保存変更を自動検知する。
     """
 
-    # 編集中の設定値
-    appearance_settings: EditableUserSettings = field(default_factory=EditableUserSettings)
-    window_settings: EditableWindowSettings = field(default_factory=EditableWindowSettings)
-    database_url: str = ""
+    # 現在の編集中スナップショット
+    current: SettingsSnapshot | None = None
 
-    # 未保存変更フラグ
-    has_unsaved_changes: bool = False
+    # 保存済みスナップショット（差分計算用）
+    _original: SettingsSnapshot | None = None
 
-    def mark_as_changed(self) -> None:
-        """設定が変更されたことをマークする。"""
-        self.has_unsaved_changes = True
+    @property
+    def has_unsaved_changes(self) -> bool:
+        """未保存の変更があるかを自動計算する。
+
+        Returns:
+            変更がある場合True
+        """
+        if self.current is None or self._original is None:
+            return False
+        return self.current != self._original
+
+    def load_snapshot(self, snapshot: SettingsSnapshot) -> None:
+        """設定スナップショットをロードし、保存済みとしてマークする。
+
+        Args:
+            snapshot: ロードする設定スナップショット
+        """
+        self.current = snapshot
+        self._original = snapshot
+
+    def update_current(self, snapshot: SettingsSnapshot) -> None:
+        """現在の編集中スナップショットを更新する。
+
+        Args:
+            snapshot: 新しいスナップショット
+        """
+        self.current = snapshot
 
     def mark_as_saved(self) -> None:
-        """設定が保存されたことをマークする。"""
-        self.has_unsaved_changes = False
+        """現在の状態を保存済みとしてマークする。"""
+        if self.current is not None:
+            self._original = self.current
 
     def start_loading(self) -> None:
         """ローディング状態を開始する。"""

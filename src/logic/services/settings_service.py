@@ -12,6 +12,7 @@ from loguru import logger
 from errors import ValidationError
 from logic.services.base import ServiceBase
 from settings.manager import ConfigManager, get_config_manager
+from settings.models import EditableDatabaseSettings, EditableUserSettings, EditableWindowSettings
 
 if TYPE_CHECKING:
     from settings.models import (
@@ -240,3 +241,61 @@ class SettingsService(ServiceBase):
 
         # 更新後の値を返す
         return self.get_setting_by_path(path)
+
+    def load_settings_snapshot(self) -> dict[str, Any]:
+        """設定値をスナップショット形式でロードする。
+
+        View層が必要とする設定値を辞書形式で返す。
+        EditableモデルへのマッピングはView層が行う。
+
+        Returns:
+            設定スナップショット辞書
+        """
+        logger.debug("設定スナップショットをロード")
+        settings = self._config_manager.settings
+
+        return {
+            "appearance": {
+                "theme": settings.user.theme,
+                "user_name": settings.user.user_name,
+                "last_login_user": settings.user.last_login_user,
+            },
+            "window": {
+                "size": settings.window.size.copy(),
+                "position": settings.window.position.copy(),
+            },
+            "database_url": self._config_manager.database_url,
+        }
+
+    def save_settings_snapshot(self, snapshot: dict[str, Any]) -> None:
+        """設定スナップショットを保存する。
+
+        Args:
+            snapshot: 保存する設定スナップショット
+
+        Raises:
+            ValidationError: バリデーションエラー
+        """
+        logger.info("設定スナップショットを保存")
+
+        with self._config_manager.edit() as editable:
+            # Appearance設定
+            appearance = snapshot.get("appearance", {})
+            editable.user = EditableUserSettings(
+                theme=appearance.get("theme", "light"),
+                user_name=appearance.get("user_name", ""),
+                last_login_user=appearance.get("last_login_user"),
+            )
+
+            # Window設定
+            window = snapshot.get("window", {})
+            editable.window = EditableWindowSettings(
+                size=window.get("size", [1280, 720]),
+                position=window.get("position", [100, 100]),
+            )
+
+            # Database設定
+            database_url = snapshot.get("database_url", "")
+            editable.database = EditableDatabaseSettings(
+                url=database_url,
+            )

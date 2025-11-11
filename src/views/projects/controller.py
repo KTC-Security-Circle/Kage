@@ -80,21 +80,11 @@ class ProjectController:
 
         status_filter = None
         if status:
+            from views.shared.status_utils import normalize_status
+
+            normalized = normalize_status(status)
             try:
-                # 日本語ステータスを英語に変換
-                # TODO(実装者向け): ステータスのローカライズ変換を一元化
-                # - models 側に変換ユーティリティを置く、あるいは i18n レイヤで双方向変換を担保してください。
-                # - ここでの辞書は暫定です。表示値とドメイン値の分離を厳密に行うと不具合が減ります。
-                status_map = {
-                    "進行中": ProjectStatus.ACTIVE,
-                    "保留": ProjectStatus.ON_HOLD,
-                    "完了": ProjectStatus.COMPLETED,
-                    "キャンセル": ProjectStatus.CANCELLED,
-                }
-                status_filter = status_map.get(status)
-                if status_filter is None:
-                    # 直接英語ステータスの場合
-                    status_filter = ProjectStatus(status)
+                status_filter = ProjectStatus(normalized)
             except ValueError:
                 logger.warning(f"無効なステータス値: {status}")
                 return

@@ -580,18 +580,9 @@ class ProjectsView(BaseView):
             # ステータス値はダイアログから受け取った表示値(Active/On-Hold/Completed)を
             # 内部表現（lower snake）に正規化する。
             status_display = (data.get("status") or "Active").strip()
-            status_map = {
-                "Active": "active",
-                "On-Hold": "on_hold",
-                "Completed": "completed",
-                "Cancelled": "cancelled",
-                # 日本語入力の可能性にも防御的に対応
-                "進行中": "active",
-                "保留": "on_hold",
-                "完了": "completed",
-                "キャンセル": "cancelled",
-            }
-            status_raw = status_map.get(status_display, str(status_display).lower())
+            from views.shared.status_utils import normalize_status
+
+            status_raw = normalize_status(status_display)
 
             # due_date は未設定時 None へ統一
             due_date_raw = (data.get("due_date") or "").strip()

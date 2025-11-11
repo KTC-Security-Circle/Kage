@@ -403,18 +403,10 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             return
         name_field.error_text = None
 
-        status_map = {
-            "Active": "active",
-            "On-Hold": "on_hold",
-            "Completed": "completed",
-            "Cancelled": "cancelled",
-            "進行中": "active",
-            "保留": "on_hold",
-            "完了": "completed",
-            "キャンセル": "cancelled",
-        }
+        from views.shared.status_utils import normalize_status
+
         raw_status = status_dropdown.value or "Active"
-        normalized_status = status_map.get(raw_status, raw_status.lower())
+        normalized_status = normalize_status(raw_status)
         due_raw = due_date_text.value.strip() if due_date_text.value else None
 
         title_val = (name_field.value or project.get("title", "")).strip()

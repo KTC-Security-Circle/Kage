@@ -85,14 +85,10 @@ class InMemoryProjectQuery:
 
         # ステータスフィルタ（日本語/英語の両方に対応）
         if status is not None:
-            jp_map = {
-                "active": "進行中",
-                "on_hold": "保留",
-                "completed": "完了",
-                "cancelled": "キャンセル",
-            }
+            from views.shared.status_utils import display_label
+
             english = status.value
-            japanese = jp_map.get(english, english)
+            japanese = display_label(english)
             items = [x for x in items if x.get("status") in (english, japanese)]
         return items
 

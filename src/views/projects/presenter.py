@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import flet as ft
+
 from models import ProjectStatus
 
 if TYPE_CHECKING:
@@ -161,9 +163,6 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
         status_enum = ProjectStatus.parse(status)
         status_color = ProjectStatus.get_color(status_enum)
     except ValueError:
-        # 未知のステータスはデフォルト色
-        import flet as ft
-
         status_color = ft.Colors.GREY
 
     # 説明文の省略（カード表示用）
@@ -217,9 +216,6 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
         status_enum = ProjectStatus.parse(status)
         status_color = ProjectStatus.get_color(status_enum)
     except ValueError:
-        # 未知のステータスはデフォルト色
-        import flet as ft
-
         status_color = ft.Colors.GREY
 
     return ProjectDetailVM(
@@ -269,8 +265,6 @@ def _project_read_to_card_vm(project: ProjectRead) -> ProjectCardVM:  # type: ig
         status_color = ProjectStatus.get_color(status_enum)
     else:
         status_display = str(status_enum)
-        import flet as ft
-
         status_color = ft.Colors.GREY
 
     # 説明文の省略（カード表示用）
@@ -302,10 +296,10 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
         詳細表示用 ViewModel
     """
     # 基本情報
-    project_id = str(getattr(project, "id", ""))
-    title = str(getattr(project, "title", ""))
-    description = str(getattr(project, "description", ""))
-    status_enum = getattr(project, "status", ProjectStatus.ACTIVE)
+    project_id = str(project.id)
+    title = project.title
+    description = project.description if project.description is not None else ""
+    status_enum = project.status
 
     # 進捗計算（現状は未集計のため0）
     task_count = 0
@@ -314,8 +308,8 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
     progress_text = f"{progress_value:.0%} 完了 ({completed_count} / {task_count} タスク)"
 
     # 日時フォーマット
-    created_at = str(getattr(project, "created_at", ""))
-    updated_at = str(getattr(project, "updated_at", ""))
+    created_at = str(project.created_at)
+    updated_at = str(project.updated_at)
     due_date_raw = getattr(project, "due_date", None)
     due_date = None if due_date_raw in (None, "") else str(due_date_raw)
 
@@ -325,8 +319,6 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
         status_color = ProjectStatus.get_color(status_enum)
     else:
         status_display = str(status_enum)
-        import flet as ft
-
         status_color = ft.Colors.GREY
 
     return ProjectDetailVM(

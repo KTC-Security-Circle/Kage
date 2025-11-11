@@ -135,8 +135,6 @@ class ProjectController:
         Args:
             status: 新しいステータスフィルタ(None の場合は全て)
         """
-        from models import ProjectStatus
-
         status_filter = None
         if status and status.strip():
             try:
@@ -394,7 +392,7 @@ class ProjectController:
             try:
                 # ID 取得 API があれば利用
                 if hasattr(self._service, "get_by_id"):
-                    selected = self._service.get_by_id(UUID(self._state.selected_id))  # type: ignore[arg-type]
+                    selected = self._service.get_by_id(UUID(self._state.selected_id))
             except Exception as e:
                 logger.warning(f"get_by_id 失敗: {e}. 一覧から探索を継続")
 
@@ -442,7 +440,7 @@ class ProjectController:
         return [self._project_read_to_presenter_dict(p) for p in items]
 
     def _project_read_to_presenter_dict(self, p: ProjectRead) -> dict[str, str]:
-        def _s(v: object) -> str:
+        def _s(v: object | None) -> str:
             return "" if v is None else str(v)
 
         status_value = getattr(p, "status", None)

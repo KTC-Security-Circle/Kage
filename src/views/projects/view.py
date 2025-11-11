@@ -6,11 +6,13 @@ MVP パターンの View として、Flet UI の描画とイベント配線の�
 
 from __future__ import annotations
 
+import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import flet as ft
+import flet as ft
 
+if TYPE_CHECKING:
     from .presenter import ProjectCardVM, ProjectDetailVM
 
 from loguru import logger
@@ -72,8 +74,6 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクト画面のメインコンテンツ
         """
-        import flet as ft
-
         # コンテナ初期化
         self._list_container = ft.Column(expand=True, spacing=8)
         self._detail_container = ft.Container(expand=True)
@@ -102,19 +102,12 @@ class ProjectsView(BaseView):
             expand=True,
         )
 
-    def did_mount(self) -> None:
-        """マウント後に初期データを読み込む。"""
-        super().did_mount()
-        # did_mount は BaseView(ft.Container) では自動コールされないため使用しない
-
     def _build_header(self) -> ft.Control:
         """ヘッダー部分を構築する。
 
         Returns:
             ヘッダーコンテンツ
         """
-        import flet as ft
-
         return ft.Container(
             content=ft.Row(
                 controls=[
@@ -148,8 +141,6 @@ class ProjectsView(BaseView):
         Returns:
             ヘッダーアクションコンテンツ
         """
-        import flet as ft
-
         return ft.Row(
             controls=[
                 # 検索バー
@@ -212,8 +203,6 @@ class ProjectsView(BaseView):
         Returns:
             メインコンテンツ
         """
-        import flet as ft
-
         controls = []
         if self._list_container:
             controls.append(
@@ -250,7 +239,7 @@ class ProjectsView(BaseView):
             self._list_container.controls = cards
 
             # コントロールがまだ page に追加されていない初期段階では update() を避ける
-            if getattr(self._list_container, "page", None):  # type: ignore[attr-defined]
+            if getattr(self._list_container, "page", None):
                 self._list_container.update()
 
     def _render_detail(self, project: ProjectDetailVM | None) -> None:
@@ -269,7 +258,7 @@ class ProjectsView(BaseView):
             # 詳細表示
             self._detail_container.content = self._build_project_detail(project)
 
-            if getattr(self._detail_container, "page", None):  # type: ignore[attr-defined]
+            if getattr(self._detail_container, "page", None):
                 self._detail_container.update()
 
     def _build_project_card(self, project: ProjectCardVM) -> ft.Control:
@@ -299,8 +288,6 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクト詳細コンテンツ
         """
-        import flet as ft
-
         return ft.Column(
             controls=[
                 ft.Card(
@@ -418,8 +405,6 @@ class ProjectsView(BaseView):
         Returns:
             未選択状態のコンテンツ
         """
-        import flet as ft
-
         return ft.Card(
             content=ft.Container(
                 content=ft.Column(
@@ -451,8 +436,6 @@ class ProjectsView(BaseView):
         Returns:
             空の状態コンテンツ
         """
-        import flet as ft
-
         return ft.Container(
             content=ft.Column(
                 controls=[
@@ -493,8 +476,6 @@ class ProjectsView(BaseView):
     # ------------------------------------------------------------------
     def _open_edit_dialog(self, vm: ProjectDetailVM) -> None:
         """編集ダイアログを開いて保存時に更新処理を呼び出す。"""
-        from models import ProjectStatus
-
         # VMのステータスを内部コードへ逆変換
         try:
             status_code = ProjectStatus.parse(vm.status).value
@@ -525,7 +506,6 @@ class ProjectsView(BaseView):
 
     def _confirm_delete(self, vm: ProjectDetailVM) -> None:
         """削除確認を表示し、確定時に削除処理を実行する。"""
-        import flet as ft
 
         def _close(_: ft.ControlEvent) -> None:
             dialog.open = False
@@ -606,9 +586,6 @@ class ProjectsView(BaseView):
             Args:
                 data: ダイアログで入力されたプロジェクト基本情報
             """
-            import uuid
-            from datetime import datetime
-
             today = datetime.now().strftime("%Y-%m-%d")
 
             status_display = (data.get("status") or "Active").strip()

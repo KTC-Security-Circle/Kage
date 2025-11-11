@@ -3,6 +3,7 @@ from loguru import logger
 
 from config import APP_TITLE, create_db_and_tables
 from logging_conf import setup_logger
+from logic.application.apps import ApplicationServices
 from router import configure_routes  # [AI UPDATED] 新しいルーティングシステムを使用
 from settings.manager import apply_page_settings, get_config_manager  # [AI GENERATED] 設定管理を追加
 
@@ -43,8 +44,10 @@ def main(page: ft.Page) -> None:
         font_family="default",
     )
 
+    apps = ApplicationServices.create()
+
     # 新しいviewsシステムを使用したルーティング設定
-    configure_routes(page)
+    configure_routes(page, apps)
 
     logger.info("セッションが開始されました。設定適用済み。")
 

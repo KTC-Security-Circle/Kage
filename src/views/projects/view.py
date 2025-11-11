@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 from loguru import logger
 
 # Application service (domain access)
-from logic.application.apps import ApplicationServices
 from logic.application.project_application_service import ProjectApplicationService
 
 # View / UI layer components
@@ -25,7 +24,7 @@ from views.projects.components.project_dialogs import (
     show_edit_project_dialog,
 )
 from views.projects.controller import ProjectController
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 
 class ProjectsView(BaseView):
@@ -40,18 +39,17 @@ class ProjectsView(BaseView):
         _detail_container: プロジェクト詳細コンテナ
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """ProjectsView を初期化する。
 
         Args:
-            page: Fletページインスタンス
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
 
         # データ取得: ApplicationService を優先して利用する
         # - 例外時のユーザー通知は BaseView の snackbar を利用
-        apps = ApplicationServices.create()
-        service = apps.get_service(ProjectApplicationService)
+        service = self.apps.get_service(ProjectApplicationService)
 
         # コントローラー初期化
         self._controller = ProjectController(

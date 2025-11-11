@@ -13,14 +13,17 @@ from loguru import logger
 if TYPE_CHECKING:
     import flet as ft
 
+    from logic.application.apps import ApplicationServices
+
 from views.layout import build_layout
 
 
-def configure_routes(page: ft.Page) -> None:  # type: ignore[name-defined]
+def configure_routes(page: ft.Page, apps: ApplicationServices) -> None:
     """ページのルーティングを初期化する。
 
     Args:
         page: Fletのページオブジェクト
+        apps: アプリケーションサービスのコンテナ
 
     Notes:
         新しいviewsレイアウトシステムを使用し、
@@ -42,7 +45,7 @@ def configure_routes(page: ft.Page) -> None:  # type: ignore[name-defined]
             page.views.clear()
 
             # Build new layout with sidebar
-            new_view = build_layout(page, route)
+            new_view = build_layout(page, route, apps)
             page.views.append(new_view)
 
             page.update()

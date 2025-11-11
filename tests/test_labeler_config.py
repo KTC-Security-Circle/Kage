@@ -30,7 +30,7 @@ class TestLabelerConfig:
             config = yaml.safe_load(f)
 
         # 必須のラベルが存在することを確認
-        required_labels = ["enhancement", "fix", "bug", "docs", "dependencies", "tests", "ai"]
+        required_labels = ["enhancement", "fix", "bug", "docs", "dependencies", "tests", "ai", "BREAKING CHANGE"]
         for label in required_labels:
             assert label in config, f"ラベル '{label}' が設定されていません"
 
@@ -107,3 +107,27 @@ class TestLabelerConfig:
         assert branch_config is not None, "aiラベルのブランチ設定が見つかりません"
         assert "^copilot" in branch_config, "aiラベルに^copilotパターンが含まれていません"
         assert "^ai" in branch_config, "aiラベルに^aiパターンが含まれていません"
+
+    def test_labeler_config_breaking_change_includes_commit_patterns(self) -> None:
+        """BREAKING CHANGEラベルがConventional Commitsのパターンに対応していることを確認."""
+        labeler_config_path = Path(__file__).parent.parent / ".github" / "labeler_branch.yml"
+
+        with labeler_config_path.open(encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        breaking_change_config = config.get("BREAKING CHANGE", [])
+        assert len(breaking_change_config) > 0, "BREAKING CHANGEラベルの設定が空です"
+
+        # コミットメッセージベースの設定を確認
+        commit_config = None
+        for item in breaking_change_config:
+            if "pr-commits" in item:
+                commit_config = item["pr-commits"]
+                break
+
+        assert commit_config is not None, "BREAKING CHANGEラベルのコミット設定が見つかりません"
+
+        # パターンを確認
+        patterns = [item.get("pattern") for item in commit_config if "pattern" in item]
+        assert "BREAKING CHANGE:" in patterns, "BREAKING CHANGEラベルに'BREAKING CHANGE:'パターンが含まれていません"
+        assert "!:" in patterns, "BREAKING CHANGEラベルに'!:'パターンが含まれていません"

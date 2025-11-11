@@ -16,13 +16,11 @@ from rich.table import Table
 
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 from logic.application.apps import ApplicationServices
+from logic.application.project_application_service import ProjectApplicationService
 from models import ProjectStatus
 
 if TYPE_CHECKING:
     from logic.application.apps import ApplicationServices
-
-    apps = ApplicationServices.create()
-    ProjectApplicationService = apps.project
     from models import ProjectRead
 
 app = typer.Typer(help="プロジェクト CRUD / 検索 コマンド")
@@ -30,38 +28,36 @@ console = Console()
 
 
 def _get_service() -> ProjectApplicationService:
-    from logic.application.apps import ApplicationServices
-
     apps = ApplicationServices.create()
     return apps.project
 
 
-# @elapsed_time()
-# @with_spinner("Loading projects...")
-# def _get_all_projects(query: GetAllProjectsQuery) -> list[ProjectRead]:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.get_all_projects(query)
+@elapsed_time()
+@with_spinner("Loading projects...")
+def _get_all_projects() -> list[ProjectRead]:  # [AI GENERATED]
+    service = _get_service()
+    return service.get_all_projects()
 
 
-# @elapsed_time()
-# @with_spinner("Creating project...")
-# def _create_project(cmd: CreateProjectCommand) -> ProjectRead:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.create_project(cmd)
+@elapsed_time()
+@with_spinner("Creating project...")
+def _create_project(title, description) -> ProjectRead:  # [AI GENERATED]
+    service = _get_service()
+    return service.create(title, description)
 
 
-# @elapsed_time()
-# @with_spinner("Fetching project...")
-# def _get_project(query: GetProjectByIdQuery) -> ProjectRead:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.get_project_by_id(query)
+@elapsed_time()
+@with_spinner("Fetching project...")
+def _get_project(project_id) -> ProjectRead:  # [AI GENERATED]
+    service = _get_service()
+    return service.get_by_id(project_id)
 
 
-# @elapsed_time()
-# @with_spinner("Searching projects...")
-# def _search_projects(query: SearchProjectsByTitleQuery) -> list[ProjectRead]:  # [AI GENERATED]
-#     service = _get_service()
-#     return service.search_projects_by_title(query)
+@elapsed_time()
+@with_spinner("Searching projects...")
+def _search_projects(query, status: ProjectStatus | None) -> list[ProjectRead]:  # [AI GENERATED]
+    service = _get_service()
+    return service.search(query, status=status)
 
 
 # @elapsed_time()

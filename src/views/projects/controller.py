@@ -194,9 +194,12 @@ class ProjectController:
             self._state = new_state
             self._update_list()
             self._update_detail()
+        except ValueError as e:
+            logger.error(f"プロジェクトデータのバリデーションエラー: {e}")
+            # TODO: ユーザーへの通知処理（例: Fletの AlertDialog や SnackBar を使用）
         except Exception as e:
-            logger.error(f"プロジェクト追加エラー: {e}")
-
+            logger.exception(f"プロジェクト追加中に予期しないエラーが発生しました: {e}")
+            # TODO: ユーザーへの通知処理（例: Fletの AlertDialog や SnackBar を使用）
     def _update_and_render(self, new_state: ProjectState) -> None:
         """状態を更新してUIを再描画する。
 

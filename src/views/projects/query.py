@@ -36,6 +36,10 @@ class ProjectQuery(Protocol):
             フィルタリングされたプロジェクトのイテラブル
         """
         ...
+        # TODO(実装者向け): 将来拡張の検討事項
+        # - ページング(cursor/limit)、サーバーサイドソート(sort_key/direction)
+        # - get_project_by_id(project_id: str) の追加で詳細取得を効率化
+        # - これらは ApplicationService → Repository 層で実装し、ここでは抽象化のみ提供
 
 
 class InMemoryProjectQuery:
@@ -90,8 +94,11 @@ class InMemoryProjectQuery:
             english = status.value
             japanese = jp_map.get(english, english)
             items = [x for x in items if x.get("status") in (english, japanese)]
-
         return items
+
+    # TODO(実装者向け): プロダクション実装の観点
+    # - Repository 経由のクエリ実装では、DB/検索エンジンでの LIKE/全文検索を使用してください。
+    # - project_id 単体取得用のメソッドを追加し、詳細画面の取得効率を最適化すると良いです。
 
     def add_project(self, project: dict[str, str]) -> None:
         """プロジェクトを追加する（テスト用）。

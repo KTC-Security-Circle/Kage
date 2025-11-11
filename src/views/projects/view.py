@@ -42,7 +42,12 @@ class ProjectsView(BaseView):
         """
         super().__init__(page)
 
-        # サンプルデータで初期化（後でRepository連携に置き換え）
+        # TODO(実装者向け): データ取得の本実装に差し替える
+        # - ここでは表示確認のためサンプルデータを InMemory の Query に流し込んでいます。
+        # - 本番実装では DI コンテナ (src/logic/container.py) から ProjectQuery 実装
+        #   もしくは ProjectApplicationService を解決し、Repository 経由でデータを取得してください。
+        # - 例: query = container.resolve(ProjectQuery) / service = container.resolve(ProjectApplicationService)
+        # - 例外時のユーザー通知は BaseView の snackbar を利用し、適宜リトライ導線も検討ください。
         sample_data = self._get_sample_data()
         query = InMemoryProjectQuery(sample_data)
 
@@ -70,6 +75,10 @@ class ProjectsView(BaseView):
         self._detail_container = ft.Container(expand=True)
 
         # 初期描画
+        # TODO(実装者向け): 非同期取得にする場合
+        # - ApplicationService 側で I/O を行うなら読み込み中インジケータを表示してから
+        #   完了時に _controller.refresh() 相当の更新を呼び出してください。
+        # - エラー時は snackbar で通知し、空表示/前回キャッシュ表示などの方針を決めるとUXが安定します。
         self._controller.refresh()
 
         return ft.Container(
@@ -588,6 +597,11 @@ class ProjectsView(BaseView):
             due_date_raw = (data.get("due_date") or "").strip()
             due_date = due_date_raw if due_date_raw else None
 
+            # TODO(実装者向け): 作成ロジックの本実装
+            # - 下記は InMemoryQuery 前提の暫定追加です。
+            # - 実装では ProjectApplicationService.create_project(...) を呼び出し、
+            #   成功時に controller.refresh() で最新状態を再取得してください。
+            # - 失敗時は self.show_error_snackbar(...) でユーザーに通知しましょう。
             new_project = {
                 "id": data.get("id", str(uuid.uuid4())),
                 "title": data.get("title", "新規プロジェクト"),
@@ -620,6 +634,9 @@ class ProjectsView(BaseView):
         Returns:
             Presenter が処理可能な正規化済みプロジェクト辞書リスト
         """
+        # TODO(実装者向け): サンプルデータの撤去
+        # - 実運用では ProjectApplicationService から取得し、Presenter が期待する
+        #   キー構造に合わせてマッピングしてください（可能なら Presenter 側で完結させる）。
         return build_projects_sample_data(get_projects_for_ui())
 
 

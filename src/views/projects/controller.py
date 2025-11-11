@@ -82,6 +82,9 @@ class ProjectController:
         if status:
             try:
                 # 日本語ステータスを英語に変換
+                # TODO(実装者向け): ステータスのローカライズ変換を一元化
+                # - models 側に変換ユーティリティを置く、あるいは i18n レイヤで双方向変換を担保してください。
+                # - ここでの辞書は暫定です。表示値とドメイン値の分離を厳密に行うと不具合が減ります。
                 status_map = {
                     "進行中": ProjectStatus.ACTIVE,
                     "保留": ProjectStatus.ON_HOLD,
@@ -172,6 +175,10 @@ class ProjectController:
             select: 追加後に選択状態にするかどうか
         """
         try:
+            # TODO(実装者向け): 作成処理の本実装
+            # - 現状は InMemory 用の add_project があれば呼び出す暫定実装です。
+            # - 実装では ApplicationService.create_project(...) を呼び出し、
+            #   成功時に refresh() で再取得してください（ID で選択維持する場合は応答の ID を使用）。
             add_fn = getattr(self._query, "add_project", None)
             if callable(add_fn):
                 add_fn(project)  # type: ignore[misc]
@@ -216,6 +223,9 @@ class ProjectController:
         """プロジェクトリストを更新する。"""
         try:
             # データ取得
+            # TODO(実装者向け): ページング/ソートをサーバーサイドへ委譲する検討
+            # - 件数が増える場合は list_projects に cursor/limit 等の引数を追加し、
+            #   ApplicationService → Repository で最適化してください。
             items = self._query.list_projects(
                 keyword=self._state.keyword,
                 status=self._state.status,
@@ -247,6 +257,9 @@ class ProjectController:
                 return
 
             # 選択されたプロジェクトを検索
+            # TODO(実装者向け): ID 取得 API の利用
+            # - list → 探索は暫定です。ProjectQuery に get_project_by_id を追加し、
+            #   Repository で最適に取得してください。
             items = self._query.list_projects()
             selected_project = None
             for item in items:

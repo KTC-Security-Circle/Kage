@@ -115,6 +115,9 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
     """
     # 基本情報
     project_id = str(project.get("id", ""))
+    # TODO(実装者向け): フィールド名の統一
+    # - サンプル互換のため title/name フォールバックを残していますが、
+    #   本実装ではドメインモデル → Presenter で title に正規化してください。
     title = str(project.get("title", project.get("name", "")))
     description = str(project.get("description", ""))
     status = str(project.get("status", ""))
@@ -159,6 +162,7 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     """
     # 基本情報
     project_id = str(project.get("id", ""))
+    # TODO(実装者向け): フィールド名の統一（上記カードと同様）
     title = str(project.get("title", project.get("name", "")))
     description = str(project.get("description", ""))
     status = str(project.get("status", ""))
@@ -203,6 +207,8 @@ def _get_status_color(status: str) -> str:
     Returns:
         ステータスに対応する色コード
     """
+    # TODO(実装者向け): ステータス色の集中管理
+    # - views.theme などに定義し、全画面で共通化してください（定数/Enum推奨）。
     status_colors = {
         "進行中": "#2196F3",  # Blue
         "active": "#2196F3",

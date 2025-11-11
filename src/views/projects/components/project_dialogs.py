@@ -158,6 +158,11 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
             "task_id": [],
         }
 
+        # TODO(実装者向け): 本保存ロジックの実装
+        # - 現在は on_save コールバックで外側へ返すだけです。
+        # - 実装では ProjectApplicationService.create_project(...) を呼び出し、
+        #   成功時は snackbar で通知し、一覧の再取得/詳細の自動選択を行ってください。
+        # - 失敗時は self.show_error_snackbar(...) 等でユーザーに明確に伝えましょう。
         # コールバック関数を呼び出してデータを親に渡す
         if on_save:
             on_save(project_data)
@@ -422,6 +427,11 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             "due_date": due_raw,
         }
         try:
+            # TODO(実装者向け): 本保存ロジックの実装
+            # - 現在は on_save コールバックで外側へ返すだけです。
+            # - 実装では ProjectApplicationService.update_project(...) を呼び出し、
+            #   成功時にデータを再取得して UI を最新化してください。
+            # - 失敗時はエラー内容を snackbar で通知してください。
             if on_save:
                 on_save(updated_project)
             close_dialog(_)

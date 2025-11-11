@@ -35,6 +35,8 @@ def create_project_card(
     import flet as ft
 
     # [ToDo: 実装機能] プロジェクトステータスに応じた色の管理
+    # - views.theme 等に get_status_color を実装して共通化してください。
+    # - ローカライズ(日本語/英語)どちらの値でも扱えるように内部値へ正規化するのが安全です。
     # status_color = get_status_color(project["status"])
     status_colors = {
         "進行中": ft.Colors.BLUE,
@@ -53,8 +55,10 @@ def create_project_card(
                         controls=[
                             ft.Column(
                                 controls=[
+                                    # TODO(実装者向け): name/title の正規化
+                                    # - ドメイン層 → Presenter で title に統一する想定です。
                                     ft.Text(
-                                        project["name"],
+                                        project.get("title", project.get("name", "")),
                                         style=ft.TextThemeStyle.TITLE_MEDIUM,
                                         weight=ft.FontWeight.W_500,
                                     ),
@@ -119,6 +123,8 @@ def create_project_card(
                                         size=16,
                                         color=ft.Colors.GREY_600,
                                     ),
+                                    # TODO(実装者向け): created_at の表示整形
+                                    # - ドメイン/Presenter 側で表示用フォーマットにして渡すと再利用性が高まります。
                                     ft.Text(
                                         project["created_at"],
                                         style=ft.TextThemeStyle.BODY_SMALL,

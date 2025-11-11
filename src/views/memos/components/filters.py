@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -13,6 +14,44 @@ import flet as ft
 if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import date
+
+
+# ========================================
+# データモデル
+# ========================================
+
+
+@dataclass(frozen=True, slots=True)
+class FilterConfig:
+    """フィルタ表示設定
+
+    Attributes:
+        show_date_filter: 日付フィルタの表示有無
+        show_ai_status_filter: AI状態フィルタの表示有無
+        show_tag_filter: タグフィルタの表示有無
+    """
+
+    show_date_filter: bool = True
+    show_ai_status_filter: bool = True
+    show_tag_filter: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class FilterData:
+    """フィルタコンポーネント表示用データ
+
+    Attributes:
+        config: フィルタ表示設定
+        on_filter_change: フィルタ変更時のコールバック
+    """
+
+    config: FilterConfig
+    on_filter_change: Callable[[dict[str, object]], None] | None = None
+
+
+# ========================================
+# コンポーネント
+# ========================================
 
 
 class MemoFilters(ft.Container):

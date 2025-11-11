@@ -1,74 +1,132 @@
 """メモアクションバーコンポーネント
 
-メモの操作（作成、検索、フィルタ等）のためのアクションバー。
-Reactテンプレートのヘッダー機能を参考に実装。
+【責務】
+- 整形済みデータ（ActionBarData）を受け取り、UIを構築する
+- アクションバーのレイアウト、スタイリング
+- 検索入力、新規作成ボタンのイベント委譲
+
+【責務外】
+- 検索クエリのバリデーション（Presenterで            self._search_field = ft.TextField(
+                hint_text=self._action_bar_data.search_placeholder,
+                width=300,
+                prefix_icon=ft.Icons.SEARCH,
+                border_radius=20,
+                filled=True,
+                content_padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                on_change=self._handle_search_change,
+                on_submit=self._handle_search_submit,
+            )
+            controls.append(self._search_field)
+
+        if self._action_bar_data.on_create_memo:
+            create_button = ft.ElevatedButton(ーマット（Presenterで実行）
+- 状態管理（Stateで管理）
+
+【設計上の特徴】
+- ActionBarDataを受け取る設計
+- このファイル内でデータクラスと専用定数を定義（凝集度向上）
+- 検索フィールドの参照を保持（外部から操作可能）
+
+【使用例】
+```python
+from views.memos.components.action_bar import MemoActionBar, ActionBarData
+from views.memos.presenter import create_action_bar_data
+
+data = create_action_bar_data(on_create_memo=handler, on_search=search_handler)
+action_bar = MemoActionBar(data=data)
+```
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
 
 import flet as ft
+
+from .shared.constants import ACTION_BAR_PADDING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class MemoActionBar(ft.Container):
-    """メモ操作用のアクションバー。
+# ========================================
+# MemoActionBar専用定数
+# ========================================
 
-    検索、新規作成、フィルタ等の操作機能を提供。
-    テンプレートのMemosScreenヘッダー部分を参考に実装。
+MIN_SEARCH_LENGTH: Final[int] = 2
+"""検索クエリの最小文字数（MemoActionBar専用）"""
+
+DEFAULT_SEARCH_PLACEHOLDER: Final[str] = "メモを検索..."
+"""検索フィールドのデフォルトプレースホルダー（MemoActionBar専用）"""
+
+
+# ========================================
+# MemoActionBar専用データクラス
+# ========================================
+
+
+@dataclass(frozen=True, slots=True)
+class ActionBarData:
+    """アクションバー表示用データ（MemoActionBar専用）
+
+    Attributes:
+        title: メインタイトル（例: "メモ"）
+        subtitle: サブタイトル（例: "思考とアイデアを記録し、AIでタスクに変換"）
+        search_placeholder: 検索フィールドのプレースホルダー
+        on_create_memo: 新規作成ボタンのコールバック（オプション）
+        on_search: 検索入力のコールバック（オプション）
     """
 
-    def __init__(
-        self,
-        *,
-        on_create_memo: Callable[[], None] | None = None,
-        on_search: Callable[[str], None] | None = None,
-        search_placeholder: str = "メモを検索...",
-        title: str = "メモ",
-        subtitle: str = "思考とアイデアを記録し、AIでタスクに変換",
-    ) -> None:
+    title: str
+    subtitle: str
+    search_placeholder: str
+    on_create_memo: Callable[[], None] | None = None
+    on_search: Callable[[str], None] | None = None
+
+
+# ========================================
+# コンポーネント本体
+# ========================================
+
+
+class MemoActionBar(ft.Container):
+    """メモ操作用のアクションバー
+
+    整形済みのActionBarDataを受け取り、視覚的なバーUIを構築する。
+    """
+
+    def __init__(self, data: ActionBarData) -> None:
         """メモアクションバーを初期化。
 
         Args:
-            on_create_memo: 新規作成ボタンのコールバック
-            on_search: 検索入力のコールバック
-            search_placeholder: 検索欄のプレースホルダー
-            title: タイトルテキスト
-            subtitle: サブタイトルテキスト
+            data: 表示用データ（整形済み）
         """
-        self.on_create_memo = on_create_memo
-        self.on_search = on_search
-        self.search_placeholder = search_placeholder
-        self.title = title
-        self.subtitle = subtitle
+        self._action_bar_data = data
         self._search_field: ft.TextField | None = None
 
         super().__init__(
             content=self._build_action_bar(),
-            padding=ft.padding.all(16),
+            padding=ft.padding.all(ACTION_BAR_PADDING),
             bgcolor=ft.Colors.SURFACE,
             border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
         )
 
     def _build_action_bar(self) -> ft.Control:
-        """アクションバーを構築。
+        """アクションバーを構築（純粋なUI組み立て）。
 
         Returns:
             構築されたコントロール
         """
-        # 左側：タイトル部分
         title_section = ft.Column(
             controls=[
                 ft.Text(
-                    self.title,
+                    self._action_bar_data.title,
                     style=ft.TextThemeStyle.HEADLINE_MEDIUM,
                     weight=ft.FontWeight.BOLD,
                 ),
                 ft.Text(
-                    self.subtitle,
+                    self._action_bar_data.subtitle,
                     style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
@@ -77,7 +135,6 @@ class MemoActionBar(ft.Container):
             tight=True,
         )
 
-        # 右側：操作部分
         action_section = self._build_action_section()
 
         return ft.Row(
@@ -94,10 +151,9 @@ class MemoActionBar(ft.Container):
         """
         controls = []
 
-        # 検索フィールド
-        if self.on_search:
+        if self._action_bar_data.on_search:
             self._search_field = ft.TextField(
-                hint_text=self.search_placeholder,
+                hint_text=self._action_bar_data.search_placeholder,
                 width=300,
                 prefix_icon=ft.Icons.SEARCH,
                 border_radius=20,
@@ -108,8 +164,7 @@ class MemoActionBar(ft.Container):
             )
             controls.append(self._search_field)
 
-        # 新規作成ボタン
-        if self.on_create_memo:
+        if self._action_bar_data.on_create_memo:
             create_button = ft.ElevatedButton(
                 content=ft.Row(
                     controls=[
@@ -127,42 +182,62 @@ class MemoActionBar(ft.Container):
             )
             controls.append(create_button)
 
-        return ft.Row(
-            controls=controls,
-            spacing=12,
-        )
+        return ft.Row(controls=controls, spacing=12)
 
     def _handle_search_change(self, _: ft.ControlEvent) -> None:
-        """検索フィールド変更時のハンドラー."""
-        if self.on_search and self._search_field:
-            self.on_search(self._search_field.value or "")
+        """検索フィールド変更時のハンドラー（イベント委譲）。
+
+        Args:
+            _: Fletのイベントオブジェクト（未使用）
+        """
+        if not (self._action_bar_data.on_search and self._search_field):
+            return
+
+        query = (self._search_field.value or "").strip()
+
+        if not query:
+            self._action_bar_data.on_search("")
+            return
+
+        if len(query) < MIN_SEARCH_LENGTH:
+            return
+
+        self._action_bar_data.on_search(query)
 
     def _handle_search_submit(self, _: ft.ControlEvent) -> None:
-        """検索フィールド送信時のハンドラー."""
-        if self.on_search and self._search_field:
-            self.on_search(self._search_field.value or "")
+        """検索フィールド送信時のハンドラー（イベント委譲）。
+
+        Args:
+            _: Fletのイベントオブジェクト（未使用）
+        """
+        if self._action_bar_data.on_search and self._search_field:
+            self._action_bar_data.on_search(self._search_field.value or "")
 
     def _handle_create_memo(self, _: ft.ControlEvent) -> None:
-        """新規作成ボタンクリック時のハンドラー。"""
-        if self.on_create_memo:
-            self.on_create_memo()
+        """新規作成ボタンクリック時のハンドラー（イベント委譲）。
+
+        Args:
+            _: Fletのイベントオブジェクト（未使用）
+        """
+        if self._action_bar_data.on_create_memo:
+            self._action_bar_data.on_create_memo()
 
     def clear_search(self) -> None:
-        """検索フィールドをクリア。"""
+        """検索フィールドをクリア（外部から操作）。"""
         if self._search_field:
             self._search_field.value = ""
             self._search_field.update()
 
     def get_search_query(self) -> str:
-        """現在の検索クエリを取得。
+        """現在の検索クエリを取得（外部から参照）。
 
         Returns:
-            検索クエリ
+            検索クエリ文字列
         """
         return self._search_field.value or "" if self._search_field else ""
 
     def set_search_query(self, query: str) -> None:
-        """検索クエリを設定。
+        """検索クエリを設定（外部から操作）。
 
         Args:
             query: 設定する検索クエリ
@@ -170,149 +245,3 @@ class MemoActionBar(ft.Container):
         if self._search_field:
             self._search_field.value = query
             self._search_field.update()
-
-
-class MemoStatusTabs(ft.Container):
-    """メモステータスタブコンポーネント。
-
-    Inbox、Active、Idea、Archiveの4つのステータスタブを提供。
-    テンプレートのTabsListを参考に実装。
-    """
-
-    def __init__(
-        self,
-        *,
-        on_tab_change: Callable[[str], None] | None = None,
-        active_tab: str = "inbox",
-        tab_counts: dict[str, int] | None = None,
-    ) -> None:
-        """メモステータスタブを初期化。
-
-        Args:
-            on_tab_change: タブ変更時のコールバック
-            active_tab: アクティブなタブ
-            tab_counts: 各タブのメモ数
-        """
-        self.on_tab_change = on_tab_change
-        self.active_tab = active_tab
-        self.tab_counts = tab_counts or {}
-        self._tab_buttons: dict[str, ft.Control] = {}
-
-        super().__init__(
-            content=self._build_tabs(),
-            padding=ft.padding.symmetric(horizontal=16, vertical=8),
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
-        )
-
-    def _build_tabs(self) -> ft.Control:
-        """タブを構築。
-
-        Returns:
-            構築されたタブコントロール
-        """
-        tab_definitions = [
-            ("inbox", "Inbox", ft.Icons.INBOX),
-            ("active", "アクティブ", ft.Icons.AUTO_AWESOME),
-            ("idea", "アイデア", ft.Icons.LIGHTBULB),
-            ("archive", "アーカイブ", ft.Icons.ARCHIVE),
-        ]
-
-        tab_controls = []
-        for tab_id, label, icon in tab_definitions:
-            tab_button = self._create_tab_button(tab_id, label, icon)
-            self._tab_buttons[tab_id] = tab_button
-            tab_controls.append(tab_button)
-
-        return ft.Row(
-            controls=tab_controls,
-            spacing=0,
-            expand=True,
-        )
-
-    def _create_tab_button(self, tab_id: str, label: str, icon: str) -> ft.Control:
-        """タブボタンを作成。
-
-        Args:
-            tab_id: タブID
-            label: タブラベル
-            icon: タブアイコン
-
-        Returns:
-            作成されたタブボタン
-        """
-        is_active = tab_id == self.active_tab
-        count = self.tab_counts.get(tab_id, 0)
-
-        # タブボタンの内容
-        content_controls = [
-            ft.Icon(icon, size=18),
-            ft.Text(label, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL),
-        ]
-
-        # カウントバッジを追加
-        if count > 0:
-            content_controls.append(
-                ft.Container(
-                    content=ft.Text(
-                        str(count),
-                        size=12,
-                        color=ft.Colors.ON_SECONDARY,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                    bgcolor=ft.Colors.SECONDARY,
-                    border_radius=10,
-                ),
-            )
-
-        return ft.Container(
-            content=ft.Row(
-                controls=content_controls,
-                spacing=8,
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if is_active else ft.Colors.TRANSPARENT,
-            border_radius=8,
-            ink=True,
-            on_click=lambda _, tid=tab_id: self._handle_tab_click(tid),
-            expand=True,
-        )
-
-    def _handle_tab_click(self, tab_id: str) -> None:
-        """タブクリック時のハンドラー。
-
-        Args:
-            tab_id: クリックされたタブのID
-        """
-        if tab_id != self.active_tab:
-            self.active_tab = tab_id
-            self._update_tab_styles()
-            if self.on_tab_change:
-                self.on_tab_change(tab_id)
-
-    def _update_tab_styles(self) -> None:
-        """タブのスタイルを更新。"""
-        self.content = self._build_tabs()
-        if hasattr(self, "page") and self.page:
-            self.update()
-
-    def update_counts(self, tab_counts: dict[str, int]) -> None:
-        """タブのカウントを更新。
-
-        Args:
-            tab_counts: 新しいタブカウント
-        """
-        self.tab_counts = tab_counts
-        self._update_tab_styles()
-
-    def set_active_tab(self, tab_id: str) -> None:
-        """アクティブタブを設定。
-
-        Args:
-            tab_id: アクティブにするタブのID
-        """
-        if tab_id != self.active_tab:
-            self.active_tab = tab_id
-            self._update_tab_styles()

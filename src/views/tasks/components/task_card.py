@@ -120,13 +120,23 @@ class TaskCard(ft.Container):
                 )
             )
 
-        footer_controls.append(
-            ft.Text(
-                self._data.subtitle,
-                style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
+        # Display due date or status timestamp in the footer, if available
+        if hasattr(self._data, "due_date") and self._data.due_date:
+            footer_controls.append(
+                ft.Text(
+                    f"期限: {self._data.due_date}",
+                    style=ft.TextThemeStyle.BODY_SMALL,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                )
             )
-        )
+        elif hasattr(self._data, "status_timestamp") and self._data.status_timestamp:
+            footer_controls.append(
+                ft.Text(
+                    f"更新: {self._data.status_timestamp}",
+                    style=ft.TextThemeStyle.BODY_SMALL,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                )
+            )
 
         footer = ft.Row(controls=footer_controls, alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=8)
 

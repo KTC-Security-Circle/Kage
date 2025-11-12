@@ -1,467 +1,369 @@
-"""タスク管理画面
+"""Tasks View (MVP構成: View層)。
 
-カンバンボード形式でのタスク管理機能を提供するメインビュー。
-ドラッグ&ドロップ、フィルタ、検索、CRUD機能を含む。
+旧カンバン実装を廃止し、MemosView と同等の責務分離 (State / Controller / Presenter / Query / Ordering) を導入。
+
+【責務】
+    - レイアウト構築と最低限のイベント配線
+    - Controller への委譲と差分再描画
+    - BaseView のエラーハンドリング/ローディング利用
+
+【非責務】
+    - データ取得 (Query)
+    - 並び替え戦略 (ordering)
+    - 状態保持と不変更新 (state)
+    - 表示用VM生成 (presenter)
+
+初期段階では InMemoryTasksQuery によるモックデータのみを扱う。
+後続で ApplicationService 連携へ切り替え可能な構造。
 """
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from datetime import date
+import flet as ft
+from loguru import logger
 
-    from models import TaskStatus
-
-if TYPE_CHECKING:
-    import flet as ft
-
-from logic.application.task_application_service import TaskApplicationService
-from models import TaskStatus
 from views.shared.base_view import BaseView
 from views.shared.components import create_page_header
 
-from .components import (
-    create_action_bar,
-    create_kanban_board,
-    create_task_dialog,
-)
+from .components.detail_panel import DetailPanelProps, TaskDetailPanel
+from .components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
+from .components.task_card import TaskCardData
+from .components.task_list import TaskList, TaskListProps
+from .controller import TasksController
+from .presenter import to_detail_from_card
+from .query import InMemoryTasksQuery, TasksQuery
+
+if TYPE_CHECKING:
+    from .presenter import TaskCardVM
+    from .state import TasksState
 
 
 class TasksView(BaseView):
-    """タスク管理画面のメインビュー。
+    """タスク管理のメインビュー (新MVP構成)。
 
-    カンバンボード形式でのタスク表示、CRUD操作、検索・フィルタ機能を提供。
-    BaseViewを継承し、エラーハンドリングとローディング機能を活用。
+    検索 / ステータスフィルタ / 並び替え / 降順切替 + リスト表示の最小UIを提供。
     """
 
-    def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
-        """TasksViewを初期化する。
+    def __init__(self, page: ft.Page, *, query: TasksQuery | None = None) -> None:
+        """コンストラクタ。
 
         Args:
-            page: Fletページインスタンス
+            page: Fletページ
+            query: テスト差し替え用の Query 実装
         """
         super().__init__(page)
+        seed = _default_seed_data()
+        self._query: TasksQuery = query or InMemoryTasksQuery(seed)
+        self._controller = TasksController(_query=self._query, _on_change=self._on_view_model_change)
+        self._list: ft.ListView | None = None  # deprecated: kept for compatibility
+        self._status_dropdown: ft.Dropdown | None = None
+        self._sort_dropdown: ft.Dropdown | None = None
+        self._desc_switch: ft.Switch | None = None
+        self._search_field: ft.TextField | None = None
+        self._tabs: ft.Tabs | None = None
+        self._current_vm: list[TaskCardVM] = []
+        # Components
+        self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
+        self._detail_comp = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
+        logger.info("TasksView initialized with MVP structure")
+        # 初期描画データ
+        self._controller.refresh()
 
-        # TaskApplicationServiceを直接インスタンス化
-        self._task_app_service = TaskApplicationService()
+    # BaseView から呼ばれる
+    def build_content(self) -> ft.Control:
+        """UIコンテンツを構築する。"""
+        # 総件数は Controller から取得（キーワードフィルタを考慮）
+        total_count = 0
+        try:
+            total_count = self._controller.get_total_count()
+        except Exception:
+            # InMemoryQuery 以外の実装に差し替えた場合でも安全に表示
+            total_count = len(self._current_vm)
 
-        self.tasks_data: dict[str, list[dict[str, any]]] = {}
-        self.search_query: str = ""
-        self.selected_project: str = ""
-        self.selected_tags: set[str] = set()
+        header = create_page_header(
+            title="タスク",
+            subtitle=f"GTDベースのタスク管理 ({total_count}件)",
+        )
 
-    def build_content(self) -> ft.Control:  # type: ignore[name-defined]
-        """タスク画面のコンテンツを構築する。
-
-        Returns:
-            タスク画面のメインコンテンツ
-        """
-        import flet as ft
-
-        # 実際のデータを読み込み
-        self._load_tasks_data()
-
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    create_page_header(
-                        title="タスク管理",
-                        subtitle=f"合計 {self._get_total_tasks_count()} 件のタスク",
-                    ),
-                    create_action_bar(
-                        on_create=self._handle_create_task,
-                        on_search=self._handle_search,
-                        on_filter=self._handle_filter,
-                        on_refresh=self._handle_refresh,
-                    ),
-                    create_kanban_board(
-                        tasks_data=self.tasks_data,
-                        on_task_click=self._handle_task_click,
-                    ),
-                ],
-                spacing=16,
-                expand=True,
-            ),
-            padding=24,
+        self._search_field = ft.TextField(
+            label="検索",
+            hint_text="タイトルでフィルタ...",
+            on_change=lambda e: self._controller.set_keyword(e.control.value or ""),  # type: ignore[arg-type]
             expand=True,
         )
 
-    def _load_tasks_data(self) -> None:
-        """TaskApplicationServiceから実際のタスクデータを読み込む。"""
-        try:
-            # 一時的にモックデータを使用
-            self._initialize_mock_data()
-            return
-
-            # 各ステータスごとにタスクを取得
-            status_mapping = {
-                "計画中": TaskStatus.TODO,
-                "進行中": TaskStatus.PROGRESS,
-                "完了": TaskStatus.COMPLETED,
-            }
-
-            self.tasks_data = {}
-
-            for display_status, task_status in status_mapping.items():
-                tasks = self._task_app_service.list_by_status(task_status)
-                self.tasks_data[display_status] = [
-                    {
-                        "id": str(task.id),
-                        "title": task.title,
-                        "description": task.description or "",
-                        "priority": "medium",  # TODO: 優先度フィールドを追加
-                        "project": "",  # TODO: プロジェクト名を取得
-                        "tags": [],  # TODO: タグを取得
-                        "assignee": "未割当",  # TODO: 担当者フィールドを追加
-                        "due_date": task.due_date.strftime("%Y-%m-%d") if task.due_date else "未設定",
-                        "created_at": (
-                            task.created_at.strftime("%Y-%m-%d")
-                            if hasattr(task, "created_at") and task.created_at
-                            else ""
-                        ),
-                    }
-                    for task in tasks
-                ]
-
-        except Exception as e:
-            # エラーが発生した場合はモックデータにフォールバック
-            if self.page:
-                self.show_snack_bar(f"データ読み込みエラー: {e}")
-            self._initialize_mock_data()
-
-    def _initialize_mock_data(self) -> None:
-        """開発用のモックデータを初期化する。"""
-        self.tasks_data = {
-            "計画中": [
-                {
-                    "id": "1",
-                    "title": "新機能の要件定義",
-                    "description": "ユーザーからの要望を整理し、機能仕様を策定する",
-                    "priority": "high",
-                    "project": "ウェブサイトリニューアル",
-                    "tags": ["要件定義", "設計"],
-                    "assignee": "田中",
-                    "due_date": "2024-11-01",
-                    "created_at": "2024-10-20",
-                },
-                {
-                    "id": "2",
-                    "title": "デザインモックアップ作成",
-                    "description": "UI/UXデザインの初期案を作成",
-                    "priority": "medium",
-                    "project": "モバイルアプリ開発",
-                    "tags": ["デザイン", "UI/UX"],
-                    "assignee": "佐藤",
-                    "due_date": "2024-10-30",
-                    "created_at": "2024-10-22",
-                },
-            ],
-            "進行中": [
-                {
-                    "id": "3",
-                    "title": "フロントエンド実装",
-                    "description": "Reactコンポーネントの実装",
-                    "priority": "high",
-                    "project": "ウェブサイトリニューアル",
-                    "tags": ["開発", "React"],
-                    "assignee": "鈴木",
-                    "due_date": "2024-11-05",
-                    "created_at": "2024-10-18",
-                },
-                {
-                    "id": "4",
-                    "title": "API仕様書作成",
-                    "description": "バックエンドAPIの詳細仕様を文書化",
-                    "priority": "medium",
-                    "project": "データベース最適化",
-                    "tags": ["文書化", "API"],
-                    "assignee": "高橋",
-                    "due_date": "2024-10-28",
-                    "created_at": "2024-10-21",
-                },
-            ],
-            "完了": [
-                {
-                    "id": "5",
-                    "title": "環境構築",
-                    "description": "開発環境のセットアップ完了",
-                    "priority": "low",
-                    "project": "モバイルアプリ開発",
-                    "tags": ["環境構築"],
-                    "assignee": "山田",
-                    "due_date": "2024-10-25",
-                    "created_at": "2024-10-15",
-                },
-            ],
-        }
-
-    def _get_total_tasks_count(self) -> int:
-        """全タスク数を取得する。
-
-        Returns:
-            全タスクの総数
-        """
-        return sum(len(tasks) for tasks in self.tasks_data.values())
-
-    def _handle_create_task(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """新規タスク作成を処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-        """
-        if not self.page:
-            return
-
-        def on_submit(form_data: dict[str, str]) -> None:
-            """タスク作成の送信処理。
-
-            Args:
-                form_data: フォームから送信されたデータ
-            """
-            try:
-                # TaskApplicationServiceを使用してタスクを作成
-                import contextlib
-
-                from models import TaskStatus
-
-                # ステータスの変換
-                status_mapping = {
-                    "計画中": TaskStatus.TODO,
-                    "進行中": TaskStatus.PROGRESS,
-                    "完了": TaskStatus.COMPLETED,
-                    "保留": TaskStatus.WAITING,
-                    "キャンセル": TaskStatus.CANCELED,
-                }
-
-                task_status = status_mapping.get(form_data.get("status", "計画中"), TaskStatus.TODO)
-
-                # 期限日の変換 - 日付のみなのでタイムゾーンは不要
-                due_date = None
-                if form_data.get("due_date"):
-                    import re
-
-                    date_str = form_data["due_date"]
-                    # 簡単な日付形式チェック
-                    if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-                        with contextlib.suppress(ValueError):
-                            year, month, day = map(int, date_str.split("-"))
-                            from datetime import date
-
-                            due_date = date(year, month, day)
-
-                # タスクを作成
-                task_data = {
-                    "title": form_data["title"],
-                    "description": form_data.get("description", ""),
-                    "status": task_status,
-                    "due_date": due_date,
-                }
-
-                created_task = self._task_app_service.create(**task_data)
-
-                if created_task:
-                    self.show_success_snackbar(f"タスク「{form_data['title']}」を作成しました")
-                    # データを再読み込み
-                    self._load_tasks_data()
-                    if self.page:
-                        self.page.update()
-                else:
-                    self.show_snack_bar("タスクの作成に失敗しました")
-
-            except Exception as e:
-                self.show_snack_bar(f"タスク作成エラー: {e}")
-
-        def on_cancel() -> None:
-            """キャンセル処理。"""
-
-        # タスク作成ダイアログを表示
-        dialog = create_task_dialog(
-            page=self.page,
-            title="新規タスク作成",
-            on_submit=on_submit,
-            on_cancel=on_cancel,
+        status_options = [ft.dropdown.Option(key="", text="すべて")] + [
+            ft.dropdown.Option(key=value, text=TASK_STATUS_LABELS[value]) for value in TASK_STATUS_LABELS
+        ]
+        self._status_dropdown = ft.Dropdown(
+            label="状態",
+            options=status_options,
+            value="",
+            on_change=lambda e: self._controller.set_status(e.control.value or None),  # type: ignore[arg-type]
+            width=160,
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
-
-    def _handle_search(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """検索を処理する。
-
-        Args:
-            e: イベントオブジェクト
-        """
-        # TODO: 検索機能を実装
-        search_text = e.control.value if e.control.value else ""  # type: ignore[attr-defined]
-        self.search_query = search_text
-        if search_text:
-            self.show_info_snackbar(f"「{search_text}」の検索機能は準備中です")
-
-    def _handle_filter(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """フィルターを処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-        """
-        # TODO: フィルターダイアログを表示
-        self.show_info_snackbar("フィルター機能は準備中です")
-
-    def _handle_refresh(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """データ更新を処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-        """
-        # TODO: 実際のデータ再読み込み
-        self._load_tasks_data()
-        self.show_info_snackbar("タスクデータを更新しました")
-        if self.page:
-            self.page.update()
-
-    def _convert_status_to_enum(self, status_str: str) -> TaskStatus:
-        """文字列ステータスをTaskStatusに変換する。
-
-        Args:
-            status_str: ステータス文字列
-
-        Returns:
-            TaskStatus enum値
-        """
-        from models import TaskStatus
-
-        status_mapping = {
-            "計画中": TaskStatus.TODO,
-            "進行中": TaskStatus.PROGRESS,
-            "完了": TaskStatus.COMPLETED,
-            "保留": TaskStatus.WAITING,
-            "キャンセル": TaskStatus.CANCELED,
-        }
-        return status_mapping.get(status_str, TaskStatus.TODO)
-
-    def _parse_due_date(self, date_str: str) -> date | None:
-        """期限日文字列をdateオブジェクトに変換する。
-
-        Args:
-            date_str: 日付文字列（YYYY-MM-DD形式）
-
-        Returns:
-            dateオブジェクト、変換できない場合はNone
-        """
-        import contextlib
-        import re
-        from datetime import date
-
-        if not date_str or not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-            return None
-
-        with contextlib.suppress(ValueError):
-            year, month, day = map(int, date_str.split("-"))
-            return date(year, month, day)
-        return None
-
-    def _update_task_with_data(self, form_data: dict[str, str]) -> bool:
-        """フォームデータでタスクを更新する。
-
-        Args:
-            form_data: フォームから送信されたデータ
-
-        Returns:
-            更新に成功した場合True
-        """
-        import uuid
-
-        task_id = form_data.get("id")
-        if not task_id:
-            if self.page:
-                self.show_snack_bar("タスクIDが見つかりません")
-            return False
-
-        try:
-            task_uuid = uuid.UUID(task_id)
-        except ValueError:
-            if self.page:
-                self.show_snack_bar("無効なタスクIDです")
-            return False
-
-        task_status = self._convert_status_to_enum(form_data.get("status", "計画中"))
-        due_date = self._parse_due_date(form_data.get("due_date", ""))
-
-        update_data = {
-            "title": form_data["title"],
-            "description": form_data.get("description", ""),
-            "status": task_status,
-            "due_date": due_date,
-        }
-
-        updated_task = self._task_app_service.update(task_uuid, **update_data)
-
-        if updated_task:
-            if self.page:
-                self.show_success_snackbar(f"タスク「{form_data['title']}」を更新しました")
-            self._load_tasks_data()
-            if self.page:
-                self.page.update()
-            return True
-
-        if self.page:
-            self.show_snack_bar("タスクの更新に失敗しました")
-        return False
-
-    def _handle_task_click(self, _: ft.ControlEvent, task: dict[str, str]) -> None:  # type: ignore[name-defined]
-        """タスククリックを処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-            task: クリックされたタスク
-        """
-        if not self.page:
-            return
-
-        def on_submit(form_data: dict[str, str]) -> None:
-            """タスク更新の送信処理。
-
-            Args:
-                form_data: フォームから送信されたデータ
-            """
-            try:
-                self._update_task_with_data(form_data)
-            except Exception as e:
-                if self.page:
-                    self.show_snack_bar(f"タスク更新エラー: {e}")
-
-        def on_cancel() -> None:
-            """キャンセル処理。"""
-
-        # タスク編集ダイアログを表示
-        dialog = create_task_dialog(
-            page=self.page,
-            title=f"タスク編集: {task['title']}",
-            task_data=task,
-            on_submit=on_submit,
-            on_cancel=on_cancel,
+        self._sort_dropdown = ft.Dropdown(
+            label="並び替え",
+            options=[
+                ft.dropdown.Option("updated_at"),
+                ft.dropdown.Option("created_at"),
+                ft.dropdown.Option("priority"),
+            ],
+            value=self._controller.state.sort_key,
+            on_change=lambda e: self._controller.set_sort(
+                key=e.control.value, descending=self._controller.state.sort_desc
+            ),  # type: ignore[arg-type]
+            width=160,
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self._desc_switch = ft.Switch(
+            label="降順",
+            value=self._controller.state.sort_desc,
+            on_change=lambda e: self._controller.set_sort(
+                key=self._controller.state.sort_key, descending=e.control.value
+            ),  # type: ignore[arg-type]
+        )
 
-    def _handle_task_move(self, task: dict[str, str], from_status: str, to_status: str) -> None:
-        """タスクの移動を処理する。
+        # タブ (React テンプレート準拠) - 各ステータス件数をバッジ表示
+        counts = self._safe_get_counts()
+        self._tabs = ft.Tabs(
+            selected_index=self._current_tab_index(),
+            tabs=[
+                ft.Tab(text=f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})")
+                for status in STATUS_ORDER
+            ],
+            on_change=self._on_tabs_change,
+            expand=True,
+        )
+        tabs_list = ft.Row([self._tabs], spacing=0)
 
-        Args:
-            task: 移動するタスク
-            from_status: 移動元のステータス
-            to_status: 移動先のステータス
-        """
-        # TODO: 実際のデータ更新
-        if from_status in self.tasks_data and to_status in self.tasks_data:
-            # タスクを移動元から削除
-            self.tasks_data[from_status] = [t for t in self.tasks_data[from_status] if t["id"] != task["id"]]
-            # タスクを移動先に追加
-            self.tasks_data[to_status].append(task)
+        # 左: 一覧 / 右: 詳細 (components)
+        self._render_items(self._current_vm)
 
-            self.show_info_snackbar(f"タスク「{task['title']}」を{to_status}に移動しました")
-            if self.page:
-                self.page.update()
+        grid = ft.ResponsiveRow(
+            controls=[
+                ft.Container(
+                    content=self._list_comp.control,
+                    col={"xs": 12, "lg": 5},
+                    padding=ft.padding.only(right=12),
+                ),
+                ft.Container(
+                    content=self._detail_comp.control,
+                    col={"xs": 12, "lg": 7},
+                ),
+            ],
+            expand=True,
+        )
+
+        controls = ft.Column(
+            controls=[
+                header,
+                ft.Row(
+                    controls=[
+                        self._search_field,
+                        self._status_dropdown,
+                        self._sort_dropdown,
+                        self._desc_switch,
+                    ],
+                    spacing=12,
+                ),
+                ft.Divider(),
+                tabs_list,
+                ft.Divider(),
+                grid,
+            ],
+            spacing=16,
+            expand=True,
+        )
+
+        return ft.Container(content=controls, padding=24, expand=True)
+
+    # --- Controller のコールバック ---
+    def _on_view_model_change(self, vm_list: list[TaskCardVM]) -> None:
+        """ControllerからのVM変化通知を受け取りリストを再描画する。"""
+        self._current_vm = vm_list
+        self._render_items(vm_list)
+        self._refresh_tabs_badges()
+
+    def _render_items(self, items: list[TaskCardVM]) -> None:
+        """ListViewへアイテムを反映。"""
+        # TaskCardDataへ変換し子コンポーネントへ渡す（MemoCardパターン踏襲）
+        cards: list[TaskCardData] = []
+        selected = self._controller.state.selected_id
+        for vm in items:
+
+            def _on_click_vm(vm: TaskCardVM = vm) -> None:
+                self._show_detail(vm)
+
+            cards.append(
+                TaskCardData(
+                    task_id=str(vm.id),
+                    title=vm.title,
+                    subtitle=vm.subtitle,
+                    status=vm.status,
+                    status_label=TASK_STATUS_LABELS.get(vm.status, vm.status),
+                    is_selected=(selected == vm.id) if selected else False,
+                    on_click=_on_click_vm,
+                )
+            )
+        self._list_comp.set_cards(cards)
+
+    def _show_detail(self, vm: TaskCardVM) -> None:
+        """選択タスク詳細を右ペインに表示する。"""
+        # Presenter で詳細用VMに昇格させてから渡す
+        dvm = to_detail_from_card(vm)
+        self._detail_comp.set_item(dvm)
+        self._controller.set_selected(vm.id)
+
+    def _count_by_status(self, status: str) -> int:
+        return sum(1 for vm in self._current_vm if vm.status == status)
+
+    def _safe_get_counts(self) -> dict[str, int]:
+        try:
+            return self._controller.get_counts()
+        except Exception:
+            return {s: self._count_by_status(s) for s in STATUS_ORDER}
+
+    def _current_tab_index(self) -> int:
+        try:
+            status = self._controller.state.status or STATUS_ORDER[0]
+            return STATUS_ORDER.index(status)
+        except Exception:
+            return 0
+
+    def _on_tabs_change(self, e: ft.ControlEvent) -> None:
+        idx = getattr(e.control, "selected_index", 0) or 0
+        if 0 <= idx < len(STATUS_ORDER):
+            self._controller.set_status(STATUS_ORDER[idx])
+        if self._status_dropdown is not None:
+            self._status_dropdown.value = STATUS_ORDER[idx]
+            with contextlib.suppress(AssertionError):
+                self._status_dropdown.update()
+
+    def _refresh_tabs_badges(self) -> None:
+        if not self._tabs:
+            return
+        counts = self._safe_get_counts()
+        for i, status in enumerate(STATUS_ORDER):
+            if i < len(self._tabs.tabs):
+                self._tabs.tabs[i].text = f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})"
+        with contextlib.suppress(AssertionError):
+            self._tabs.update()
+
+    # --- 外部 API (将来統合用) ---
+    def get_state_snapshot(self) -> TasksState:
+        """現在の状態スナップショットを返す。テスト/デバッグ用。"""
+        return self._controller.state
+
+    # --- Component callbacks ---
+    def _on_item_clicked(self, vm: TaskCardVM) -> None:
+        self._show_detail(vm)
+
+    def _on_item_clicked_id(self, task_id: str) -> None:
+        # 現在のVM一覧から該当を検索
+        for vm in self._current_vm:
+            if vm.id == task_id:
+                self._show_detail(vm)
+                return
+
+    def _on_status_change(self, task_id: str, new_status: str) -> None:
+        # Controller に委譲（InMemoryでは簡易更新）。実装未対応ならログのみ。
+        try:
+            self._controller.change_task_status(task_id, new_status)
+        except AttributeError:
+            logger.warning("change_task_status not supported by controller")
+
+
+def _default_seed_data() -> list[dict[str, object]]:
+    """旧ビューのモックを平坦化した初期シードを返す。
+
+    Returns:
+        タスク辞書リスト
+    """
+    return [
+        {
+            "id": "1",
+            "title": "新機能の要件定義",
+            "description": "ユーザー要望整理と仕様策定",
+            "priority": 3,
+            "status": "todo",
+            "updated_at": "2024-10-20",
+            "created_at": "2024-10-20",
+        },
+        {
+            "id": "2",
+            "title": "デザインモックアップ作成",
+            "description": "UI/UX初期案",
+            "priority": 2,
+            "status": "todo",
+            "updated_at": "2024-10-22",
+            "created_at": "2024-10-22",
+        },
+        {
+            "id": "3",
+            "title": "フロントエンド実装",
+            "description": "Reactコンポーネント実装",
+            "priority": 3,
+            "status": "progress",
+            "updated_at": "2024-10-18",
+            "created_at": "2024-10-18",
+        },
+        {
+            "id": "4",
+            "title": "API仕様書作成",
+            "description": "バックエンドAPI詳細",
+            "priority": 2,
+            "status": "progress",
+            "updated_at": "2024-10-21",
+            "created_at": "2024-10-21",
+        },
+        {
+            "id": "5",
+            "title": "環境構築",
+            "description": "開発環境セットアップ",
+            "priority": 1,
+            "status": "completed",
+            "updated_at": "2024-10-15",
+            "created_at": "2024-10-15",
+        },
+        {
+            "id": "6",
+            "title": "本日のレビュー",
+            "description": "スタンドアップ用メモ",
+            "priority": 2,
+            "status": "todays",
+            "updated_at": "2024-10-24",
+            "created_at": "2024-10-24",
+        },
+        {
+            "id": "7",
+            "title": "依頼待ちの回答",
+            "description": "法務確認待ち",
+            "priority": 2,
+            "status": "waiting",
+            "updated_at": "2024-10-23",
+            "created_at": "2024-10-22",
+        },
+        {
+            "id": "8",
+            "title": "不要チケットのクローズ",
+            "description": "範囲外のため",
+            "priority": 1,
+            "status": "canceled",
+            "updated_at": "2024-10-19",
+            "created_at": "2024-10-17",
+        },
+        {
+            "id": "9",
+            "title": "期限切れのバックログ整理",
+            "description": "期限超過アイテムの棚卸し",
+            "priority": 3,
+            "status": "overdue",
+            "updated_at": "2024-10-10",
+            "created_at": "2024-10-01",
+        },
+    ]

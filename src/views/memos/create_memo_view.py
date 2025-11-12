@@ -221,6 +221,3 @@ class CreateMemoView(BaseView):
         self.page.go("/memos")
 
 
-def create_create_memo_view(page: ft.Page) -> CreateMemoView:  # type: ignore[name-defined]
-    """ファクトリ関数: CreateMemoView を生成する。"""
-    return CreateMemoView(page)

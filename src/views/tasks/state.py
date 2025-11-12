@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-SortKey = Literal["created_at", "updated_at", "priority"]
+SortKey = Literal["created_at", "updated_at", "due_date"]
 TaskStatus = Literal["todo", "todays", "progress", "waiting", "completed", "canceled", "overdue"]
 StatusFilter = TaskStatus | None
 

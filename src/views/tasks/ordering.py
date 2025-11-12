@@ -28,15 +28,7 @@ class FieldOrder:
 
     def key(self, item: dict) -> str:
         value: object | None = item.get(self.field, None)
-        if self.field == "priority":
-            if value is None:
-                return "0000"
-            if isinstance(value, int):
-                return f"{value:04d}"
-            try:
-                return f"{int(value):04d}"
-            except Exception:
-                return "0000"
+        # ISO8601 文字列 (日付/日時) は文字列比較で概ね妥当な順序になる
         return str(value) if value is not None else ""
         # TODO: locale対応の文字列比較 (例: ICU) や自然順ソート ("Task 2" < "Task 10") が必要になれば
         #       strategy 実装を追加する。現在は単純な str() による辞書式。
@@ -45,7 +37,7 @@ class FieldOrder:
 ORDERING_MAP: dict[str, OrderStrategy] = {
     "created_at": FieldOrder("created_at"),
     "updated_at": FieldOrder("updated_at"),
-    "priority": FieldOrder("priority"),
+    "due_date": FieldOrder("due_date"),
 }
 
 # TODO: ユーザー定義順序 (ドラッグ&ドロップ保存) を扱うためには別ストラテジー UserDefinedOrder が必要。

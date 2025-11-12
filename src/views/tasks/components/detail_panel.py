@@ -69,7 +69,9 @@ class TaskDetailPanel:
         )
 
         card = ft.Card(
+            expand=True,
             content=ft.Container(
+                expand=True,
                 content=ft.Column(
                     [
                         ft.Text("タスク詳細", weight=ft.FontWeight.BOLD, size=18),
@@ -78,12 +80,24 @@ class TaskDetailPanel:
                         ft.Divider(),
                         ft.Row([ft.Text("ステータス:"), self._status_dd]),
                         ft.Row([ft.Text("更新日:"), ft.Text(getattr(vm, "subtitle", ""))]),
-                        ft.Row([ft.Text("優先度:"), ft.Text(str(getattr(vm, "priority", "")) or "-")]),
+                        ft.Row([ft.Text("期限:"), ft.Text(str(getattr(vm, "due_date", "") or "-"))]),
+                        ft.Row([ft.Text("完了:"), ft.Text(str(getattr(vm, "completed_at", "") or "-"))]),
+                        ft.Row([ft.Text("プロジェクトID:"), ft.Text(str(getattr(vm, "project_id", "") or "-"))]),
+                        ft.Row([ft.Text("メモID:"), ft.Text(str(getattr(vm, "memo_id", "") or "-"))]),
+                        ft.Row(
+                            [
+                                ft.Text("繰り返し:"),
+                                ft.Text("あり" if getattr(vm, "is_recurring", False) else "なし"),
+                            ]
+                        ),
+                        ft.Row([ft.Text("RRULE:"), ft.Text(str(getattr(vm, "recurrence_rule", "") or "-"))]),
                     ],
                     spacing=8,
+                    scroll=ft.ScrollMode.AUTO,
+                    expand=True,
                 ),
                 padding=16,
-            )
+            ),
         )
         # ルートの content を差し替えて更新
         self._root.content = card

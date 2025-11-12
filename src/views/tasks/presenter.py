@@ -43,7 +43,12 @@ class TaskDetailVM:
         description: 説明
         status: ステータス（string）
         subtitle: 補助表示用のサブタイトル（例: 更新日）
-        priority: 優先度（数値/未設定は None）
+        due_date: 期限日（文字列、未設定は None）
+        completed_at: 完了日時（文字列、未設定は None）
+        project_id: プロジェクトID（文字列、未設定は None）
+        memo_id: メモID（文字列、未設定は None）
+        is_recurring: 繰り返しタスクフラグ（未設定は False）
+        recurrence_rule: RRULE形式などの繰り返しルール（未設定は None）
         created_at: 作成日（文字列、未設定は None）
         updated_at: 更新日（文字列、未設定は None）
     """
@@ -53,13 +58,17 @@ class TaskDetailVM:
     description: str
     status: str
     subtitle: str = ""
-    priority: int | None = None
+    due_date: str | None = None
+    completed_at: str | None = None
+    project_id: str | None = None
+    memo_id: str | None = None
+    is_recurring: bool = False
+    recurrence_rule: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
 
 
 # TODO: 日付/時刻の整形 (subtitle のローカライズ) を集中管理するヘルパーを導入する。
-# TODO: priority などの数値をラベル化 (例: 1=Low, 3=High) し、i18n対応する。
 # TODO: パフォーマンス観点で to_card_vm はジェネレータやバッチ変換最適化を検討 (大量件数時)。
 
 
@@ -97,7 +106,12 @@ def to_detail_vm(item: dict) -> TaskDetailVM:
         description=str(item.get("description", "")),
         status=str(item.get("status", "")),
         subtitle=str(item.get("updated_at", "")),
-        priority=(int(item["priority"]) if "priority" in item and item.get("priority") is not None else None),
+        due_date=str(item.get("due_date")) if item.get("due_date") is not None else None,
+        completed_at=str(item.get("completed_at")) if item.get("completed_at") is not None else None,
+        project_id=str(item.get("project_id")) if item.get("project_id") is not None else None,
+        memo_id=str(item.get("memo_id")) if item.get("memo_id") is not None else None,
+        is_recurring=bool(item.get("is_recurring", False)),
+        recurrence_rule=str(item.get("recurrence_rule")) if item.get("recurrence_rule") is not None else None,
         created_at=str(item.get("created_at")) if item.get("created_at") is not None else None,
         updated_at=str(item.get("updated_at")) if item.get("updated_at") is not None else None,
     )
@@ -119,6 +133,14 @@ def to_detail_from_card(vm: TaskCardVM) -> TaskDetailVM:
         description=vm.description,
         status=vm.status,
         subtitle=vm.subtitle,
+        due_date=None,
+        completed_at=None,
+        project_id=None,
+        memo_id=None,
+        is_recurring=False,
+        recurrence_rule=None,
+        created_at=None,
+        updated_at=None,
     )
 
 

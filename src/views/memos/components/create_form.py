@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import flet as ft
+from loguru import logger
 
 from models import MemoStatus
 
@@ -85,7 +86,7 @@ class CreateForm(ft.Container):
                 ft.dropdown.Option(MemoStatus.IDEA.value, "IDEA"),
                 ft.dropdown.Option(MemoStatus.ARCHIVE.value, "ARCHIVE"),
             ],
-            on_change=lambda e: self._callbacks.on_status_change(MemoStatus(e.data or MemoStatus.INBOX.value)),
+            on_change=lambda e: self._handle_status_change(e.data or MemoStatus.INBOX.value),
         )
 
         basic_card = ft.Card(
@@ -165,3 +166,16 @@ class CreateForm(ft.Container):
                 controls=render_markdown_preview(self._content_editor.value or ""), spacing=8
             )
             self.update()
+
+    def _handle_status_change(self, value: str) -> None:
+        """ステータス変更イベントを安全に処理する。
+
+        与えられた value が `MemoStatus` にマッピングできない場合は INBOX にフォールバックし、
+        警告ログを出力する。
+        """
+        try:
+            status = MemoStatus(value)
+        except ValueError:
+            logger.warning(f"Invalid MemoStatus value received: {value!r}. Fallback to INBOX.")
+            status = MemoStatus.INBOX
+        self._callbacks.on_status_change(status)

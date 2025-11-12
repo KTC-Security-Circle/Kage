@@ -188,6 +188,7 @@ class CreateMemoView(BaseView):
                 self._header.enable_save()
             else:
                 self._header.disable_save()
+
     def _handle_back(self) -> None:
         self.page.go("/memos")
 

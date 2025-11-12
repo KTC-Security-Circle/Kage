@@ -47,7 +47,11 @@ def render_markdown_preview(markdown: str) -> list[ft.Control]:
         # 太字/斜体/インラインコード（簡易置換）
         html_like = line
         html_like = re.sub(r"\*\*(.+?)\*\*|__(.+?)__", lambda m: m.group(1) or m.group(2), html_like)
-        html_like = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)|(?<!_)_([^_]+?)_(?!_)", lambda m: m.group(1) or m.group(2), html_like)
+        html_like = re.sub(
+            r"(?<!\*)\*([^*]+?)\*(?!\*)|(?<!_)_([^_]+?)_(?!_)",
+            lambda m: m.group(1) or m.group(2),
+            html_like,
+        )
         html_like = re.sub(r"`(.+?)`", lambda m: m.group(1), html_like)
 
         if not html_like.strip():

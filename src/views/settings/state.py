@@ -88,10 +88,10 @@ class SettingsViewState(BaseViewState):
         # currentとoriginalに別々のインスタンスを保持
         # frozenなので全フィールドを明示的にコピーして新しいインスタンスを作成
         self.current = snapshot
-        # originalには同じ値で新しいインスタンスを作成（比較のため）
+        # originalには深いコピーを作成（Pydanticモデルもコピー）
         self._original = SettingsSnapshot(
-            appearance=snapshot.appearance,
-            window=snapshot.window,
+            appearance=snapshot.appearance.model_copy(deep=True),
+            window=snapshot.window.model_copy(deep=True),
             database_url=snapshot.database_url,
         )
 
@@ -106,10 +106,10 @@ class SettingsViewState(BaseViewState):
     def mark_as_saved(self) -> None:
         """現在の状態を保存済みとしてマークする。"""
         if self.current is not None:
-            # 別インスタンスとして保存（比較のため）
+            # 深いコピーを作成（Pydanticモデルもコピー）
             self._original = SettingsSnapshot(
-                appearance=self.current.appearance,
-                window=self.current.window,
+                appearance=self.current.appearance.model_copy(deep=True),
+                window=self.current.window.model_copy(deep=True),
                 database_url=self.current.database_url,
             )
 

@@ -10,7 +10,7 @@ import flet as ft
 from loguru import logger
 
 from logic.services.settings_service import SettingsService
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color
 
@@ -33,13 +33,14 @@ class SettingsView(BaseView):
     # 型ヒントで具体的なStateを宣言
     state: SettingsViewState
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """SettingsViewを初期化する。
 
         Args:
-            props: View共通プロパティ
+            props: ビュー共通プロパティ (page, apps などを含む)
         """
         super().__init__(props)
+        page = props.page  # 既存セクション初期化との互換性用ローカルエイリアス
 
         # State層とController層の初期化
         self.state = SettingsViewState()

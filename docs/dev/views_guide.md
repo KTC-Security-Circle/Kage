@@ -197,12 +197,12 @@ class ContextFilter(ft.Row):
 
         # GTD標準コンテキストの定義
         self.gtd_contexts = [
-            ("@電話", ft.icons.PHONE, ft.colors.BLUE),
-            ("@外出", ft.icons.DIRECTIONS_CAR, ft.colors.GREEN),
-            ("@PC", ft.icons.COMPUTER, ft.colors.PURPLE),
-            ("@家", ft.icons.HOME, ft.colors.ORANGE),
-            ("@買い物", ft.icons.SHOPPING_CART, ft.colors.RED),
-            ("@待機", ft.icons.SCHEDULE, ft.colors.YELLOW),
+            ("@電話", ft.icons.PHONE, ft.Colors.BLUE),
+            ("@外出", ft.icons.DIRECTIONS_CAR, ft.Colors.GREEN),
+            ("@PC", ft.icons.COMPUTER, ft.Colors.PURPLE),
+            ("@家", ft.icons.HOME, ft.Colors.ORANGE),
+            ("@買い物", ft.icons.SHOPPING_CART, ft.Colors.RED),
+            ("@待機", ft.icons.SCHEDULE, ft.Colors.YELLOW),
         ]
 
         self._build_context_chips()
@@ -248,25 +248,25 @@ class QuickActionButton(ft.ElevatedButton):
             "DO_NOW": {  # 2分以内で完了
                 "text": "今すぐ実行",
                 "icon": ft.icons.FLASH_ON,
-                "color": ft.colors.GREEN,
+                "color": ft.Colors.GREEN,
                 "tooltip": "2分以内で完了できるタスクをすぐに実行"
             },
             "DEFER": {  # 後で実行
                 "text": "後で実行",
                 "icon": ft.icons.SCHEDULE,
-                "color": ft.colors.BLUE,
+                "color": ft.Colors.BLUE,
                 "tooltip": "Next Actionリストに追加"
             },
             "DELEGATE": {  # 委譲
                 "text": "委譲",
                 "icon": ft.icons.PERSON_ADD,
-                "color": ft.colors.ORANGE,
+                "color": ft.Colors.ORANGE,
                 "tooltip": "他の人に委譲"
             },
             "DELETE": {  # 削除
                 "text": "削除",
                 "icon": ft.icons.DELETE,
-                "color": ft.colors.RED,
+                "color": ft.Colors.RED,
                 "tooltip": "不要なタスクを削除"
             }
         }
@@ -277,7 +277,7 @@ class QuickActionButton(ft.ElevatedButton):
         self.icon = config["icon"]
         self.bgcolor = config["color"]
         self.tooltip = config["tooltip"]
-        self.style = ft.ButtonStyle(color=ft.colors.WHITE)
+        self.style = ft.ButtonStyle(color=ft.Colors.WHITE)
 ```
 
 ## Project 階層表示コンポーネント
@@ -323,7 +323,7 @@ class ProjectTreeView(ft.Container):
             progress = self._calculate_project_progress(project)
 
             tile = ft.ListTile(
-                leading=ft.Icon(ft.icons.FOLDER, color=ft.colors.BLUE_400),
+                leading=ft.Icon(ft.icons.FOLDER, color=ft.Colors.BLUE_400),
                 title=ft.Text(project.title, weight=ft.FontWeight.BOLD),
                 subtitle=ft.Text(f"進捗: {progress:.0%} | タスク数: {len(project.tasks)}"),
                 trailing=ft.LinearProgressBar(value=progress, width=100),
@@ -364,7 +364,7 @@ def create_welcome_message() -> ft.Container:
         content=ft.Text(
             "タスク管理でもっと効率的に！",
             size=18,
-            color=ft.colors.GREY_700,
+            color=ft.Colors.GREY_700,
         ),
         alignment=ft.alignment.center,
     )
@@ -392,8 +392,8 @@ def create_action_button(
         width=width,
         height=50,
         style=ft.ButtonStyle(
-            bgcolor=ft.colors.BLUE_600,
-            color=ft.colors.WHITE,
+            bgcolor=ft.Colors.BLUE_600,
+            color=ft.Colors.WHITE,
         ),
         on_click=on_click,
     )
@@ -539,7 +539,7 @@ def create_loading_spinner() -> ft.ProgressRing:
     return ft.ProgressRing()
 
 def create_divider() -> ft.Divider:
-    return ft.Divider(height=1, color=ft.colors.GREY_300)
+    return ft.Divider(height=1, color=ft.Colors.GREY_300)
 ```
 
 #### クラスベースを選ぶ場合

@@ -167,7 +167,7 @@ class ApplicationServices:
                 instance = self._build_service_instance(service_type)
                 self._services[service_type] = instance
                 logger.debug(
-                    "ApplicationServices: %s を初期化しました (uow=%s)",
+                    "ApplicationServices: {} を初期化しました (uow={})",
                     service_type.__name__,
                     self._unit_of_work_factory.__name__,
                 )

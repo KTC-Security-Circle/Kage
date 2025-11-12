@@ -8,19 +8,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from views.theme import get_status_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     import flet as ft
 
-from views.theme import get_status_color
+    from views.projects.presenter import ProjectCardVM
 
 
 def create_project_card(
     project: dict[str, str],
-    on_edit: Callable[[ft.ControlEvent, dict[str, str]], None],  # type: ignore[name-defined]
-    on_delete: Callable[[ft.ControlEvent, dict[str, str]], None],  # type: ignore[name-defined]
-) -> ft.Control:  # type: ignore[name-defined]
+    on_edit: Callable[[ft.ControlEvent, dict[str, str]], None],
+    on_delete: Callable[[ft.ControlEvent, dict[str, str]], None],
+) -> ft.Control:
     """プロジェクトカードを作成する。
 
     Args:
@@ -154,4 +156,94 @@ def create_project_card(
             padding=20,
         ),
         elevation=2,
+    )
+
+
+def create_project_card_from_vm(
+    vm: ProjectCardVM,  # type: ignore[name-defined]
+    on_select: Callable[[str], None],
+    *,
+    is_selected: bool = False,
+) -> ft.Control:  # type: ignore[name-defined]
+    """ViewModel からプロジェクトカードを作成する。
+
+    View の直書きを置き換え、再利用性を高めた統一インターフェース。
+
+    Args:
+        vm: プロジェクトカードViewModel
+        on_select: カード選択時のコールバック (project_id を引数に取る)
+        is_selected: 選択状態フラグ
+
+    Returns:
+        プロジェクトカードコンポーネント
+    """
+    import flet as ft
+
+    return ft.Card(
+        content=ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Text(
+                                vm.title,
+                                style=ft.TextThemeStyle.TITLE_SMALL,
+                                weight=ft.FontWeight.W_500,
+                                expand=True,
+                            ),
+                            ft.Container(
+                                content=ft.Text(
+                                    vm.status,
+                                    style=ft.TextThemeStyle.LABEL_SMALL,
+                                    color=ft.Colors.WHITE,
+                                    weight=ft.FontWeight.W_500,
+                                ),
+                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                bgcolor=vm.status_color,
+                                border_radius=12,
+                            ),
+                        ],
+                    ),
+                    ft.Text(
+                        vm.subtitle,
+                        style=ft.TextThemeStyle.BODY_SMALL,
+                        color=ft.Colors.GREY_600,
+                    ),
+                    ft.Text(
+                        vm.description,
+                        style=ft.TextThemeStyle.BODY_SMALL,
+                        color=ft.Colors.GREY_700,
+                        max_lines=2,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text(
+                                        vm.progress_text,
+                                        style=ft.TextThemeStyle.BODY_SMALL,
+                                        color=ft.Colors.GREY_600,
+                                    ),
+                                ],
+                            ),
+                            ft.ProgressBar(
+                                value=vm.progress_value,
+                                color=ft.Colors.BLUE,
+                                bgcolor=ft.Colors.GREY_300,
+                                height=6,
+                            ),
+                        ],
+                        spacing=4,
+                    ),
+                ],
+                spacing=8,
+            ),
+            padding=16,
+            ink=True,
+            on_click=lambda _: on_select(vm.id),
+        ),
+        elevation=1 if not is_selected else 3,
+        color=ft.Colors.WHITE if not is_selected else ft.Colors.BLUE_50,
+        surface_tint_color=ft.Colors.BLUE if is_selected else None,
     )

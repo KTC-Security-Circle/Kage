@@ -7,10 +7,8 @@
 from __future__ import annotations
 
 import flet as ft
-from loguru import logger
 
-from logic.services.settings_service import SettingsService
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color
 
@@ -18,6 +16,7 @@ from .components.appearance_section import AppearanceSection
 from .components.database_section import DatabaseSection
 from .components.window_section import WindowSection
 from .controller import SettingsController
+from .query import SettingsQuery
 from .state import SettingsViewState
 
 
@@ -33,7 +32,7 @@ class SettingsView(BaseView):
     # 型ヒントで具体的なStateを宣言
     state: SettingsViewState
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """SettingsViewを初期化する。
 
         Args:
@@ -41,20 +40,24 @@ class SettingsView(BaseView):
         """
         super().__init__(props)
 
+        # UI更新中フラグ（イベント発火を抑制）
+        self._updating_ui = False
+
         # State層とController層の初期化
         self.state = SettingsViewState()
-        self._settings_service = SettingsService.build_service()
+        # ApplicationServices経由でSettingsApplicationServiceを取得
+        self._query = SettingsQuery(app_service=self.apps.settings)
         self.controller = SettingsController(
             state=self.state,
-            service=self._settings_service,
+            query=self._query,
         )
 
         # セクションコンポーネント（ハンドラ注入）
-        self.appearance_section = AppearanceSection(page, self._on_setting_changed)
-        self.window_section = WindowSection(page, self._on_setting_changed)
-        self.database_section = DatabaseSection(page, self._on_setting_changed)
+        self.appearance_section = AppearanceSection(props.page, self._on_setting_changed)
+        self.window_section = WindowSection(props.page, self._on_setting_changed)
+        self.database_section = DatabaseSection(props.page, self._on_setting_changed)
 
-        # 保存・リセットボタン
+        # 保存・リセットボタン（常時有効）
         self.save_button = ft.ElevatedButton(
             text="設定を保存",
             icon=ft.Icons.SAVE,
@@ -63,22 +66,25 @@ class SettingsView(BaseView):
                 color={ft.ControlState.DEFAULT: get_light_color("on_primary")},
             ),
             on_click=self._on_save_settings,
-            disabled=True,
         )
 
         self.reset_button = ft.OutlinedButton(
             text="リセット",
             icon=ft.Icons.REFRESH,
             on_click=self._on_reset_settings,
-            disabled=True,
         )
 
-    def build(self) -> ft.Control:
+    def build_content(self) -> ft.Control:
         """設定画面のUIを構築する。
 
         Returns:
             構築されたUIコントロール
         """
+        # 初回構築時に設定をロード
+        if self.state.current is None:
+            self.controller.load_settings()
+            self._update_sections_from_state()
+
         return ft.Container(
             content=ft.Column(
                 [
@@ -224,55 +230,81 @@ class SettingsView(BaseView):
 
     def _on_setting_changed(self) -> None:
         """設定値が変更された時の処理。"""
-        # 状態変更は自動的にhas_unsaved_changesで検知される
-        self.save_button.disabled = not self.state.has_unsaved_changes
-        self.reset_button.disabled = not self.state.has_unsaved_changes
-        if hasattr(self.page, "update"):
-            self.page.update()
+        # UI更新中は処理をスキップ
+        if self._updating_ui:
+            return
+
+        if self.state.current is None:
+            return
+
+        # UIから値を取得してControllerの状態を更新（値が変更された場合のみ）
+        current = self.state.current
+
+        # 外観設定
+        if (
+            self.appearance_section.theme_radio.value
+            and self.appearance_section.theme_radio.value != current.appearance.theme
+        ):
+            self.controller.update_theme(self.appearance_section.theme_radio.value)
+
+        if (
+            self.appearance_section.user_name_field.value is not None
+            and self.appearance_section.user_name_field.value != current.appearance.user_name
+        ):
+            self.controller.update_user_name(self.appearance_section.user_name_field.value)
+
+        # ウィンドウ設定
+        try:
+            width = int(self.window_section.width_field.value or "1280")
+            height = int(self.window_section.height_field.value or "720")
+            if [width, height] != current.window.size:
+                self.controller.update_window_size(width, height)
+
+            x = int(self.window_section.x_field.value or "100")
+            y = int(self.window_section.y_field.value or "100")
+            if [x, y] != current.window.position:
+                self.controller.update_window_position(x, y)
+        except ValueError:
+            # 不正な数値の場合は何もしない
+            pass
+
+        # データベース設定
+        if self.database_section.url_field.value and self.database_section.url_field.value != current.database_url:
+            self.controller.update_database_url(self.database_section.url_field.value)
 
     def _on_save_settings(self, _: ft.ControlEvent) -> None:
         """設定保存ボタンがクリックされた時の処理。"""
-        try:
-            # Controllerに保存処理を委譲
-            self.controller.save_settings()
 
-            # UI更新
-            self.save_button.disabled = True
-            self.reset_button.disabled = True
+        def save_and_apply_settings() -> None:
+            """設定を保存し、ランタイム設定を適用する。"""
+            self.controller.save_settings()
+            self.controller.apply_runtime_effects(self.page)
             self.show_success_snackbar("設定を保存しました")
 
-            # ページ設定の適用（Controllerに委譲）
-            self.controller.apply_runtime_effects(self.page)
-
-            logger.info("設定を正常に保存しました")
-
-        except Exception as e:
-            logger.error(f"設定保存時にエラーが発生しました: {e}")
-            self.notify_error(f"設定の保存に失敗しました: {e}")
+        self.with_loading(
+            fn_or_coro=save_and_apply_settings,
+            user_error_message="設定の保存に失敗しました",
+        )
 
     def _on_reset_settings(self, _: ft.ControlEvent) -> None:
         """リセットボタンがクリックされた時の処理。"""
 
         def on_confirm_reset() -> None:
             """リセット確認時の処理。"""
-            try:
-                # Controllerにリセット処理を委譲
+
+            def reset_and_update() -> None:
+                """設定をリセットし、UIを更新する。"""
                 self.controller.reset_settings()
-
-                # セクションUIを更新
                 self._update_sections_from_state()
-
-                # UI更新
-                self.save_button.disabled = True
-                self.reset_button.disabled = True
                 self.show_info_snackbar("設定をリセットしました")
 
                 if self.page:
                     self.page.update()
 
-            except Exception as e:
-                logger.error(f"設定のリセットに失敗しました: {e}")
-                self.notify_error(f"設定のリセットに失敗しました: {e}")
+            self.with_loading(
+                fn_or_coro=reset_and_update,
+                user_error_message="設定のリセットに失敗しました",
+            )
 
         # 確認ダイアログを表示
         if not self.page:
@@ -291,25 +323,30 @@ class SettingsView(BaseView):
         if self.state.current is None:
             return
 
-        # TODO: セクションコンポーネントに値を反映する実装
-        # 現在のセクションコンポーネントはまだ古い実装のため、統合は後で行う
+        snapshot = self.state.current
 
-    def did_mount(self) -> None:
-        """ビューがマウントされた時の処理。"""
-        super().did_mount()
-
-        # Controllerを使って設定値を読み込む
+        # UI更新中フラグを立てる（イベント発火を抑制）
+        self._updating_ui = True
         try:
-            self.controller.load_settings()
+            # 外観設定セクションの更新
+            self.appearance_section.theme_radio.value = snapshot.appearance.theme
+            self.appearance_section.user_name_field.value = snapshot.appearance.user_name
 
-            # セクションUIを更新
-            self._update_sections_from_state()
+            # ウィンドウ設定セクションの更新
+            self.window_section.width_field.value = str(snapshot.window.size[0])
+            self.window_section.height_field.value = str(snapshot.window.size[1])
+            self.window_section.x_field.value = str(snapshot.window.position[0])
+            self.window_section.y_field.value = str(snapshot.window.position[1])
 
-            logger.debug("設定画面を初期化しました")
+            # データベース設定セクションの更新
+            self.database_section.url_field.value = snapshot.database_url
 
-        except Exception as e:
-            logger.error(f"設定画面の初期化でエラーが発生しました: {e}")
-            self.notify_error(f"設定の読み込みに失敗しました: {e}")
+            # UIを更新
+            if self.page:
+                self.page.update()
+        finally:
+            # フラグを戻す
+            self._updating_ui = False
 
     def will_unmount(self) -> None:
         """ビューがアンマウントされる時の処理。"""

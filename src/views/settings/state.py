@@ -85,8 +85,15 @@ class SettingsViewState(BaseViewState):
         Args:
             snapshot: ロードする設定スナップショット
         """
+        # currentとoriginalに別々のインスタンスを保持
+        # frozenなので全フィールドを明示的にコピーして新しいインスタンスを作成
         self.current = snapshot
-        self._original = snapshot
+        # originalには同じ値で新しいインスタンスを作成（比較のため）
+        self._original = SettingsSnapshot(
+            appearance=snapshot.appearance,
+            window=snapshot.window,
+            database_url=snapshot.database_url,
+        )
 
     def update_current(self, snapshot: SettingsSnapshot) -> None:
         """現在の編集中スナップショットを更新する。
@@ -99,7 +106,12 @@ class SettingsViewState(BaseViewState):
     def mark_as_saved(self) -> None:
         """現在の状態を保存済みとしてマークする。"""
         if self.current is not None:
-            self._original = self.current
+            # 別インスタンスとして保存（比較のため）
+            self._original = SettingsSnapshot(
+                appearance=self.current.appearance,
+                window=self.current.window,
+                database_url=self.current.database_url,
+            )
 
     def start_loading(self) -> None:
         """ローディング状態を開始する。"""

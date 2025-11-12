@@ -31,7 +31,7 @@ class SettingsApplicationService(BaseApplicationService[None]):
         self._settings_service = SettingsService()
 
     @classmethod
-    def invalidate(cls) -> None:  # type: ignore[override]
+    def invalidate(cls) -> None:
         """共有インスタンスと ConfigManager を無効化する。
 
         次回 get_instance() で新しい設定マネージャー/サービスが構築される。
@@ -166,3 +166,26 @@ class SettingsApplicationService(BaseApplicationService[None]):
         """
         logger.info(f"個別設定更新開始: {path} = {value}")
         return self._settings_service.update_setting_by_path(path, value)
+
+    def load_settings_snapshot(self) -> dict[str, Any]:
+        """設定値をスナップショット形式でロードする。
+
+        View層が必要とする設定値を辞書形式で返す。
+
+        Returns:
+            設定スナップショット辞書
+        """
+        logger.debug("設定スナップショットをロード")
+        return self._settings_service.load_settings_snapshot()
+
+    def save_settings_snapshot(self, snapshot: dict[str, Any]) -> None:
+        """設定スナップショットを保存する。
+
+        Args:
+            snapshot: 保存する設定スナップショット
+
+        Raises:
+            ValidationError: バリデーションエラー
+        """
+        logger.info("設定スナップショットを保存")
+        self._settings_service.save_settings_snapshot(snapshot)

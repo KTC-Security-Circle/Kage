@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from logic.application.apps import ApplicationServices
 
 from views.home import HomeView
-from views.memos import MemosView
+from views.memos import CreateMemoView, MemosView
 from views.projects import ProjectsView
 from views.settings import SettingsView
 from views.shared.base_view import BaseViewProps
@@ -91,6 +91,7 @@ def _get_view_content(page: ft.Page, route: str, apps: ApplicationServices) -> f
         "/tasks": lambda p: TasksView(p).build(),
         "/settings": lambda p: SettingsView(p).build(),
         "/memos": lambda p: MemosView(p).build(),
+        "/memos/create": lambda p: CreateMemoView(p).build(),
         "/terms": lambda p: TermsView(p).build(),
         "/weekly-review": lambda p: WeeklyReviewView(p).build(),
     }

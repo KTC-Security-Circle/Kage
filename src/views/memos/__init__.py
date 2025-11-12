@@ -30,8 +30,10 @@ MVPパターンに基づき、責務を明確に分離した設計。
     - AI提案機能（統合フェーズで実装予定）
 """
 
+from .create_memo_view import CreateMemoView
 from .view import MemosView
 
 __all__ = [
     "MemosView",
+    "CreateMemoView",
 ]

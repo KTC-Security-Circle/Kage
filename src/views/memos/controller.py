@@ -158,8 +158,20 @@ class MemosController:
         Raises:
             NotImplementedError: 未実装
         """
-        msg = "create_memo is not yet implemented"
-        raise NotImplementedError(msg)
+        # TODO: 実装方針
+        #  1) ApplicationService 呼び出し
+        #     created = self.memo_app.create(title=title, content=content, status=status)
+        #  2) 並び順の適用と state 反映
+        #     self.state.upsert_memo(created)
+        #     self.state.set_all_memos(sort_memos(self.state.all_memos))
+        #  3) 選択状態の更新（作成直後のメモを選択）
+        #     self.state.set_selected_memo(created.id)
+        #     self.state.reconcile()
+        #  4) 例外処理
+        #     try/except で NotFoundError/ValidationError 等を捕捉しログ + 再送出 or None返却方針
+        # 現状は未実装
+        msg_create = "create_memo is not yet implemented"
+        raise NotImplementedError(msg_create)
 
     def update_memo(self, memo_id: UUID, *, title: str | None = None, content: str | None = None) -> MemoRead:  # type: ignore[name-defined]
         """既存のメモを更新する。
@@ -175,8 +187,17 @@ class MemosController:
         Raises:
             NotImplementedError: 未実装
         """
-        msg = "update_memo is not yet implemented"
-        raise NotImplementedError(msg)
+        # TODO: 実装方針
+        #  1) ApplicationService 呼び出し
+        #     updated = self.memo_app.update(memo_id, title=title, content=content)
+        #  2) state 反映（upsert + 必要なら並び替え）
+        #     self.state.upsert_memo(updated)
+        #     self.state.set_all_memos(sort_memos(self.state.all_memos))
+        #  3) 選択状態整合（reconcile）
+        #     self.state.reconcile()
+        # 現状は未実装
+        msg_update = "update_memo is not yet implemented"
+        raise NotImplementedError(msg_update)
 
     def delete_memo(self, memo_id: UUID) -> None:
         """メモを削除する。
@@ -187,5 +208,14 @@ class MemosController:
         Raises:
             NotImplementedError: 未実装
         """
-        msg = "delete_memo is not yet implemented"
-        raise NotImplementedError(msg)
+        # TODO: 実装方針
+        #  1) ApplicationService 呼び出し
+        #     self.memo_app.delete(memo_id)
+        #  2) state から削除し、並び順維持
+        #     self.state.all_memos = [m for m in self.state.all_memos if m.id != memo_id]
+        #     self.state.set_all_memos(sort_memos(self.state.all_memos))
+        #  3) 選択状態整合（reconcile）
+        #     self.state.reconcile()
+        # 現状は未実装
+        msg_delete = "delete_memo is not yet implemented"
+        raise NotImplementedError(msg_delete)

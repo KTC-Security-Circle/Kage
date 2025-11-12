@@ -2,37 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import flet as ft
 
 from views.memos import presenter
 
-from .memo_card import MemoCard, MemoCardData
+from .memo_card import MemoCard
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from models import MemoRead
 
-
-# ========================================
-# データモデル
-# ========================================
-
-
-@dataclass(frozen=True, slots=True)
-class MemoListData:
-    """メモリスト表示用データ
-
-    Attributes:
-        cards: 表示するメモカードデータのリスト
-        empty_message: リストが空の場合のメッセージ
-    """
-
-    cards: tuple[MemoCardData, ...]
-    empty_message: str | None = None
+    # データモデルは components/types.py の MemoListData を使用
 
 
 # ========================================

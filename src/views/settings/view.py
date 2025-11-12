@@ -10,7 +10,7 @@ import flet as ft
 from loguru import logger
 
 from logic.services.settings_service import SettingsService
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color
 
@@ -33,11 +33,12 @@ class SettingsView(BaseView):
     # 型ヒントで具体的なStateを宣言
     state: SettingsViewState
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """SettingsViewを初期化する。
 
         Args:
-            props: View共通プロパティ
+            props: View共通プロパティ。BaseViewPropsとしてFletの``page``と
+                アプリケーションサービス``apps``を受け取ります。
         """
         super().__init__(props)
 
@@ -50,9 +51,9 @@ class SettingsView(BaseView):
         )
 
         # セクションコンポーネント（ハンドラ注入）
-        self.appearance_section = AppearanceSection(page, self._on_setting_changed)
-        self.window_section = WindowSection(page, self._on_setting_changed)
-        self.database_section = DatabaseSection(page, self._on_setting_changed)
+        self.appearance_section = AppearanceSection(self.page, self._on_setting_changed)
+        self.window_section = WindowSection(self.page, self._on_setting_changed)
+        self.database_section = DatabaseSection(self.page, self._on_setting_changed)
 
         # 保存・リセットボタン
         self.save_button = ft.ElevatedButton(

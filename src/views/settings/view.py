@@ -1,6 +1,7 @@
 """設定画面のメインビュークラス。
 
 アプリケーション設定の表示・編集機能を提供します。
+新レイヤー構造（state/query/presenter/controller）に準拠。
 """
 
 from __future__ import annotations
@@ -8,24 +9,31 @@ from __future__ import annotations
 import flet as ft
 from loguru import logger
 
-from settings.manager import get_config_manager
-from views.shared.base_view import BaseView, BaseViewProps
-from views.shared.dialogs import ConfirmDialog, ErrorDialog
+from logic.services.settings_service import SettingsService
+from views.shared.base_view import BaseView
+from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color
 
 from .components.appearance_section import AppearanceSection
 from .components.database_section import DatabaseSection
 from .components.window_section import WindowSection
+from .controller import SettingsController
+from .state import SettingsViewState
 
 
 class SettingsView(BaseView):
     """設定画面のメインビュークラス。
 
-    アプリケーション設定の表示・編集機能を提供します。
-    変更は即座に適用され、設定ファイルに保存されます。
+    新レイヤー構造に準拠：
+    - State: 表示状態の保持
+    - Controller: イベント処理とロジック実行
+    - View: UI構築とハンドラ注入
     """
 
-    def __init__(self, props: BaseViewProps) -> None:
+    # 型ヒントで具体的なStateを宣言
+    state: SettingsViewState
+
+    def __init__(self, page: ft.Page) -> None:
         """SettingsViewを初期化する。
 
         Args:
@@ -33,14 +41,18 @@ class SettingsView(BaseView):
         """
         super().__init__(props)
 
-        # 設定管理
-        self.config_manager = get_config_manager()
-        self.has_unsaved_changes = False
+        # State層とController層の初期化
+        self.state = SettingsViewState()
+        self._settings_service = SettingsService.build_service()
+        self.controller = SettingsController(
+            state=self.state,
+            service=self._settings_service,
+        )
 
-        # セクションコンポーネント
-        self.appearance_section = AppearanceSection(self.page, self._on_setting_changed)
-        self.window_section = WindowSection(self.page, self._on_setting_changed)
-        self.database_section = DatabaseSection(self.page, self._on_setting_changed)
+        # セクションコンポーネント（ハンドラ注入）
+        self.appearance_section = AppearanceSection(page, self._on_setting_changed)
+        self.window_section = WindowSection(page, self._on_setting_changed)
+        self.database_section = DatabaseSection(page, self._on_setting_changed)
 
         # 保存・リセットボタン
         self.save_button = ft.ElevatedButton(
@@ -212,58 +224,60 @@ class SettingsView(BaseView):
 
     def _on_setting_changed(self) -> None:
         """設定値が変更された時の処理。"""
-        self.has_unsaved_changes = True
-        self.save_button.disabled = False
-        self.reset_button.disabled = False
+        # 状態変更は自動的にhas_unsaved_changesで検知される
+        self.save_button.disabled = not self.state.has_unsaved_changes
+        self.reset_button.disabled = not self.state.has_unsaved_changes
         if hasattr(self.page, "update"):
             self.page.update()
 
     def _on_save_settings(self, _: ft.ControlEvent) -> None:
         """設定保存ボタンがクリックされた時の処理。"""
         try:
-            with self.config_manager.edit() as editable_settings:
-                # 各セクションから設定値を取得して適用
-                self.appearance_section.apply_settings(editable_settings)
-                self.window_section.apply_settings(editable_settings)
-                self.database_section.apply_settings(editable_settings)
+            # Controllerに保存処理を委譲
+            self.controller.save_settings()
 
-            # 保存成功
-            self.has_unsaved_changes = False
+            # UI更新
             self.save_button.disabled = True
             self.reset_button.disabled = True
-
             self.show_success_snackbar("設定を保存しました")
 
-            # ページ設定の適用（テーマ変更等）
-            self._apply_page_settings()
+            # ページ設定の適用（Controllerに委譲）
+            self.controller.apply_runtime_effects(self.page)
 
             logger.info("設定を正常に保存しました")
 
         except Exception as e:
             logger.error(f"設定保存時にエラーが発生しました: {e}")
-            self._show_error_dialog("設定の保存に失敗しました", str(e))
+            self.notify_error(f"設定の保存に失敗しました: {e}")
 
     def _on_reset_settings(self, _: ft.ControlEvent) -> None:
         """リセットボタンがクリックされた時の処理。"""
 
         def on_confirm_reset() -> None:
             """リセット確認時の処理。"""
-            self._reset_to_current_settings()
-            self.has_unsaved_changes = False
-            self.save_button.disabled = True
-            self.reset_button.disabled = True
-            self.show_info_snackbar("設定をリセットしました")
-            if self.page:
-                self.page.update()
+            try:
+                # Controllerにリセット処理を委譲
+                self.controller.reset_settings()
 
-        def on_cancel_reset() -> None:
-            """リセットキャンセル時の処理。"""
+                # セクションUIを更新
+                self._update_sections_from_state()
 
-        # 確認処理を分離してBoolean引数を回避
+                # UI更新
+                self.save_button.disabled = True
+                self.reset_button.disabled = True
+                self.show_info_snackbar("設定をリセットしました")
+
+                if self.page:
+                    self.page.update()
+
+            except Exception as e:
+                logger.error(f"設定のリセットに失敗しました: {e}")
+                self.notify_error(f"設定のリセットに失敗しました: {e}")
+
+        # 確認ダイアログを表示
         if not self.page:
             return
 
-        # ラムダを使って直接呼び出しを処理
         dialog = ConfirmDialog(
             self.page,
             "設定のリセット",
@@ -272,65 +286,30 @@ class SettingsView(BaseView):
         )
         dialog.show()
 
-    def _reset_to_current_settings(self) -> None:
-        """現在の保存済み設定値にリセットする。"""
-        current_settings = self.config_manager.settings
+    def _update_sections_from_state(self) -> None:
+        """Stateの値からセクションUIを更新する。"""
+        if self.state.current is None:
+            return
 
-        # 各セクションを現在の設定値でリセット
-        self.appearance_section.reset_to_settings(current_settings)
-        self.window_section.reset_to_settings(current_settings)
-        self.database_section.reset_to_settings(current_settings)
-
-    def _apply_page_settings(self) -> None:
-        """ページに設定を適用する。"""
-        try:
-            # テーマの適用
-            theme = self.config_manager.theme
-            if hasattr(self.page, "theme_mode"):
-                self.page.theme_mode = ft.ThemeMode.DARK if theme == "dark" else ft.ThemeMode.LIGHT
-
-            # ウィンドウサイズの適用（デスクトップアプリの場合）
-            window_size = self.config_manager.window_size
-            if hasattr(self.page, "window_width") and hasattr(self.page, "window_height"):
-                self.page.window_width = window_size[0]
-                self.page.window_height = window_size[1]
-
-            if hasattr(self.page, "update"):
-                self.page.update()
-
-        except Exception as e:
-            logger.warning(f"ページ設定の適用に失敗しました: {e}")
-
-    def _show_error_dialog(self, title: str, message: str) -> None:
-        """エラーダイアログを表示する。
-
-        Args:
-            title: エラータイトル
-            message: エラーメッセージ
-        """
-        dialog = ErrorDialog(
-            self.page,
-            title,
-            message,
-        )
-        dialog.show()
+        # TODO: セクションコンポーネントに値を反映する実装
+        # 現在のセクションコンポーネントはまだ古い実装のため、統合は後で行う
 
     def did_mount(self) -> None:
         """ビューがマウントされた時の処理。"""
         super().did_mount()
 
-        # 現在の設定値で各セクションを初期化
+        # Controllerを使って設定値を読み込む
         try:
-            current_settings = self.config_manager.settings
-            self.appearance_section.reset_to_settings(current_settings)
-            self.window_section.reset_to_settings(current_settings)
-            self.database_section.reset_to_settings(current_settings)
+            self.controller.load_settings()
+
+            # セクションUIを更新
+            self._update_sections_from_state()
 
             logger.debug("設定画面を初期化しました")
 
         except Exception as e:
             logger.error(f"設定画面の初期化でエラーが発生しました: {e}")
-            self._show_error_dialog("初期化エラー", f"設定の読み込みに失敗しました: {e}")
+            self.notify_error(f"設定の読み込みに失敗しました: {e}")
 
     def will_unmount(self) -> None:
         """ビューがアンマウントされる時の処理。"""

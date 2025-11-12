@@ -115,9 +115,10 @@ class WindowSection(ft.Column):
     def _on_get_current_size(self, _: ft.ControlEvent) -> None:
         """現在のウィンドウサイズを取得する。"""
         try:
-            if hasattr(self.page, "window_width") and hasattr(self.page, "window_height"):
-                self.width_field.value = str(int(self.page.window_width or 1280))
-                self.height_field.value = str(int(self.page.window_height or 720))
+            if self.page:
+                # type: ignore を使用してFletの型スタブの問題を回避
+                self.width_field.value = str(int(self.page.window_width or 1280))  # type: ignore[attr-defined]
+                self.height_field.value = str(int(self.page.window_height or 720))  # type: ignore[attr-defined]
 
             # 位置の取得は困難なため、デフォルトを維持
             if not self.x_field.value:
@@ -125,8 +126,8 @@ class WindowSection(ft.Column):
             if not self.y_field.value:
                 self.y_field.value = "100"
 
-            if hasattr(self.page, "update"):
-                self.page.update()
+            if self.page:
+                self.update()
 
             self.on_change()
 
@@ -172,5 +173,5 @@ class WindowSection(ft.Column):
         self.x_field.value = str(settings.window.position[0])
         self.y_field.value = str(settings.window.position[1])
 
-        if hasattr(self.page, "update"):
-            self.page.update()
+        if self.page:
+            self.update()

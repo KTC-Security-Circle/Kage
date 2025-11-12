@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -33,19 +34,29 @@ class TaskDetailPanel:
         # TaskDetailVM 優先。後方互換で TaskCardVM も許容
         self._vm: TaskDetailVM | TaskCardVM | None = None
         self._status_dd: ft.Dropdown | None = None
-        self._root: ft.Control | None = None
+        # ルートは固定のコンテナを持ち、content を差し替える（コントロール参照の不一致を防ぐ）
+        self._root: ft.Container = ft.Container(expand=True)
 
     @property
     def control(self) -> ft.Control:
-        return self._root or self._placeholder()
+        # 初期表示はプレースホルダ
+        if self._root.content is None:
+            self._root.content = self._placeholder()
+        return self._root
 
     def set_item(self, vm: TaskDetailVM | TaskCardVM | None) -> None:
         """詳細対象を切り替えて再描画。"""
         self._vm = vm
         if not vm:
-            self._root = self._placeholder()
-            # 親側で update される想定
+            # 既存ルートの content を置換
+            self._root.content = self._placeholder()
+            with contextlib.suppress(AssertionError):
+                self._root.update()
             return
+        # TODO: MVC化時はフォーム編集(タイトル/説明/期日等)をこのパネルに統合し、
+        #       変更は Controller 経由で ApplicationService に送る。
+        # TODO: ステータス→色 (Badge) のマッピングは constants に集約し、表示とロジックで共有。
+        # TODO: 書き込み失敗時は楽観的更新のロールバックとエラーToastを表示する。
 
         # Flet Option は key/text を指定可能。value は key が使われる。
         status_options = [ft.dropdown.Option(key=s, text=TASK_STATUS_LABELS.get(s, s)) for s in STATUS_ORDER]
@@ -74,7 +85,10 @@ class TaskDetailPanel:
                 padding=16,
             )
         )
-        self._root = card
+        # ルートの content を差し替えて更新
+        self._root.content = card
+        with contextlib.suppress(AssertionError):
+            self._root.update()
 
     # Internal
     def _placeholder(self) -> ft.Control:

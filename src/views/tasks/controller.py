@@ -79,6 +79,11 @@ class TasksController:
             # 反映
             self._update_and_render(self._state)
 
+    # TODO: MVC整備後は Command/ApplicationService 層へ書き込み操作を委譲する。
+    #       例: TaskApplicationService.change_status(cmd) にトランザクション管理/ドメイン検証を移管。
+    # TODO: 検索入力は debounce / throttle を導入し過剰な再描画を抑制。
+    # TODO: _update_and_render の失敗時にユーザー通知 (トースト/ダイアログ) を発火するエラーハンドリングを追加。
+
     # --- Query helpers for View ---
     def get_counts(self) -> dict[str, int]:
         """現在のキーワードフィルタでのステータス別件数を返す。"""
@@ -86,6 +91,8 @@ class TasksController:
         for status in STATUS_ORDER:
             counts[status] = len(self._query.list_items(self._state.keyword, status))
         return counts
+        # TODO: counts は Query 側で集約できるようにするとクエリ回数を削減可能。
+        #       例: get_counts(keyword) -> dict[status, count]
 
     def get_total_count(self) -> int:
         """現在のキーワードでの総件数。"""
@@ -110,3 +117,4 @@ class TasksController:
             self._on_change(vm)
         except Exception as e:  # defensive
             logger.error(f"on_change callback failed: {e}")
+            # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。

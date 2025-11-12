@@ -75,6 +75,9 @@ class TasksView(BaseView):
     # BaseView から呼ばれる
     def build_content(self) -> ft.Control:
         """UIコンテンツを構築する。"""
+        # TODO: MVC化に伴い InMemoryQuery を ApplicationService 経由の取得に置き換える。
+        # TODO: ツールバーに「新規/編集/削除」アクションを追加。編集は右ペイン内インラインまたはモーダル。
+        # TODO: アクセシビリティ改善 (ショートカット/フォーカス移動/スクリーンリーダー対応)。
         # 総件数は Controller から取得（キーワードフィルタを考慮）
         total_count = 0
         try:
@@ -102,7 +105,7 @@ class TasksView(BaseView):
             label="状態",
             options=status_options,
             value="",
-            on_change=lambda e: self._controller.set_status(e.control.value or None),  # type: ignore[arg-type]
+            on_change=lambda e: self._on_status_dd_change(e),  # type: ignore[arg-type]
             width=160,
         )
 
@@ -130,12 +133,19 @@ class TasksView(BaseView):
 
         # タブ (React テンプレート準拠) - 各ステータス件数をバッジ表示
         counts = self._safe_get_counts()
+        # タブ: 先頭に「すべて」を追加し単一ソースに統一（status=None を表す）
+        total = 0
+        try:
+            total = self._controller.get_total_count()
+        except Exception:
+            total = len(self._current_vm)
+        self._tab_keys: list[str | None] = [None, *STATUS_ORDER]  # 0番目は None (=すべて)
+        tab_texts: list[str] = [f"すべて ({total})"] + [
+            f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})" for status in STATUS_ORDER
+        ]
         self._tabs = ft.Tabs(
             selected_index=self._current_tab_index(),
-            tabs=[
-                ft.Tab(text=f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})")
-                for status in STATUS_ORDER
-            ],
+            tabs=[ft.Tab(text=t) for t in tab_texts],
             on_change=self._on_tabs_change,
             expand=True,
         )
@@ -158,6 +168,7 @@ class TasksView(BaseView):
             ],
             expand=True,
         )
+        # TODO: 右ペインをタブ化 (概要/履歴/コメント) するなどの拡張を検討。アクティビティ連携も想定。
 
         controls = ft.Column(
             controls=[
@@ -217,6 +228,7 @@ class TasksView(BaseView):
         # Presenter で詳細用VMに昇格させてから渡す
         dvm = to_detail_from_card(vm)
         self._detail_comp.set_item(dvm)
+        logger.debug("detail set: id={} title='{}' status={}", vm.id, vm.title, vm.status)
         self._controller.set_selected(vm.id)
 
     def _count_by_status(self, status: str) -> int:
@@ -230,17 +242,20 @@ class TasksView(BaseView):
 
     def _current_tab_index(self) -> int:
         try:
-            status = self._controller.state.status or STATUS_ORDER[0]
-            return STATUS_ORDER.index(status)
+            status = self._controller.state.status
+            if not status:
+                return 0
+            return 1 + STATUS_ORDER.index(status)
         except Exception:
             return 0
 
     def _on_tabs_change(self, e: ft.ControlEvent) -> None:
         idx = getattr(e.control, "selected_index", 0) or 0
-        if 0 <= idx < len(STATUS_ORDER):
-            self._controller.set_status(STATUS_ORDER[idx])
+        # 0番目は「すべて」= None、それ以外は STATUS_ORDER[idx-1]
+        new_status: str | None = None if idx == 0 else STATUS_ORDER[idx - 1]
+        self._controller.set_status(new_status)
         if self._status_dropdown is not None:
-            self._status_dropdown.value = STATUS_ORDER[idx]
+            self._status_dropdown.value = new_status or ""
             with contextlib.suppress(AssertionError):
                 self._status_dropdown.update()
 
@@ -248,11 +263,31 @@ class TasksView(BaseView):
         if not self._tabs:
             return
         counts = self._safe_get_counts()
-        for i, status in enumerate(STATUS_ORDER):
+        # 先頭（すべて）
+        total = 0
+        try:
+            total = self._controller.get_total_count()
+        except Exception:
+            total = len(self._current_vm)
+        if len(self._tabs.tabs) > 0:
+            self._tabs.tabs[0].text = f"すべて ({total})"
+        # 残りステータス
+        for i, status in enumerate(STATUS_ORDER, start=1):
             if i < len(self._tabs.tabs):
                 self._tabs.tabs[i].text = f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})"
         with contextlib.suppress(AssertionError):
             self._tabs.update()
+        # TODO: 大量件数時は counts を Controller 側の集計キャッシュから取得し、頻度を制御 (レート制限)。
+
+    def _on_status_dd_change(self, e: ft.ControlEvent) -> None:
+        # Dropdown→state 更新 + Tabs の選択も同期
+        new_status = e.control.value or None
+        self._controller.set_status(new_status)
+        if self._tabs is not None:
+            idx = 0 if not new_status else 1 + STATUS_ORDER.index(str(new_status))
+            self._tabs.selected_index = idx
+            with contextlib.suppress(AssertionError):
+                self._tabs.update()
 
     # --- 外部 API (将来統合用) ---
     def get_state_snapshot(self) -> TasksState:

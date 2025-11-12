@@ -38,6 +38,8 @@ class FieldOrder:
             except Exception:
                 return "0000"
         return str(value) if value is not None else ""
+        # TODO: locale対応の文字列比較 (例: ICU) や自然順ソート ("Task 2" < "Task 10") が必要になれば
+        #       strategy 実装を追加する。現在は単純な str() による辞書式。
 
 
 ORDERING_MAP: dict[str, OrderStrategy] = {
@@ -45,6 +47,9 @@ ORDERING_MAP: dict[str, OrderStrategy] = {
     "updated_at": FieldOrder("updated_at"),
     "priority": FieldOrder("priority"),
 }
+
+# TODO: ユーザー定義順序 (ドラッグ&ドロップ保存) を扱うためには別ストラテジー UserDefinedOrder が必要。
+# TODO: 複合ソート (updated_at DESC, priority DESC) などのチェーン構成をサポートする CompositeOrderStrategy を検討。
 
 
 def apply_order(items: Iterable[dict], strategy: OrderStrategy, *, descending: bool) -> list[dict]:
@@ -58,3 +63,4 @@ def apply_order(items: Iterable[dict], strategy: OrderStrategy, *, descending: b
         ソート後リスト
     """
     return sorted(items, key=strategy.key, reverse=descending)
+    # TODO: 大量データのときはサーバー側/DB側ソートへ委譲し、ここではキー抽出用 Query 拡張に切り替える。

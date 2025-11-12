@@ -31,6 +31,13 @@ class TasksState:
     sort_desc: bool = True
     selected_id: str | None = None
 
+    # TODO: 永続層導入後は selected_id を Repository の存在確認付きで更新する。
+    #       不整合 (ID削除済み等) を検出し安全にクリアできる仕組みを追加する。
+    # TODO: 派生値 (フィルタ済み件数/overdue件数など) を State に含めるか再検討。
+    #       大量データ時は Query 側集計 + キャッシュ層で最適化する。
+    # TODO: keyword が長文検索や AND/OR 構文対応になった場合は、
+    #       パース済みトークン構造 (例: dataclass ParsedSearchQuery) へ変更する。
+
     def update(self, **changes: object) -> TasksState:
         """不変更新で新しい状態を生成する。
 

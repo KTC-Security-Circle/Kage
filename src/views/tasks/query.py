@@ -23,6 +23,11 @@ class TasksQuery(Protocol):
         """
         ...
 
+    # TODO: ページネーションや無限スクロールに対応するためのインターフェースを拡張する。
+    #       例: list_items_paged(keyword, status, *, offset, limit) -> PagedResult。
+    # TODO: MVC化で永続層(Repository/Service)と接続。SQLModel/ORM連携やN+1対策、
+    #       キャッシュ戦略 (LRU/TTL) の導入。I/O 例外に対するリトライ/フォールバック方針を決める。
+
 
 @dataclass(slots=True)
 class InMemoryTasksQuery:
@@ -45,3 +50,4 @@ class InMemoryTasksQuery:
             if str(x.get("id")) == str(task_id):
                 x["status"] = new_status
                 return
+        # TODO: 見つからない場合の扱いを決める (例外送出 or ログ警告)。将来的に Command へ移設。

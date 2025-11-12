@@ -58,6 +58,11 @@ class TaskDetailVM:
     updated_at: str | None = None
 
 
+# TODO: 日付/時刻の整形 (subtitle のローカライズ) を集中管理するヘルパーを導入する。
+# TODO: priority などの数値をラベル化 (例: 1=Low, 3=High) し、i18n対応する。
+# TODO: パフォーマンス観点で to_card_vm はジェネレータやバッチ変換最適化を検討 (大量件数時)。
+
+
 def to_card_vm(items: Iterable[dict]) -> list[TaskCardVM]:
     """辞書タスクを TaskCardVM に変換する。
 
@@ -115,3 +120,7 @@ def to_detail_from_card(vm: TaskCardVM) -> TaskDetailVM:
         status=vm.status,
         subtitle=vm.subtitle,
     )
+
+
+# TODO: View/Persistence 層からの属性差異を吸収する Mapper 層を検討。
+#       例: DBのカラム名とViewModelのプロパティ名の差異 (updatedAt vs updated_at)。

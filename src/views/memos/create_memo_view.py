@@ -21,10 +21,18 @@ import flet as ft
 from loguru import logger
 
 from models import MemoStatus
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 from .components.create_form import CreateForm, FormCallbacks
 from .components.create_header import CreateHeader
+
+# TODO: [Logic] メモ永続化の統合（ロジック担当）
+# - ApplicationService 統合: MemoApplicationService.create(...) を用意し DI 経由で取得
+# - Command 定義: CreateMemoCommand(title: str, content: str, status: MemoStatus, tags: list[str])
+# - 成功時の戻り値: MemoRead(id: UUID, title, content, status, tags, created_at, ...)
+# - 失敗時の例外: ValidationError, RepositoryError, Timeout 等を想定し UI 側で通知
+# - UI 制御: 保存中は保存ボタンとショートカットを無効化し、連打防止
+# - 画面遷移: 成功後は /memos に戻り、新規メモを選択 or 先頭に反映（MemosView 側で upsert）
 
 
 @dataclass(slots=True)
@@ -50,7 +58,13 @@ class CreateMemoView(BaseView):
     """メモ作成用のフルスクリーンビュー。"""
 
     def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
-        super().__init__(page)
+        # TODO: [Logic] DIコンテナ経由で ApplicationServices を取得するよう差し替え予定
+        #  現状は簡易生成で props を構築
+        from logic.application.apps import ApplicationServices  # ローカルインポートで循環回避
+
+        apps = ApplicationServices.create()
+        props = BaseViewProps(page=page, apps=apps)
+        super().__init__(props)
         self.state_local = CreateMemoState()
 
         # UI controls (late init)

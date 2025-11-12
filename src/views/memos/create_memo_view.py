@@ -212,5 +212,3 @@ class CreateMemoView(BaseView):
         logger.info(f"Create memo requested: status={status}, title_length={len(title)}, content_length={len(content)}")
         self.show_success_snackbar("メモを作成しました（暫定）")
         self.page.go("/memos")
-
-

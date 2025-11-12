@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -107,8 +108,6 @@ class CreateHeader(ft.Container):
         if self._save_button is not None:
             self._save_button.disabled = False
             if getattr(self, "page", None) is not None:
-                import contextlib
-
                 with contextlib.suppress(AssertionError):
                     self.update()
 
@@ -117,7 +116,5 @@ class CreateHeader(ft.Container):
         if self._save_button is not None:
             self._save_button.disabled = True
             if getattr(self, "page", None) is not None:
-                import contextlib
-
                 with contextlib.suppress(AssertionError):
                     self.update()

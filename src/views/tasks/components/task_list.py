@@ -5,6 +5,7 @@ ft.UserControl でタスク一覧を表示し、アイテムクリックをコ�
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -74,6 +75,9 @@ class TaskList:
                     on_click=_handle_click if self._props.on_item_click else None,
                 )
             )
+        # 変更を即時反映
+        with contextlib.suppress(AssertionError):
+            self._list.update()
         # TODO: 大量件数対応で差分更新 (DOM diff) や仮想スクロールを導入。現在は全件再描画。
         # TODO: 複数選択 (shift/ctrl) やドラッグ&ドロップ並び替えにも対応できる設計へ拡張。
 
@@ -87,5 +91,8 @@ class TaskList:
         for data in cards:
             card = TaskCard(data)
             self._list.controls.append(card)
+        # 変更を即時反映
+        with contextlib.suppress(AssertionError):
+            self._list.update()
         # TODO: 選択状態の差分適用 (前後の選択ID比較) で再描画コストを削減。
         # TODO: カード幅/レイアウトをレスポンシブに調整する仕組み (列数変更) が必要なら Grid 化を検討。

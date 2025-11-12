@@ -199,6 +199,8 @@ class TasksView(BaseView):
         self._current_vm = vm_list
         self._render_items(vm_list)
         self._refresh_tabs_badges()
+        # フィルタ/検索/並び替えの反映を確実に UI に適用
+        self.safe_update()
 
     def _render_items(self, items: list[TaskCardVM]) -> None:
         """ListViewへアイテムを反映。"""
@@ -258,6 +260,8 @@ class TasksView(BaseView):
             self._status_dropdown.value = new_status or ""
             with contextlib.suppress(AssertionError):
                 self._status_dropdown.update()
+        # タブ操作後の一覧反映
+        self.safe_update()
 
     def _refresh_tabs_badges(self) -> None:
         if not self._tabs:
@@ -288,6 +292,8 @@ class TasksView(BaseView):
             self._tabs.selected_index = idx
             with contextlib.suppress(AssertionError):
                 self._tabs.update()
+        # ドロップダウン操作後の一覧反映
+        self.safe_update()
 
     # --- 外部 API (将来統合用) ---
     def get_state_snapshot(self) -> TasksState:
@@ -313,6 +319,7 @@ class TasksView(BaseView):
             logger.warning("change_task_status not supported by controller")
 
 
+# TODO: ここでサンプルデータを与えてます
 def _default_seed_data() -> list[dict[str, object]]:
     """旧ビューのモックを平坦化した初期シードを返す。
 

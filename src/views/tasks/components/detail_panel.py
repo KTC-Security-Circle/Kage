@@ -64,7 +64,8 @@ class TaskDetailPanel:
             label="ステータス",
             value=vm.status or "",
             options=status_options,
-            on_change=lambda e: self._handle_status_change(str(e.control.value or "")),  # type: ignore[arg-type]
+            # 余分な str() 二重変換を排除し、None 時は空文字へ正規化
+            on_change=lambda e: self._handle_status_change(e.control.value or ""),  # type: ignore[arg-type]
             width=220,
         )
 
@@ -76,7 +77,7 @@ class TaskDetailPanel:
                     [
                         ft.Text("タスク詳細", weight=ft.FontWeight.BOLD, size=18),
                         ft.Text(vm.title, size=16),
-                        ft.Text(getattr(vm, "description", "") or "説明なし", color=ft.colors.GREY_700),
+                        ft.Text(getattr(vm, "description", "") or "説明なし", color=ft.Colors.GREY_700),
                         ft.Divider(),
                         ft.Row([ft.Text("ステータス:"), self._status_dd]),
                         ft.Row([ft.Text("更新日:"), ft.Text(getattr(vm, "subtitle", ""))]),
@@ -108,7 +109,7 @@ class TaskDetailPanel:
     def _placeholder(self) -> ft.Control:
         return ft.Container(
             content=ft.Column(
-                [ft.Text("タスクを選択して詳細を表示", color=ft.colors.GREY_600)],
+                [ft.Text("タスクを選択して詳細を表示", color=ft.Colors.GREY_600)],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -116,6 +117,12 @@ class TaskDetailPanel:
         )
 
     def _handle_status_change(self, new_status: str) -> None:
+        """ステータス変更イベントを親へ通知する。
+
+        Args:
+            new_status: ドロップダウンで選択された新ステータスキー
+        """
         if not self._vm:
             return
+        # self._vm.id は VM 内部で文字列前提。安全のため明示的に str にしておく。
         self._props.on_status_change(str(self._vm.id), new_status)

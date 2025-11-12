@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import TYPE_CHECKING
 
@@ -93,7 +94,7 @@ class TasksView(BaseView):
         self._search_field = ft.TextField(
             label="検索",
             hint_text="タイトルでフィルタ...",
-            on_change=lambda e: self._controller.set_keyword(e.control.value or ""),  # type: ignore[arg-type]
+            on_change=self._on_search_change,  # デバウンス対応
             expand=True,
         )
 
@@ -214,6 +215,46 @@ class TasksView(BaseView):
             logger.debug(f"filter debug logging failed: {e}")
         # フィルタ/検索/並び替えの反映を確実に UI に適用
         self.safe_update()
+
+    # --- Search debounce ---
+    _SEARCH_DEBOUNCE_MS: int = 300
+    _search_debounce_task: asyncio.Task | None = None
+
+    def _on_search_change(self, e: ft.ControlEvent) -> None:  # type: ignore[override]
+        """検索フィールド変更時にデバウンスしてキーワード更新。
+
+        毎キー入力で即フィルタをかけると再描画頻度が高くなるため 300ms デバウンス。
+        """
+        keyword = (e.control.value or "").strip()
+        self._debounce_keyword_apply(keyword)
+
+    def _debounce_keyword_apply(self, keyword: str) -> None:
+        # 既存タスクがあればキャンセル
+        if self._search_debounce_task and not self._search_debounce_task.done():
+            self._search_debounce_task.cancel()
+
+        async def _apply() -> None:
+            try:
+                await asyncio.sleep(self._SEARCH_DEBOUNCE_MS / 1000)
+                self._controller.set_keyword(keyword)
+            except asyncio.CancelledError:
+                return
+            except Exception as e:  # ログのみ
+                logger.debug(f"debounce apply failed: {e}")
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # 非同期ループ未起動時は即時適用 (テスト環境考慮)
+            self._controller.set_keyword(keyword)
+            return
+        self._search_debounce_task = loop.create_task(_apply())
+
+    def will_unmount(self) -> None:  # type: ignore[override]
+        # 検索デバウンスタスクをクリーンアップ
+        if self._search_debounce_task and not self._search_debounce_task.done():
+            self._search_debounce_task.cancel()
+        super().will_unmount()
 
     def _render_items(self, items: list[TaskCardVM]) -> None:
         """ListViewへアイテムを反映。"""

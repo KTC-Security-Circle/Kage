@@ -798,7 +798,7 @@ class MainView(BaseView):
                 ft.Container(
                     content=self._build_sidebar(),
                     width=200,
-                    bgcolor=ft.colors.SURFACE_VARIANT
+                    bgcolor=ft.Colors.SURFACE_VARIANT
                 ),
                 # メインコンテンツエリア
                 ft.Container(
@@ -861,7 +861,7 @@ class TaskComponent(ft.UserControl):
                         ft.Text(
                             self.task.description,
                             size=12,
-                            color=ft.colors.ON_SURFACE_VARIANT
+                            color=ft.Colors.ON_SURFACE_VARIANT
                         ),
                     self._build_metadata_row()
                 ]),
@@ -873,14 +873,14 @@ class TaskComponent(ft.UserControl):
     def _get_status_color(self, status: TaskStatus) -> str:
         """GTDステータスに応じた色を取得"""
         color_map = {
-            TaskStatus.INBOX: ft.colors.ORANGE,
-            TaskStatus.NEXT_ACTION: ft.colors.GREEN,
-            TaskStatus.WAITING: ft.colors.YELLOW,
-            TaskStatus.SCHEDULED: ft.colors.BLUE,
-            TaskStatus.SOMEDAY_MAYBE: ft.colors.PURPLE,
-            TaskStatus.DONE: ft.colors.GREY,
+            TaskStatus.INBOX: ft.Colors.ORANGE,
+            TaskStatus.NEXT_ACTION: ft.Colors.GREEN,
+            TaskStatus.WAITING: ft.Colors.YELLOW,
+            TaskStatus.SCHEDULED: ft.Colors.BLUE,
+            TaskStatus.SOMEDAY_MAYBE: ft.Colors.PURPLE,
+            TaskStatus.DONE: ft.Colors.GREY,
         }
-        return color_map.get(status, ft.colors.SURFACE)
+        return color_map.get(status, ft.Colors.SURFACE)
 
 # views/components/quick_capture.py - クイックキャプチャー
 class QuickCaptureComponent(ft.UserControl):
@@ -930,7 +930,7 @@ class QuickCaptureComponent(ft.UserControl):
             self.page.show_snack_bar(
                 ft.SnackBar(
                     content=ft.Text(f"エラー: {str(e)}"),
-                    bgcolor=ft.colors.ERROR
+                    bgcolor=ft.Colors.ERROR
                 )
             )
 ```

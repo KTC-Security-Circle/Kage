@@ -6,63 +6,109 @@ MVP パターンの Presenter と View の橋渡しを行う。
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
+from uuid import UUID
+
+from loguru import logger
+
+from models import ProjectStatus, ProjectUpdate
+
+from .ordering import apply_order, get_order_strategy
+from .presenter import (
+    ProjectCardVM,
+    ProjectDetailVM,
+    to_card_vm,
+    to_detail_vm,
+)
+from .state import ProjectState
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from .query import ProjectQuery
+    from models import ProjectRead
 
-from loguru import logger
 
-from .ordering import apply_order, get_order_strategy
-from .presenter import ProjectCardVM, ProjectDetailVM, to_card_vm, to_detail_vm
-from .state import ProjectState
+class ProjectApplicationPort(Protocol):
+    """ProjectApplicationService へ依存を抽象化するポート。
+
+    View/Controller はこの Protocol のみを前提にし、具体的な取得方法や
+    UnitOfWork/Repository には依存しない。テストではモックを注入可能。
+    """
+
+    def get_all_projects(self) -> list[ProjectRead]:  # pragma: no cover - interface
+        """全プロジェクト取得"""
+        ...
+
+    def get_by_id(self, project_id: UUID) -> ProjectRead | None:  # pragma: no cover - interface
+        """ID で単一取得。見つからない場合 None。"""
+        ...
+
+    def search(
+        self,
+        query: str,
+        *,
+        status: ProjectStatus | None = None,
+    ) -> list[ProjectRead]:  # pragma: no cover - interface
+        """検索（任意でステータスフィルタ）。"""
+        ...
+
+    def list_by_status(self, status: ProjectStatus) -> list[ProjectRead]:  # pragma: no cover - interface
+        """ステータス別一覧取得。"""
+        ...
+
+    def create(
+        self,
+        title: str,
+        description: str | None = None,
+        *,
+        status: ProjectStatus | None = None,
+    ) -> ProjectRead:  # pragma: no cover - interface
+        """プロジェクト作成。"""
+        ...
+
+    def update(self, project_id: UUID, update_data: ProjectUpdate) -> ProjectRead:  # pragma: no cover - interface
+        """プロジェクト更新。"""
+        ...
+
+    def delete(self, project_id: UUID) -> bool:  # pragma: no cover - interface
+        """プロジェクト削除。"""
+        ...
 
 
 class ProjectController:
-    """プロジェクト画面のメインコントローラー。
+    """ProjectsView 用の調停役 Controller。
 
-    UI状態の管理、データ取得、並び替え、ViewModel生成を調停し、
-    View層への更新通知を行う。状態管理とビジネスロジックを分離する。
-
-    Attributes:
-        _query: プロジェクトデータ取得用クエリ
-        _state: 現在のUI状態
-        _on_list_change: リスト更新時のコールバック
-        _on_detail_change: 詳細更新時のコールバック
+    - Port 経由で ApplicationService を呼び出し、一覧/詳細/検索/並び替えを行う
+    - 不変 `ProjectState` を生成し UI 更新をコールバックで通知
+    - 例外発生時はユーザ通知ハンドラ経由で UI レイヤに委譲
     """
 
     def __init__(
         self,
-        query: ProjectQuery,
+        service: ProjectApplicationPort,
         on_list_change: Callable[[list[ProjectCardVM]], None],
         on_detail_change: Callable[[ProjectDetailVM | None], None],
+        on_error: Callable[[str], None] | None = None,
     ) -> None:
-        """ProjectController を初期化する。
+        """Controller 初期化。
 
         Args:
-            query: プロジェクトデータ取得用クエリ
-            on_list_change: リスト更新時のコールバック関数
-            on_detail_change: 詳細更新時のコールバック関数
+            service: ProjectApplicationPort 実装（ApplicationService を抽象化）
+            on_list_change: 一覧 VM 更新時コールバック
+            on_detail_change: 詳細 VM 更新時コールバック
+            on_error: ユーザ通知用エラーハンドラ（SnackBar 等）
         """
-        self._query = query
+        self._service = service
         self._state = ProjectState()
         self._on_list_change = on_list_change
         self._on_detail_change = on_detail_change
+        self._on_error = on_error
 
-    def show_error_snackbar(self, message: str) -> None:
-        """ユーザー向けにエラーを通知する。
-
-        デフォルト実装では loguru にエラーを記録するだけで、実際の UI 表示
-        (例: Flet の SnackBar/AlertDialog) は View 層でこのメソッドをオーバーライド
-        して実装してください。
-
-        Args:
-            message: ユーザーに表示するエラーメッセージ
-        """
-        # デフォルトはログ出力のみ
+    def _notify_error(self, message: str) -> None:
+        """UI 層へエラー通知（存在すれば）。"""
         logger.error(message)
+        if self._on_error:
+            self._on_error(message)
 
     @property
     def state(self) -> ProjectState:
@@ -87,24 +133,17 @@ class ProjectController:
         """ステータスフィルタを設定する。
 
         Args:
-            status: 新しいステータスフィルタ（None の場合は全て）
+            status: 新しいステータスフィルタ(None の場合は全て)
         """
-        from models import ProjectStatus
-
         status_filter = None
-        if status:
-            # TODO: 正規化をドメイン層へ
-            #  - normalize_status は現在 views.shared.status_utils にありますが、
-            #    将来的には models 側（例: models/project.py）で ProjectStatus と
-            #    一緒に提供し、UI層はドメインの変換APIのみを利用する設計にする。
-            from views.shared.status_utils import normalize_status
-
-            normalized = normalize_status(status)
+        if status and status.strip():
             try:
-                status_filter = ProjectStatus(normalized)
+                # ドメイン層の parse を使用して統一的に変換
+                status_filter = ProjectStatus.parse(status)
             except ValueError:
-                logger.warning(f"無効なステータス値: {status}")
-                return
+                # 未知のステータスは全件扱い
+                logger.debug(f"未知のステータス入力を全件扱いに変換: {status}")
+                status_filter = None
 
         logger.debug(f"ステータスフィルタ設定: {status_filter}")
         new_state = self._state.update(status=status_filter)
@@ -168,45 +207,120 @@ class ProjectController:
 
     def refresh(self) -> None:
         """データを再読み込みして画面を更新する。"""
-        logger.debug("データ再読み込み")
-        self._update_and_render(self._state)
+        logger.debug("データ再読み込み: 一覧・詳細を再描画")
+        # 初回ロードや外部要因で状態が不変でも、強制的に描画更新する
+        self._update_list()
+        self._update_detail()
 
     def create_project(self, project: dict[str, str], *, select: bool = True) -> None:
-        """新規プロジェクトを追加し、必要に応じて選択・再描画する。
-
-        テスト/デモ用の `InMemoryProjectQuery` では `add_project` を持つため、
-        それを利用してデータを追加する。実運用では Repository 経由の作成に置き換える。
+        """新規プロジェクトを ApplicationService 経由で作成する。
 
         Args:
-            project: 追加するプロジェクト辞書（Presenterが扱えるキーを推奨）
-            select: 追加後に選択状態にするかどうか
+            project: ダイアログ等から受け取った新規作成データ（title, description, status 等）
+            select: 作成後に選択状態にするか
         """
-        try:
-            # TODO: 作成処理の本実装
-            # - 現状は InMemory 用の add_project があれば呼び出す暫定実装です。
-            # - 実装では ApplicationService.create_project(...) を呼び出し、
-            #   成功時に refresh() で再取得してください（ID で選択維持する場合は応答の ID を使用）。
-            add_fn = getattr(self._query, "add_project", None)
-            if callable(add_fn):
-                add_fn(project)  # type: ignore[misc]
-            else:
-                logger.warning("クエリが add_project をサポートしていません。")
+        title = str(project.get("title") or project.get("name") or "").strip()
+        description = str(project.get("description") or "").strip() or None
+        status_text = str(project.get("status") or "").strip()
 
-            # 追加後に選択する場合は state を更新
+        # ステータスはドメインのparseで正規化
+        status_enum = None
+        if status_text:
+            try:
+                status_enum = ProjectStatus.parse(status_text)
+            except ValueError:
+                status_enum = None
+
+        if not title:
+            self._notify_error("タイトルを入力してください。")
+            return
+
+        try:
+            created = self._service.create(title, description, status=status_enum)
+            new_id = str(getattr(created, "id", ""))
+
             new_state = self._state
             if select:
-                new_state = new_state.update(selected_id=str(project.get("id", "")))
-
-            # 内部更新関数を用いて強制的にリスト/詳細を再描画
+                new_state = new_state.update(selected_id=new_id)
             self._state = new_state
             self._update_list()
             self._update_detail()
-        except ValueError as e:
-            logger.error(f"プロジェクトデータのバリデーションエラー: {e}")
-            # TODO: ユーザーへの通知処理（例: Fletの AlertDialog や SnackBar を使用）
         except Exception as e:
-            logger.exception(f"プロジェクト追加中に予期しないエラーが発生しました: {e}")
-            # TODO: ユーザーへの通知処理（例: Fletの AlertDialog や SnackBar を使用）
+            logger.exception(f"プロジェクト作成中にエラー: {e}")
+            self._notify_error("プロジェクトの作成に失敗しました。詳細はログを参照してください。")
+
+    def update_project(self, project_id: str, changes: dict[str, Any]) -> None:
+        """既存プロジェクトを ApplicationService 経由で更新する。
+
+        Args:
+            project_id: 文字列のプロジェクトID
+            changes: 変更フィールド（title/description/status/due_date など）
+        """
+        try:
+            pid = UUID(project_id)
+
+            update_kwargs: dict[str, Any] = {}
+            if "title" in changes and changes.get("title") is not None:
+                update_kwargs["title"] = str(changes["title"]).strip()
+            if "description" in changes:
+                desc_val = changes.get("description")
+                update_kwargs["description"] = None if desc_val in (None, "") else str(desc_val)
+            if "status" in changes and changes.get("status"):
+                try:
+                    # ドメインのparseで正規化
+                    update_kwargs["status"] = ProjectStatus.parse(str(changes["status"]))
+                except ValueError:
+                    logger.warning(f"未知のステータス更新要求: {changes['status']}")
+            if "due_date" in changes and changes.get("due_date"):
+                update_kwargs["due_date"] = changes["due_date"]
+
+            update_data = ProjectUpdate(**update_kwargs)
+            updated = self._service.update(pid, update_data)
+
+            # 状態更新: 選択IDが一致していれば詳細も更新
+            if self._state.selected_id == str(getattr(updated, "id", "")):
+                self._update_detail()
+            # 一覧は常に更新
+            self._update_list()
+        except ValueError:
+            self._notify_error("不正なプロジェクトIDです。")
+        except Exception as e:
+            logger.exception(f"プロジェクト更新中にエラー: {e}")
+            self._notify_error("プロジェクトの更新に失敗しました。詳細はログを参照してください。")
+
+    def delete_project(self, project_id: str) -> None:
+        """プロジェクトを ApplicationService 経由で削除する。
+
+        Args:
+            project_id: 削除するプロジェクトのID（文字列）
+        """
+        try:
+            pid = UUID(project_id)
+        except ValueError:
+            self._notify_error("不正なプロジェクトIDです。")
+            return
+
+        try:
+            success = False
+            delete_method = getattr(self._service, "delete", None)
+            if callable(delete_method):
+                success = bool(delete_method(pid))  # type: ignore[no-any-return]
+            else:
+                logger.warning("Port に delete が未実装のため操作をスキップ")
+
+            if not success:
+                self._notify_error("プロジェクトの削除に失敗しました。詳細はログを参照してください。")
+                return
+
+            # 選択解除と一覧更新
+            if self._state.selected_id == project_id:
+                self._state = self._state.clear_selection()
+                self._on_detail_change(None)
+            self._update_list()
+            logger.info(f"プロジェクト削除完了: {project_id}")
+        except Exception as e:
+            logger.exception(f"プロジェクト削除中にエラー: {e}")
+            self._notify_error("プロジェクトの削除に失敗しました。詳細はログを参照してください。")
 
     def _update_and_render(self, new_state: ProjectState) -> None:
         """状態を更新してUIを再描画する。
@@ -234,19 +348,22 @@ class ProjectController:
         """プロジェクトリストを更新する。"""
         try:
             # データ取得
-            # TODO: ページング/ソートをサーバーサイドへ委譲する検討
-            # - 件数が増える場合は list_projects に cursor/limit 等の引数を追加し、
-            #   ApplicationService → Repository で最適化してください。
-            items = self._query.list_projects(
-                keyword=self._state.keyword,
-                status=self._state.status,
+            if self._state.keyword:
+                items = self._service.search(self._state.keyword, status=self._state.status)
+            elif self._state.status is not None:
+                items = self._service.list_by_status(self._state.status)
+            else:
+                items = self._service.get_all_projects()
+
+            # 並び替え（ProjectReadのまま辞書化し、並び替えを適用）
+            strategy = get_order_strategy(self._state.sort_key)
+            ordered_items = apply_order(
+                self._reads_to_presenter_dicts(items),
+                strategy,
+                desc=self._state.sort_desc,
             )
 
-            # 並び替え
-            strategy = get_order_strategy(self._state.sort_key)
-            ordered_items = apply_order(items, strategy, desc=self._state.sort_desc)
-
-            # ViewModel変換
+            # ViewModel変換（辞書経由でのレガシー互換性を維持）
             view_models = to_card_vm(ordered_items)
 
             # UI更新通知
@@ -255,13 +372,8 @@ class ProjectController:
 
         except Exception as e:
             logger.error(f"プロジェクトリスト更新エラー: {e}")
-            # エラー時は空リストで更新
             self._on_list_change([])
-            # TODO: ユーザーへの通知処理（例: Flet の SnackBar/AlertDialog を使用）
-            # - View 層の show_error_snackbar のオーバーライド実装がある場合は
-            #   ここで呼び出してエラーを可視化してください。
-            if hasattr(self, "show_error_snackbar") and callable(self.show_error_snackbar):
-                self.show_error_snackbar("プロジェクト一覧の取得に失敗しました。詳細はログを参照してください。")
+            self._notify_error("プロジェクト一覧の取得に失敗しました。詳細はログを参照してください。")
 
     def _update_detail(self) -> None:
         """プロジェクト詳細を更新する。"""
@@ -276,20 +388,31 @@ class ProjectController:
             # TODO: ID 取得 API の利用
             # - list → 探索は暫定です。ProjectQuery に get_project_by_id を追加し、
             #   Repository で最適に取得してください。
-            items = self._query.list_projects()
-            selected_project = None
-            for item in items:
-                if str(item.get("id")) == self._state.selected_id:
-                    selected_project = item
-                    break
+            selected = None
+            try:
+                # ID 取得 API があれば利用
+                if hasattr(self._service, "get_by_id"):
+                    selected = self._service.get_by_id(UUID(self._state.selected_id))
+            except Exception as e:
+                logger.warning(f"get_by_id 失敗: {e}. 一覧から探索を継続")
 
-            if selected_project:
-                # ViewModel変換
-                detail_vm = to_detail_vm(selected_project)
+            if selected is None:
+                # フォールバック: 全件取得後に探索
+                try:
+                    all_items = self._service.get_all_projects()
+                    for p in all_items:
+                        if str(getattr(p, "id", "")) == self._state.selected_id:
+                            selected = p
+                            break
+                except Exception as e:
+                    logger.error(f"詳細取得用の一覧取得失敗: {e}")
+
+            if selected is not None:
+                # Presenter 互換の辞書へマッピング
+                detail_vm = to_detail_vm(self._project_read_to_presenter_dict(selected))
                 self._on_detail_change(detail_vm)
-                logger.debug(f"プロジェクト詳細更新: {selected_project.get('title', '')}")
+                logger.debug(f"プロジェクト詳細更新: {detail_vm.title}")
             else:
-                # 選択されたプロジェクトが見つからない場合
                 logger.warning(f"選択されたプロジェクトが見つかりません: {self._state.selected_id}")
                 self._on_detail_change(None)
 
@@ -298,10 +421,45 @@ class ProjectController:
             msg = f"プロジェクト詳細更新中にエラーが発生しました: project_id={self._state.selected_id}, error={e}"
             logger.exception(msg)
             # [AI GENERATED] ユーザーにエラー内容を通知
-            if hasattr(self, "show_error_snackbar") and callable(self.show_error_snackbar):
-                user_msg = (
-                    f"プロジェクト詳細の取得中にエラーが発生しました（ID: {self._state.selected_id}）。"
-                    "詳細はログを参照してください。"
-                )
-                self.show_error_snackbar(user_msg)
+            user_msg = (
+                f"プロジェクト詳細の取得中にエラーが発生しました（ID: {self._state.selected_id}）。"
+                "詳細はログを参照してください。"
+            )
+            self._notify_error(user_msg)
             self._on_detail_change(None)
+
+    # --- internal helpers -------------------------------------------------
+
+    def _reads_to_presenter_dicts(self, items: list[ProjectRead]) -> list[dict[str, Any]]:
+        """ProjectRead の配列を Presenter 互換の辞書リストへ正規化する。
+
+        Note:
+            Presenter は dict[str, str] を想定するため、文字列へ寄せる。
+            進捗系は未集計のため 0 を設定する（将来 ApplicationService に統合）。
+        """
+        return [self._project_read_to_presenter_dict(p) for p in items]
+
+    def _project_read_to_presenter_dict(self, p: ProjectRead) -> dict[str, str]:
+        def _s(v: object | None) -> str:
+            return "" if v is None else str(v)
+
+        status_value = getattr(p, "status", None)
+        status_text = _s(status_value)
+        # Enum の場合は表示ラベルへ（ドメイン層のメソッドを使用）
+        if isinstance(status_value, ProjectStatus):
+            status_text = ProjectStatus.display_label(status_value)
+        else:
+            status_text = _s(status_value)
+
+        return {
+            "id": _s(getattr(p, "id", "")),
+            "title": _s(getattr(p, "title", "")),
+            "description": _s(getattr(p, "description", "")),
+            "status": status_text,
+            "created_at": _s(getattr(p, "created_at", "")),
+            "updated_at": _s(getattr(p, "updated_at", "")),
+            "due_date": _s(getattr(p, "due_date", "")),
+            # 進捗系（未集計のため 0）
+            "task_count": "0",
+            "completed_count": "0",
+        }

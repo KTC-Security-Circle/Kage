@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from views.sample import SampleTerm, SampleTermStatus, get_sample_terms
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 from .components.action_bar import TermActionBar
 from .components.status_tabs import TermStatusTabs
@@ -19,13 +19,13 @@ if TYPE_CHECKING:
 class TermsView(BaseView):
     """Main view for terminology management."""
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """Initialize terms view.
 
         Args:
-            page: Flet page instance
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
         self.title = "社内用語管理"
         self.description = "社内固有の用語・略語・定義を管理"
 

@@ -39,7 +39,7 @@ from loguru import logger
 
 from logic.application.apps import ApplicationServices
 from models import MemoRead, MemoStatus
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 from . import presenter
 from .components import MemoActionBar, MemoCardList, MemoFilters, MemoStatusTabs
@@ -61,14 +61,14 @@ class MemosView(BaseView):
     - AI提案機能（将来実装）
     """
 
-    def __init__(self, page: ft.Page, *, memo_app: MemoApplicationPort | None = None) -> None:
+    def __init__(self, props: BaseViewProps, *, memo_app: MemoApplicationPort | None = None) -> None:
         """メモビューを初期化。
 
         Args:
-            page: Fletページオブジェクト
+            props: View共通プロパティ
             memo_app: テストやDI用に注入するメモアプリケーションサービス
         """
-        super().__init__(page)
+        super().__init__(props)
 
         self.memos_state = MemosViewState()
         if memo_app is None:
@@ -337,13 +337,13 @@ class MemosView(BaseView):
 # ユーティリティ関数
 
 
-def create_memos_view(page: ft.Page) -> MemosView:
+def create_memos_view(props: BaseViewProps) -> MemosView:
     """メモビューを作成。
 
     Args:
-        page: Fletページオブジェクト
+        props: View共通プロパティ
 
     Returns:
         作成されたメモビュー
     """
-    return MemosView(page)
+    return MemosView(props)

@@ -15,7 +15,7 @@ from views.sample import (
     get_sample_statistics,
     get_sample_tasks,
 )
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.theme import SPACING, get_light_color
 
 
@@ -25,13 +25,13 @@ class HomeView(BaseView):
     ダッシュボード表示、最近のアクティビティ、クイックアクション等を提供します。
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """HomeViewを初期化する。
 
         Args:
-            page: Fletページオブジェクト
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
         self._initialize_dummy_data()
 
     def _initialize_dummy_data(self) -> None:

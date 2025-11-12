@@ -6,20 +6,29 @@ MVP パターンの View として、Flet UI の描画とイベント配線の�
 
 from __future__ import annotations
 
+import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import flet as ft
+import flet as ft
 
+if TYPE_CHECKING:
     from .presenter import ProjectCardVM, ProjectDetailVM
 
 from loguru import logger
 
-from views.projects.components.project_dialogs import show_create_project_dialog
+# Application service (domain access)
+from logic.application.project_application_service import ProjectApplicationService
+from models import ProjectStatus
+
+# View / UI layer components
+from views.projects.components.project_card import create_project_card_from_vm
+from views.projects.components.project_dialogs import (
+    show_create_project_dialog,
+    show_edit_project_dialog,
+)
 from views.projects.controller import ProjectController
-from views.projects.query import InMemoryProjectQuery
-from views.sample import get_projects_for_ui
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 
 class ProjectsView(BaseView):
@@ -34,52 +43,47 @@ class ProjectsView(BaseView):
         _detail_container: プロジェクト詳細コンテナ
     """
 
-    def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
+    def __init__(self, props: BaseViewProps) -> None:
         """ProjectsView を初期化する。
 
         Args:
-            page: Fletページインスタンス
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
 
-        # TODO: データ取得の本実装に差し替える
-        # - ここでは表示確認のためサンプルデータを InMemory の Query に流し込んでいます。
-        # - 本番実装では DI コンテナ (src/logic/container.py) から ProjectQuery 実装
-        #   もしくは ProjectApplicationService を解決し、Repository 経由でデータを取得してください。
-        # - 例: query = container.resolve(ProjectQuery) / service = container.resolve(ProjectApplicationService)
-        # - 例外時のユーザー通知は BaseView の snackbar を利用し、適宜リトライ導線も検討ください。
-        sample_data = self._get_sample_data()
-        query = InMemoryProjectQuery(sample_data)
+        # データ取得: ApplicationService を優先して利用する
+        # - 例外時のユーザー通知は BaseView の snackbar を利用
+        service = self.apps.get_service(ProjectApplicationService)
 
         # コントローラー初期化
         self._controller = ProjectController(
-            query=query,
+            service=service,
             on_list_change=self._render_list,
             on_detail_change=self._render_detail,
+            # BaseView.show_error_snackbar は (page, message) 署名のためアダプタで統一
+            on_error=lambda msg: self.show_error_snackbar(self.page, msg),
         )
 
         # UI コンテナ
-        self._list_container: ft.Column | None = None  # type: ignore[name-defined]
-        self._detail_container: ft.Container | None = None  # type: ignore[name-defined]
+        self._list_container: ft.Column | None = None
+        self._detail_container: ft.Container | None = None
 
-    def build_content(self) -> ft.Control:  # type: ignore[name-defined]
+    def build_content(self) -> ft.Control:
         """プロジェクト画面のコンテンツを構築する。
 
         Returns:
             プロジェクト画面のメインコンテンツ
         """
-        import flet as ft
-
         # コンテナ初期化
         self._list_container = ft.Column(expand=True, spacing=8)
         self._detail_container = ft.Container(expand=True)
 
-        # 初期描画
-        # TODO: 非同期取得にする場合
-        # - ApplicationService 側で I/O を行うなら読み込み中インジケータを表示してから
-        #   完了時に _controller.refresh() 相当の更新を呼び出してください。
-        # - エラー時は snackbar で通知し、空表示/前回キャッシュ表示などの方針を決めるとUXが安定します。
-        self._controller.refresh()
+        # 初期データ取得: ここで refresh を呼ぶが、未マウント時の update() 呼び出しは
+        # _render_list / _render_detail 内で page 属性存在確認後に行うため安全。
+        try:
+            self._controller.refresh()
+        except Exception as e:  # [AI GENERATED] 初期ロード失敗のフォールバック
+            logger.warning(f"初期ロード時に一時的なエラー: {e}")
 
         return ft.Container(
             content=ft.Column(
@@ -98,14 +102,12 @@ class ProjectsView(BaseView):
             expand=True,
         )
 
-    def _build_header(self) -> ft.Control:  # type: ignore[name-defined]
+    def _build_header(self) -> ft.Control:
         """ヘッダー部分を構築する。
 
         Returns:
             ヘッダーコンテンツ
         """
-        import flet as ft
-
         return ft.Container(
             content=ft.Row(
                 controls=[
@@ -133,14 +135,12 @@ class ProjectsView(BaseView):
             border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_300)),
         )
 
-    def _build_header_actions(self) -> ft.Control:  # type: ignore[name-defined]
+    def _build_header_actions(self) -> ft.Control:
         """ヘッダーアクション部分を構築する。
 
         Returns:
             ヘッダーアクションコンテンツ
         """
-        import flet as ft
-
         return ft.Row(
             controls=[
                 # 検索バー
@@ -157,13 +157,13 @@ class ProjectsView(BaseView):
                     label="ステータス",
                     width=150,
                     options=[
-                        ft.dropdown.Option("", "全て"),
+                        ft.dropdown.Option("全て", "全て"),
                         ft.dropdown.Option("進行中", "進行中"),
                         ft.dropdown.Option("完了", "完了"),
                         ft.dropdown.Option("保留", "保留"),
                         ft.dropdown.Option("キャンセル", "キャンセル"),
                     ],
-                    value="",
+                    value="全て",
                     on_change=self._on_status_change,
                 ),
                 # 並び替え
@@ -197,14 +197,12 @@ class ProjectsView(BaseView):
             spacing=12,
         )
 
-    def _build_main_content(self) -> ft.Control:  # type: ignore[name-defined]
+    def _build_main_content(self) -> ft.Control:
         """メインコンテンツ部分を構築する。
 
         Returns:
             メインコンテンツ
         """
-        import flet as ft
-
         controls = []
         if self._list_container:
             controls.append(
@@ -240,7 +238,9 @@ class ProjectsView(BaseView):
             cards = [self._build_project_card(project) for project in projects]
             self._list_container.controls = cards
 
-        self._list_container.update()
+            # コントロールがまだ page に追加されていない初期段階では update() を避ける
+            if getattr(self._list_container, "page", None):
+                self._list_container.update()
 
     def _render_detail(self, project: ProjectDetailVM | None) -> None:
         """プロジェクト詳細を描画する。
@@ -258,10 +258,13 @@ class ProjectsView(BaseView):
             # 詳細表示
             self._detail_container.content = self._build_project_detail(project)
 
-        self._detail_container.update()
+            if getattr(self._detail_container, "page", None):
+                self._detail_container.update()
 
-    def _build_project_card(self, project: ProjectCardVM) -> ft.Control:  # type: ignore[name-defined]
+    def _build_project_card(self, project: ProjectCardVM) -> ft.Control:
         """プロジェクトカードを構築する。
+
+        コンポーネント関数に委譲し、View層の責務を最小化。
 
         Args:
             project: プロジェクトViewModel
@@ -269,80 +272,14 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクトカード
         """
-        import flet as ft
-
         is_selected = self._controller.state.selected_id == project.id
-
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Text(
-                                    project.title,
-                                    style=ft.TextThemeStyle.TITLE_SMALL,
-                                    weight=ft.FontWeight.W_500,
-                                    expand=True,
-                                ),
-                                ft.Container(
-                                    content=ft.Text(
-                                        project.status,
-                                        style=ft.TextThemeStyle.LABEL_SMALL,
-                                        color=ft.Colors.WHITE,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                                    bgcolor=project.status_color,
-                                    border_radius=12,
-                                ),
-                            ],
-                        ),
-                        ft.Text(
-                            project.subtitle,
-                            style=ft.TextThemeStyle.BODY_SMALL,
-                            color=ft.Colors.GREY_600,
-                        ),
-                        ft.Text(
-                            project.description,
-                            style=ft.TextThemeStyle.BODY_SMALL,
-                            color=ft.Colors.GREY_700,
-                            max_lines=2,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        ft.Column(
-                            controls=[
-                                ft.Row(
-                                    controls=[
-                                        ft.Text(
-                                            project.progress_text,
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.Colors.GREY_600,
-                                        ),
-                                    ],
-                                ),
-                                ft.ProgressBar(
-                                    value=project.progress_value,
-                                    color=ft.Colors.BLUE,
-                                    bgcolor=ft.Colors.GREY_300,
-                                    height=6,
-                                ),
-                            ],
-                            spacing=4,
-                        ),
-                    ],
-                    spacing=8,
-                ),
-                padding=16,
-                ink=True,
-                on_click=lambda _: self._controller.select_project(project.id),
-            ),
-            elevation=1 if not is_selected else 3,
-            color=ft.Colors.WHITE if not is_selected else ft.Colors.BLUE_50,
-            surface_tint_color=ft.Colors.BLUE if is_selected else None,
+        return create_project_card_from_vm(
+            vm=project,
+            on_select=self._controller.select_project,
+            is_selected=is_selected,
         )
 
-    def _build_project_detail(self, project: ProjectDetailVM) -> ft.Control:  # type: ignore[name-defined]
+    def _build_project_detail(self, project: ProjectDetailVM) -> ft.Control:
         """プロジェクト詳細を構築する。
 
         Args:
@@ -351,8 +288,6 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクト詳細コンテンツ
         """
-        import flet as ft
-
         return ft.Column(
             controls=[
                 ft.Card(
@@ -381,16 +316,32 @@ class ProjectsView(BaseView):
                                             spacing=4,
                                             expand=True,
                                         ),
-                                        ft.Container(
-                                            content=ft.Text(
-                                                project.status,
-                                                style=ft.TextThemeStyle.LABEL_MEDIUM,
-                                                color=ft.Colors.WHITE,
-                                                weight=ft.FontWeight.W_500,
-                                            ),
-                                            bgcolor=project.status_color,
-                                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                                            border_radius=16,
+                                        ft.Row(
+                                            controls=[
+                                                ft.Container(
+                                                    content=ft.Text(
+                                                        project.status,
+                                                        style=ft.TextThemeStyle.LABEL_MEDIUM,
+                                                        color=ft.Colors.WHITE,
+                                                        weight=ft.FontWeight.W_500,
+                                                    ),
+                                                    bgcolor=project.status_color,
+                                                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                                                    border_radius=16,
+                                                ),
+                                                ft.IconButton(
+                                                    icon=ft.Icons.EDIT,
+                                                    tooltip="編集",
+                                                    on_click=lambda _: self._open_edit_dialog(project),
+                                                ),
+                                                ft.IconButton(
+                                                    icon=ft.Icons.DELETE_OUTLINE,
+                                                    tooltip="削除",
+                                                    on_click=lambda _: self._confirm_delete(project),
+                                                ),
+                                            ],
+                                            spacing=8,
+                                            alignment=ft.MainAxisAlignment.END,
                                         ),
                                     ],
                                 ),
@@ -448,14 +399,12 @@ class ProjectsView(BaseView):
             expand=True,
         )
 
-    def _build_no_selection(self) -> ft.Control:  # type: ignore[name-defined]
+    def _build_no_selection(self) -> ft.Control:
         """未選択状態を構築する。
 
         Returns:
             未選択状態のコンテンツ
         """
-        import flet as ft
-
         return ft.Card(
             content=ft.Container(
                 content=ft.Column(
@@ -481,14 +430,12 @@ class ProjectsView(BaseView):
             expand=True,
         )
 
-    def _build_empty_state(self) -> ft.Control:  # type: ignore[name-defined]
+    def _build_empty_state(self) -> ft.Control:
         """空の状態を構築する。
 
         Returns:
             空の状態コンテンツ
         """
-        import flet as ft
-
         return ft.Container(
             content=ft.Column(
                 controls=[
@@ -524,35 +471,99 @@ class ProjectsView(BaseView):
             expand=True,
         )
 
+    # ------------------------------------------------------------------
+    # 編集 / 削除 ダイアログ操作
+    # ------------------------------------------------------------------
+    def _open_edit_dialog(self, vm: ProjectDetailVM) -> None:
+        """編集ダイアログを開いて保存時に更新処理を呼び出す。"""
+        # VMのステータスを内部コードへ逆変換
+        try:
+            status_code = ProjectStatus.parse(vm.status).value
+        except ValueError:
+            status_code = "active"
+
+        project_dict: dict[str, str] = {
+            "id": vm.id,
+            "title": vm.title,
+            "description": vm.description,
+            "status": status_code,
+            "due_date": vm.due_date or "",
+            "tasks_count": str(vm.task_count),
+            "completed_tasks": str(vm.completed_count),
+        }
+
+        def _on_save(updated: dict[str, str]) -> None:
+            changes = {
+                "title": updated.get("title", ""),
+                "description": updated.get("description", ""),
+                "status": updated.get("status", ""),
+                "due_date": updated.get("due_date"),
+            }
+            self.with_loading(lambda: self._controller.update_project(vm.id, changes))
+            self.show_success_snackbar("プロジェクトを更新しました")
+
+        show_edit_project_dialog(self.page, project_dict, on_save=_on_save)
+
+    def _confirm_delete(self, vm: ProjectDetailVM) -> None:
+        """削除確認を表示し、確定時に削除処理を実行する。"""
+
+        def _close(_: ft.ControlEvent) -> None:
+            dialog.open = False
+            self.page.update()
+
+        def _delete(_: ft.ControlEvent) -> None:
+            self.with_loading(lambda: self._controller.delete_project(vm.id))
+            _close(_)
+            self.show_success_snackbar("プロジェクトを削除しました")
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("削除の確認", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            content=ft.Text(f"「{vm.title}」を削除します。よろしいですか？"),
+            actions=[
+                ft.TextButton("キャンセル", on_click=_close),
+                ft.ElevatedButton(
+                    "削除",
+                    icon=ft.Icons.DELETE,
+                    bgcolor=ft.Colors.RED,
+                    color=ft.Colors.WHITE,
+                    on_click=_delete,
+                ),
+            ],
+        )
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
     # イベントハンドラー
-    def _on_search_change(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+    def _on_search_change(self, e: ft.ControlEvent) -> None:
         """検索変更イベント。
 
         Args:
             e: イベント引数
         """
-        keyword = e.control.value if e.control.value else ""  # type: ignore[attr-defined]
+        keyword = e.control.value if e.control.value else ""
         self._controller.set_keyword(keyword)
 
-    def _on_status_change(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+    def _on_status_change(self, e: ft.ControlEvent) -> None:
         """ステータス変更イベント。
 
         Args:
             e: イベント引数
         """
-        status = e.control.value if e.control.value else None  # type: ignore[attr-defined]
+        status = e.control.value if e.control.value else None
         self._controller.set_status(status)
 
-    def _on_sort_change(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+    def _on_sort_change(self, e: ft.ControlEvent) -> None:
         """並び替え変更イベント。
 
         Args:
             e: イベント引数
         """
-        sort_key = e.control.value  # type: ignore[attr-defined]
+        sort_key = e.control.value
         self._controller.set_sort(sort_key)
 
-    def _on_sort_toggle(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+    def _on_sort_toggle(self, _: ft.ControlEvent) -> None:
         """並び順切替イベント。
 
         Args:
@@ -560,7 +571,7 @@ class ProjectsView(BaseView):
         """
         self._controller.toggle_sort_direction()
 
-    def _on_create_click(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+    def _on_create_click(self, _: ft.ControlEvent) -> None:
         """新規作成クリックイベント。
 
         Args:
@@ -575,21 +586,13 @@ class ProjectsView(BaseView):
             Args:
                 data: ダイアログで入力されたプロジェクト基本情報
             """
-            import uuid
-            from datetime import datetime
-
             today = datetime.now().strftime("%Y-%m-%d")
 
-            # ステータス値はダイアログから受け取った表示値(Active/On-Hold/Completed 等)を内部コードに正規化。
-            # TODO: 重複正規化ロジックの最終的な移設
-            #  - normalize_status は現在 views.shared.status_utils にあるが、
-            #    ドメイン境界の明確化のため最終的には models (例: models/project.py) 側で
-            #    ProjectStatus に紐づくユーティリティとして提供し、View 層は直接参照しない設計にする。
-            #  - 関連重複箇所: controller.set_status / project_dialogs.save_project / query.list_projects
             status_display = (data.get("status") or "Active").strip()
-            from views.shared.status_utils import normalize_status
-
-            status_raw = normalize_status(status_display)
+            try:
+                status_raw = ProjectStatus.parse(status_display).value
+            except ValueError:
+                status_raw = "active"
 
             # due_date は未設定時 None へ統一
             due_date_raw = (data.get("due_date") or "").strip()
@@ -612,58 +615,8 @@ class ProjectsView(BaseView):
                 "task_count": "0",
                 "completed_count": "0",
             }
-            self._controller.create_project(new_project, select=True)
+            # 作成処理もローディング表示で包み、更新/削除と挙動を統一
+            self.with_loading(lambda: self._controller.create_project(new_project, select=True))
             self.show_success_snackbar("プロジェクトを追加しました")
 
-        show_create_project_dialog(self.page, on_save=_on_save)  # type: ignore[arg-type]
-
-    def _get_sample_data(self) -> list[dict[str, str]]:
-        """`views.sample` のサンプルデータをプロジェクトView用形式に変換して取得する。
-
-        `sample.py` 内の `get_projects_for_ui()` は以下のキーを持つ:
-        - id, name, description, status, tasks_count, completed_tasks, created_at, start_date, end_date, priority
-
-        本 View / Presenter 層では以下のキーを期待する:
-        - id, title(or name), description, status, created_at, updated_at, due_date,
-          task_count(or tasks_count), completed_count(or completed_tasks)
-
-        欠損する `updated_at` は `created_at` を流用し、`due_date` は `end_date` をマッピングする。
-
-        Returns:
-            Presenter が処理可能な正規化済みプロジェクト辞書リスト
-        """
-        # TODO: サンプルデータの撤去
-        # - 実運用では ProjectApplicationService から取得し、Presenter が期待する
-        #   キー構造に合わせてマッピングしてください（可能なら Presenter 側で完結させる）。
-        return build_projects_sample_data(get_projects_for_ui())
-
-
-def build_projects_sample_data(items: list[dict[str, str]]) -> list[dict[str, str]]:
-    """`views.sample.get_projects_for_ui()`の出力をPresenterが扱える形へ正規化する。
-
-    Args:
-        items: sample由来の生データリスト
-
-    Returns:
-        正規化済みのプロジェクト辞書リスト
-    """
-    return [
-        {
-            "id": str(item.get("id", "")),
-            # sample側は name を使用しているが Presenter 側は title も受け付ける
-            "title": str(item.get("title", item.get("name", ""))),
-            "description": str(item.get("description", "")),
-            # 日本語ステータス想定（Presenter/Controller側での表示には支障なし）
-            "status": str(item.get("status", "")),
-            "created_at": str(item.get("created_at", item.get("start_date", ""))),
-            # TODO: updated_at の暫定値
-            # - updated_at が無いため created_at を暫定利用しています（実データ導入時に差し替え）。
-            "updated_at": str(item.get("created_at", item.get("start_date", ""))),
-            # due_date は sample 側 end_date をマッピング
-            "due_date": str(item.get("end_date", "")),
-            # Presenter は tasks_count / completed_tasks もしくは task_count / completed_count を受け付ける
-            "task_count": str(item.get("tasks_count", "0")),
-            "completed_count": str(item.get("completed_tasks", "0")),
-        }
-        for item in items
-    ]
+        show_create_project_dialog(self.page, on_save=_on_save)

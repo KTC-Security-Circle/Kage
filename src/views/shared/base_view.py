@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from asyncio import Task
     from collections.abc import Awaitable, Callable
 
+    from logic.application.apps import ApplicationServices
+
 
 class ErrorHandlingMixin:
     """エラーハンドリング機能を提供するミックスイン。
@@ -37,7 +39,7 @@ class ErrorHandlingMixin:
     dialog/snack_bar を動的に設定するため安全に ``setattr`` を使用する。
     """
 
-    page: ft.Page  # type: ignore[assignment]
+    page: ft.Page
 
     def show_error_dialog(
         self,
@@ -125,6 +127,18 @@ class BaseViewState:
     error_message: str | None = None
 
 
+@dataclass(slots=True)
+class BaseViewProps:
+    """View 共通プロパティ.
+
+    - page: Flet ページインスタンス
+    - apps: アプリケーションサービスのコンテナ
+    """
+
+    page: ft.Page
+    apps: ApplicationServices
+
+
 class BaseView(ft.Container, ErrorHandlingMixin):
     """全 View の共通基底クラス (spec: base-view-contract).
 
@@ -135,11 +149,12 @@ class BaseView(ft.Container, ErrorHandlingMixin):
     - Cleanup: 実行中タスクキャンセル
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         super().__init__()
-        self.page: ft.Page = page
+        self.page: ft.Page = props.page
         self.is_mounted: bool = False
         self.state: BaseViewState = BaseViewState()
+        self.apps = props.apps
         # 実行中タスク (async) を保持し unmount 時にキャンセル
         # 非同期タスク保持 (TYPE_CHECKING で Task インポート)
         self._running_tasks: list[Task[Any]] = []

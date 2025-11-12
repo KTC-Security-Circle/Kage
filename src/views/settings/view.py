@@ -9,7 +9,7 @@ import flet as ft
 from loguru import logger
 
 from settings.manager import get_config_manager
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog, ErrorDialog
 from views.theme import SPACING, get_light_color
 
@@ -25,22 +25,22 @@ class SettingsView(BaseView):
     変更は即座に適用され、設定ファイルに保存されます。
     """
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """SettingsViewを初期化する。
 
         Args:
-            page: Fletページオブジェクト
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
 
         # 設定管理
         self.config_manager = get_config_manager()
         self.has_unsaved_changes = False
 
         # セクションコンポーネント
-        self.appearance_section = AppearanceSection(page, self._on_setting_changed)
-        self.window_section = WindowSection(page, self._on_setting_changed)
-        self.database_section = DatabaseSection(page, self._on_setting_changed)
+        self.appearance_section = AppearanceSection(self.page, self._on_setting_changed)
+        self.window_section = WindowSection(self.page, self._on_setting_changed)
+        self.database_section = DatabaseSection(self.page, self._on_setting_changed)
 
         # 保存・リセットボタン
         self.save_button = ft.ElevatedButton(

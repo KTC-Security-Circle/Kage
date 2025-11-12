@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 from logic.application.task_application_service import TaskApplicationService
 from models import TaskStatus
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import create_page_header
 
 from .components import (
@@ -35,13 +35,13 @@ class TasksView(BaseView):
     BaseViewを継承し、エラーハンドリングとローディング機能を活用。
     """
 
-    def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
+    def __init__(self, props: BaseViewProps) -> None:  # type: ignore[name-defined]
         """TasksViewを初期化する。
 
         Args:
-            page: Fletページインスタンス
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
 
         # TaskApplicationServiceを直接インスタンス化
         self._task_app_service = TaskApplicationService()

@@ -58,7 +58,6 @@ class TasksView(BaseView):
         seed = _default_seed_data()
         self._query: TasksQuery = query or InMemoryTasksQuery(seed)
         self._controller = TasksController(_query=self._query, _on_change=self._on_view_model_change)
-        self._list: ft.ListView | None = None  # deprecated: kept for compatibility
         self._status_dropdown: ft.Dropdown | None = None
         self._sort_dropdown: ft.Dropdown | None = None
         self._desc_switch: ft.Switch | None = None

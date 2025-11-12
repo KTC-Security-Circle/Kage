@@ -38,10 +38,10 @@ class NavigationItem:
 # Navigation items configuration
 NAVIGATION_ITEMS = [
     NavigationItem("ホーム", "/", ft.Icons.HOME_OUTLINED, ft.Icons.HOME),
+    NavigationItem("メモ", "/memos", ft.Icons.NOTE_OUTLINED, ft.Icons.NOTE),
+    NavigationItem("タスク", "/tasks", ft.Icons.TASK_OUTLINED, ft.Icons.TASK),
     NavigationItem("プロジェクト", "/projects", ft.Icons.FOLDER_OUTLINED, ft.Icons.FOLDER),
     NavigationItem("タグ", "/tags", ft.Icons.LOCAL_OFFER_OUTLINED, ft.Icons.LOCAL_OFFER),
-    NavigationItem("タスク", "/tasks", ft.Icons.TASK_OUTLINED, ft.Icons.TASK),
-    NavigationItem("メモ", "/memos", ft.Icons.NOTE_OUTLINED, ft.Icons.NOTE),
     NavigationItem("用語集", "/terms", ft.Icons.MENU_BOOK_OUTLINED, ft.Icons.MENU_BOOK),
     NavigationItem("週間レビュー", "/weekly-review", ft.Icons.ASSESSMENT_OUTLINED, ft.Icons.ASSESSMENT),
     NavigationItem("設定", "/settings", ft.Icons.SETTINGS_OUTLINED, ft.Icons.SETTINGS),

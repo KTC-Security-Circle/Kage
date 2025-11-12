@@ -188,13 +188,6 @@ class CreateMemoView(BaseView):
                 self._header.enable_save()
             else:
                 self._header.disable_save()
-        else:
-            # フォールバック: 画面全体を更新
-            try:
-                self.safe_update()
-            except Exception as e:
-                logger.debug(f"update save button ignored: {e}")
-
     def _handle_back(self) -> None:
         self.page.go("/memos")
 

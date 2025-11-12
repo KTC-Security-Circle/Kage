@@ -14,10 +14,13 @@ import flet as ft
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from logic.application.apps import ApplicationServices
+
 from views.home import HomeView
-from views.memos import MemosView
+from views.memos import CreateMemoView, MemosView
 from views.projects import ProjectsView
 from views.settings import SettingsView
+from views.shared.base_view import BaseViewProps
 from views.shared.sidebar import build_sidebar
 from views.tags import TagsView
 from views.tasks import TasksView
@@ -25,12 +28,13 @@ from views.terms import TermsView
 from views.weekly_review import WeeklyReviewView
 
 
-def build_layout(page: ft.Page, route: str) -> ft.View:
+def build_layout(page: ft.Page, route: str, apps: ApplicationServices) -> ft.View:
     """指定されたルートに対応するレイアウトとViewを構築する。
 
     Args:
         page: Fletのページオブジェクト
         route: 現在のルート文字列
+        apps: アプリケーションサービスのコンテナ
 
     Returns:
         構築されたFletビュー
@@ -40,7 +44,7 @@ def build_layout(page: ft.Page, route: str) -> ft.View:
         ルートとViewの対応は今後各画面実装時に追加される。
     """
     # Route to view mapping
-    content = _get_view_content(page, route)
+    content = _get_view_content(page, route, apps)
 
     # Build sidebar with current route
     sidebar = build_sidebar(page, route)
@@ -68,31 +72,34 @@ def build_layout(page: ft.Page, route: str) -> ft.View:
     )
 
 
-def _get_view_content(page: ft.Page, route: str) -> ft.Control:
+def _get_view_content(page: ft.Page, route: str, apps: ApplicationServices) -> ft.Control:
     """ルートに基づいて適切なViewコンテンツを取得する。
 
     Args:
         page: Fletページオブジェクト
         route: 現在のルート文字列
+        apps: アプリケーションサービスのコンテナ
 
     Returns:
         対応するViewコンテンツ
     """
     # Route to view mapping (factory pattern to reduce returns)
-    view_factory: dict[str, Callable[[ft.Page], ft.Control]] = {
+    view_factory: dict[str, Callable[[BaseViewProps], ft.Control]] = {
         "/": lambda p: HomeView(p).build(),
         "/projects": lambda p: ProjectsView(p).build(),
         "/tags": lambda p: TagsView(p).build(),
         "/tasks": lambda p: TasksView(p).build(),
         "/settings": lambda p: SettingsView(p).build(),
         "/memos": lambda p: MemosView(p).build(),
+        "/memos/create": lambda p: CreateMemoView(p).build(),
         "/terms": lambda p: TermsView(p).build(),
         "/weekly-review": lambda p: WeeklyReviewView(p).build(),
     }
 
     factory = view_factory.get(route)
     if factory:
-        return factory(page)
+        props = BaseViewProps(page=page, apps=apps)
+        return factory(props)
 
     # Other views are still placeholders
     # TODO: 未実装ルートに対しては随時追加

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import flet as ft
 
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 from views.theme import get_tag_color_palette
 
 from .components import (
@@ -30,13 +30,13 @@ class TagsView(BaseView):
     ローディング機能を活用。
     """
 
-    def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
+    def __init__(self, props: BaseViewProps) -> None:  # type: ignore[name-defined]
         """TagsViewを初期化する。
 
         Args:
-            page: Fletページインスタンス
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
         self.tags_data: list[dict[str, str]] = []  # TODO: 実際のデータバインディング
         self.available_colors = get_tag_color_palette()
 

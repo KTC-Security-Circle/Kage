@@ -150,23 +150,25 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                 return
             due_date_text.error_text = None
 
+        # ステータスはドメイン層のparseで正規化
+        from models import ProjectStatus
+
+        status_raw = (status_dropdown.value or "Active").strip()
+        try:
+            status_normalized = ProjectStatus.parse(status_raw).value
+        except ValueError:
+            status_normalized = "active"  # デフォルト
+
         # プロジェクトデータを作成（DBスキーマ準拠）
         project_data = {
-            "id": str(__import__("uuid").uuid4()),  # uuid4で衝突回避
+            "id": str(__import__("uuid").uuid4()),
             "title": (name_field.value or "新しいプロジェクト").strip(),
             "description": (description_field.value or "").strip(),
-            "status": (status_dropdown.value or "Active").strip(),
+            "status": status_normalized,
             "due_date": due_date_val,
-            # tasksは作成時は空リストを基本とする
             "task_id": [],
         }
 
-        # TODO: 本保存ロジックの実装
-        # - 現在は on_save コールバックで外側へ返すだけです。
-        # - 実装では ProjectApplicationService.create_project(...) を呼び出し、
-        #   成功時は snackbar で通知し、一覧の再取得/詳細の自動選択を行ってください。
-        # - 失敗時は self.show_error_snackbar(...) 等でユーザーに明確に伝えましょう。
-        # コールバック関数を呼び出してデータを親に渡す
         if on_save:
             on_save(project_data)
 
@@ -409,14 +411,15 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             return
         name_field.error_text = None
 
-        # TODO: 正規化の移設
-        #  - 現在は views.shared.status_utils.normalize_status を利用しているが、
-        #    将来的には models 側で ProjectStatus と一緒に提供する関数に委譲し、
-        #    View 層はドメインのAPIのみを呼び出す。
-        from views.shared.status_utils import normalize_status
+        # ステータスはドメイン層のparseで正規化
+        from models import ProjectStatus
 
         raw_status = status_dropdown.value or "Active"
-        normalized_status = normalize_status(raw_status)
+        try:
+            normalized_status = ProjectStatus.parse(raw_status).value
+        except ValueError:
+            normalized_status = "active"
+
         due_raw = due_date_text.value.strip() if due_date_text.value else None
 
         title_val = (name_field.value or project.get("title", "")).strip()

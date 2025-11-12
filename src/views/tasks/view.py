@@ -25,7 +25,13 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from views.shared.base_view import BaseView
+
+if TYPE_CHECKING:
+    import flet as ft
+
+from logic.application.task_application_service import TaskApplicationService
+from models import TaskStatus
+from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import create_page_header
 
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
@@ -46,7 +52,6 @@ class TasksView(BaseView):
 
     検索 / ステータスフィルタ / 並び替え / 降順切替 + リスト表示の最小UIを提供。
     """
-
     def __init__(self, page: ft.Page, *, query: TasksQuery | None = None) -> None:
         """コンストラクタ。
 

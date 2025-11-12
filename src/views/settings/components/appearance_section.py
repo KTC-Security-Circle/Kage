@@ -99,5 +99,5 @@ class AppearanceSection(ft.Column):
         # ユーザー名設定
         self.user_name_field.value = settings.user.user_name
 
-        if hasattr(self.page, "update"):
-            self.page.update()
+        if self.page:
+            self.update()

@@ -39,7 +39,7 @@ from loguru import logger
 
 from logic.application.apps import ApplicationServices
 from models import MemoRead, MemoStatus
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 from . import presenter
 from .components import MemoActionBar, MemoCardList, MemoFilters, MemoStatusTabs
@@ -61,14 +61,14 @@ class MemosView(BaseView):
     - AI提案機能（将来実装）
     """
 
-    def __init__(self, page: ft.Page, *, memo_app: MemoApplicationPort | None = None) -> None:
+    def __init__(self, props: BaseViewProps, *, memo_app: MemoApplicationPort | None = None) -> None:
         """メモビューを初期化。
 
         Args:
-            page: Fletページオブジェクト
+            props: View共通プロパティ
             memo_app: テストやDI用に注入するメモアプリケーションサービス
         """
-        super().__init__(page)
+        super().__init__(props)
 
         self.memos_state = MemosViewState()
         if memo_app is None:
@@ -234,8 +234,13 @@ class MemosView(BaseView):
     def _handle_create_memo(self) -> None:
         """新規メモ作成ハンドラー。"""
         logger.info("Create memo requested")
-        # TODO: メモ作成ダイアログまたは画面遷移を実装
-        self.show_info_snackbar("メモ作成機能は統合フェーズで実装予定です")
+        # TODO: ダイアログ版のクイック作成（テンプレートの CreateMemoDialog 相当）を後続で併存させる。
+        #       現状はページ遷移でフルスクリーンの CreateMemoView を表示。
+        # メモ作成ページへ遷移
+        try:
+            self.page.go("/memos/create")
+        except Exception as e:
+            self.notify_error("メモ作成ページへの遷移に失敗しました", details=f"{type(e).__name__}: {e}")
 
     def _handle_search(self, query: str) -> None:
         """検索ハンドラー。
@@ -332,13 +337,13 @@ class MemosView(BaseView):
 # ユーティリティ関数
 
 
-def create_memos_view(page: ft.Page) -> MemosView:
+def create_memos_view(props: BaseViewProps) -> MemosView:
     """メモビューを作成。
 
     Args:
-        page: Fletページオブジェクト
+        props: View共通プロパティ
 
     Returns:
         作成されたメモビュー
     """
-    return MemosView(page)
+    return MemosView(props)

@@ -75,21 +75,12 @@ from loguru import logger
 
 from models import MemoStatus
 
-from .components.action_bar import (
-    DEFAULT_SEARCH_PLACEHOLDER,
-    MIN_SEARCH_LENGTH,
-    ActionBarData,
-)
+from .components.action_bar import DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH, ActionBarData
 from .components.filters import FilterConfig, FilterData
-from .components.memo_card import (
-    DEFAULT_MEMO_TITLE,
-    MAX_CONTENT_PREVIEW_LENGTH,
-    MemoCardData,
-    StatusBadgeData,
-)
-from .components.memo_list import MemoListData
+from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
 from .components.shared.constants import DEFAULT_DATE_TEXT
 from .components.status_tabs import StatusTabsData, TabData
+from .components.types import MemoListData
 
 if TYPE_CHECKING:
     from collections.abc import Callable

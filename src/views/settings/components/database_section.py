@@ -89,16 +89,16 @@ class DatabaseSection(ft.Column):
     def _on_url_changed(self, _: ft.ControlEvent) -> None:
         """データベースURLが変更された時の処理。"""
         self.result_text.visible = False
-        if hasattr(self.page, "update"):
-            self.page.update()
+        if self.page:
+            self.update()
         self.on_change()
 
     def _on_reset_to_default(self, _: ft.ControlEvent) -> None:
         """デフォルトURLに戻すボタンがクリックされた時の処理。"""
         self.url_field.value = "sqlite:///storage/data/tasks.db"
         self.result_text.visible = False
-        if hasattr(self.page, "update"):
-            self.page.update()
+        if self.page:
+            self.update()
         self.on_change()
 
     def _on_test_connection(self, _: ft.ControlEvent) -> None:
@@ -142,8 +142,8 @@ class DatabaseSection(ft.Column):
         self.result_text.value = message
         self.result_text.color = ft.Colors.GREEN if success else ft.Colors.ERROR
         self.result_text.visible = True
-        if hasattr(self.page, "update"):
-            self.page.update()
+        if self.page:
+            self.update()
 
     def apply_settings(self, settings: EditableAppSettings) -> None:
         """設定値を適用する。
@@ -164,5 +164,5 @@ class DatabaseSection(ft.Column):
         self.url_field.value = settings.database.url
         self.result_text.visible = False
 
-        if hasattr(self.page, "update"):
-            self.page.update()
+        if self.page:
+            self.update()

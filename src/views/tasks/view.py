@@ -26,16 +26,17 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import create_page_header
 
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
 from .components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
 from .components.task_card import TaskCardData
+from .components.task_dialog import show_create_task_dialog
 from .components.task_list import TaskList, TaskListProps
 from .controller import TasksController
 from .presenter import to_detail_from_card
-from .query import InMemoryTasksQuery, TasksQuery
 
 if TYPE_CHECKING:
     from .presenter import TaskCardVM
@@ -48,17 +49,25 @@ class TasksView(BaseView):
     検索 / ステータスフィルタ / 並び替え / 降順切替 + リスト表示の最小UIを提供。
     """
 
-    def __init__(self, props: BaseViewProps, *, query: TasksQuery | None = None) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """コンストラクタ。
 
         Args:
             props: 共通ビュープロパティ (page, apps コンテナ)
-            query: テスト差し替え用の Query 実装
         """
         super().__init__(props)
-        seed = _default_seed_data()
-        self._query: TasksQuery = query or InMemoryTasksQuery(seed)
-        self._controller = TasksController(_query=self._query, _on_change=self._on_view_model_change)
+
+        # データ取得: ApplicationService を優先して利用する
+        # - 例外時のユーザー通知は BaseView の snackbar を利用
+        service = self.apps.get_service(TaskApplicationService)
+
+        # コントローラー初期化
+        self._controller = TasksController(
+            service=service,
+            on_change=self._on_view_model_change,
+            on_error=lambda msg: self.show_error_snackbar(self.page, msg),
+        )
+
         self._status_dropdown: ft.Dropdown | None = None
         self._sort_dropdown: ft.Dropdown | None = None
         self._desc_switch: ft.Switch | None = None
@@ -68,7 +77,7 @@ class TasksView(BaseView):
         # Components
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
         self._detail_comp = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
-        logger.info("TasksView initialized with MVP structure")
+        logger.info("TasksView initialized with ApplicationService")
         # 初期描画データ
         self._controller.refresh()
 
@@ -89,6 +98,17 @@ class TasksView(BaseView):
         header = create_page_header(
             title="タスク",
             subtitle=f"GTDベースのタスク管理 ({total_count}件)",
+        )
+
+        # 新規タスク作成ボタン
+        create_button = ft.ElevatedButton(
+            "新規タスク作成",
+            icon=ft.icons.ADD,
+            on_click=lambda _: self._open_create_dialog(),
+            style=ft.ButtonStyle(
+                color=ft.Colors.WHITE,
+                bgcolor=ft.Colors.BLUE_600,
+            ),
         )
 
         self._search_field = ft.TextField(
@@ -173,6 +193,10 @@ class TasksView(BaseView):
         controls = ft.Column(
             controls=[
                 header,
+                ft.Row(
+                    controls=[create_button],
+                    alignment=ft.MainAxisAlignment.END,
+                ),
                 ft.Row(
                     controls=[
                         self._search_field,
@@ -366,145 +390,55 @@ class TasksView(BaseView):
                 return
 
     def _on_status_change(self, task_id: str, new_status: str) -> None:
-        # Controller に委譲（InMemoryでは簡易更新）。実装未対応ならログのみ。
+        """タスクステータス変更時のコールバック。
+
+        Args:
+            task_id: タスクID
+            new_status: 新しいステータス
+        """
         try:
             self._controller.change_task_status(task_id, new_status)
+            # ステータス変更後に画面を更新
+            self.safe_update()
         except AttributeError:
             logger.warning("change_task_status not supported by controller")
 
+    def _open_create_dialog(self) -> None:
+        """タスク作成ダイアログを開く。"""
+        show_create_task_dialog(
+            page=self.page,
+            on_save=self._handle_create_task,
+        )
 
-# TODO: ここでサンプルデータを与えてます
-def _default_seed_data() -> list[dict[str, object]]:
-    """旧ビューのモックを平坦化した初期シードを返す。
+    def _handle_create_task(self, task_data: dict[str, str]) -> None:
+        """タスク作成処理を実行する。
 
-    Returns:
-        タスク辞書リスト
-    """
-    return [
-        {
-            "id": "1",
-            "title": "新機能の要件定義",
-            "description": "ユーザー要望整理と仕様策定",
-            "status": "todo",
-            "due_date": "2024-11-30",
-            "completed_at": None,
-            "project_id": "p1",
-            "memo_id": None,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-20",
-            "created_at": "2024-10-20",
-        },
-        {
-            "id": "2",
-            "title": "デザインモックアップ作成",
-            "description": "UI/UX初期案",
-            "status": "todo",
-            "due_date": "2024-11-25",
-            "completed_at": None,
-            "project_id": "p1",
-            "memo_id": "m2",
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-22",
-            "created_at": "2024-10-22",
-        },
-        {
-            "id": "3",
-            "title": "フロントエンド実装",
-            "description": "Reactコンポーネント実装",
-            "status": "progress",
-            "due_date": "2024-12-05",
-            "completed_at": None,
-            "project_id": "p2",
-            "memo_id": None,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-18",
-            "created_at": "2024-10-18",
-        },
-        {
-            "id": "4",
-            "title": "API仕様書作成",
-            "description": "バックエンドAPI詳細",
-            "status": "progress",
-            "due_date": None,
-            "completed_at": None,
-            "project_id": "p2",
-            "memo_id": "m4",
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-21",
-            "created_at": "2024-10-21",
-        },
-        {
-            "id": "5",
-            "title": "環境構築",
-            "description": "開発環境セットアップ",
-            "status": "completed",
-            "due_date": "2024-10-16",
-            "completed_at": "2024-10-15T10:00:00",
-            "project_id": None,
-            "memo_id": None,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-15",
-            "created_at": "2024-10-15",
-        },
-        {
-            "id": "6",
-            "title": "本日のレビュー",
-            "description": "スタンドアップ用メモ",
-            "status": "todays",
-            "due_date": "2024-11-12",
-            "completed_at": None,
-            "project_id": None,
-            "memo_id": "m6",
-            "is_recurring": True,
-            "recurrence_rule": "FREQ=DAILY",
-            "updated_at": "2024-10-24",
-            "created_at": "2024-10-24",
-        },
-        {
-            "id": "7",
-            "title": "依頼待ちの回答",
-            "description": "法務確認待ち",
-            "status": "waiting",
-            "due_date": None,
-            "completed_at": None,
-            "project_id": "p3",
-            "memo_id": None,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-23",
-            "created_at": "2024-10-22",
-        },
-        {
-            "id": "8",
-            "title": "不要チケットのクローズ",
-            "description": "範囲外のため",
-            "status": "canceled",
-            "due_date": None,
-            "completed_at": None,
-            "project_id": None,
-            "memo_id": None,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-19",
-            "created_at": "2024-10-17",
-        },
-        {
-            "id": "9",
-            "title": "期限切れのバックログ整理",
-            "description": "期限超過アイテムの棚卸し",
-            "status": "overdue",
-            "due_date": "2024-10-05",
-            "completed_at": None,
-            "project_id": None,
-            "memo_id": None,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "updated_at": "2024-10-10",
-            "created_at": "2024-10-01",
-        },
-    ]
+        Args:
+            task_data: タスクデータ(title, description, status など)
+        """
+        title = task_data.get("title", "").strip()
+        description = task_data.get("description", "").strip() or None
+        status = task_data.get("status", "").strip()
+
+        if not title:
+            self.show_error_snackbar(self.page, "タイトルを入力してください。")
+            return
+
+        # Controllerにタスク作成を委譲（ローディング表示付き）
+        def _create() -> None:
+            self._controller.create_task(
+                title=title,
+                description=description,
+                status=status,
+            )
+
+        try:
+            self.with_loading(_create)
+            # 成功メッセージを表示
+            self.show_success_snackbar(f"タスク「{title}」を作成しました。")
+            logger.info(f"タスク作成成功: {title}")
+            # 明示的に画面を更新
+            self.safe_update()
+        except Exception as e:
+            logger.exception(f"タスク作成中にエラー: {e}")
+            self.show_error_snackbar(self.page, "タスクの作成に失敗しました。詳細はログを参照してください。")

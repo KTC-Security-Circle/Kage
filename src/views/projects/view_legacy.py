@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import flet as ft
 
 from views.sample import get_enhanced_projects_sample_data
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 from .components import show_create_project_dialog, show_edit_project_dialog
 
@@ -29,13 +29,13 @@ class ProjectsView(BaseView):
     BaseViewを継承し、エラーハンドリングとローディング機能を活用。
     """
 
-    def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
+    def __init__(self, props: BaseViewProps) -> None:  # type: ignore[name-defined]
         """ProjectsViewを初期化する。
 
         Args:
-            page: Fletページインスタンス
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
         self.projects_data: list[dict[str, str]] = []  # TODO: 実際のデータバインディング
         self.selected_project: dict[str, str] | None = None
         self.search_query: str = ""

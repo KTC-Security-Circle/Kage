@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import flet as ft
 
-from views.shared.base_view import BaseView
+from views.shared.base_view import BaseView, BaseViewProps
 
 from .components.review_components import (
     ProductivityInsights,
@@ -20,13 +20,13 @@ from .components.review_components import (
 class WeeklyReviewView(BaseView):
     """Main view for weekly retrospective and planning."""
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, props: BaseViewProps) -> None:
         """Initialize weekly review view.
 
         Args:
-            page: Flet page instance
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
         self.title = "週次振り返り"
         self.description = "今週の振り返りと来週の計画"
 

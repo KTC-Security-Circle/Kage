@@ -37,9 +37,9 @@ class SettingsView(BaseView):
         """SettingsViewを初期化する。
 
         Args:
-            page: Fletページオブジェクト
+            props: View共通プロパティ
         """
-        super().__init__(page)
+        super().__init__(props)
 
         # State層とController層の初期化
         self.state = SettingsViewState()

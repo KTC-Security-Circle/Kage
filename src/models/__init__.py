@@ -116,6 +116,95 @@ class ProjectStatus(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+    @classmethod
+    def parse(cls, value: str) -> "ProjectStatus":
+        """任意のステータス文字列をProjectStatus Enumへ変換する。
+
+        英語コード、日本語表示値、ハイフン/アンダースコア混在を吸収し、
+        統一された Enum 値を返す。
+
+        Args:
+            value: 英語コードまたは日本語表示値（例: "active", "進行中", "On-Hold"）
+
+        Returns:
+            対応する ProjectStatus Enum
+
+        Raises:
+            ValueError: 未知のステータス値が指定された場合
+        """
+        # 正規化: 小文字化、ハイフン→アンダースコア
+        normalized = value.strip().lower().replace("-", "_")
+
+        # 英語コードマッピング
+        code_map = {
+            "active": cls.ACTIVE,
+            "on_hold": cls.ON_HOLD,
+            "completed": cls.COMPLETED,
+            "cancelled": cls.CANCELLED,
+        }
+
+        # 日本語→英語コードマッピング
+        jp_to_code = {
+            "進行中": "active",
+            "計画中": "active",  # 計画中も進行中扱い
+            "保留": "on_hold",
+            "完了": "completed",
+            "中止": "cancelled",
+            "キャンセル": "cancelled",
+        }
+
+        # 英語コードで直接マッチ
+        if normalized in code_map:
+            return code_map[normalized]
+
+        # 日本語から英語コードへ変換
+        raw = value.strip()
+        if raw in jp_to_code:
+            return code_map[jp_to_code[raw]]
+
+        # 未知の値
+        valid_values = list(code_map.keys()) + list(jp_to_code.keys())
+        msg = f"Unknown status value: '{value}'. Valid values: {valid_values}"
+        raise ValueError(msg)
+
+    @classmethod
+    def display_label(cls, status: "ProjectStatus") -> str:
+        """ProjectStatus Enumから日本語表示ラベルを取得する。
+
+        Args:
+            status: ProjectStatus Enum値
+
+        Returns:
+            対応する日本語表示ラベル
+        """
+        label_map = {
+            cls.ACTIVE: "進行中",
+            cls.ON_HOLD: "保留",
+            cls.COMPLETED: "完了",
+            cls.CANCELLED: "中止",
+        }
+        return label_map.get(status, status.value)
+
+    @classmethod
+    def get_color(cls, status: "ProjectStatus") -> str:
+        """ProjectStatus Enumからテーマカラーを取得する。
+
+        Args:
+            status: ProjectStatus Enum値
+
+        Returns:
+            Flet Color定数文字列
+        """
+        import flet as ft
+
+        color_map = {
+            cls.ACTIVE: ft.Colors.BLUE,
+            cls.ON_HOLD: ft.Colors.ORANGE,
+            cls.COMPLETED: ft.Colors.GREEN,
+            cls.CANCELLED: ft.Colors.GREY,
+        }
+        return color_map.get(status, ft.Colors.GREY)
+
 
 class TaskStatus(str, Enum):
     """タスクのステータス（GTDシステムに基づく）

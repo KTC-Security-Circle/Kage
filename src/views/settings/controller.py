@@ -33,16 +33,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import flet as ft
 from loguru import logger
 
 from errors import ValidationError
-from logic.services.settings_service import SettingsService  # noqa: TC001 - Runtime dependency
 from settings.models import EditableUserSettings, EditableWindowSettings
 
+from .query import SettingsQuery  # noqa: TC001 - Runtime dependency
 from .state import SettingsSnapshot, SettingsViewState
 from .validation import validate_database_url, validate_theme, validate_window_size
 
@@ -67,7 +67,7 @@ class SettingsController:
     """SettingsView 用の状態操作とサービス呼び出しを集約する。"""
 
     state: SettingsViewState
-    service: SettingsService
+    query: SettingsQuery
 
     def load_settings(self) -> None:
         """現在の設定値を読み込んでStateに反映する。
@@ -79,8 +79,8 @@ class SettingsController:
             self.state.start_loading()
             self.state.set_error(None)
 
-            # Serviceからスナップショット取得
-            data = self.service.load_settings_snapshot()
+            # Query層からスナップショット取得
+            data = self.query.load_snapshot()
 
             # Snapshot生成
             snapshot = SettingsSnapshot(
@@ -98,8 +98,6 @@ class SettingsController:
 
             # Stateに反映
             self.state.load_snapshot(snapshot)
-
-            logger.debug("設定値を読み込みました")
 
         except Exception as e:
             logger.error(f"設定値の読み込みに失敗しました: {e}")
@@ -141,15 +139,13 @@ class SettingsController:
                 "database_url": self.state.current.database_url,
             }
 
-            # Serviceで保存
-            self.service.save_settings_snapshot(snapshot_dict)
+            # Query層で保存
+            self.query.save_snapshot(snapshot_dict)
 
             # Stateを保存済みとしてマーク
             self.state.mark_as_saved()
-            logger.info("設定を保存しました")
 
         except ValidationError as e:
-            logger.warning(f"設定のバリデーションエラー: {e}")
             error_msg = f"設定の検証に失敗しました: {e}"
             self.state.set_error(error_msg)
             raise SettingsSaveError(error_msg) from e
@@ -171,7 +167,6 @@ class SettingsController:
         """
         try:
             self.load_settings()
-            logger.debug("設定をリセットしました")
 
         except Exception as e:
             logger.error(f"設定のリセットに失敗しました: {e}")
@@ -188,8 +183,14 @@ class SettingsController:
         if self.state.current is None:
             return
 
-        new_appearance = replace(self.state.current.appearance, theme=theme)
-        new_snapshot = replace(self.state.current, appearance=new_appearance)
+        # PydanticモデルなのでmodelModel_copy()を使用
+        new_appearance = self.state.current.appearance.model_copy(update={"theme": theme})
+        # SettingsSnapshotはdataclassなので新しいインスタンスを作成
+        new_snapshot = SettingsSnapshot(
+            appearance=new_appearance,
+            window=self.state.current.window,
+            database_url=self.state.current.database_url,
+        )
         self.state.update_current(new_snapshot)
 
     def update_user_name(self, user_name: str) -> None:
@@ -201,8 +202,12 @@ class SettingsController:
         if self.state.current is None:
             return
 
-        new_appearance = replace(self.state.current.appearance, user_name=user_name)
-        new_snapshot = replace(self.state.current, appearance=new_appearance)
+        new_appearance = self.state.current.appearance.model_copy(update={"user_name": user_name})
+        new_snapshot = SettingsSnapshot(
+            appearance=new_appearance,
+            window=self.state.current.window,
+            database_url=self.state.current.database_url,
+        )
         self.state.update_current(new_snapshot)
 
     def update_window_size(self, width: int, height: int) -> None:
@@ -215,8 +220,12 @@ class SettingsController:
         if self.state.current is None:
             return
 
-        new_window = replace(self.state.current.window, size=[width, height])
-        new_snapshot = replace(self.state.current, window=new_window)
+        new_window = self.state.current.window.model_copy(update={"size": [width, height]})
+        new_snapshot = SettingsSnapshot(
+            appearance=self.state.current.appearance,
+            window=new_window,
+            database_url=self.state.current.database_url,
+        )
         self.state.update_current(new_snapshot)
 
     def update_window_position(self, x: int, y: int) -> None:
@@ -229,8 +238,12 @@ class SettingsController:
         if self.state.current is None:
             return
 
-        new_window = replace(self.state.current.window, position=[x, y])
-        new_snapshot = replace(self.state.current, window=new_window)
+        new_window = self.state.current.window.model_copy(update={"position": [x, y]})
+        new_snapshot = SettingsSnapshot(
+            appearance=self.state.current.appearance,
+            window=new_window,
+            database_url=self.state.current.database_url,
+        )
         self.state.update_current(new_snapshot)
 
     def update_database_url(self, url: str) -> None:
@@ -242,7 +255,11 @@ class SettingsController:
         if self.state.current is None:
             return
 
-        new_snapshot = replace(self.state.current, database_url=url)
+        new_snapshot = SettingsSnapshot(
+            appearance=self.state.current.appearance,
+            window=self.state.current.window,
+            database_url=url,
+        )
         self.state.update_current(new_snapshot)
 
     def apply_runtime_effects(self, page: Page) -> None:
@@ -268,8 +285,6 @@ class SettingsController:
 
             if hasattr(page, "update"):
                 page.update()
-
-            logger.debug("ランタイム設定を適用しました")
 
         except Exception as e:
             logger.warning(f"ランタイム設定の適用に失敗しました: {e}")

@@ -25,12 +25,6 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-
-if TYPE_CHECKING:
-    import flet as ft
-
-from logic.application.task_application_service import TaskApplicationService
-from models import TaskStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import create_page_header
 
@@ -52,14 +46,15 @@ class TasksView(BaseView):
 
     検索 / ステータスフィルタ / 並び替え / 降順切替 + リスト表示の最小UIを提供。
     """
-    def __init__(self, page: ft.Page, *, query: TasksQuery | None = None) -> None:
+
+    def __init__(self, props: BaseViewProps, *, query: TasksQuery | None = None) -> None:
         """コンストラクタ。
 
         Args:
-            page: Fletページ
+            props: 共通ビュープロパティ (page, apps コンテナ)
             query: テスト差し替え用の Query 実装
         """
-        super().__init__(page)
+        super().__init__(props)
         seed = _default_seed_data()
         self._query: TasksQuery = query or InMemoryTasksQuery(seed)
         self._controller = TasksController(_query=self._query, _on_change=self._on_view_model_change)
@@ -204,6 +199,20 @@ class TasksView(BaseView):
         self._current_vm = vm_list
         self._render_items(vm_list)
         self._refresh_tabs_badges()
+        # デバッグ用ログ (フィルタ結果の可視化)
+        try:
+            counts = self._safe_get_counts()
+            logger.debug(
+                "filter applied: total={} keyword='{}' status='{}' sort='{}' desc={} counts={}",
+                len(vm_list),
+                self._controller.state.keyword,
+                self._controller.state.status,
+                self._controller.state.sort_key,
+                self._controller.state.sort_desc,
+                counts,
+            )
+        except Exception as e:  # 安全性優先で失敗を握り潰す
+            logger.debug(f"filter debug logging failed: {e}")
         # フィルタ/検索/並び替えの反映を確実に UI に適用
         self.safe_update()
 

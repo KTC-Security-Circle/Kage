@@ -5,8 +5,8 @@
     ユースケースの実行、ApplicationServiceの呼び出し、State更新の調整を行う。
 
     - ユースケースメソッドの提供（load, search, select, CRUD）
-    - TermApplicationPortを通じたApplicationService呼び出し（将来実装予定）
-    - Stateへの状態反映とreconcile実行
+    - TermApplicationPortを通じたApplicationService呼び出し
+    - Stateへの状態反映と自動整合性保証
     - 検索クエリの正規化（SearchQueryNormalizerを使用）
     - 並び順の適用（utilsモジュールを使用）
     - 例外処理とログ出力（観測性の向上）
@@ -15,19 +15,19 @@
     - UI要素の構築・更新 → Presenter
     - 状態の保持と派生計算 → State
     - UIレイアウトの決定 → View
-    - データの永続化 → ApplicationService/Repository（将来実装）
+    - データの永続化 → ApplicationService/Repository
 
 【設計の拡張ポイント】
     - SearchQueryNormalizer: 検索クエリの正規化戦略（Strategy パターン）
-    - TermApplicationPort: ApplicationServiceの抽象化（依存性逆転）※将来実装
-    - CRUD メソッド骨格: 統合フェーズで実装予定
+    - TermApplicationPort: ApplicationServiceの抽象化（依存性逆転、Protocol実装済み）
+    - 依存性注入: service=None時は暫定的にサンプルデータを使用
 
 【アーキテクチャ上の位置づけ】
-    View → Controller → ApplicationService（将来）
+    View → Controller → ApplicationService
                 ↓           (TermApplicationPort)
               State
                 ↓
-            reconcile()
+         自動整合性保証（derived property）
 
 【主な機能】
     - 初期用語一覧の読み込みとソート
@@ -35,7 +35,7 @@
     - 検索実行と結果反映
     - 用語選択状態の管理
     - ステータス別件数の提供
-    - CRUD操作の骨格（create/update/delete）※未実装
+    - CRUD操作（create/update/delete）※ApplicationService統合時に完全動作
 """
 
 from __future__ import annotations

@@ -9,7 +9,7 @@
     - 検索結果の保持（search_results）
     - 派生データの計算（フィルタリング済み用語一覧、ステータス別件数）
     - 用語IDインデックスの管理（高速検索用）
-    - 選択状態の整合性保証（reconcile）
+    - 選択状態の自動整合性保証
 
 【責務外（他層の担当）】
     - データの取得・永続化 → Controller/ApplicationService
@@ -19,18 +19,18 @@
 
 【設計上の特徴】
     - Immutableなデータクラス（dataclass with slots）
-    - 副作用を排除したsetter設計（reconcile()で整合性保証）
+    - 副作用を排除したsetter設計（自動整合性保証）
     - インデックス（_by_id）による高速検索
-    - 派生データのメソッド化（derived_terms, counts_by_status）
+    - 派生データのプロパティ化（visible_terms, selected_term, counts_by_status）
 
 【アーキテクチャ上の位置づけ】
     Controller → State.set_xxx()
                     ↓
-                State.reconcile()
+              自動整合性保証
                     ↓
-    View → State.derived_terms()
-        → State.selected_term()
-        → State.counts_by_status()
+    View → State.visible_terms
+        → State.selected_term
+        → State.counts_by_status
 """
 
 from __future__ import annotations
@@ -150,11 +150,36 @@ class TermsViewState:
         return self.search_results is not None and bool(self.search_query)
 
     def derived_terms(self) -> list[SampleTerm]:
-        """【後方互換性のため残存】visible_terms プロパティを使用してください。
+        """【非推奨】visible_terms プロパティを使用してください。
+
+        このメソッドは後方互換性のために残されていますが、
+        新しいコードでは `visible_terms` プロパティを使用してください。
+
+        マイグレーションガイド:
+            ```python
+            # 変更前
+            terms = state.derived_terms()
+
+            # 変更後
+            terms = state.visible_terms
+            ```
 
         Returns:
             表示対象の用語リスト
+
+        Warnings:
+            DeprecationWarning: このメソッドは将来のバージョンで削除されます。
+
+        Note:
+            削除予定バージョン: v2.0.0
         """
+        import warnings
+
+        warnings.warn(
+            "derived_terms() は非推奨です。visible_terms プロパティを使用してください。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.visible_terms
 
     @property

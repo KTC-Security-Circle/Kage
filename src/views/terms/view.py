@@ -359,7 +359,7 @@ class TermsView(BaseView):
             if self.controller.service is None:
                 logger.warning("ApplicationService not configured, showing placeholder message")
                 self._close_create_dialog()
-                self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未実装）")
+                self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未設定）")
                 return
 
             # 用語作成
@@ -373,7 +373,7 @@ class TermsView(BaseView):
             # ApplicationService未設定
             logger.warning("ApplicationService not configured", extra={"error": str(e)})
             self._close_create_dialog()
-            self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未実装）")
+            self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未設定）")
 
         except ValueError as e:
             # バリデーションエラー

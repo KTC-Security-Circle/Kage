@@ -22,6 +22,12 @@ import flet as ft
 
 from views.sample import SampleTermStatus
 
+from .shared.constants import (
+    CARD_PADDING,
+    MAX_DESCRIPTION_LINES,
+    MAX_SYNONYMS_DISPLAY,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -30,13 +36,10 @@ if TYPE_CHECKING:
 # TermCard 専用定数
 # ========================================
 
-CARD_PADDING: Final[int] = 16
 CARD_BORDER_RADIUS: Final[int] = 8
 DEFAULT_BORDER_WIDTH: Final[float] = 1.0
 SELECTED_BORDER_WIDTH: Final[float] = 2.0
 DEFAULT_EMPTY_TITLE: Final[str] = "(無題)"
-MAX_SYNONYMS_DISPLAY: Final[int] = 3
-MAX_DESCRIPTION_LINES: Final[int] = 2
 
 
 # ========================================

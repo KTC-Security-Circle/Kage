@@ -160,14 +160,24 @@ class TagsView(BaseView):
             controls.append(TagListItem(item_props))
         return controls
 
+    def _tags_by_id(self) -> dict[str, dict[str, str]]:
+        """[AI GENERATED] タグIDをキーとしたタグ辞書を返す
+
+        Returns:
+            dict[str, dict[str, str]]: タグIDをキーとしたタグ辞書
+        """
+        return {tag["id"]: tag for tag in self.tags_state.items}
+
     def _get_selected_tag(self) -> dict[str, str] | None:
-        """選択中のタグを取得する"""
-        if not self.tags_state.selected_id:
+        """選択中のタグを取得する
+
+        Returns:
+            dict[str, str] | None: 選択中のタグ、未選択の場合はNone
+        """
+        selected_id = self.tags_state.selected_id
+        if not selected_id:
             return None
-        for tag in self.tags_state.items:
-            if tag["id"] == self.tags_state.selected_id:
-                return tag
-        return None
+        return self._tags_by_id().get(selected_id)
 
     # ------------------------------------------------------------------
     # Event Handlers

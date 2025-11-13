@@ -36,6 +36,12 @@ class CreateTermDialogProps:
 class CreateTermDialog:
     """用語作成ダイアログコンポーネント。"""
 
+    # フィールド長の制限（フォーム定義とバリデーションで共有）
+    MAX_KEY_LENGTH = 100
+    MAX_TITLE_LENGTH = 200
+    MAX_DESCRIPTION_LENGTH = 2000
+    MAX_URL_LENGTH = 500
+
     def __init__(self, props: CreateTermDialogProps) -> None:
         """Initialize create term dialog.
 
@@ -65,7 +71,7 @@ class CreateTermDialog:
         self._key_field = ft.TextField(
             label="キー *",
             hint_text="例: LLM, RAG, SDLC",
-            max_length=100,
+            max_length=self.MAX_KEY_LENGTH,
             autofocus=True,
             helper_text="英数字とアンダースコアを推奨（一意である必要があります）",
         )
@@ -74,7 +80,7 @@ class CreateTermDialog:
         self._title_field = ft.TextField(
             label="タイトル *",
             hint_text="例: Large Language Model",
-            max_length=200,
+            max_length=self.MAX_TITLE_LENGTH,
         )
 
         # 説明フィールド
@@ -84,7 +90,7 @@ class CreateTermDialog:
             multiline=True,
             min_lines=3,
             max_lines=5,
-            max_length=2000,
+            max_length=self.MAX_DESCRIPTION_LENGTH,
         )
 
         # ステータスドロップダウン
@@ -102,7 +108,7 @@ class CreateTermDialog:
         self._source_url_field = ft.TextField(
             label="出典URL",
             hint_text="https://example.com/definition",
-            max_length=500,
+            max_length=self.MAX_URL_LENGTH,
         )
 
         # 同義語フィールド（カンマ区切り）
@@ -179,24 +185,20 @@ class CreateTermDialog:
         Returns:
             (成功フラグ, エラーメッセージ)のタプル
         """
-        max_key_length = 100
-        max_title_length = 200
-        max_description_length = 2000
-
         # 必須フィールドの検証
-        key_error = self._validate_required_field(self._key_field, "キー", max_key_length)
+        key_error = self._validate_required_field(self._key_field, "キー", self.MAX_KEY_LENGTH)
         if key_error:
             return False, key_error
 
-        title_error = self._validate_required_field(self._title_field, "タイトル", max_title_length)
+        title_error = self._validate_required_field(self._title_field, "タイトル", self.MAX_TITLE_LENGTH)
         if title_error:
             return False, title_error
 
         # 説明の検証（任意だが長さチェック）
         if self._description_field and self._description_field.value:
             description = self._description_field.value.strip()
-            if len(description) > max_description_length:
-                return False, f"説明は{max_description_length}文字以内で入力してください"
+            if len(description) > self.MAX_DESCRIPTION_LENGTH:
+                return False, f"説明は{self.MAX_DESCRIPTION_LENGTH}文字以内で入力してください"
 
         # URLの検証（任意だが形式チェック）
         url_error = self._validate_url()

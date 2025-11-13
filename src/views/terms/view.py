@@ -279,6 +279,7 @@ class TermsView(BaseView):
         cards: list[TermCardData] = []
         for term in derived_terms:
 
+            # [AI GENERATED] デフォルト引数で term_id をキャプチャし、ループ変数の遅延評価（late binding）を回避しています。
             def _on_click(term_id: UUID = term.id) -> None:
                 self._handle_term_select_uuid(term_id)
 

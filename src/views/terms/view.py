@@ -395,8 +395,14 @@ class TermsView(BaseView):
     def _close_create_dialog(self) -> None:
         """用語作成ダイアログを閉じる。"""
         if self.create_dialog and self.page:
+            # 1. ダイアログを閉じる
             self.create_dialog.dialog.open = False
+            self.page.update()  # 先にダイアログを閉じる表示を反映
+
+            # 2. オーバーレイから削除
             if self.create_dialog.dialog in self.page.overlay:
                 self.page.overlay.remove(self.create_dialog.dialog)
-            self.page.update()
+                self.page.update()  # オーバーレイからの削除を反映
+
+            # 3. 参照をクリア
             self.create_dialog = None

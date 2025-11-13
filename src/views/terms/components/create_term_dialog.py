@@ -13,7 +13,7 @@
 
 from __future__ import annotations
 
-import contextlib
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -52,6 +52,10 @@ class CreateTermDialog:
         self._status_dropdown: ft.Dropdown | None = None
         self._source_url_field: ft.TextField | None = None
         self._synonyms_field: ft.TextField | None = None
+
+        # エラーバナー（動的に表示/非表示）
+        self._error_banner: ft.Container | None = None
+        self._form_column: ft.Column | None = None
 
         self._build_dialog()
 
@@ -108,29 +112,41 @@ class CreateTermDialog:
             helper_text="別名や略称を入力してください",
         )
 
+        # エラーバナー（初期状態は非表示）
+        self._error_banner = ft.Container(
+            visible=False,
+            bgcolor=ft.Colors.ERROR_CONTAINER,
+            padding=12,
+            border_radius=8,
+        )
+
+        # フォームカラム（エラーバナーを含む）
+        self._form_column = ft.Column(
+            controls=[
+                self._error_banner,
+                self._key_field,
+                self._title_field,
+                self._description_field,
+                self._status_dropdown,
+                self._source_url_field,
+                self._synonyms_field,
+                ft.Container(height=8),
+                ft.Text(
+                    "* 必須項目",
+                    size=12,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+            ],
+            spacing=12,
+            scroll=ft.ScrollMode.AUTO,
+        )
+
         # ダイアログ本体
         self._dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text("新しい用語を作成"),
             content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        self._key_field,
-                        self._title_field,
-                        self._description_field,
-                        self._status_dropdown,
-                        self._source_url_field,
-                        self._synonyms_field,
-                        ft.Container(height=8),
-                        ft.Text(
-                            "* 必須項目",
-                            size=12,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
-                    ],
-                    spacing=12,
-                    scroll=ft.ScrollMode.AUTO,
-                ),
+                content=self._form_column,
                 width=500,
                 height=600,
             ),
@@ -238,28 +254,12 @@ class CreateTermDialog:
         # バリデーション
         is_valid, error_message = self._validate_form()
         if not is_valid:
-            # エラー表示（スナックバーは親ビューで処理）
-            if self._dialog:
-                self._dialog.title = ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ERROR),
-                        ft.Text("入力エラー"),
-                    ]
-                )
-                self._dialog.content = ft.Column(
-                    controls=[
-                        ft.Text(
-                            error_message,
-                            color=ft.Colors.ERROR,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        ft.Divider(),
-                        self._dialog.content,  # type: ignore[list-item]
-                    ]
-                )
-                with contextlib.suppress(AssertionError):
-                    self._dialog.update()
+            # エラーバナーを表示（既存のフォーム内容は保持）
+            self._show_error(error_message)
             return
+
+        # バリデーション成功時はエラーを非表示
+        self._hide_error()
 
         # フォームデータの収集
         description_value = (
@@ -292,6 +292,40 @@ class CreateTermDialog:
         """キャンセルボタンのクリックをハンドリングする。"""
         if self._props.on_cancel:
             self._props.on_cancel()
+
+    def _show_error(self, error_message: str) -> None:
+        """エラーバナーを表示する。
+
+        Args:
+            error_message: エラーメッセージ
+        """
+        if self._error_banner:
+            self._error_banner.content = ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ON_ERROR_CONTAINER),
+                    ft.Text(
+                        error_message,
+                        color=ft.Colors.ON_ERROR_CONTAINER,
+                        weight=ft.FontWeight.W_500,
+                        expand=True,
+                    ),
+                ],
+                spacing=8,
+            )
+            self._error_banner.visible = True
+
+            if self._dialog:
+                with suppress(AssertionError):
+                    self._dialog.update()
+
+    def _hide_error(self) -> None:
+        """エラーバナーを非表示にする。"""
+        if self._error_banner:
+            self._error_banner.visible = False
+
+            if self._dialog:
+                with suppress(AssertionError):
+                    self._dialog.update()
 
     def reset(self) -> None:
         """フォームをリセットする。"""

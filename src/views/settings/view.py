@@ -37,9 +37,8 @@ class SettingsView(BaseView):
 
         Args:
             props: ビュー共通プロパティ (page, apps などを含む)
-
+        """
         super().__init__(props)
-        page = props.page  # 既存セクション初期化との互換性用ローカルエイリアス
 
         # UI更新中フラグ（イベント発火を抑制）
         self._updating_ui = False

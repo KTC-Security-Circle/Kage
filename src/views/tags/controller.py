@@ -211,8 +211,8 @@ class TagsController:
         # 理由: 毎回全件取得は非効率。COUNT()クエリで件数のみ取得
         # 実装: counts = await self.tag_service.get_tag_item_counts(tag_name)
         # 置換先: src/logic/queries/tag_queries.py に count_memos_by_tag(), count_tasks_by_tag() 追加
-        memo_count = len(self.get_related_memos(tag_name))
-        task_count = len(self.get_related_tasks(tag_name))
+        memo_count = sum(1 for m in self._mock_memos if m.get("tag_name") == tag_name)
+        task_count = sum(1 for t in self._mock_tasks if t.get("tag_name") == tag_name)
         return {
             "memo_count": memo_count,
             "task_count": task_count,

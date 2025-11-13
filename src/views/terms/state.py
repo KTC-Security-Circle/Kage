@@ -45,15 +45,14 @@ if TYPE_CHECKING:
 
 
 @dataclass(slots=True)
+# TODO: 設計上の改善点
+#   - reconcile()を排除し、derived propertyで自動計算
+#   - 不変性の徹底（setterで新しいインスタンスを返す、または内部でキャッシュ無効化）
+#   - Domain StateとPresentation Stateの明確な分離
 class TermsViewState:
     """TermsView の表示状態を管理するデータクラス。
 
     View 自体は UI 制御のみに集中させ、状態の保持と派生計算をこのクラスへ委譲する。
-
-    設計上の改善点:
-        - reconcile()を排除し、derived propertyで自動計算
-        - 不変性の徹底（setterで新しいインスタンスを返す、または内部でキャッシュ無効化）
-        - Domain StateとPresentation Stateの明確な分離
     """
 
     current_tab: SampleTermStatus = SampleTermStatus.APPROVED

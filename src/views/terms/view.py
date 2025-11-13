@@ -312,19 +312,58 @@ class TermsView(BaseView):
         Args:
             form_data: フォームデータ（key, title, description, status, source_url, synonyms）
         """
-        # TODO: ApplicationServiceを使用してデータベースに保存
+        # TODO: [ロジック担当者向け] 用語作成機能の実装
+        #
+        # 必要な実装:
+        # 1. TermApplicationService の作成
+        #    - ファイル: src/logic/application/term_application_service.py
+        #    - メソッド: async def create_term(self, data: TermCreate) -> TermRead
+        #    - 処理内容:
+        #      * TermCreate モデルに変換 (form_data から)
+        #      * キーの一意性チェック（既存チェック）
+        #      * データベースに保存（Term テーブル）
+        #      * 同義語の保存（Synonym テーブル、term_id で紐付け）
+        #      * エラーハンドリング（UniqueConstraintError など）
+        #
+        # 2. Controller への統合
+        #    - ファイル: src/views/terms/controller.py
+        #    - メソッド追加: async def create_term(self, form_data: dict[str, object]) -> None
+        #    - 処理内容:
+        #      * form_data を TermCreate に変換
+        #      * ApplicationService.create_term() を呼び出し
+        #      * State の更新（all_terms に追加）
+        #      * reconcile() で整合性確保
+        #
+        # 3. View からの呼び出し（このメソッド内）
+        #    - with_loading デコレータで非同期実行
+        #    - 成功時: リスト更新 + 成功メッセージ
+        #    - 失敗時: エラーダイアログ表示（notify_error 使用）
+        #
+        # form_data の構造:
+        # {
+        #     "key": str,              # 必須、一意
+        #     "title": str,            # 必須
+        #     "description": str | None,
+        #     "status": str,           # TermStatus.value ("draft", "approved", "deprecated")
+        #     "source_url": str | None,
+        #     "synonyms": list[str],   # 同義語のリスト（空の場合もあり）
+        # }
+        #
+        # 実装後のコード例:
+        # try:
+        #     await self.controller.create_term(form_data)
+        #     self._close_create_dialog()
+        #     self.show_success_snackbar(f"用語 '{form_data['key']}' を作成しました")
+        #     self._refresh_term_list()
+        #     self._refresh_status_tabs()
+        # except Exception as e:
+        #     self.notify_error(e, "用語の作成に失敗しました")
+
         key = form_data.get("key", "")
 
-        # ダイアログを閉じる
+        # 暫定実装: ダイアログを閉じて通知のみ
         self._close_create_dialog()
-
-        # 成功メッセージ
         self.show_snack_bar(f"用語 '{key}' を作成しました（実装中）")
-
-        # TODO: リスト更新（現在はモックデータのため、実装後に有効化）
-        # self.controller.load_initial_terms()
-        # self._refresh_term_list()
-        # self._refresh_status_tabs()
 
     def _handle_dialog_cancel(self) -> None:
         """ダイアログのキャンセルをハンドリングする。"""

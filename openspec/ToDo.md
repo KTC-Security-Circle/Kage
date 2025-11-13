@@ -12,7 +12,7 @@
 ✅ **完了済み** - ルーティングシステム動作確認済み  
 ✅ **完了済み** - `models.terminology.py`作成、import問題解消  
 ✅ **完了済み** - `ft.UserControl` → `ft.Control` 修正  
-✅ **完了済み** - 廃止予定API警告修正: `ft.colors` → `ft.Colors`, `ft.icons` → `ft.Icons`  
+✅ **完了済み** - 廃止予定API警告修正: `ft.Colors` → `ft.Colors`, `ft.icons` → `ft.Icons`  
 
 ## 緊急修正が必要な問題 🚨
 
@@ -44,7 +44,7 @@
   - 対応: 動作確認済み、但しMemosViewとTermsViewにエラーあり
 
 ## 2) Flet 非推奨APIの置換
-- [x] `ft.colors.*` → `ft.Colors.*` への移行 (優先度: 高) **完了**
+- [x] `ft.Colors.*` → `ft.Colors.*` への移行 (優先度: 高) **完了**
   - 実施済み: `src/views/**` 内の一括置換
   - 確認済み: 置換漏れなし
 

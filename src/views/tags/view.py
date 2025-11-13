@@ -215,10 +215,8 @@ class TagsView(BaseView):
 
         def on_submit(form_data: TagFormData) -> None:
             """タグ作成時のコールバック"""
-            # TODO: Controllerにタグ作成を委譲（現状はスタブ）
-            # 理由: ApplicationServiceとの統合が未完了
-            # 実装: self.controller.create_tag(form_data.name, form_data.color, form_data.description)
-            # 置換先: controller.py の create_tag メソッドを実装
+            # [AI GENERATED] 注意: form_dataは現在スタブ実装のため使用されていない
+            # TODO: self.controller.create_tag(form_data.name, form_data.color, form_data.description)
             self.controller.create_tag_stub()
             self._refresh_ui()
             self.show_success_snackbar(f"タグ「{form_data.name}」を作成しました")

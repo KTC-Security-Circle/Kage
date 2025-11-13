@@ -331,13 +331,6 @@ class TermDetailPanel:
         if not data.tags:
             return ft.Container()
 
-        def _handle_tag_click(tag_name: str) -> Callable[[ft.ControlEvent], None]:
-            def handler(_e: ft.ControlEvent) -> None:
-                if self._props.on_tag_click:
-                    self._props.on_tag_click(tag_name)
-
-            return handler
-
         tag_chips = [
             ft.Container(
                 content=ft.Row(
@@ -360,7 +353,7 @@ class TermDetailPanel:
                 border=ft.border.all(1, ft.Colors.PRIMARY),
                 border_radius=16,
                 ink=True,
-                on_click=_handle_tag_click(tag_name),
+                on_click=lambda _e, tag=tag_name: self._props.on_tag_click(tag) if self._props.on_tag_click else None,
             )
             for tag_name in data.tags
         ]
@@ -513,13 +506,6 @@ class TermDetailPanel:
         """
         max_display = 3
 
-        def _handle_item_click(item_id: str) -> Callable[[ft.ControlEvent], None]:
-            def handler(_e: ft.ControlEvent) -> None:
-                if self._props.on_item_click:
-                    self._props.on_item_click(item_type, item_id)
-
-            return handler
-
         item_controls = []
         for item in items[:max_display]:  # 最大3件まで表示
             row_controls: list[ft.Control] = [ft.Text(item.title, size=14)]
@@ -547,7 +533,9 @@ class TermDetailPanel:
                     border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
                     border_radius=8,
                     ink=True,
-                    on_click=_handle_item_click(item.item_id),
+                    on_click=lambda _e, item_id=item.item_id: self._props.on_item_click(item_type, item_id)
+                    if self._props.on_item_click
+                    else None,
                 )
             )
 

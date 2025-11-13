@@ -230,9 +230,6 @@ class TagFormDialog(ft.AlertDialog):
         if not name:
             return False, "タグ名は必須です"
 
-        if len(name) < 1:
-            return False, "タグ名は1文字以上で入力してください"
-
         if len(name) > max_name_length:
             return False, f"タグ名は{max_name_length}文字以内で入力してください"
 

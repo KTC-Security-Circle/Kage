@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from views.theme import get_on_primary_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -34,7 +36,7 @@ def create_color_palette(
             content=ft.Text(
                 color["name"],
                 style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.WHITE,
+                color=get_on_primary_color(),
                 text_align=ft.TextAlign.CENTER,
             ),
             bgcolor=color["value"],

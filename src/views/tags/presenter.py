@@ -15,8 +15,9 @@ if TYPE_CHECKING:
     from .controller import TagsController
     from .state import TagDict, TagsViewState
 
+from views.theme import get_status_label
+
 from .components.action_bar import TagsActionBarProps
-from .components.tag_card import TagCardProps
 from .components.tag_detail_panel import (
     RelatedItem,
     TagDetailData,
@@ -43,18 +44,6 @@ class TagsPresenter:
             on_search=on_search,
             on_refresh=on_refresh,
         )
-
-    def build_tag_card_props(
-        self,
-        tag: TagDict,
-        *,
-        on_edit: Callable[[ft.ControlEvent, TagDict], None],
-        on_delete: Callable[[ft.ControlEvent, TagDict], None],
-        on_select: Callable[[ft.ControlEvent, TagDict], None],
-        selected: bool,
-    ) -> TagCardProps:
-        """タグカードPropsを生成する。"""
-        return TagCardProps(tag=tag, selected=selected, on_edit=on_edit, on_delete=on_delete, on_select=on_select)
 
     def build_tag_list_item_props(
         self,
@@ -136,7 +125,7 @@ class TagsPresenter:
                 title=t["title"],
                 description=t["description"],
                 status=t.get("status"),
-                status_label=self._format_task_status(t.get("status")),
+                status_label=get_status_label(t.get("status")),
             )
             for t in tasks
         ]
@@ -162,21 +151,3 @@ class TagsPresenter:
             on_memo_click=on_memo_click,
             on_task_click=on_task_click,
         )
-
-    def _format_task_status(self, status: str | None) -> str | None:
-        """タスクステータスを表示用にフォーマットする。
-
-        Args:
-            status: タスクステータス
-
-        Returns:
-            フォーマット済みステータスラベル
-        """
-        if not status:
-            return None
-        status_map = {
-            "completed": "完了",
-            "todays": "今日",
-            "active": "進行中",
-        }
-        return status_map.get(status)

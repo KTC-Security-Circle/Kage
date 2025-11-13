@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import get_grey_color, get_primary_color
+from views.theme import get_grey_color, get_on_primary_color, get_primary_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -45,7 +45,7 @@ class EmptyTagsState(ft.Container):
                     icon=ft.Icons.ADD,
                     on_click=props.on_create,
                     bgcolor=get_primary_color(),
-                    color=ft.Colors.WHITE,
+                    color=get_on_primary_color(),
                 ),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,

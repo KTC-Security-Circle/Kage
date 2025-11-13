@@ -14,6 +14,7 @@ from loguru import logger
 
 from views.theme import (
     get_grey_color,
+    get_on_primary_color,
     get_primary_color,
     get_tag_icon_bg_opacity,
     get_task_status_color,
@@ -99,13 +100,10 @@ class TagDetailPanel(ft.Container):
             on_item_click=props.on_task_click,
         )
 
-        # メモ・タスク両方が0の場合は未使用メッセージを表示
-        sections = []
-        if data.memo_count > 0:
-            sections.append(memos_section)
-        if data.task_count > 0:
-            sections.append(tasks_section)
+        # 関連セクションの表示（0件の場合も表示）
+        sections = [memos_section, tasks_section]
 
+        # メモ・タスク両方が0の場合は未使用メッセージも追加
         if data.memo_count == 0 and data.task_count == 0:
             sections.append(self._build_no_items_message())
 
@@ -206,7 +204,7 @@ class TagDetailPanel(ft.Container):
                                         ft.Text(
                                             f"{data.total_count} 件のアイテム",
                                             style=ft.TextThemeStyle.BODY_MEDIUM,
-                                            color=ft.Colors.GREY_600,
+                                            color=get_grey_color(600),
                                         ),
                                     ],
                                     spacing=4,
@@ -223,12 +221,12 @@ class TagDetailPanel(ft.Container):
                                     "説明",
                                     style=ft.TextThemeStyle.LABEL_MEDIUM,
                                     weight=ft.FontWeight.W_500,
-                                    color=ft.Colors.GREY_700,
+                                    color=get_grey_color(700),
                                 ),
                                 ft.Text(
                                     data.description or "（説明なし）",
                                     style=ft.TextThemeStyle.BODY_MEDIUM,
-                                    color=ft.Colors.GREY_600,
+                                    color=get_grey_color(600),
                                 ),
                             ],
                             spacing=4,
@@ -241,19 +239,19 @@ class TagDetailPanel(ft.Container):
                                     "カラー:",
                                     style=ft.TextThemeStyle.LABEL_MEDIUM,
                                     weight=ft.FontWeight.W_500,
-                                    color=ft.Colors.GREY_700,
+                                    color=get_grey_color(700),
                                 ),
                                 ft.Container(
                                     width=20,
                                     height=20,
                                     border_radius=ft.border_radius.all(4),
                                     bgcolor=data.color,
-                                    border=ft.border.all(1, ft.Colors.GREY_400),
+                                    border=ft.border.all(1, get_grey_color(400)),
                                 ),
                                 ft.Text(
                                     data.color.upper(),
                                     style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=ft.Colors.GREY_600,
+                                    color=get_grey_color(600),
                                 ),
                             ],
                             spacing=8,
@@ -266,12 +264,12 @@ class TagDetailPanel(ft.Container):
                                         ft.Icon(
                                             ft.Icons.CALENDAR_TODAY,
                                             size=16,
-                                            color=ft.Colors.GREY_600,
+                                            color=get_grey_color(600),
                                         ),
                                         ft.Text(
                                             f"作成: {data.created_at}",
                                             style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.Colors.GREY_600,
+                                            color=get_grey_color(600),
                                         ),
                                     ],
                                     spacing=4,
@@ -281,12 +279,12 @@ class TagDetailPanel(ft.Container):
                                         ft.Icon(
                                             ft.Icons.UPDATE,
                                             size=16,
-                                            color=ft.Colors.GREY_600,
+                                            color=get_grey_color(600),
                                         ),
                                         ft.Text(
                                             f"更新: {data.updated_at}",
                                             style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.Colors.GREY_600,
+                                            color=get_grey_color(600),
                                         ),
                                     ],
                                     spacing=4,
@@ -321,10 +319,17 @@ class TagDetailPanel(ft.Container):
         on_item_click: Callable[[ft.ControlEvent, str], None],
     ) -> ft.Control:
         """関連アイテムセクションを構築する"""
+        # 0件の場合も明示的にセクションを表示
         if count == 0:
-            return ft.Container()
-
-        item_widgets = [self._build_related_item_card(item, on_item_click) for item in items]
+            empty_message = ft.Text(
+                "関連なし",
+                style=ft.TextThemeStyle.BODY_SMALL,
+                color=get_grey_color(500),
+                italic=True,
+            )
+            item_widgets = [empty_message]
+        else:
+            item_widgets = [self._build_related_item_card(item, on_item_click) for item in items]
 
         return ft.Card(
             content=ft.Container(
@@ -379,7 +384,7 @@ class TagDetailPanel(ft.Container):
                 content=ft.Text(
                     item.status_label,
                     size=11,
-                    color=ft.Colors.WHITE,
+                    color=get_on_primary_color(),
                     weight=ft.FontWeight.W_500,
                 ),
                 bgcolor=badge_color,
@@ -414,7 +419,7 @@ class TagDetailPanel(ft.Container):
                                     ft.Text(
                                         item.description,
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_grey_color(600),
                                         max_lines=2,
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
@@ -429,7 +434,7 @@ class TagDetailPanel(ft.Container):
                 ],
             ),
             padding=12,
-            border=ft.border.all(1, ft.Colors.GREY_300),
+            border=ft.border.all(1, get_grey_color(300)),
             border_radius=ft.border_radius.all(8),
             on_click=lambda e, item_id=item.id: on_click(e, item_id),
             ink=True,

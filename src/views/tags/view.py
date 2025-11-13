@@ -33,8 +33,11 @@ from .components import (
     EmptyTagsState,
     EmptyTagsStateProps,
     TagDetailPanel,
+    TagFormData,
     TagListItem,
     TagsActionBar,
+    show_tag_create_dialog,
+    show_tag_edit_dialog,
 )
 from .components.page_header import create_page_header
 from .controller import TagsController
@@ -170,10 +173,10 @@ class TagsView(BaseView):
     # Event Handlers
     # ------------------------------------------------------------------
     def _refresh_ui(self) -> None:
-        """State変更後にUIを更新する"""
+        """State変更後にUIを更新する（差分更新）"""
         import flet as ft
 
-        # ヘッダー件数更新
+        # ヘッダー件数更新（set_props的な更新が望ましいが、ヘッダーは単純なのでTextを直接更新）
         if self._header and hasattr(self._header, "parent"):
             parent_col = self._header.parent  # type: ignore[attr-defined]
             if parent_col and isinstance(parent_col, ft.Column):
@@ -181,11 +184,17 @@ class TagsView(BaseView):
                 parent_col.controls[idx] = create_page_header(self.tags_state.filtered_count)  # type: ignore[index]
                 self._header = parent_col.controls[idx]
 
-        # リスト再構築
+        # リスト差分更新（全再構築より、個別アイテムのset_propsを呼ぶべきだが、
+        # フィルタ変更時は件数が変わるため、シンプルに全再構築）
+        # TODO: 仮想化（ListView等）を導入してパフォーマンス向上
         if self._list_column:
-            self._list_column.controls = self._build_list_controls()
+            new_controls = self._build_list_controls()
+            # 既存コントロールと新規コントロールのIDを比較して差分更新を実装
+            # ここでは簡易的に全置換（将来の改善ポイント）
+            self._list_column.controls = new_controls
+            self._list_column.update()
 
-        # 詳細パネル更新
+        # 詳細パネル更新（Props経由で差分更新）
         if self._detail_panel:
             selected_tag = self._get_selected_tag()
             detail_props = self.presenter.build_tag_detail_panel_props(
@@ -201,14 +210,20 @@ class TagsView(BaseView):
 
     def _on_create(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """新規作成ハンドラ"""
-        # TODO: タグ作成ダイアログを表示
-        # 理由: ユーザー入力（name, color, description）を受け取る
-        # 実装: dialog = TagCreateDialog(on_submit=self._handle_create_submit)
-        # 置換先: src/views/tags/components/tag_create_dialog.py を新規作成
-        # 注意: カラーパレットダイアログの統合も必要
-        self.controller.create_tag_stub()
-        self._refresh_ui()
-        self.show_info_snackbar("新規タグ作成は後続実装予定")
+        if not self.page:
+            return
+
+        def on_submit(form_data: TagFormData) -> None:
+            """タグ作成時のコールバック"""
+            # TODO: Controllerにタグ作成を委譲（現状はスタブ）
+            # 理由: ApplicationServiceとの統合が未完了
+            # 実装: self.controller.create_tag(form_data.name, form_data.color, form_data.description)
+            # 置換先: controller.py の create_tag メソッドを実装
+            self.controller.create_tag_stub()
+            self._refresh_ui()
+            self.show_success_snackbar(f"タグ「{form_data.name}」を作成しました")
+
+        show_tag_create_dialog(self.page, on_submit)
 
     def _on_search(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """検索ハンドラ"""
@@ -229,29 +244,43 @@ class TagsView(BaseView):
 
     def _on_edit_selected(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """選択タグの編集ハンドラ"""
-        # TODO: タグ編集ダイアログを表示
-        # 理由: 選択中タグの情報を編集可能にする
-        # 実装: dialog = TagEditDialog(tag=selected_tag, on_submit=self._handle_edit_submit)
-        # 置換先: src/views/tags/components/tag_edit_dialog.py を新規作成
-        # 注意: カラーパレットダイアログの統合、バリデーション、更新後のリフレッシュ
+        if not self.page:
+            return
+
         selected_tag = self._get_selected_tag()
-        if selected_tag:
-            self.show_info_snackbar(f"タグ『{selected_tag['name']}』編集は準備中")
+        if not selected_tag:
+            self.show_info_snackbar("編集するタグを選択してください")
+            return
+
+        def on_submit(form_data: TagFormData) -> None:
+            """タグ編集時のコールバック"""
+            # TODO: Controllerにタグ編集を委譲（現状はスタブ）
+            # 理由: ApplicationServiceとの統合が未完了
+            # 実装:
+            # self.controller.update_tag(
+            #     selected_tag["id"], form_data.name, form_data.color, form_data.description
+            # )
+            # 置換先: controller.py の update_tag メソッドを実装
+            self._refresh_ui()
+            self.show_success_snackbar(f"タグ「{form_data.name}」を更新しました")
+
+        show_tag_edit_dialog(self.page, selected_tag, on_submit)
 
     def _on_memo_click(self, _e: ft.ControlEvent, memo_id: str) -> None:  # type: ignore[name-defined]
         """関連メモクリックハンドラ"""
-        # TODO: メモ詳細画面へ遷移
-        # 理由: 選択されたメモの詳細を表示する
-        # 実装: self.page.go(f"/memos/{memo_id}")
-        # 置換先: src/router.py のルーティング設定を確認
-        # 注意: MemosViewでの選択状態復元が必要かもしれない
-        self.show_info_snackbar(f"メモ {memo_id} への遷移は後続実装予定")
+        # TODO: メモ詳細画面の実装待ち
+        # 理由: メモ詳細画面（/memos/:id）がまだ存在しない
+        # 実装: MemosViewで詳細表示機能を実装後、ここで遷移を有効化
+        # 置換先: src/views/memos/ 内に詳細表示機能を追加
+        # 暫定: メモ一覧画面へ遷移してユーザーに選択させる
+        if self.page:
+            self.page.go("/memos")
+            self.show_info_snackbar(f"メモ {memo_id} を一覧から選択してください")
 
     def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:  # type: ignore[name-defined]
         """関連タスククリックハンドラ"""
-        # TODO: タスク詳細画面へ遷移
-        # 理由: 選択されたタスクの詳細を表示する
-        # 実装: self.page.go(f"/tasks/{task_id}")
-        # 置換先: src/router.py のルーティング設定を確認
-        # 注意: TasksViewでの選択状態復元が必要かもしれない
-        self.show_info_snackbar(f"タスク {task_id} への遷移は後続実装予定")
+        # タスク管理画面へ遷移
+        # 注意: TasksViewで特定タスクの選択・フォーカス機能があれば連携できる
+        if self.page:
+            self.page.go("/tasks")
+            self.show_info_snackbar(f"タスク {task_id} を一覧から確認してください")

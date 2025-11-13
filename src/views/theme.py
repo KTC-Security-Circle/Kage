@@ -406,6 +406,144 @@ def get_tag_icon_bg_opacity() -> float:
     return UI_COLORS.tag_icon_bg_opacity
 
 
+def get_status_label(status: str | None) -> str | None:
+    """ステータスコードから日本語ラベルを取得する。
+
+    Args:
+        status: ステータスコード（active, completed, on_hold, cancelled, todays など）
+
+    Returns:
+        日本語ラベル（進行中、完了、保留、中止、今日など）
+        status が None の場合は None を返す
+
+    Note:
+        ステータスラベルの一元管理。presenter等で重複実装しない。
+    """
+    if not status:
+        return None
+
+    status_label_map = {
+        # Task statuses
+        "completed": "完了",
+        "todays": "今日",
+        "active": "進行中",
+        # Project statuses
+        "planned": "計画中",
+        "on_hold": "保留",
+        "cancelled": "中止",
+    }
+    normalized = status.strip().lower()
+    return status_label_map.get(normalized, status)
+
+
+# Material Design 3 セマンティックカラー取得関数
+# NOTE: 現在はライトテーマのみ対応。将来的にはsettingsからテーマモードを取得して切り替える
+
+
+def get_on_primary_color() -> str:
+    """プライマリカラー上のテキスト色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        ボタンやチップなどのプライマリカラー背景上で使用するテキスト色。
+        ライト/ダークテーマで自動的に適切なコントラスト比を保証。
+    """
+    # TODO: テーマモード取得後、DARK_COLORS.on_primary にも対応
+    return LIGHT_COLORS.on_primary
+
+
+def get_on_surface_color() -> str:
+    """サーフェス上のテキスト色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        カードやパネル背景上で使用する基本テキスト色。
+    """
+    return LIGHT_COLORS.on_surface
+
+
+def get_surface_color() -> str:
+    """サーフェス（カード・パネル）背景色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return LIGHT_COLORS.surface
+
+
+def get_background_color() -> str:
+    """アプリ全体の背景色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return LIGHT_COLORS.background
+
+
+def get_error_color() -> str:
+    """エラー色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        エラーメッセージ、バリデーションエラー表示などに使用。
+    """
+    return LIGHT_COLORS.error
+
+
+def get_on_error_color() -> str:
+    """エラー色背景上のテキスト色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return LIGHT_COLORS.on_error
+
+
+# 役割ベースのカラーヘルパー（MD3ガイドライン準拠）
+
+
+def get_outline_color() -> str:
+    """アウトライン（境界線・Divider）用の色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        カードの枠線、Divider、入力フィールドのボーダーなど。
+    """
+    return get_grey_color(300)
+
+
+def get_text_secondary_color() -> str:
+    """補助テキスト用の色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        キャプション、タイムスタンプ、補足説明など、主要テキストより優先度が低い情報。
+    """
+    return get_grey_color(600)
+
+
+def get_surface_variant_color() -> str:
+    """サーフェスバリアント（強調背景）色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        選択状態、ホバー状態など、通常のサーフェスより少し強調したい背景。
+    """
+    return get_grey_color(100)
+
+
 # TODO: 統合フェーズで settings から現在のテーマモード設定を取得する機能を追加
 # 理由: ユーザー設定の永続化機能が未実装のため
 # 置換先: settings/application_service.py から theme_mode を取得

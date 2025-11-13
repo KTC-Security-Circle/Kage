@@ -121,10 +121,10 @@ class TagListItem(ft.Container):
             padding=16,
         )
 
-        # 選択状態に応じたスタイル
+        # 選択状態に応じたスタイル（MD3準拠: 選択時はelevation 1→2）
         border_color = get_primary_color() if props.selected else get_grey_color(300)
         border_width = 2 if props.selected else 1
-        elevation = 4 if props.selected else 1
+        elevation = 2 if props.selected else 1
 
         self.content = ft.Card(
             content=card_content,

@@ -446,5 +446,5 @@ class TagDetailPanel(ft.Container):
         try:
             self.content = self._build(props)
             self.update()
-        except Exception as exc:
+        except (AttributeError, RuntimeError) as exc:
             logger.warning(f"TagDetailPanel.set_props skipped: {exc}")

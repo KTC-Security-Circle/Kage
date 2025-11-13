@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import flet as ft
+from loguru import logger
 
 from views.theme import get_grey_color, get_on_primary_color, get_primary_color
 
@@ -64,9 +65,7 @@ class EmptyTagsState(ft.Container):
                 btn = column.controls[-1]  # type: ignore[index]
                 btn.on_click = props.on_create
             self.update()
-        except Exception as exc:
-            from loguru import logger
-
+        except (AttributeError, IndexError) as exc:
             logger.warning(f"EmptyTagsState.set_props skipped: {exc}")
 
 

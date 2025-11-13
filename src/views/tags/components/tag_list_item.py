@@ -141,5 +141,5 @@ class TagListItem(ft.Container):
         try:
             self._build_content(props)
             self.update()
-        except Exception as exc:
+        except (AttributeError, RuntimeError) as exc:
             logger.warning(f"TagListItem.set_props skipped: {exc}")

@@ -73,7 +73,7 @@ class TagsActionBar(ft.Container):
                 left_btn.on_click = props.on_create
                 refresh_btn.on_click = props.on_refresh
             self.update()
-        except Exception as exc:
+        except (AttributeError, ValueError, RuntimeError) as exc:
             # まだページに未追加の可能性があるため握りつぶさず記録のみ
             logger.warning(f"TagsActionBar.set_props update skipped: {exc}")
 

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import flet as ft
+from loguru import logger
 
 from views.sample import SampleTermStatus
 from views.shared.base_view import BaseView, BaseViewProps
@@ -66,12 +67,23 @@ class TermsView(BaseView):
         # Dialogs
         self.create_dialog: CreateTermDialog | None = None
 
-        # Initial load
-        self.controller.load_initial_terms()
-
     def build(self) -> ft.Control:
         """Build the main content area."""
+        # 初期ロード（非同期）をスケジュール
+        if self.page:
+            self.page.run_task(self._initial_load)
         return self.build_content()
+
+    async def _initial_load(self) -> None:
+        """初期データのロード（非同期）。"""
+        try:
+            await self.controller.load_initial_terms()
+            self._refresh_term_list()
+            self._refresh_status_tabs()
+        except Exception:
+            logger.exception("Failed to load initial terms")
+            if self.page:
+                self.show_error_snackbar(self.page, "初期データの読み込みに失敗しました")
 
     def build_content(self) -> ft.Control:
         """Build the main content area."""
@@ -177,8 +189,22 @@ class TermsView(BaseView):
             e: コントロールイベント
         """
         query = getattr(e.control, "value", "") or ""
-        self.controller.update_search(query)
-        self._refresh_term_list()
+        if self.page:
+            self.page.run_task(self._async_search, query)
+
+    async def _async_search(self, query: str) -> None:
+        """非同期検索を実行する。
+
+        Args:
+            query: 検索クエリ
+        """
+        try:
+            await self.controller.update_search(query)
+            self._refresh_term_list()
+        except Exception:
+            logger.exception("Failed to perform search")
+            if self.page:
+                self.show_error_snackbar(self.page, "検索に失敗しました")
 
     def _handle_status_change(self, status: SampleTermStatus) -> None:
         """ステータスタブの変更をハンドリングする。
@@ -206,7 +232,12 @@ class TermsView(BaseView):
         Args:
             term_id: 選択された用語のID
         """
-        self._handle_term_select_uuid(UUID(term_id))
+        try:
+            self._handle_term_select_uuid(UUID(term_id))
+        except ValueError:
+            logger.warning("Invalid UUID format", extra={"term_id": term_id})
+            if self.page:
+                self.show_error_snackbar(self.page, "無効なIDです")
 
     def _handle_create_term(self) -> None:
         """用語作成ボタンのクリックをハンドリングする。"""
@@ -242,7 +273,7 @@ class TermsView(BaseView):
         if not self.term_list:
             return
 
-        derived_terms = self.term_state.derived_terms()
+        derived_terms = self.term_state.visible_terms
         selected_id = self.term_state.selected_term_id
 
         cards: list[TermCardData] = []
@@ -265,7 +296,7 @@ class TermsView(BaseView):
         if not self.detail_panel:
             return
 
-        selected_term = self.term_state.selected_term()
+        selected_term = self.term_state.selected_term
         if not selected_term:
             self.detail_panel.set_item(None)
             return
@@ -312,58 +343,50 @@ class TermsView(BaseView):
         Args:
             form_data: フォームデータ（key, title, description, status, source_url, synonyms）
         """
-        # TODO: [ロジック担当者向け] 用語作成機能の実装
-        #
-        # 必要な実装:
-        # 1. TermApplicationService の作成
-        #    - ファイル: src/logic/application/term_application_service.py
-        #    - メソッド: async def create_term(self, data: TermCreate) -> TermRead
-        #    - 処理内容:
-        #      * TermCreate モデルに変換 (form_data から)
-        #      * キーの一意性チェック（既存チェック）
-        #      * データベースに保存（Term テーブル）
-        #      * 同義語の保存（Synonym テーブル、term_id で紐付け）
-        #      * エラーハンドリング（UniqueConstraintError など）
-        #
-        # 2. Controller への統合
-        #    - ファイル: src/views/terms/controller.py
-        #    - メソッド追加: async def create_term(self, form_data: dict[str, object]) -> None
-        #    - 処理内容:
-        #      * form_data を TermCreate に変換
-        #      * ApplicationService.create_term() を呼び出し
-        #      * State の更新（all_terms に追加）
-        #      * reconcile() で整合性確保
-        #
-        # 3. View からの呼び出し（このメソッド内）
-        #    - with_loading デコレータで非同期実行
-        #    - 成功時: リスト更新 + 成功メッセージ
-        #    - 失敗時: エラーダイアログ表示（notify_error 使用）
-        #
-        # form_data の構造:
-        # {
-        #     "key": str,              # 必須、一意
-        #     "title": str,            # 必須
-        #     "description": str | None,
-        #     "status": str,           # TermStatus.value ("draft", "approved", "deprecated")
-        #     "source_url": str | None,
-        #     "synonyms": list[str],   # 同義語のリスト（空の場合もあり）
-        # }
-        #
-        # 実装後のコード例:
-        # try:
-        #     await self.controller.create_term(form_data)
-        #     self._close_create_dialog()
-        #     self.show_success_snackbar(f"用語 '{form_data['key']}' を作成しました")
-        #     self._refresh_term_list()
-        #     self._refresh_status_tabs()
-        # except Exception as e:
-        #     self.notify_error(e, "用語の作成に失敗しました")
+        if self.page:
+            self.page.run_task(self._async_create_term, form_data)
 
+    async def _async_create_term(self, form_data: dict[str, object]) -> None:
+        """非同期で用語を作成する。
+
+        Args:
+            form_data: フォームデータ
+        """
         key = form_data.get("key", "")
 
-        # 暫定実装: ダイアログを閉じて通知のみ
-        self._close_create_dialog()
-        self.show_snack_bar(f"用語 '{key}' を作成しました（実装中）")
+        try:
+            # ApplicationServiceが設定されていない場合は暫定処理
+            if self.controller.service is None:
+                logger.warning("ApplicationService not configured, showing placeholder message")
+                self._close_create_dialog()
+                self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未実装）")
+                return
+
+            # 用語作成
+            created_term = await self.controller.create_term(form_data)
+            self._close_create_dialog()
+            self.show_snack_bar(f"用語 '{created_term.key}' を作成しました")
+            self._refresh_term_list()
+            self._refresh_status_tabs()
+
+        except RuntimeError as e:
+            # ApplicationService未設定
+            logger.warning("ApplicationService not configured", extra={"error": str(e)})
+            self._close_create_dialog()
+            self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未実装）")
+
+        except ValueError as e:
+            # バリデーションエラー
+            logger.warning("Validation error during term creation", extra={"error": str(e)})
+            if self.page:
+                self.show_error_snackbar(self.page, f"バリデーションエラー: {e}")
+
+        except Exception:
+            # その他のエラー
+            logger.exception("Failed to create term")
+            self._close_create_dialog()
+            if self.page:
+                self.show_error_snackbar(self.page, "用語の作成に失敗しました")
 
     def _handle_dialog_cancel(self) -> None:
         """ダイアログのキャンセルをハンドリングする。"""

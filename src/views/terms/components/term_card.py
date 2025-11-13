@@ -53,7 +53,7 @@ class TermCardData:
         title: 表示用タイトル
         key: 用語キー
         description: 説明プレビュー
-        synonyms: 同義語リスト
+        synonyms: 同義語タプル（不変）
         status: 内部ステータス
         status_text: 表示用ステータステキスト
         is_selected: 選択状態
@@ -64,7 +64,7 @@ class TermCardData:
     title: str
     key: str
     description: str
-    synonyms: list[str]
+    synonyms: tuple[str, ...]
     status: SampleTermStatus
     status_text: str
     is_selected: bool = False

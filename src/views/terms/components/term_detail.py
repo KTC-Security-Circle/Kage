@@ -47,8 +47,8 @@ class TermDetailData:
     description: str
     status: SampleTermStatus
     status_text: str
-    synonyms: list[str]
-    tags: list[str]
+    synonyms: tuple[str, ...]
+    tags: tuple[str, ...]
     source_url: str | None
     created_date: str
     updated_date: str
@@ -607,7 +607,5 @@ class TermDetailPanel:
         Args:
             source_url: 出典URL
         """
-        if source_url:
-            # Fletでは外部URLを開く処理が必要
-            # TODO: page.launch_url(source_url) を実装
-            pass
+        if source_url and self._root.page:
+            self._root.page.launch_url(source_url)

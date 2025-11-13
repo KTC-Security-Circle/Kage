@@ -49,6 +49,11 @@ class TermsViewState:
     """TermsView の表示状態を管理するデータクラス。
 
     View 自体は UI 制御のみに集中させ、状態の保持と派生計算をこのクラスへ委譲する。
+
+    設計上の改善点:
+        - reconcile()を排除し、derived propertyで自動計算
+        - 不変性の徹底（setterで新しいインスタンスを返す、または内部でキャッシュ無効化）
+        - Domain StateとPresentation Stateの明確な分離
     """
 
     current_tab: SampleTermStatus = SampleTermStatus.APPROVED
@@ -66,7 +71,8 @@ class TermsViewState:
             terms: 表示対象となる用語のシーケンス
         """
         self.all_terms = list(terms)
-        self._rebuild_index()
+        self.rebuild_index()
+        self._validate_selection()
 
     def set_search_result(self, query: str, results: list[SampleTerm] | None) -> None:
         """検索クエリと結果を保存する。
@@ -77,6 +83,7 @@ class TermsViewState:
         """
         self.search_query = query
         self.search_results = results
+        self._validate_selection()
 
     def set_current_tab(self, tab: SampleTermStatus) -> None:
         """アクティブなタブを設定する。
@@ -109,18 +116,21 @@ class TermsViewState:
         self.all_terms.append(term)
         self._by_id[term.id] = term
 
-    def reconcile(self) -> None:
-        """状態の整合性を確認し、必要に応じて調整する。
+    def _validate_selection(self) -> None:
+        """選択中の用語が現在の派生リストに存在するかを検証し、存在しない場合は選択解除する。
 
-        - 選択中の用語が現在の派生リストに存在しない場合は選択解除
-        - インデックスの再構築
+        これはsetterメソッド内で自動的に呼ばれるため、reconcile()を手動で呼ぶ必要はない。
         """
-        derived = self.derived_terms()
-        if self.selected_term_id is not None and not any(t.id == self.selected_term_id for t in derived):
+        if self.selected_term_id is None:
+            return
+
+        derived = self.visible_terms
+        if not any(t.id == self.selected_term_id for t in derived):
             self.selected_term_id = None
 
-    def derived_terms(self) -> list[SampleTerm]:
-        """現在のタブと検索条件でフィルタリングした用語一覧を返す。
+    @property
+    def visible_terms(self) -> list[SampleTerm]:
+        """現在のタブと検索条件でフィルタリングした用語一覧を返す（derived property）。
 
         Returns:
             表示対象の用語リスト
@@ -131,8 +141,26 @@ class TermsViewState:
         # タブによるステータスフィルタ
         return [t for t in source if t.status == self.current_tab]
 
+    @property
+    def is_searching(self) -> bool:
+        """検索中かどうかを返す。
+
+        Returns:
+            検索中の場合True
+        """
+        return self.search_results is not None and bool(self.search_query)
+
+    def derived_terms(self) -> list[SampleTerm]:
+        """【後方互換性のため残存】visible_terms プロパティを使用してください。
+
+        Returns:
+            表示対象の用語リスト
+        """
+        return self.visible_terms
+
+    @property
     def selected_term(self) -> SampleTerm | None:
-        """選択中の用語を返す。
+        """選択中の用語を返す（derived property）。
 
         Returns:
             選択中の用語。未選択の場合は None。
@@ -141,8 +169,9 @@ class TermsViewState:
             return None
         return self._by_id.get(self.selected_term_id)
 
+    @property
     def counts_by_status(self) -> dict[SampleTermStatus, int]:
-        """ステータス別の用語件数を集計する。
+        """ステータス別の用語件数を集計する（derived property）。
 
         Returns:
             ステータスごとの件数を持つ辞書
@@ -157,6 +186,6 @@ class TermsViewState:
                 counts[term.status] += 1
         return counts
 
-    def _rebuild_index(self) -> None:
+    def rebuild_index(self) -> None:
         """IDインデックスを再構築する。"""
         self._by_id = {term.id: term for term in self.all_terms}

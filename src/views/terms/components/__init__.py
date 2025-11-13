@@ -1,7 +1,14 @@
-"""Components module for terms management."""
+"""Terms management components."""
 
-from .action_bar import TermActionBar
-from .status_tabs import TermStatusTabs
-from .term_detail import TermDetail
+from .action_bar import ActionBarProps, TermActionBar
+from .status_tabs import StatusTabsProps, TermStatusTabs
+from .term_list import TermList, TermListProps
 
-__all__ = ["TermActionBar", "TermStatusTabs", "TermDetail"]
+__all__ = [
+    "ActionBarProps",
+    "TermActionBar",
+    "StatusTabsProps",
+    "TermStatusTabs",
+    "TermList",
+    "TermListProps",
+]

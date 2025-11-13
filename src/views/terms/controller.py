@@ -41,7 +41,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, TypedDict
 
 from loguru import logger
 
@@ -56,6 +56,30 @@ if TYPE_CHECKING:
     from views.sample import SampleTerm
 
     from .state import TermsViewState
+
+
+class TermFormData(TypedDict, total=False):
+    """用語作成・更新フォームデータの型定義。
+
+    ApplicationServiceに渡すフォームデータの構造を型安全に定義する。
+    total=False により、すべてのキーがオプショナルとして扱われる。
+    実際の必須性はバリデーション層で検証される。
+
+    Attributes:
+        key: 用語の一意キー（必須）
+        title: 用語のタイトル（必須）
+        description: 用語の説明（任意）
+        status: 用語のステータス（TermStatus.value）
+        source_url: 参照元URL（任意）
+        synonyms: 同義語のリスト（任意）
+    """
+
+    key: str
+    title: str
+    description: str | None
+    status: str
+    source_url: str | None
+    synonyms: list[str]
 
 
 class TermApplicationPort(Protocol):
@@ -92,11 +116,11 @@ class TermApplicationPort(Protocol):
         """
         ...
 
-    async def create_term(self, form_data: dict[str, object]) -> SampleTerm:
+    async def create_term(self, form_data: TermFormData) -> SampleTerm:
         """用語を作成する。
 
         Args:
-            form_data: フォームデータ
+            form_data: 用語作成フォームデータ
 
         Returns:
             作成された用語
@@ -106,12 +130,12 @@ class TermApplicationPort(Protocol):
         """
         ...
 
-    async def update_term(self, term_id: UUID, form_data: dict[str, object]) -> SampleTerm:
+    async def update_term(self, term_id: UUID, form_data: TermFormData) -> SampleTerm:
         """用語を更新する。
 
         Args:
             term_id: 更新対象の用語ID
-            form_data: 更新データ
+            form_data: 用語更新フォームデータ
 
         Returns:
             更新された用語
@@ -241,17 +265,11 @@ class TermsController:
             or any(query in synonym.lower() for synonym in term.synonyms)
         )
 
-    async def create_term(self, form_data: dict[str, object]) -> SampleTerm:
+    async def create_term(self, form_data: TermFormData) -> SampleTerm:
         """新しい用語を作成する。
 
         Args:
-            form_data: ダイアログから受け取ったフォームデータ
-                - key: str (必須、一意)
-                - title: str (必須)
-                - description: str | None
-                - status: str (TermStatus.value)
-                - source_url: str | None
-                - synonyms: list[str]
+            form_data: 用語作成フォームデータ
 
         Returns:
             作成された用語
@@ -273,12 +291,12 @@ class TermsController:
         logger.info(f"Created term: {created_term.key} (ID: {created_term.id})")
         return created_term
 
-    async def update_term(self, term_id: UUID, form_data: dict[str, object]) -> SampleTerm:
+    async def update_term(self, term_id: UUID, form_data: TermFormData) -> SampleTerm:
         """既存の用語を更新する。
 
         Args:
             term_id: 更新対象の用語ID
-            form_data: 更新データ
+            form_data: 用語更新フォームデータ
 
         Returns:
             更新された用語

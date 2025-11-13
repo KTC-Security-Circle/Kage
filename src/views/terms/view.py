@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 import flet as ft
@@ -31,7 +31,7 @@ from views.shared.components import create_page_header
 from .components.status_tabs import StatusTabsProps, TermStatusTabs
 from .components.term_detail import DetailPanelProps, TermDetailPanel
 from .components.term_list import TermList, TermListProps
-from .controller import TermsController
+from .controller import TermFormData, TermsController
 from .presenter import create_term_card_data, create_term_detail_data, get_empty_message
 from .state import TermsViewState
 
@@ -278,8 +278,8 @@ class TermsView(BaseView):
 
         cards: list[TermCardData] = []
         for term in derived_terms:
-
-            # [AI GENERATED] デフォルト引数で term_id をキャプチャし、ループ変数の遅延評価（late binding）を回避しています。
+            # [AI GENERATED] デフォルト引数で term_id をキャプチャ
+            # ループ変数の遅延評価（late binding）を回避
             def _on_click(term_id: UUID = term.id) -> None:
                 self._handle_term_select_uuid(term_id)
 
@@ -364,7 +364,7 @@ class TermsView(BaseView):
                 return
 
             # 用語作成
-            created_term = await self.controller.create_term(form_data)
+            created_term = await self.controller.create_term(cast("TermFormData", form_data))
             self._close_create_dialog()
             self.show_snack_bar(f"用語 '{created_term.key}' を作成しました")
             self._refresh_term_list()

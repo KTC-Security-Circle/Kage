@@ -1,4 +1,5 @@
 """Shared constants for term components."""
+
 import flet as ft
 
 # Status badge configuration

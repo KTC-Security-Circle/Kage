@@ -32,7 +32,7 @@ class TagsViewState:
     _filtered_tags_cache_search_text: str | None = field(default=None, init=False, repr=False)
     _filtered_tags_cache_items_id: int | None = field(default=None, init=False, repr=False)
 
-    def __setattr__(self, name: str, value) -> None:
+    def __setattr__(self, name: str, value: object) -> None:
         """[AI GENERATED] items または search_text が変更された場合、フィルタキャッシュをクリアする。
 
         Args:

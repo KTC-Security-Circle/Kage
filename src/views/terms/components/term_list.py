@@ -1,4 +1,17 @@
-"""Term list component."""
+"""用語リストコンポーネント。
+
+【責務】
+    用語カードのリスト表示を担当。
+    - Props駆動のカードリスト描画
+    - 空状態の表示
+    - カードのクリックイベントハンドリング
+    - 差分更新による効率的な再描画
+
+【非責務】
+    - データ取得・変換 → Presenter
+    - 状態管理 → State/Controller
+    - ビジネスロジック → Controller
+"""
 
 from __future__ import annotations
 
@@ -8,56 +21,79 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.sample import SampleTerm, SampleTermStatus
-
-from .shared.constants import (
-    CARD_PADDING,
-    CARD_SPACING,
-    MAX_DESCRIPTION_LINES,
-    MAX_SYNONYMS_DISPLAY,
-)
-
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from uuid import UUID
+
+    from .term_card import TermCardData
 
 
 @dataclass(frozen=True, slots=True)
 class TermListProps:
-    """TermList用のプロパティ。"""
+    """TermList初期化プロパティ。
 
-    terms: list[SampleTerm]
-    selected_term_id: UUID | None = None
+    Attributes:
+        on_item_click: アイテムクリック時のコールバック（用語IDを引数にとる）
+        empty_message: 空状態時のメッセージ
+    """
+
+    on_item_click: Callable[[str], None] | None = None
     empty_message: str = "用語がありません"
-    on_term_select: Callable[[UUID], None] | None = None
 
 
-class TermList(ft.Column):
-    """用語リストコンポーネント。"""
+class TermList:
+    """用語リスト表示コンポーネント（非継承パターン）。"""
 
     def __init__(self, props: TermListProps) -> None:
         """Initialize term list.
 
         Args:
-            props: リストの設定プロパティ
+            props: 初期化プロパティ
         """
-        super().__init__()
-        self.props = props
-        self.spacing = CARD_SPACING
-        self.scroll = ft.ScrollMode.AUTO
+        self._props = props
+        self._cards: list[ft.Control] = []
+        self._list = ft.Column(
+            spacing=8,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+        )
 
-        self._build_list()
+    @property
+    def control(self) -> ft.Control:
+        """コントロールを取得する。
 
-    def _build_list(self) -> None:
-        """リストを構築する。"""
-        if not self.props.terms:
-            self.controls = [self._build_empty_state()]
-            return
+        Returns:
+            リストコントロール
+        """
+        return self._list
 
-        self.controls = [self._build_term_card(term) for term in self.props.terms]
+    def set_cards(self, cards: list[TermCardData]) -> None:
+        """カードリストを設定して再描画する。
+
+        Args:
+            cards: 表示するカードデータのリスト
+        """
+        from .term_card import TermCard
+
+        self._cards = []
+        self._list.controls = []
+
+        if not cards:
+            self._list.controls = [self._build_empty_state()]
+        else:
+            for data in cards:
+                card = TermCard(data)
+                self._cards.append(card)
+                self._list.controls.append(card)
+
+        with contextlib.suppress(AssertionError):
+            self._list.update()
 
     def _build_empty_state(self) -> ft.Control:
-        """空状態を構築する。"""
+        """空状態の表示を構築する。
+
+        Returns:
+            空状態コントロール
+        """
         return ft.Container(
             content=ft.Column(
                 controls=[
@@ -67,7 +103,7 @@ class TermList(ft.Column):
                         color=ft.Colors.OUTLINE,
                     ),
                     ft.Text(
-                        self.props.empty_message,
+                        self._props.empty_message,
                         size=16,
                         color=ft.Colors.OUTLINE,
                         text_align=ft.TextAlign.CENTER,
@@ -80,151 +116,10 @@ class TermList(ft.Column):
             alignment=ft.alignment.center,
         )
 
-    def _build_term_card(self, term: SampleTerm) -> ft.Control:
-        """用語カードを構築する。
-
-        Args:
-            term: 用語データ
-
-        Returns:
-            用語カードコントロール
-        """
-        is_selected = self.props.selected_term_id == term.id
-        status_icon = self._get_status_icon(term.status)
-
-        card_content = ft.Column(
-            controls=[
-                # Header
-                ft.Row(
-                    controls=[
-                        status_icon,
-                        ft.Column(
-                            controls=[
-                                ft.Text(
-                                    term.title,
-                                    weight=ft.FontWeight.BOLD,
-                                    size=16,
-                                ),
-                                ft.Text(
-                                    f"キー: {term.key}",
-                                    size=12,
-                                    color=ft.Colors.OUTLINE,
-                                ),
-                            ],
-                            spacing=2,
-                        ),
-                    ],
-                    spacing=8,
-                ),
-                # Description
-                ft.Text(
-                    term.description or "説明なし",
-                    size=14,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                    max_lines=MAX_DESCRIPTION_LINES,
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                ),
-                # Synonyms
-                self._build_synonyms(term),
-            ],
-            spacing=CARD_SPACING,
-        )
-
-        return ft.Container(
-            content=card_content,
-            padding=CARD_PADDING,
-            border_radius=8,
-            border=ft.border.all(
-                1,
-                ft.Colors.PRIMARY if is_selected else ft.Colors.OUTLINE_VARIANT,
-            ),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if is_selected else None,
-            on_click=lambda _, t=term: self._handle_click(t.id),
-            data=term.id,
-        )
-
-    def _build_synonyms(self, term: SampleTerm) -> ft.Control:
-        """同義語表示を構築する。
-
-        Args:
-            term: 用語データ
-
-        Returns:
-            同義語表示コントロール
-        """
-        if not term.synonyms:
-            return ft.Container()
-
-        visible_synonyms = term.synonyms[:MAX_SYNONYMS_DISPLAY]
-        synonym_chips = [
-            ft.Container(
-                content=ft.Text(
-                    synonym,
-                    size=12,
-                    color=ft.Colors.ON_SECONDARY_CONTAINER,
-                ),
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                bgcolor=ft.Colors.SECONDARY_CONTAINER,
-                border_radius=4,
-            )
-            for synonym in visible_synonyms
-        ]
-
-        if len(term.synonyms) > MAX_SYNONYMS_DISPLAY:
-            synonym_chips.append(
-                ft.Container(
-                    content=ft.Text(
-                        f"+{len(term.synonyms) - MAX_SYNONYMS_DISPLAY}",
-                        size=12,
-                        color=ft.Colors.ON_SECONDARY_CONTAINER,
-                    ),
-                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                    bgcolor=ft.Colors.SECONDARY_CONTAINER,
-                    border_radius=4,
-                )
-            )
-
-        return ft.Row(
-            controls=synonym_chips,
-            spacing=4,
-            wrap=True,
-        )
-
-    def _get_status_icon(self, status: SampleTermStatus) -> ft.Control:
-        """ステータスアイコンを取得する。
-
-        Args:
-            status: 用語ステータス
-
-        Returns:
-            ステータスアイコン
-        """
-        icon_map = {
-            SampleTermStatus.APPROVED: ft.Icons.CHECK_CIRCLE,
-            SampleTermStatus.DRAFT: ft.Icons.HELP_OUTLINE,
-            SampleTermStatus.DEPRECATED: ft.Icons.CANCEL,
-        }
-        return ft.Icon(
-            icon_map.get(status, ft.Icons.HELP_OUTLINE),
-            size=16,
-        )
-
-    def _handle_click(self, term_id: UUID) -> None:
-        """カードクリックをハンドリングする。
-
-        Args:
-            term_id: クリックされた用語のID
-        """
-        if self.props.on_term_select:
-            self.props.on_term_select(term_id)
-
-    def set_props(self, props: TermListProps) -> None:
-        """新しいプロパティを設定する。
+    def update_props(self, props: TermListProps) -> None:
+        """プロパティを更新する。
 
         Args:
             props: 新しいプロパティ
         """
-        self.props = props
-        self._build_list()
-        with contextlib.suppress(AssertionError):
-            self.update()
+        self._props = props

@@ -1,0 +1,314 @@
+"""用語作成ダイアログコンポーネント。
+
+【責務】
+    新しい用語を作成するためのダイアログUIを提供。
+    - フォーム入力（キー、タイトル、説明、ステータス、出典URL、同義語）
+    - バリデーション
+    - 作成コールバックの呼び出し
+
+【非責務】
+    - データベース操作 → Controller/ApplicationService
+    - 状態管理 → State/Controller
+"""
+
+from __future__ import annotations
+
+import contextlib
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+import flet as ft
+
+from models import TermStatus
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+@dataclass(frozen=True, slots=True)
+class CreateTermDialogProps:
+    """用語作成ダイアログの初期化プロパティ。"""
+
+    on_create: Callable[[dict[str, object]], None]
+    on_cancel: Callable[[], None] | None = None
+
+
+class CreateTermDialog:
+    """用語作成ダイアログコンポーネント。"""
+
+    def __init__(self, props: CreateTermDialogProps) -> None:
+        """Initialize create term dialog.
+
+        Args:
+            props: ダイアログプロパティ
+        """
+        self._props = props
+        self._dialog: ft.AlertDialog | None = None
+
+        # フォームフィールド
+        self._key_field: ft.TextField | None = None
+        self._title_field: ft.TextField | None = None
+        self._description_field: ft.TextField | None = None
+        self._status_dropdown: ft.Dropdown | None = None
+        self._source_url_field: ft.TextField | None = None
+        self._synonyms_field: ft.TextField | None = None
+
+        self._build_dialog()
+
+    def _build_dialog(self) -> None:
+        """ダイアログを構築する。"""
+        # キーフィールド（必須、ユニーク）
+        self._key_field = ft.TextField(
+            label="キー *",
+            hint_text="例: LLM, RAG, SDLC",
+            max_length=100,
+            autofocus=True,
+            helper_text="英数字とアンダースコアを推奨（一意である必要があります）",
+        )
+
+        # タイトルフィールド（必須）
+        self._title_field = ft.TextField(
+            label="タイトル *",
+            hint_text="例: Large Language Model",
+            max_length=200,
+        )
+
+        # 説明フィールド
+        self._description_field = ft.TextField(
+            label="説明",
+            hint_text="用語の定義や説明を入力してください",
+            multiline=True,
+            min_lines=3,
+            max_lines=5,
+            max_length=2000,
+        )
+
+        # ステータスドロップダウン
+        self._status_dropdown = ft.Dropdown(
+            label="ステータス",
+            options=[
+                ft.dropdown.Option(key=TermStatus.DRAFT.value, text="草案"),
+                ft.dropdown.Option(key=TermStatus.APPROVED.value, text="承認済み"),
+                ft.dropdown.Option(key=TermStatus.DEPRECATED.value, text="非推奨"),
+            ],
+            value=TermStatus.DRAFT.value,
+        )
+
+        # 出典URLフィールド
+        self._source_url_field = ft.TextField(
+            label="出典URL",
+            hint_text="https://example.com/definition",
+            max_length=500,
+        )
+
+        # 同義語フィールド（カンマ区切り）
+        self._synonyms_field = ft.TextField(
+            label="同義語",
+            hint_text="カンマ区切りで複数入力可能（例: LLM, 大規模言語モデル）",
+            helper_text="別名や略称を入力してください",
+        )
+
+        # ダイアログ本体
+        self._dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("新しい用語を作成"),
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        self._key_field,
+                        self._title_field,
+                        self._description_field,
+                        self._status_dropdown,
+                        self._source_url_field,
+                        self._synonyms_field,
+                        ft.Container(height=8),
+                        ft.Text(
+                            "* 必須項目",
+                            size=12,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    spacing=12,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                width=500,
+                height=600,
+            ),
+            actions=[
+                ft.TextButton(
+                    "キャンセル",
+                    on_click=lambda _: self._handle_cancel(),
+                ),
+                ft.ElevatedButton(
+                    "作成",
+                    icon=ft.Icons.ADD,
+                    on_click=lambda _: self._handle_create(),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+    @property
+    def dialog(self) -> ft.AlertDialog:
+        """ダイアログコントロールを取得する。
+
+        Returns:
+            AlertDialogコントロール
+        """
+        return self._dialog  # type: ignore[return-value]
+
+    def _validate_form(self) -> tuple[bool, str]:
+        """フォームをバリデーションする。
+
+        Returns:
+            (成功フラグ, エラーメッセージ)のタプル
+        """
+        max_key_length = 100
+        max_title_length = 200
+        max_description_length = 2000
+
+        # 必須フィールドの検証
+        key_error = self._validate_required_field(self._key_field, "キー", max_key_length)
+        if key_error:
+            return False, key_error
+
+        title_error = self._validate_required_field(self._title_field, "タイトル", max_title_length)
+        if title_error:
+            return False, title_error
+
+        # 説明の検証（任意だが長さチェック）
+        if self._description_field and self._description_field.value:
+            description = self._description_field.value.strip()
+            if len(description) > max_description_length:
+                return False, f"説明は{max_description_length}文字以内で入力してください"
+
+        # URLの検証（任意だが形式チェック）
+        url_error = self._validate_url()
+        if url_error:
+            return False, url_error
+
+        return True, ""
+
+    def _validate_required_field(
+        self,
+        field: ft.TextField | None,
+        field_name: str,
+        max_length: int,
+    ) -> str | None:
+        """必須フィールドをバリデーションする。
+
+        Args:
+            field: 検証対象のテキストフィールド
+            field_name: フィールド名（エラーメッセージ用）
+            max_length: 最大文字数
+
+        Returns:
+            エラーメッセージ（正常時はNone）
+        """
+        if not field or not field.value or not field.value.strip():
+            return f"{field_name}は必須です"
+
+        value = field.value.strip()
+        if len(value) > max_length:
+            return f"{field_name}は{max_length}文字以内で入力してください"
+
+        return None
+
+    def _validate_url(self) -> str | None:
+        """URLフィールドをバリデーションする。
+
+        Returns:
+            エラーメッセージ（正常時はNone）
+        """
+        max_url_length = 500
+
+        if not self._source_url_field or not self._source_url_field.value:
+            return None
+
+        url = self._source_url_field.value.strip()
+        if len(url) > max_url_length:
+            return f"URLは{max_url_length}文字以内で入力してください"
+        if not url.startswith(("http://", "https://")):
+            return "URLはhttp://またはhttps://で始まる必要があります"
+
+        return None
+
+    def _handle_create(self) -> None:
+        """作成ボタンのクリックをハンドリングする。"""
+        # バリデーション
+        is_valid, error_message = self._validate_form()
+        if not is_valid:
+            # エラー表示（スナックバーは親ビューで処理）
+            if self._dialog:
+                self._dialog.title = ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ERROR),
+                        ft.Text("入力エラー"),
+                    ]
+                )
+                self._dialog.content = ft.Column(
+                    controls=[
+                        ft.Text(
+                            error_message,
+                            color=ft.Colors.ERROR,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Divider(),
+                        self._dialog.content,  # type: ignore[list-item]
+                    ]
+                )
+                with contextlib.suppress(AssertionError):
+                    self._dialog.update()
+            return
+
+        # フォームデータの収集
+        description_value = (
+            self._description_field.value.strip() if self._description_field and self._description_field.value else None
+        )
+        source_url_value = (
+            self._source_url_field.value.strip() if self._source_url_field and self._source_url_field.value else None
+        )
+
+        form_data: dict[str, object] = {
+            "key": self._key_field.value.strip() if self._key_field and self._key_field.value else "",
+            "title": self._title_field.value.strip() if self._title_field and self._title_field.value else "",
+            "description": description_value,
+            "status": self._status_dropdown.value if self._status_dropdown else TermStatus.DRAFT.value,
+            "source_url": source_url_value,
+        }
+
+        # 同義語の処理（カンマ区切り）
+        if self._synonyms_field and self._synonyms_field.value:
+            synonyms_text = self._synonyms_field.value.strip()
+            synonyms = [s.strip() for s in synonyms_text.split(",") if s.strip()]
+            form_data["synonyms"] = synonyms
+        else:
+            form_data["synonyms"] = []
+
+        # コールバック呼び出し
+        self._props.on_create(form_data)
+
+    def _handle_cancel(self) -> None:
+        """キャンセルボタンのクリックをハンドリングする。"""
+        if self._props.on_cancel:
+            self._props.on_cancel()
+
+    def reset(self) -> None:
+        """フォームをリセットする。"""
+        if self._key_field:
+            self._key_field.value = ""
+        if self._title_field:
+            self._title_field.value = ""
+        if self._description_field:
+            self._description_field.value = ""
+        if self._status_dropdown:
+            self._status_dropdown.value = TermStatus.DRAFT.value
+        if self._source_url_field:
+            self._source_url_field.value = ""
+        if self._synonyms_field:
+            self._synonyms_field.value = ""
+
+        # タイトルとコンテンツを元に戻す
+        if self._dialog:
+            self._dialog.title = ft.Text("新しい用語を作成")
+            self._build_dialog()

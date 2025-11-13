@@ -1,11 +1,11 @@
-"""Terms management view implementation.
+"""Terms management view implementation (新デザイン).
 
 【責務】
     レイアウト構築とイベント配線を担当。
     Controller/Presenterを活用し、UIの構築に集中する。
 
     - BaseViewを継承し、with_loading/notify_error等を利用
-    - コンポーネントの組み合わせとレイアウト構成
+    - コンポーネントの組み合わせとレイアウト構成（2カラム: 左リスト、右詳細）
     - イベントハンドラでControllerへ委譲
     - State変更後の差分更新
 
@@ -19,25 +19,29 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import flet as ft
 
 from views.sample import SampleTermStatus
 from views.shared.base_view import BaseView, BaseViewProps
+from views.shared.components import create_page_header
 
-from .components.action_bar import ActionBarProps, TermActionBar
 from .components.status_tabs import StatusTabsProps, TermStatusTabs
+from .components.term_detail import DetailPanelProps, TermDetailPanel
 from .components.term_list import TermList, TermListProps
 from .controller import TermsController
-from .presenter import get_empty_message
+from .presenter import create_term_card_data, create_term_detail_data, get_empty_message
 from .state import TermsViewState
 
 if TYPE_CHECKING:
-    from uuid import UUID
+    from .components.create_term_dialog import CreateTermDialog
+    from .components.term_card import TermCardData
+    from .components.term_detail import TermDetailData
 
 
 class TermsView(BaseView):
-    """社内用語管理のメインビュー。"""
+    """社内用語管理のメインビュー（最新デザイン対応）。"""
 
     def __init__(self, props: BaseViewProps) -> None:
         """Initialize terms view.
@@ -54,9 +58,13 @@ class TermsView(BaseView):
         self.controller = TermsController(state=self.term_state)
 
         # Components
-        self.action_bar: TermActionBar | None = None
+        self.search_field: ft.TextField | None = None
         self.status_tabs: TermStatusTabs | None = None
         self.term_list: TermList | None = None
+        self.detail_panel: TermDetailPanel | None = None
+
+        # Dialogs
+        self.create_dialog: CreateTermDialog | None = None
 
         # Initial load
         self.controller.load_initial_terms()
@@ -67,34 +75,36 @@ class TermsView(BaseView):
 
     def build_content(self) -> ft.Control:
         """Build the main content area."""
-        # Header
-        header = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        self.title,
-                        size=32,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                    ft.Text(
-                        f"{self.description} ({len(self.term_state.all_terms)}件)",
-                        size=16,
-                        color=ft.Colors.OUTLINE,
-                    ),
-                ],
-                spacing=8,
-            ),
-            padding=ft.padding.all(24),
+        # ヘッダー
+        total_count = len(self.term_state.all_terms)
+        header = create_page_header(
+            title=self.title,
+            subtitle=f"{self.description} ({total_count}件)",
         )
 
-        # Action bar
-        action_bar_props = ActionBarProps(
-            on_search=self._handle_search,
-            on_create=self._handle_create_term,
+        # 検索バー + 作成ボタン
+        self.search_field = ft.TextField(
+            hint_text="用語、キー、同義語で検索...",
+            prefix_icon=ft.Icons.SEARCH,
+            on_change=self._handle_search,
+            expand=True,
         )
-        self.action_bar = TermActionBar(action_bar_props)
 
-        # Status tabs
+        create_button = ft.ElevatedButton(
+            text="新しい用語",
+            icon=ft.Icons.ADD,
+            on_click=lambda _: self._handle_create_term(),
+        )
+
+        search_row = ft.Row(
+            controls=[
+                self.search_field,
+                create_button,
+            ],
+            spacing=16,
+        )
+
+        # ステータスタブ
         counts = self.controller.get_counts()
         status_tabs_props = StatusTabsProps(
             approved_count=counts[SampleTermStatus.APPROVED],
@@ -104,52 +114,69 @@ class TermsView(BaseView):
         )
         self.status_tabs = TermStatusTabs(status_tabs_props)
 
-        # Term list
-        derived_terms = self.term_state.derived_terms()
+        # 用語リスト
         term_list_props = TermListProps(
-            terms=derived_terms,
-            selected_term_id=self.term_state.selected_term_id,
+            on_item_click=self._handle_term_select_str,
             empty_message=get_empty_message(self.term_state.current_tab),
-            on_term_select=self._handle_term_select_uuid,
         )
         self.term_list = TermList(term_list_props)
 
-        # Main content
-        main_content = ft.Row(
+        # 詳細パネル
+        detail_panel_props = DetailPanelProps(
+            on_edit=self._handle_edit_term,
+            on_tag_click=self._handle_tag_click,
+            on_item_click=self._handle_related_item_click,
+        )
+        self.detail_panel = TermDetailPanel(detail_panel_props)
+
+        # 初期データ描画
+        self._refresh_term_list()
+
+        # 2カラムレイアウト（左: リスト、右: 詳細）
+        grid = ft.ResponsiveRow(
             controls=[
                 ft.Container(
                     content=ft.Column(
                         controls=[
                             self.status_tabs,
-                            self.term_list,
+                            self.term_list.control,
                         ],
                         spacing=16,
+                        expand=True,
                     ),
-                    expand=True,
-                    padding=ft.padding.all(16),
+                    col={"xs": 12, "lg": 5},
+                    padding=ft.padding.only(right=12),
+                ),
+                ft.Container(
+                    content=self.detail_panel.control,
+                    col={"xs": 12, "lg": 7},
                 ),
             ],
             expand=True,
         )
 
+        # メインコンテンツ
         return ft.Column(
             controls=[
                 header,
                 ft.Container(
-                    content=self.action_bar,
-                    padding=ft.padding.symmetric(horizontal=24),
+                    content=search_row,
+                    padding=ft.padding.symmetric(horizontal=0),
                 ),
-                main_content,
+                ft.Divider(),
+                grid,
             ],
+            spacing=16,
             expand=True,
         )
 
-    def _handle_search(self, query: str) -> None:
+    def _handle_search(self, e: ft.ControlEvent) -> None:
         """検索クエリの変更をハンドリングする。
 
         Args:
-            query: 検索クエリ
+            e: コントロールイベント
         """
+        query = getattr(e.control, "value", "") or ""
         self.controller.update_search(query)
         self._refresh_term_list()
 
@@ -171,41 +198,143 @@ class TermsView(BaseView):
         """
         self.controller.select_term(term_id)
         self._refresh_term_list()
+        self._show_detail()
 
-    def _handle_term_select(self, term_id: str) -> None:
+    def _handle_term_select_str(self, term_id: str) -> None:
         """用語選択をハンドリングする（文字列）。
 
         Args:
             term_id: 選択された用語のID
         """
-        from uuid import UUID
-
         self._handle_term_select_uuid(UUID(term_id))
 
     def _handle_create_term(self) -> None:
         """用語作成ボタンのクリックをハンドリングする。"""
-        self.show_snack_bar("用語作成機能は準備中です")
+        self._show_create_dialog()
+
+    def _handle_edit_term(self, term_id: str) -> None:
+        """用語編集ボタンのクリックをハンドリングする。
+
+        Args:
+            term_id: 編集する用語のID
+        """
+        self.show_snack_bar(f"用語編集機能は準備中です (ID: {term_id})")
+
+    def _handle_tag_click(self, tag_name: str) -> None:
+        """タグクリックをハンドリングする。
+
+        Args:
+            tag_name: クリックされたタグ名
+        """
+        self.show_snack_bar(f"タグ '{tag_name}' の機能は準備中です")
+
+    def _handle_related_item_click(self, item_type: str, item_id: str) -> None:
+        """関連アイテムクリックをハンドリングする。
+
+        Args:
+            item_type: アイテムタイプ（"memo" or "task"）
+            item_id: アイテムID
+        """
+        self.show_snack_bar(f"{item_type} アイテム遷移機能は準備中です (ID: {item_id})")
 
     def _refresh_term_list(self) -> None:
         """用語リストを更新する。"""
-        if self.term_list:
-            derived_terms = self.term_state.derived_terms()
-            term_list_props = TermListProps(
-                terms=derived_terms,
-                selected_term_id=self.term_state.selected_term_id,
-                empty_message=get_empty_message(self.term_state.current_tab),
-                on_term_select=self._handle_term_select_uuid,
+        if not self.term_list:
+            return
+
+        derived_terms = self.term_state.derived_terms()
+        selected_id = self.term_state.selected_term_id
+
+        cards: list[TermCardData] = []
+        for term in derived_terms:
+
+            def _on_click(term_id: UUID = term.id) -> None:
+                self._handle_term_select_uuid(term_id)
+
+            card_data = create_term_card_data(
+                term,
+                is_selected=(term.id == selected_id) if selected_id else False,
+                on_click=_on_click,
             )
-            self.term_list.set_props(term_list_props)
+            cards.append(card_data)
+
+        self.term_list.set_cards(cards)
+
+    def _show_detail(self) -> None:
+        """選択された用語の詳細を表示する。"""
+        if not self.detail_panel:
+            return
+
+        selected_term = self.term_state.selected_term()
+        if not selected_term:
+            self.detail_panel.set_item(None)
+            return
+
+        # TODO: 関連アイテムの取得ロジック実装
+        detail_data: TermDetailData = create_term_detail_data(
+            selected_term,
+            related_items=[],
+        )
+        self.detail_panel.set_item(detail_data)
 
     def _refresh_status_tabs(self) -> None:
         """ステータスタブを更新する。"""
-        if self.status_tabs:
-            counts = self.controller.get_counts()
-            status_tabs_props = StatusTabsProps(
-                approved_count=counts[SampleTermStatus.APPROVED],
-                draft_count=counts[SampleTermStatus.DRAFT],
-                deprecated_count=counts[SampleTermStatus.DEPRECATED],
-                on_status_change=self._handle_status_change,
-            )
-            self.status_tabs.set_props(status_tabs_props)
+        if not self.status_tabs:
+            return
+
+        counts = self.controller.get_counts()
+        status_tabs_props = StatusTabsProps(
+            approved_count=counts[SampleTermStatus.APPROVED],
+            draft_count=counts[SampleTermStatus.DRAFT],
+            deprecated_count=counts[SampleTermStatus.DEPRECATED],
+            on_status_change=self._handle_status_change,
+        )
+        self.status_tabs.set_props(status_tabs_props)
+
+    def _show_create_dialog(self) -> None:
+        """用語作成ダイアログを表示する。"""
+        from .components.create_term_dialog import CreateTermDialog, CreateTermDialogProps
+
+        dialog_props = CreateTermDialogProps(
+            on_create=self._handle_dialog_create,
+            on_cancel=self._handle_dialog_cancel,
+        )
+        self.create_dialog = CreateTermDialog(dialog_props)
+
+        if self.page:
+            self.page.overlay.append(self.create_dialog.dialog)
+            self.create_dialog.dialog.open = True
+            self.page.update()
+
+    def _handle_dialog_create(self, form_data: dict[str, object]) -> None:
+        """ダイアログからの用語作成をハンドリングする。
+
+        Args:
+            form_data: フォームデータ（key, title, description, status, source_url, synonyms）
+        """
+        # TODO: ApplicationServiceを使用してデータベースに保存
+        key = form_data.get("key", "")
+
+        # ダイアログを閉じる
+        self._close_create_dialog()
+
+        # 成功メッセージ
+        self.show_snack_bar(f"用語 '{key}' を作成しました（実装中）")
+
+        # TODO: リスト更新（現在はモックデータのため、実装後に有効化）
+        # self.controller.load_initial_terms()
+        # self._refresh_term_list()
+        # self._refresh_status_tabs()
+
+    def _handle_dialog_cancel(self) -> None:
+        """ダイアログのキャンセルをハンドリングする。"""
+        self._close_create_dialog()
+
+    def _close_create_dialog(self) -> None:
+        """用語作成ダイアログを閉じる。"""
+        if self.create_dialog and self.page:
+            self.create_dialog.dialog.open = False
+            if self.create_dialog.dialog in self.page.overlay:
+                self.page.overlay.remove(self.create_dialog.dialog)
+            self.page.update()
+            self.create_dialog = None

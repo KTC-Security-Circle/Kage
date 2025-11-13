@@ -7,6 +7,7 @@
     - フォーマット済みテキスト（日付、ステータス等）の提供
     - 差分更新ヘルパー
     - 空状態メッセージの生成
+    - 関連アイテムデータの整形
 
 【責務外（他層の担当）】
     - 状態管理 → State
@@ -22,52 +23,29 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from views.sample import SampleTermStatus
 
+from .components.term_card import TermCardData
+from .components.term_detail import RelatedItemData, TermDetailData
 from .utils import format_date, format_datetime
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from views.sample import SampleTerm
 
 
-@dataclass(frozen=True, slots=True)
-class TermCardData:
-    """用語カード表示用のデータ。"""
-
-    term_id: str
-    title: str
-    key: str
-    description: str
-    synonyms: list[str]
-    status: SampleTermStatus
-    is_selected: bool
-
-
-@dataclass(frozen=True, slots=True)
-class TermDetailData:
-    """用語詳細表示用のデータ。"""
-
-    title: str
-    key: str
-    description: str
-    synonyms: list[str]
-    tags: list[str]
-    status: SampleTermStatus
-    status_text: str
-    source_url: str | None
-    created_date: str
-    updated_date: str
-
-
-def create_term_card_data(term: SampleTerm, *, is_selected: bool = False) -> TermCardData:
+def create_term_card_data(
+    term: SampleTerm, *, is_selected: bool = False, on_click: Callable[[], None] | None = None
+) -> TermCardData:
     """用語カード表示用のデータを生成する。
 
     Args:
         term: ソース用語データ
         is_selected: 選択状態
+        on_click: クリック時のコールバック
 
     Returns:
         カード表示用データ
@@ -79,20 +57,28 @@ def create_term_card_data(term: SampleTerm, *, is_selected: bool = False) -> Ter
         description=term.description or "説明なし",
         synonyms=term.synonyms[:],
         status=term.status,
+        status_text=format_status_text(term.status),
         is_selected=is_selected,
+        on_click=on_click,
     )
 
 
-def create_term_detail_data(term: SampleTerm) -> TermDetailData:
+def create_term_detail_data(
+    term: SampleTerm,
+    *,
+    related_items: list[RelatedItemData] | None = None,
+) -> TermDetailData:
     """用語詳細表示用のデータを生成する。
 
     Args:
         term: ソース用語データ
+        related_items: 関連アイテムリスト（オプション）
 
     Returns:
         詳細表示用データ
     """
     return TermDetailData(
+        term_id=str(term.id),
         title=term.title,
         key=term.key,
         description=term.description or "説明が登録されていません",
@@ -103,6 +89,7 @@ def create_term_detail_data(term: SampleTerm) -> TermDetailData:
         source_url=term.source_url,
         created_date=format_date(term.created_at),
         updated_date=format_datetime(term.updated_at),
+        related_items=related_items or [],
     )
 
 

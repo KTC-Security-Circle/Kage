@@ -346,12 +346,8 @@ def get_task_status_color(status: str) -> str:
     Returns:
         色コード（HEX形式）
     """
-    normalized = status.strip().lower()
-    if normalized == "completed":
-        return STATUS_COLORS.completed
-    if normalized == "todays":
-        return STATUS_COLORS.todays
-    return STATUS_COLORS.on_hold
+    # [AI GENERATED] get_status_color() を利用して重複を排除
+    return get_status_color(status)
 
 
 def get_grey_color(shade: int = 600) -> str:

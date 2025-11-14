@@ -20,20 +20,6 @@ if TYPE_CHECKING:  # import grouping for type checking only
     from typing import Any
 
     from logic.application.settings_application_service import SettingsApplicationService
-    from logic.commands.settings_commands import (
-        UpdateDatabaseSettingsCommand,
-        UpdateSettingCommand,
-        UpdateUserSettingsCommand,
-        UpdateWindowSettingsCommand,
-    )
-    from logic.queries.settings_queries import (
-        GetAgentsSettingsQuery,
-        GetAllSettingsQuery,
-        GetDatabaseSettingsQuery,
-        GetSettingQuery,
-        GetUserSettingsQuery,
-        GetWindowSettingsQuery,
-    )
     from settings.models import (
         AgentsSettings,
         AppSettings,
@@ -47,80 +33,96 @@ console = Console()
 
 
 def _get_service() -> SettingsApplicationService:
-    from logic.application.settings_application_service import SettingsApplicationService
+    from logic.application.apps import ApplicationServices
 
-    return SettingsApplicationService()
+    # Use ApplicationServices container to obtain the shared SettingsApplicationService
+    return ApplicationServices.create().settings
 
 
 # ==== Helpers ====
 @elapsed_time()
 @with_spinner("Fetching all settings...")
-def _get_all_settings(query: GetAllSettingsQuery) -> AppSettings:
+def _get_all_settings() -> AppSettings:
     service = _get_service()
-    return service.get_all_settings(query)
+    return service.get_all_settings()
 
 
 @elapsed_time()
 @with_spinner("Fetching window settings...")
-def _get_window_settings(query: GetWindowSettingsQuery) -> WindowSettings:
+def _get_window_settings() -> WindowSettings:
     service = _get_service()
-    return service.get_window_settings(query)
+    return service.get_window_settings()
 
 
 @elapsed_time()
 @with_spinner("Fetching user settings...")
-def _get_user_settings(query: GetUserSettingsQuery) -> UserSettings:
+def _get_user_settings() -> UserSettings:
     service = _get_service()
-    return service.get_user_settings(query)
+    return service.get_user_settings()
 
 
 @elapsed_time()
 @with_spinner("Fetching database settings...")
-def _get_database_settings(query: GetDatabaseSettingsQuery) -> DatabaseSettings:
+def _get_database_settings() -> DatabaseSettings:
     service = _get_service()
-    return service.get_database_settings(query)
+    return service.get_database_settings()
 
 
 @elapsed_time()
 @with_spinner("Fetching agents settings...")
-def _get_agents_settings(query: GetAgentsSettingsQuery) -> AgentsSettings:
+def _get_agents_settings() -> AgentsSettings:
     service = _get_service()
-    return service.get_agents_settings(query)
+    return service.get_agents_settings()
 
 
 @elapsed_time()
 @with_spinner("Fetching setting...")
-def _get_setting(query: GetSettingQuery) -> Any:  # noqa: ANN401
+def _get_setting(query: str | Any) -> Any:  # noqa: ANN401
     service = _get_service()
-    return service.get_setting(query)
+    # Accept either a GetSettingQuery-like object or a raw path string
+    path = getattr(query, "path", query)
+    return service.get_setting(path)
 
 
 @elapsed_time()
 @with_spinner("Updating window settings...")
-def _update_window_settings(cmd: UpdateWindowSettingsCommand) -> WindowSettings:
+def _update_window_settings(size: list[int] | None, position: list[int] | None) -> WindowSettings:
+    """Update window settings via service helper.
+
+    Args:
+        size: [width, height] list or None
+        position: [x, y] list or None
+
+    Returns:
+        Updated WindowSettings
+    """
     service = _get_service()
-    return service.update_window_settings(cmd)
+    return service.update_window_settings(size=size or [], position=position or [])
 
 
 @elapsed_time()
 @with_spinner("Updating user settings...")
-def _update_user_settings(cmd: UpdateUserSettingsCommand) -> UserSettings:
+def _update_user_settings(last_login_user: str | None, theme: str | None, user_name: str | None) -> UserSettings:
     service = _get_service()
-    return service.update_user_settings(cmd)
+    return service.update_user_settings(
+        last_login_user=last_login_user or "",
+        theme=theme or "",
+        user_name=user_name or "",
+    )
 
 
 @elapsed_time()
 @with_spinner("Updating database settings...")
-def _update_database_settings(cmd: UpdateDatabaseSettingsCommand) -> DatabaseSettings:
+def _update_database_settings(url: str) -> DatabaseSettings:
     service = _get_service()
-    return service.update_database_settings(cmd)
+    return service.update_database_settings(url=url)
 
 
 @elapsed_time()
 @with_spinner("Updating setting...")
-def _update_setting(cmd: UpdateSettingCommand) -> Any:  # noqa: ANN401
+def _update_setting(path: str, value: Any) -> Any:  # noqa: ANN401
     service = _get_service()
-    return service.update_setting(cmd)
+    return service.update_setting(path=path, value=value)
 
 
 def _render_settings_tree(settings: AppSettings) -> Tree:
@@ -163,9 +165,7 @@ def _render_settings_tree(settings: AppSettings) -> Tree:
 @handle_cli_errors()
 def show_all() -> None:
     """全設定をツリー形式で表示"""
-    from logic.queries.settings_queries import GetAllSettingsQuery
-
-    result = _get_all_settings(GetAllSettingsQuery())
+    result = _get_all_settings()
 
     tree = _render_settings_tree(result.result)
     console.print(tree)
@@ -182,9 +182,7 @@ def get_setting(
     Args:
         path: ドット区切りの設定パス
     """
-    from logic.queries.settings_queries import GetSettingQuery
-
-    result = _get_setting(GetSettingQuery(path=path))
+    result = _get_setting(path)
 
     console.print(
         Panel.fit(
@@ -210,14 +208,13 @@ def set_setting(
     """
     from json import JSONDecodeError, loads
 
-    from logic.commands.settings_commands import UpdateSettingCommand
-
     # Try to parse value as JSON (for lists, dicts, etc.)
     parsed_value: Any = value
     with contextlib.suppress(JSONDecodeError):
         parsed_value = loads(value)
 
-    result = _update_setting(UpdateSettingCommand(path=path, value=parsed_value))
+    # Call helper directly with raw args to avoid depending on missing command types
+    result = _update_setting(path, parsed_value)
 
     console.print(f"[green]✓[/green] Updated [bold]{path}[/bold] = [cyan]{result.result}[/cyan]")
     console.print(f"[dim]Elapsed: {result.elapsed:.2f}s[/dim]")
@@ -227,9 +224,7 @@ def set_setting(
 @handle_cli_errors()
 def show_window() -> None:
     """ウィンドウ設定を表示"""
-    from logic.queries.settings_queries import GetWindowSettingsQuery
-
-    result = _get_window_settings(GetWindowSettingsQuery())
+    result = _get_window_settings()
 
     table = Table(title="Window Settings", caption=f"Elapsed: {result.elapsed:.2f}s")
     table.add_column("Property", style="cyan")
@@ -245,9 +240,7 @@ def show_window() -> None:
 @handle_cli_errors()
 def show_user() -> None:
     """ユーザー設定を表示"""
-    from logic.queries.settings_queries import GetUserSettingsQuery
-
-    result = _get_user_settings(GetUserSettingsQuery())
+    result = _get_user_settings()
 
     table = Table(title="User Settings", caption=f"Elapsed: {result.elapsed:.2f}s")
     table.add_column("Property", style="cyan")
@@ -264,9 +257,7 @@ def show_user() -> None:
 @handle_cli_errors()
 def show_database() -> None:
     """データベース設定を表示"""
-    from logic.queries.settings_queries import GetDatabaseSettingsQuery
-
-    result = _get_database_settings(GetDatabaseSettingsQuery())
+    result = _get_database_settings()
 
     console.print(
         Panel.fit(
@@ -282,9 +273,7 @@ def show_database() -> None:
 @handle_cli_errors()
 def show_agents() -> None:
     """エージェント設定を表示"""
-    from logic.queries.settings_queries import GetAgentsSettingsQuery
-
-    result = _get_agents_settings(GetAgentsSettingsQuery())
+    result = _get_agents_settings()
 
     table = Table(title="Agents Settings", caption=f"Elapsed: {result.elapsed:.2f}s")
     table.add_column("Property", style="cyan")
@@ -309,8 +298,6 @@ def update_window(
         size: カンマ区切りのサイズ
         position: カンマ区切りの位置
     """
-    from logic.commands.settings_commands import UpdateWindowSettingsCommand
-
     size_list: list[int] | None = None
     position_list: list[int] | None = None
 
@@ -323,7 +310,8 @@ def update_window(
         console.print("[yellow]No changes specified[/yellow]")
         return
 
-    result = _update_window_settings(UpdateWindowSettingsCommand(size=size_list, position=position_list))
+    # Call helper directly with parsed lists
+    result = _update_window_settings(size_list, position_list)
 
     console.print("[green]✓[/green] Window settings updated")
     console.print(f"  size: {result.result.size}")
@@ -345,19 +333,12 @@ def update_user(
         user_name: ユーザー表示名
         last_login: 最終ログインユーザー
     """
-    from logic.commands.settings_commands import UpdateUserSettingsCommand
-
     if theme is None and user_name is None and last_login is None:
         console.print("[yellow]No changes specified[/yellow]")
         return
 
-    result = _update_user_settings(
-        UpdateUserSettingsCommand(
-            theme=theme,
-            user_name=user_name,
-            last_login_user=last_login,
-        )
-    )
+    # Call helper directly with raw values
+    result = _update_user_settings(last_login, theme, user_name)
 
     console.print("[green]✓[/green] User settings updated")
     console.print(f"  theme: {result.result.theme}")
@@ -376,9 +357,8 @@ def update_database(
     Args:
         url: データベース接続URL
     """
-    from logic.commands.settings_commands import UpdateDatabaseSettingsCommand
-
-    result = _update_database_settings(UpdateDatabaseSettingsCommand(url=url))
+    # Call helper directly with raw url
+    result = _update_database_settings(url)
 
     console.print(f"[green]✓[/green] Database URL updated: {result.result.url}")
     console.print(f"[dim]Elapsed: {result.elapsed:.2f}s[/dim]")

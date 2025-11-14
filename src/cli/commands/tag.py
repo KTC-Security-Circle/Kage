@@ -54,9 +54,14 @@ def _create_tag(name: str) -> TagRead:  # [AI GENERATED] return TagRead
 
 @elapsed_time()
 @with_spinner("Searching tags...")
-def _search_tags(query: str) -> TagRead:  # [AI GENERATED] list[TagRead]
+def _search_tags(query: str) -> list[TagRead]:  # [AI GENERATED]
+    """名前で部分一致検索を行うヘルパー。
+
+    `TagApplicationService` 側の部分一致検索メソッドを呼び出します。
+    """
     service = _get_service()
-    return service.get_by_name(query)
+    # TagApplicationService.search / search_by_name は部分一致で複数件を返す
+    return service.search(query)
 
 
 @elapsed_time()
@@ -127,15 +132,16 @@ def search_tags(query: str) -> None:
     if not results.result:
         console.print("[yellow]No results[/yellow]")
         raise typer.Exit(code=0)
+    tags = results.result
     table = Table(
         title=f"Search: {query}",
         box=box.SIMPLE,
-        # caption=f"Hits: {len(results.result)} Elapsed: {results.elapsed:.2f}s",
+        caption=f"Hits: {len(tags)} Elapsed: {results.elapsed:.2f}s",
     )
     table.add_column("ID")
     table.add_column("Name")
-    # for t in results.result:
-    #    table.add_row(str(t.id), t.name)
+    for t in tags:
+        table.add_row(str(t.id), t.name)
     console.print(table)
 
 

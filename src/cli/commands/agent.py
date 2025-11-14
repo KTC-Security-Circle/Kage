@@ -95,9 +95,22 @@ def _get_one_liner_service(
 
 @with_spinner("Building context...")
 def _build_context_auto() -> OneLinerState:  # [AI GENERATED]
-    from logic.queries.one_liner_queries import build_one_liner_context_auto
-
-    return build_one_liner_context_auto()
+    # 注: `logic.queries.one_liner_queries.build_one_liner_context_auto` は削除されました。
+    # TODO: コンテキストビルダを復活するか、適切な実装に置き換えてください。
+    # 元の実装はデータソースから自動的に OneLinerState を構築していました。
+    # 安全なプレースホルダとして CLI が動作するよう最小の状態を返します。
+    # from logic.queries.one_liner_queries import build_one_liner_context_auto
+    # return build_one_liner_context_auto()
+    # OneLinerState 型の辞書を返します（プレースホルダ）。
+    return OneLinerState(
+        {
+            "today_task_count": 0,
+            "completed_task_count": 0,
+            "overdue_task_count": 0,
+            "progress_summary": "",
+            "user_name": "",
+        }
+    )
 
 
 def _build_context_interactive() -> OneLinerState:  # [AI GENERATED]
@@ -105,12 +118,24 @@ def _build_context_interactive() -> OneLinerState:  # [AI GENERATED]
     today = int(questionary.text("today_task_count?", default="0").ask() or 0)
     completed = int(questionary.text("completed_task_count?", default="0").ask() or 0)
     overdue = int(questionary.text("overdue_task_count?", default="0").ask() or 0)
-    from logic.queries.one_liner_queries import build_one_liner_context
-
-    return build_one_liner_context(
-        today_task_count=today,
-        completed_task_count=completed,
-        overdue_task_count=overdue,
+    # 注: `logic.queries.one_liner_queries.build_one_liner_context` は削除されました。
+    # TODO: 対話的なコンテキストビルダを復活するか、適切な実装に置き換えてください。
+    # 安全なプレースホルダとして、収集した入力から OneLinerState を直接構築して返します。
+    # from logic.queries.one_liner_queries import build_one_liner_context
+    # return build_one_liner_context(
+    #     today_task_count=today,
+    #     completed_task_count=completed,
+    #     overdue_task_count=overdue,
+    # )
+    # 収集した入力から構築した OneLinerState 型の辞書を返します（プレースホルダ）。
+    return OneLinerState(
+        {
+            "today_task_count": int(today),
+            "completed_task_count": int(completed),
+            "overdue_task_count": int(overdue),
+            "progress_summary": "",
+            "user_name": "",
+        }
     )
 
 
@@ -259,19 +284,18 @@ def save_one_liner_as_task(
         ctx = _build_context_auto()
     gen_res = _generate_one_liner(ctx, provider=provider, model=model)
     text = gen_res.result
-    from logic.application.task_application_service import TaskApplicationService
-    # from logic.commands.task_commands import CreateTaskCommand
-    # from logic.container import service_container
+    from logic.application.apps import ApplicationServices
     from models import TaskStatus
 
     try:
         task_status = TaskStatus(status)
     except ValueError:  # [AI GENERATED]
-        task_status = TaskStatus.TODO  # [AI GENERATED]
-    service = service_container.get_service(TaskApplicationService)
+        # ステータスが不正または未指定の場合、サービス側の既定値に委ねるため None を渡します
+        task_status = None  # type: ignore[assignment]
+    apps = ApplicationServices.create()
+    task_service = apps.task
     truncated = text[:60]
-    cmd = CreateTaskCommand(title=truncated, description=text, status=task_status)
-    created = service.create_task(cmd)
+    created = task_service.create(title=truncated, description=text, status=task_status)
     _print_one_liner(
         text,
         gen_res.elapsed,

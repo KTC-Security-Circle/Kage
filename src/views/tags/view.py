@@ -27,6 +27,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import flet as ft
 
+from logic.application.memo_application_service import MemoApplicationService
+from logic.application.tag_application_service import TagApplicationService
+from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
 
 from .components import (
@@ -59,7 +62,10 @@ class TagsView(BaseView):
     def __init__(self, props: BaseViewProps) -> None:  # type: ignore[name-defined]
         super().__init__(props)
         self.tags_state = TagsViewState()
-        self.controller = TagsController(self.tags_state)
+        tag_service = self.apps.get_service(TagApplicationService)
+        memo_service = self.apps.get_service(MemoApplicationService)
+        task_service = self.apps.get_service(TaskApplicationService)
+        self.controller = TagsController(self.tags_state, tag_service, memo_service, task_service)
         self.presenter = TagsPresenter()
 
         # UIルート要素
@@ -76,7 +82,11 @@ class TagsView(BaseView):
 
         # 初期ロード（一度のみ）
         if not self.tags_state.initial_loaded:
-            self.controller.load_initial_tags()
+            try:
+                self.controller.load_initial_tags()
+            except Exception as exc:  # pragma: no cover - UI フォールバック
+                if self.page:
+                    self.show_error_snackbar(self.page, f"タグの読み込みに失敗しました: {exc}")
 
         # ヘッダー
         self._header = create_page_header(self.tags_state.filtered_count)
@@ -225,9 +235,11 @@ class TagsView(BaseView):
 
         def on_submit(form_data: TagFormData) -> None:
             """タグ作成時のコールバック"""
-            # [AI GENERATED] 注意: form_dataは現在スタブ実装のため使用されていない
-            # TODO: self.controller.create_tag(form_data.name, form_data.color, form_data.description)
-            self.controller.create_tag_stub()
+            try:
+                self.controller.create_tag(form_data.name, form_data.color, form_data.description)
+            except Exception as exc:  # pragma: no cover - UI フォールバック
+                self.show_error_snackbar(self.page, f"タグの作成に失敗しました: {exc}")
+                return
             self._refresh_ui()
             self.show_success_snackbar(f"タグ「{form_data.name}」を作成しました")
 
@@ -241,7 +253,12 @@ class TagsView(BaseView):
 
     def _on_refresh(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """更新ハンドラ"""
-        self.controller.refresh()
+        try:
+            self.controller.refresh()
+        except Exception as exc:  # pragma: no cover - UI フォールバック
+            if self.page:
+                self.show_error_snackbar(self.page, f"タグデータの更新に失敗しました: {exc}")
+            return
         self._refresh_ui()
         self.show_success_snackbar("タグデータを更新しました")
 
@@ -262,13 +279,16 @@ class TagsView(BaseView):
 
         def on_submit(form_data: TagFormData) -> None:
             """タグ編集時のコールバック"""
-            # TODO: Controllerにタグ編集を委譲（現状はスタブ）
-            # 理由: ApplicationServiceとの統合が未完了
-            # 実装:
-            # self.controller.update_tag(
-            #     selected_tag["id"], form_data.name, form_data.color, form_data.description
-            # )
-            # 置換先: controller.py の update_tag メソッドを実装
+            try:
+                self.controller.update_tag(
+                    selected_tag["id"],
+                    name=form_data.name,
+                    color=form_data.color,
+                    description=form_data.description,
+                )
+            except Exception as exc:  # pragma: no cover - UI フォールバック
+                self.show_error_snackbar(self.page, f"タグの更新に失敗しました: {exc}")
+                return
             self._refresh_ui()
             self.show_success_snackbar(f"タグ「{form_data.name}」を更新しました")
 

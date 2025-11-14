@@ -64,7 +64,7 @@ class TagsPresenter:
         Returns:
             TagListItemProps
         """
-        counts = controller.get_tag_counts(tag["name"])
+        counts = controller.get_tag_counts(tag["id"])
         return TagListItemProps(
             tag_id=tag["id"],
             name=tag["name"],
@@ -106,8 +106,8 @@ class TagsPresenter:
             )
 
         # 関連アイテム取得
-        memos = controller.get_related_memos(tag["name"])
-        tasks = controller.get_related_tasks(tag["name"])
+        memos = controller.get_related_memos(tag["id"])
+        tasks = controller.get_related_tasks(tag["id"])
 
         # RelatedItem変換
         related_memos = [
@@ -130,7 +130,7 @@ class TagsPresenter:
             for t in tasks
         ]
 
-        counts = controller.get_tag_counts(tag["name"])
+        counts = controller.get_tag_counts(tag["id"])
         detail_data = TagDetailData(
             tag_id=tag["id"],
             name=tag["name"],

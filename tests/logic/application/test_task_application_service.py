@@ -177,6 +177,22 @@ class TestTaskApplicationService:
 
         mock_task_service.list_by_status.assert_called_once_with(TaskStatus.PROGRESS, with_details=True)
 
+    def test_list_by_tag(
+        self,
+        task_application_service: TaskApplicationService,
+        mock_unit_of_work: Mock,
+        sample_task_read: TaskRead,
+    ) -> None:
+        """正常系: タグIDでタスク取得"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        tag_id = uuid.uuid4()
+        mock_task_service.list_by_tag.return_value = [sample_task_read]
+
+        result = task_application_service.list_by_tag(tag_id)
+
+        assert result == [sample_task_read]
+        mock_task_service.list_by_tag.assert_called_once_with(tag_id, with_details=False)
+
     # Today 件数APIは現行仕様に存在しないため対象外
 
     def test_get_by_id(

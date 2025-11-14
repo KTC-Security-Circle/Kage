@@ -55,36 +55,31 @@ class ErrorHandlingMixin:
                 ft.TextButton("OK", on_click=lambda _: self._close_dialog(page)),
             ],
         )
-        page.dialog = dialog  # type: ignore[attr-defined]
-        dialog.open = True
+        page.open(dialog)
         page.update()
 
     def show_error_snackbar(self, page: ft.Page, message: str = "エラーが発生しました") -> None:
         """エラースナックバーを表示する。"""
         snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.ERROR)
-        page.snack_bar = snack_bar  # type: ignore[attr-defined]
-        snack_bar.open = True
+        page.open(snack_bar)
         page.update()
 
     def show_info_snackbar(self, message: str = "情報") -> None:
         """情報スナックバーを表示する。"""
         snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.BLUE)
-        self.page.snack_bar = snack_bar  # type: ignore[attr-defined]
-        snack_bar.open = True
+        self.page.open(snack_bar)
         self.page.update()
 
     def show_success_snackbar(self, message: str = "成功しました") -> None:
         """成功スナックバーを表示する。"""
         snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREEN)
-        self.page.snack_bar = snack_bar  # type: ignore[attr-defined]
-        snack_bar.open = True
+        self.page.open(snack_bar)
         self.page.update()
 
     def show_snack_bar(self, message: str, bgcolor: str | None = None) -> None:
         """汎用スナックバーを表示する。"""
         snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=bgcolor or ft.Colors.PRIMARY)
-        self.page.snack_bar = snack_bar  # type: ignore[attr-defined]
-        snack_bar.open = True
+        self.page.open(snack_bar)
         self.page.update()
 
     def handle_exception_with_dialog(

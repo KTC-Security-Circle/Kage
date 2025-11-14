@@ -256,8 +256,16 @@ class TestTaskApplicationService:
         assert args[0].status is TaskStatus.PROGRESS
 
     # 追加: 検索API
-    def test_search_empty_query_returns_empty(self, task_application_service: TaskApplicationService) -> None:
-        assert task_application_service.search("") == []
+    def test_search_empty_query_returns_all(
+        self, task_application_service: TaskApplicationService, mock_unit_of_work: Mock, sample_task_read: TaskRead
+    ) -> None:
+        """空クエリの場合は全件取得する"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_task_service.get_all.return_value = [sample_task_read]
+
+        result = task_application_service.search("")
+        assert result == [sample_task_read]
+        mock_task_service.get_all.assert_called_once()
 
     def test_search_delegates_and_filters_status(
         self, task_application_service: TaskApplicationService, mock_unit_of_work: Mock, sample_task_read: TaskRead

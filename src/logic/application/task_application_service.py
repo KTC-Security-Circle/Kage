@@ -144,7 +144,7 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         タイトル・説明を横断検索し、必要に応じてステータスやタグで絞り込む。
 
         Args:
-            query: 検索クエリ（空文字・空白のみなら空配列）
+            query: 検索クエリ（空文字・空白のみなら全件取得してフィルタ適用）
             with_details: 関連情報を含めるかどうか
             status: ステータスでの追加フィルタ
             tags: タグIDのリスト（いずれかを含むOR条件）
@@ -152,12 +152,14 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         Returns:
             list[TaskRead]: 検索結果
         """
-        if not query or not query.strip():
-            return []
-
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)
-            results = task_service.search_tasks(query, with_details=with_details)
+
+            # 空クエリの場合は全件取得、それ以外は検索
+            if not query or not query.strip():
+                results = task_service.get_all()
+            else:
+                results = task_service.search_tasks(query, with_details=with_details)
 
             # ステータスフィルタ
             if status is not None:

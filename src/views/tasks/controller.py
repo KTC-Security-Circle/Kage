@@ -5,30 +5,105 @@ View と Query/Ordering/Presenter を調停し状態を不変更新する。
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from loguru import logger
 
 if TYPE_CHECKING:  # 型チェック専用
     from collections.abc import Callable
+    from uuid import UUID
+
+    from models import TaskRead, TaskStatus, TaskUpdate
 
 from .components.shared.constants import STATUS_ORDER
 from .ordering import ORDERING_MAP, apply_order
 from .presenter import TaskCardVM, to_card_vm
 from .state import TasksState
 
-if TYPE_CHECKING:  # 型チェック専用
-    from .query import TasksQuery
+
+class TaskApplicationPort(Protocol):
+    """TaskApplicationService への依存を抽象化するポート。
+
+    View/Controller はこの Protocol のみを前提にし、具体的な取得方法や
+    UnitOfWork/Repository には依存しない。テストではモックを注入可能。
+    """
+
+    def get_all_tasks(self) -> list[TaskRead]:  # pragma: no cover - interface
+        """全タスク取得"""
+        ...
+
+    def get_by_id(
+        self, task_id: UUID, *, with_details: bool = False
+    ) -> TaskRead | None:  # pragma: no cover - interface
+        """ID で単一取得。見つからない場合 None。"""
+        ...
+
+    def search(
+        self,
+        query: str,
+        *,
+        with_details: bool = False,
+        status: TaskStatus | None = None,
+    ) -> list[TaskRead]:  # pragma: no cover - interface
+        """検索（任意でステータスフィルタ）。"""
+        ...
+
+    def list_by_status(
+        self, status: TaskStatus, *, with_details: bool = False
+    ) -> list[TaskRead]:  # pragma: no cover - interface
+        """ステータス別一覧取得。"""
+        ...
+
+    def create(
+        self,
+        title: str,
+        description: str | None = None,
+        *,
+        status: TaskStatus | None = None,
+    ) -> TaskRead:  # pragma: no cover - interface
+        """タスク作成。"""
+        ...
+
+    def update(self, task_id: UUID, update_data: TaskUpdate) -> TaskRead:  # pragma: no cover - interface
+        """タスク更新。"""
+        ...
+
+    def delete(self, task_id: UUID) -> bool:  # pragma: no cover - interface
+        """タスク削除。"""
+        ...
 
 
-@dataclass
 class TasksController:
-    """イベント→状態→取得→並び替え→VM生成→通知を制御する調停役。"""
+    """TasksView 用の調停役 Controller。
 
-    _query: TasksQuery
-    _on_change: Callable[[list[TaskCardVM]], None]
-    _state: TasksState = field(default_factory=TasksState)
+    - Port 経由で ApplicationService を呼び出し、一覧/詳細/検索/並び替えを行う
+    - 不変 `TasksState` を生成し UI 更新をコールバックで通知
+    - 例外発生時はユーザー通知ハンドラ経由で UI レイヤに委譲
+    """
+
+    def __init__(
+        self,
+        service: TaskApplicationPort,
+        on_change: Callable[[list[TaskCardVM]], None],
+        on_error: Callable[[str], None] | None = None,
+    ) -> None:
+        """Controller 初期化。
+
+        Args:
+            service: TaskApplicationPort 実装(ApplicationService を抽象化)
+            on_change: 一覧 VM 更新時コールバック
+            on_error: ユーザー通知用エラーハンドラ(SnackBar 等)
+        """
+        self._service = service
+        self._state = TasksState()
+        self._on_change = on_change
+        self._on_error = on_error
+
+    def _notify_error(self, message: str) -> None:
+        """UI 層へエラー通知(存在すれば)。"""
+        logger.error(message)
+        if self._on_error:
+            self._on_error(message)
 
     @property
     def state(self) -> TasksState:
@@ -37,10 +112,34 @@ class TasksController:
 
     # --- Public Events ---
     def set_keyword(self, keyword: str) -> None:
-        self._update_and_render(self._state.update(keyword=keyword))
+        """検索キーワードを設定する。
+
+        Args:
+            keyword: 新しい検索キーワード
+        """
+        logger.debug(f"検索キーワード設定: '{keyword}'")
+        new_state = self._state.update(keyword=keyword)
+        self._update_and_render(new_state)
 
     def set_status(self, status: str | None) -> None:
-        self._update_and_render(self._state.update(status=status))
+        """ステータスフィルタを設定する。
+
+        Args:
+            status: 新しいステータスフィルタ(None の場合は全て)
+        """
+        status_filter = None
+        if status and status.strip():
+            try:
+                from models import TaskStatus
+
+                status_filter = TaskStatus(status)
+            except ValueError:
+                logger.debug(f"未知のステータス入力を全件扱いに変換: {status}")
+                status_filter = None
+
+        logger.debug(f"ステータスフィルタ設定: {status_filter}")
+        new_state = self._state.update(status=status)
+        self._update_and_render(new_state)
 
     def set_sort(self, key: str, *, descending: bool) -> None:
         """ソート条件を更新する。
@@ -49,35 +148,89 @@ class TasksController:
             key: ソートキー
             descending: 降順にするか
         """
+        logger.debug(f"並び替え設定: key={key}, desc={descending}")
         self._update_and_render(self._state.update(sort_key=key, sort_desc=descending))
 
     def refresh(self) -> None:
         """外部からの再読み込み要求。"""
+        logger.debug("データ再読み込み: 一覧を再描画")
         self._update_and_render(self._state)
 
     def set_selected(self, task_id: str | None) -> None:
         """選択中のタスクIDを更新する。"""
+        logger.debug(f"タスク選択: {task_id}")
         self._update_and_render(self._state.update(selected_id=task_id))
 
     def change_task_status(self, task_id: str, new_status: str) -> None:
         """タスクのステータスを変更し再描画する。
 
-        InMemory実装では Query 側に更新APIを持たせ暫定対応。将来的にCommand層へ委譲予定。
-
         Args:
             task_id: 変更対象ID
             new_status: 新ステータス
         """
+        from uuid import UUID
+
+        from models import TaskStatus, TaskUpdate
+
         try:
-            # type: ignore[attr-defined] は update_item_status が存在しない実装向け抑止
-            if hasattr(self._query, "update_item_status"):
-                self._query.update_item_status(task_id, new_status)  # type: ignore[attr-defined]
-                logger.debug("Changed task status id={} -> {}", task_id, new_status)
-            else:
-                logger.warning("Query does not support update_item_status; skipping")
+            tid = UUID(task_id)
+            status_enum = TaskStatus(new_status)
+            update_data = TaskUpdate(status=status_enum)
+            self._service.update(tid, update_data)
+            logger.debug("Changed task status id={} -> {}", task_id, new_status)
+        except (ValueError, Exception) as e:
+            logger.error(f"Failed to change task status: {e}")
+            self._notify_error("タスクのステータス変更に失敗しました。")
         finally:
             # 反映
             self._update_and_render(self._state)
+
+    def create_task(
+        self,
+        title: str,
+        description: str | None = None,
+        status: str | None = None,
+    ) -> None:
+        """新規タスクを ApplicationService 経由で作成する。
+
+        Args:
+            title: タスクタイトル
+            description: タスクの説明
+            status: タスクのステータス
+        """
+        from models import TaskStatus
+
+        # タイトルのバリデーション
+        title = title.strip()
+        if not title:
+            self._notify_error("タイトルを入力してください。")
+            return
+
+        # ステータスの変換
+        status_enum = None
+        if status and status.strip():
+            try:
+                status_enum = TaskStatus(status)
+            except ValueError:
+                # 未知のステータスはデフォルト(None)
+                logger.debug(f"未知のステータス入力: {status}")
+                status_enum = None
+
+        try:
+            # ApplicationService経由でタスク作成
+            created = self._service.create(
+                title=title,
+                description=description,
+                status=status_enum,
+            )
+            logger.info(f"タスク作成完了: {created.title}")
+
+            # 一覧を更新
+            self._update_and_render(self._state)
+
+        except Exception as e:
+            logger.exception(f"タスク作成中にエラー: {e}")
+            self._notify_error("タスクの作成に失敗しました。詳細はログを参照してください。")
 
     # TODO: MVC整備後は Command/ApplicationService 層へ書き込み操作を委譲する。
     #       例: TaskApplicationService.change_status(cmd) にトランザクション管理/ドメイン検証を移管。
@@ -87,34 +240,100 @@ class TasksController:
     # --- Query helpers for View ---
     def get_counts(self) -> dict[str, int]:
         """現在のキーワードフィルタでのステータス別件数を返す。"""
+        from models import TaskStatus
+
         counts: dict[str, int] = {}
         for status in STATUS_ORDER:
-            counts[status] = len(self._query.list_items(self._state.keyword, status))
+            try:
+                status_enum = TaskStatus(status) if status else None
+                items = self._service.search(
+                    self._state.keyword,
+                    with_details=False,
+                    status=status_enum,
+                )
+                counts[status] = len(items)
+            except Exception:
+                counts[status] = 0
         return counts
         # TODO: counts は Query 側で集約できるようにするとクエリ回数を削減可能。
         #       例: get_counts(keyword) -> dict[status, count]
 
     def get_total_count(self) -> int:
         """現在のキーワードでの総件数。"""
-        return len(self._query.list_items(self._state.keyword, None))
+        try:
+            return len(
+                self._service.search(
+                    self._state.keyword,
+                    with_details=False,
+                    status=None,
+                )
+            )
+        except Exception:
+            return 0
 
     # --- Internal orchestration ---
     def _update_and_render(self, new_state: TasksState) -> None:
+        """状態を更新してUIを再描画する。
+
+        Args:
+            new_state: 新しいUI状態
+        """
         self._state = new_state
-        items = self._query.list_items(new_state.keyword, new_state.status)
-        strategy = ORDERING_MAP[new_state.sort_key]
-        ordered = apply_order(items, strategy, descending=new_state.sort_desc)
-        vm: list[TaskCardVM] = to_card_vm(ordered)
-        logger.debug(
-            "Render tasks count={} keyword='{}' status={} sort={} desc={}",
-            len(vm),
-            new_state.keyword,
-            new_state.status,
-            new_state.sort_key,
-            new_state.sort_desc,
-        )
         try:
+            # データ取得
+            from models import TaskStatus
+
+            status_enum = TaskStatus(new_state.status) if new_state.status else None
+            items = self._service.search(
+                new_state.keyword,
+                with_details=False,
+                status=status_enum,
+            )
+
+            # 辞書化してPresenterへ
+            items_dict = [self._task_read_to_dict(item) for item in items]
+
+            # 並び替え
+            strategy = ORDERING_MAP[new_state.sort_key]
+            ordered = apply_order(items_dict, strategy, descending=new_state.sort_desc)
+            vm: list[TaskCardVM] = to_card_vm(ordered)
+
+            logger.debug(
+                "Render tasks count={} keyword='{}' status={} sort={} desc={}",
+                len(vm),
+                new_state.keyword,
+                new_state.status,
+                new_state.sort_key,
+                new_state.sort_desc,
+            )
             self._on_change(vm)
-        except Exception as e:  # defensive
-            logger.error(f"on_change callback failed: {e}")
-            # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。
+        except Exception as e:
+            logger.error(f"タスク一覧更新エラー: {e}")
+            self._on_change([])
+            self._notify_error("タスク一覧の取得に失敗しました。詳細はログを参照してください。")
+
+    def _task_read_to_dict(self, task: TaskRead) -> dict:
+        """TaskRead を辞書形式に変換する。
+
+        Args:
+            task: TaskRead インスタンス
+
+        Returns:
+            タスク情報の辞書
+        """
+
+        def _s(v: object | None) -> str:
+            return "" if v is None else str(v)
+
+        return {
+            "id": _s(task.id),
+            "title": _s(task.title),
+            "description": _s(task.description),
+            "status": _s(task.status.value if task.status else ""),
+            "due_date": _s(task.due_date),
+            "created_at": _s(task.created_at),
+            "updated_at": _s(task.updated_at),
+            "completed_at": _s(task.completed_at),
+            "project_id": _s(task.project_id),
+        }
+        # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。

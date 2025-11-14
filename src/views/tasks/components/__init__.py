@@ -12,9 +12,6 @@ if TYPE_CHECKING:
 
     import flet as ft
 
-# タスクダイアログのインポート
-from .task_dialog import create_task_dialog
-
 # 定数定義
 DESCRIPTION_MAX_LENGTH = 50
 
@@ -23,7 +20,6 @@ __all__ = [
     "create_action_bar",
     "create_kanban_board",
     "create_task_card",
-    "create_task_dialog",
 ]
 
 

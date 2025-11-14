@@ -6,7 +6,12 @@ CQRS の Query 側。テスト容易性のため InMemory 実装を同梱。
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from models import TaskRead
+
+    from .controller import TaskApplicationPort
 
 
 class TasksQuery(Protocol):
@@ -50,4 +55,77 @@ class InMemoryTasksQuery:
             if str(x.get("id")) == str(task_id):
                 x["status"] = new_status
                 return
+
+
+@dataclass(slots=True)
+class ServiceBasedTasksQuery:
+    """TaskApplicationService を使用した実装。"""
+
+    _service: TaskApplicationPort
+
+    def list_items(self, keyword: str, status: str | None) -> list[dict]:
+        """タスク一覧を ApplicationService 経由で取得する。
+
+        Args:
+            keyword: タイトル検索用キーワード
+            status: フィルタするステータス
+
+        Returns:
+            タスク辞書のリスト
+        """
+        from models import TaskStatus
+
+        status_enum = TaskStatus(status) if status else None
+        items = self._service.search(
+            keyword,
+            with_details=False,
+            status=status_enum,
+        )
+        return [self._task_read_to_dict(item) for item in items]
+
+    def update_item_status(self, task_id: str, new_status: str) -> None:
+        """タスクのステータスを更新する。
+
+        Args:
+            task_id: タスクID
+            new_status: 新しいステータス
+        """
+        from uuid import UUID
+
+        from loguru import logger
+
+        from models import TaskStatus, TaskUpdate
+
+        try:
+            tid = UUID(task_id)
+            status_enum = TaskStatus(new_status)
+            update_data = TaskUpdate(status=status_enum)
+            self._service.update(tid, update_data)
+        except (ValueError, Exception) as e:
+            logger.warning(f"Failed to update task status: {e}")
+
+    def _task_read_to_dict(self, task: TaskRead) -> dict:
+        """TaskRead を辞書形式に変換する。
+
+        Args:
+            task: TaskRead インスタンス
+
+        Returns:
+            タスク情報の辞書
+        """
+
+        def _s(v: object | None) -> str:
+            return "" if v is None else str(v)
+
+        return {
+            "id": _s(task.id),
+            "title": _s(task.title),
+            "description": _s(task.description),
+            "status": _s(task.status.value if task.status else ""),
+            "due_date": _s(task.due_date),
+            "created_at": _s(task.created_at),
+            "updated_at": _s(task.updated_at),
+            "completed_at": _s(task.completed_at),
+            "project_id": _s(task.project_id),
+        }
         # TODO: 見つからない場合の扱いを決める (例外送出 or ログ警告)。将来的に Command へ移設。

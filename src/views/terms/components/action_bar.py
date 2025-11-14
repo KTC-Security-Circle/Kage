@@ -1,37 +1,45 @@
 """Action bar component for terms management."""
 
+from __future__ import annotations
+
+import contextlib
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 import flet as ft
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+@dataclass(frozen=True, slots=True)
+class ActionBarProps:
+    """ActionBar用のプロパティ。"""
+
+    search_placeholder: str = "用語、キー、同義語で検索..."
+    on_search: Callable[[str], None] | None = None
+    on_create: Callable[[], None] | None = None
 
 
 class TermActionBar(ft.Row):
     """Action bar with search and create functionality for terms."""
 
-    def __init__(
-        self,
-        on_search: ft.OptionalEventCallable = None,
-        on_create_term: ft.OptionalEventCallable = None,
-        search_placeholder: str = "用語、キー、同義語で検索...",
-    ) -> None:
+    def __init__(self, props: ActionBarProps) -> None:
         """Initialize term action bar.
 
         Args:
-            on_search: Callback when search query changes
-            on_create_term: Callback when create term button is clicked
-            search_placeholder: Placeholder text for search field
+            props: ActionBarの設定プロパティ
         """
         super().__init__()
-        self.on_search = on_search
-        self.on_create_term = on_create_term
-        self.search_placeholder = search_placeholder
+        self.props = props
         self.search_field: ft.TextField | None = None
 
-        # 初期化時にコントロールを構築
         self._build_controls()
 
     def _build_controls(self) -> None:
-        """Build and setup controls."""
+        """コントロールを構築する。"""
         self.search_field = ft.TextField(
-            hint_text=self.search_placeholder,
+            hint_text=self.props.search_placeholder,
             prefix_icon=ft.Icons.SEARCH,
             border_radius=8,
             on_change=self._handle_search,
@@ -51,31 +59,30 @@ class TermActionBar(ft.Row):
         self.spacing = 16
         self.alignment = ft.MainAxisAlignment.SPACE_BETWEEN
 
-    def build(self) -> ft.Control:
-        """Build the action bar."""
-        # この方法は使用しない（ft.Rowを継承しているため）
-        return self
-
     def _handle_search(self, e: ft.ControlEvent) -> None:
-        """Handle search input change."""
-        if self.on_search:
-            self.on_search(e.control.value)
+        """検索入力の変更をハンドリングする。"""
+        if self.props.on_search and hasattr(e.control, "value"):
+            self.props.on_search(str(e.control.value))
 
     def _handle_create(self, _: ft.ControlEvent) -> None:
-        """Handle create term button click."""
-        if self.on_create_term:
-            self.on_create_term()
+        """作成ボタンのクリックをハンドリングする。"""
+        if self.props.on_create:
+            self.props.on_create()
+
+    def set_props(self, props: ActionBarProps) -> None:
+        """新しいプロパティを設定する。
+
+        Args:
+            props: 新しいプロパティ
+        """
+        self.props = props
+        if self.search_field:
+            self.search_field.hint_text = props.search_placeholder
 
     def clear_search(self) -> None:
-        """Clear the search field."""
+        """検索フィールドをクリアする。"""
         if self.search_field:
             self.search_field.value = ""
-            self.search_field.update()
-
-    def get_search_query(self) -> str:
-        """Get current search query.
-
-        Returns:
-            Current search query string
-        """
-        return self.search_field.value or "" if self.search_field else ""
+            # ページ未追加時は無視
+            with contextlib.suppress(AssertionError):
+                self.search_field.update()

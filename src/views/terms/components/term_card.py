@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Final
 
 import flet as ft
 
-from views.sample import SampleTermStatus
+from models import TermStatus
 
 from .shared.constants import (
     CARD_PADDING,
@@ -68,7 +68,7 @@ class TermCardData:
     key: str
     description: str
     synonyms: tuple[str, ...]
-    status: SampleTermStatus
+    status: TermStatus
     status_text: str
     is_selected: bool = False
     on_click: Callable[[], None] | None = None
@@ -174,9 +174,9 @@ class TermCard(ft.Container):
             ステータスアイコンコントロール
         """
         icon_map = {
-            SampleTermStatus.APPROVED: ft.Icons.CHECK_CIRCLE,
-            SampleTermStatus.DRAFT: ft.Icons.HELP_OUTLINE,
-            SampleTermStatus.DEPRECATED: ft.Icons.CANCEL,
+            TermStatus.APPROVED: ft.Icons.CHECK_CIRCLE,
+            TermStatus.DRAFT: ft.Icons.HELP_OUTLINE,
+            TermStatus.DEPRECATED: ft.Icons.CANCEL,
         }
 
         return ft.Icon(

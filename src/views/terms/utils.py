@@ -13,15 +13,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import datetime
 
-if TYPE_CHECKING:
-    from datetime import datetime
-
-    from views.sample import SampleTerm
+from models import TermRead
 
 
-def format_date(dt: datetime) -> str:
+def format_date(dt: datetime | None) -> str:
     """日時を日本語フォーマットに変換する。
 
     Args:
@@ -30,10 +27,12 @@ def format_date(dt: datetime) -> str:
     Returns:
         "YYYY年MM月DD日" 形式の文字列
     """
+    if not dt:
+        return "-"
     return dt.strftime("%Y年%m月%d日")
 
 
-def format_datetime(dt: datetime) -> str:
+def format_datetime(dt: datetime | None) -> str:
     """日時を詳細な日本語フォーマットに変換する。
 
     Args:
@@ -42,10 +41,12 @@ def format_datetime(dt: datetime) -> str:
     Returns:
         "YYYY年MM月DD日 HH:MM" 形式の文字列
     """
+    if not dt:
+        return "-"
     return dt.strftime("%Y年%m月%d日 %H:%M")
 
 
-def get_term_sort_key(term: SampleTerm) -> tuple[float, str]:
+def get_term_sort_key(term: TermRead) -> tuple[float, str]:
     """用語のソートキーを生成する。
 
     更新日時の降順、同一の場合はタイトルの昇順。
@@ -56,10 +57,11 @@ def get_term_sort_key(term: SampleTerm) -> tuple[float, str]:
     Returns:
         ソートキーのタプル（更新日時の逆順、タイトル）
     """
-    return (-term.updated_at.timestamp(), term.title.lower())
+    updated_at = term.updated_at or datetime.fromtimestamp(0)
+    return (-updated_at.timestamp(), (term.title or "").lower())
 
 
-def sort_terms(terms: list[SampleTerm]) -> list[SampleTerm]:
+def sort_terms(terms: list[TermRead]) -> list[TermRead]:
     """用語リストをソートする。
 
     Args:

@@ -23,22 +23,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Sequence
+from typing import Any
 
-from views.sample import SampleTermStatus
-
+from models import TermRead, TermStatus
 from .components.term_card import TermCardData
 from .components.term_detail import RelatedItemData, TermDetailData
 from .utils import format_date, format_datetime
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from views.sample import SampleTerm
-
 
 def create_term_card_data(
-    term: SampleTerm, *, is_selected: bool = False, on_click: Callable[[], None] | None = None
+    term: TermRead, *, is_selected: bool = False, on_click: Callable[[], None] | None = None
 ) -> TermCardData:
     """用語カード表示用のデータを生成する。
 
@@ -55,7 +50,7 @@ def create_term_card_data(
         title=term.title,
         key=term.key,
         description=term.description or "説明なし",
-        synonyms=tuple(term.synonyms),
+        synonyms=_extract_synonyms(term),
         status=term.status,
         status_text=format_status_text(term.status),
         is_selected=is_selected,
@@ -64,7 +59,7 @@ def create_term_card_data(
 
 
 def create_term_detail_data(
-    term: SampleTerm,
+    term: TermRead,
     *,
     related_items: list[RelatedItemData] | None = None,
 ) -> TermDetailData:
@@ -82,8 +77,8 @@ def create_term_detail_data(
         title=term.title,
         key=term.key,
         description=term.description or "説明が登録されていません",
-        synonyms=tuple(term.synonyms),
-        tags=tuple(term.tags),
+        synonyms=_extract_synonyms(term),
+        tags=_extract_tags(term),
         status=term.status,
         status_text=format_status_text(term.status),
         source_url=term.source_url,
@@ -93,7 +88,7 @@ def create_term_detail_data(
     )
 
 
-def format_status_text(status: SampleTermStatus) -> str:
+def format_status_text(status: TermStatus) -> str:
     """ステータスを日本語テキストに変換する。
 
     Args:
@@ -103,14 +98,14 @@ def format_status_text(status: SampleTermStatus) -> str:
         日本語ステータステキスト
     """
     status_map = {
-        SampleTermStatus.APPROVED: "承認済み",
-        SampleTermStatus.DRAFT: "草案",
-        SampleTermStatus.DEPRECATED: "非推奨",
+        TermStatus.APPROVED: "承認済み",
+        TermStatus.DRAFT: "草案",
+        TermStatus.DEPRECATED: "非推奨",
     }
     return status_map.get(status, "不明")
 
 
-def get_empty_message(status: SampleTermStatus) -> str:
+def get_empty_message(status: TermStatus) -> str:
     """空状態のメッセージを取得する。
 
     Args:
@@ -120,3 +115,31 @@ def get_empty_message(status: SampleTermStatus) -> str:
         空状態メッセージ
     """
     return f"{format_status_text(status)}の用語はありません"
+
+
+def _extract_synonyms(term: TermRead) -> tuple[str, ...]:
+    """TermReadから同義語を抽出して整形する。"""
+    synonyms = getattr(term, "synonyms", None)
+    return _extract_texts(synonyms, attr="text")
+
+
+def _extract_tags(term: TermRead) -> tuple[str, ...]:
+    """TermReadからタグ名を抽出して整形する。"""
+    tags = getattr(term, "tags", None)
+    return _extract_texts(tags, attr="name")
+
+
+def _extract_texts(items: Sequence[Any] | None, *, attr: str) -> tuple[str, ...]:
+    """Sequence内の要素から指定属性を抽出し文字列化する。"""
+    if not items:
+        return tuple()
+    normalized: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            normalized.append(item)
+            continue
+        if hasattr(item, attr):
+            normalized.append(str(getattr(item, attr)))
+            continue
+        normalized.append(str(item))
+    return tuple(normalized)

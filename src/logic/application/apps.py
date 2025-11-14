@@ -14,6 +14,7 @@ from logic.application.one_liner_application_service import OneLinerApplicationS
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
+from logic.application.terminology_application_service import TerminologyApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork, UnitOfWork
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
@@ -284,8 +285,13 @@ class ApplicationServices:
         return self.get_service(MemoToTaskApplicationService)
 
     @property
-    def settings(self) -> SettingsApplicationService:  # type: ignore[override]
+    def settings(self) -> SettingsApplicationService:
         """SettingsApplicationService を取得。"""
         from logic.application.settings_application_service import SettingsApplicationService
 
         return self.get_service(SettingsApplicationService)
+
+    @property
+    def terminology(self) -> TerminologyApplicationService:
+        """TerminologyApplicationService を取得。"""
+        return self.get_service(TerminologyApplicationService)

@@ -66,7 +66,13 @@ class MainActionSection(ft.Column):
         Returns:
             今日のタスク件数
         """
-        from logic.queries.task_queries import GetTodayTasksCountQuery
+        # NOTE: `logic.queries.task_queries.GetTodayTasksCountQuery` は削除されました。
+        # TODO: コンテキストカウントを提供するクエリ/サービス実装を復活させるか、
+        #       Application Service 側に集計メソッドを追加してください。
+        # 元の実装:
+        # from logic.queries.task_queries import GetTodayTasksCountQuery
+        # query = GetTodayTasksCountQuery()
+        # return self.task_app_service.get_today_tasks_count(query)
 
-        query = GetTodayTasksCountQuery()
-        return self.task_app_service.get_today_tasks_count(query)
+        # 安全なプレースホルダ: 0 を返します（将来的に実装で置換してください）。
+        return 0

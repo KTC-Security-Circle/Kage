@@ -35,25 +35,24 @@
     - 検索実行と結果反映
     - メモ選択状態の管理
     - ステータス別件数の提供
-    - CRUD操作の骨格（create/update/delete）※未実装
+    - CRUD操作（create/update/delete）の実行
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
+from uuid import UUID
 
 from loguru import logger
 
 from errors import NotFoundError
-from models import MemoRead, MemoStatus
+from models import MemoRead, MemoStatus, MemoUpdate
 
 from .ordering import sort_memos
 from .query import SearchQueryNormalizer
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from .state import MemosViewState
 
 
@@ -64,6 +63,10 @@ class MemoApplicationPort(Protocol):
         """メモを全件取得する。"""
         ...
 
+    def get_by_id(self, memo_id: UUID, *, with_details: bool = False) -> MemoRead:
+        """ID で単一メモを取得する。"""
+        ...
+
     def search(
         self,
         query: str,
@@ -72,6 +75,24 @@ class MemoApplicationPort(Protocol):
         status: MemoStatus | None = None,
     ) -> list[MemoRead]:
         """検索条件に一致するメモを返す。"""
+        ...
+
+    def create(
+        self,
+        title: str,
+        content: str,
+        *,
+        status: MemoStatus = MemoStatus.INBOX,
+    ) -> MemoRead:
+        """メモを作成する。"""
+        ...
+
+    def update(self, memo_id: UUID, update_data: MemoUpdate) -> MemoRead:
+        """メモを更新する。"""
+        ...
+
+    def delete(self, memo_id: UUID) -> bool:
+        """メモを削除する。"""
         ...
 
 
@@ -141,81 +162,81 @@ class MemosController:
         """選択中のメモを返す。"""
         return self.state.selected_memo()
 
-    # --- CRUD operations (骨格) ---
-    # TODO: 統合フェーズで実装
+    # --- CRUD operations ---
 
-    def create_memo(self, title: str, content: str, status: MemoStatus = MemoStatus.INBOX) -> MemoRead:  # type: ignore[name-defined]
-        """新しいメモを作成する。
+    def create_memo(
+        self,
+        title: str,
+        content: str,
+        *,
+        status: MemoStatus = MemoStatus.INBOX,
+    ) -> MemoRead:
+        """新しいメモを作成する。"""
 
-        Args:
-            title: メモのタイトル
-            content: メモの内容
-            status: メモのステータス（デフォルト: INBOX）
+        created = self.memo_app.create(title=title, content=content, status=status)
+        self.state.upsert_memo(created)
+        self.state.set_all_memos(sort_memos(self.state.all_memos))
+        self.state.set_selected_memo(created.id)
+        if self.state.search_query:
+            self._refresh_search_results()
+        self.state.reconcile()
+        return created
 
-        Returns:
-            作成されたメモ
+    def update_memo(
+        self,
+        memo_id: UUID,
+        *,
+        title: str | None = None,
+        content: str | None = None,
+        status: MemoStatus | None = None,
+    ) -> MemoRead:
+        """既存のメモを更新する。"""
 
-        Raises:
-            NotImplementedError: 未実装
-        """
-        # TODO: 実装方針
-        #  1) ApplicationService 呼び出し
-        #     created = self.memo_app.create(title=title, content=content, status=status)
-        #  2) 並び順の適用と state 反映
-        #     self.state.upsert_memo(created)
-        #     self.state.set_all_memos(sort_memos(self.state.all_memos))
-        #  3) 選択状態の更新（作成直後のメモを選択）
-        #     self.state.set_selected_memo(created.id)
-        #     self.state.reconcile()
-        #  4) 例外処理
-        #     try/except で NotFoundError/ValidationError 等を捕捉しログ + 再送出 or None返却方針
-        # 現状は未実装
-        msg_create = "create_memo is not yet implemented"
-        raise NotImplementedError(msg_create)
-
-    def update_memo(self, memo_id: UUID, *, title: str | None = None, content: str | None = None) -> MemoRead:  # type: ignore[name-defined]
-        """既存のメモを更新する。
-
-        Args:
-            memo_id: 更新対象のメモID
-            title: 新しいタイトル（Noneの場合は更新しない）
-            content: 新しい内容（Noneの場合は更新しない）
-
-        Returns:
-            更新されたメモ
-
-        Raises:
-            NotImplementedError: 未実装
-        """
-        # TODO: 実装方針
-        #  1) ApplicationService 呼び出し
-        #     updated = self.memo_app.update(memo_id, title=title, content=content)
-        #  2) state 反映（upsert + 必要なら並び替え）
-        #     self.state.upsert_memo(updated)
-        #     self.state.set_all_memos(sort_memos(self.state.all_memos))
-        #  3) 選択状態整合（reconcile）
-        #     self.state.reconcile()
-        # 現状は未実装
-        msg_update = "update_memo is not yet implemented"
-        raise NotImplementedError(msg_update)
+        update_payload = MemoUpdate(title=title, content=content, status=status)
+        updated = self.memo_app.update(memo_id, update_payload)
+        self.state.upsert_memo(updated)
+        self.state.set_all_memos(sort_memos(self.state.all_memos))
+        if self.state.search_query:
+            self._refresh_search_results()
+        self.state.reconcile()
+        return updated
 
     def delete_memo(self, memo_id: UUID) -> None:
-        """メモを削除する。
+        """メモを削除する。"""
 
-        Args:
-            memo_id: 削除対象のメモID
+        success = self.memo_app.delete(memo_id)
+        if not success:
+            msg = f"メモが見つかりません (id={memo_id})"
+            raise NotFoundError(msg)
 
-        Raises:
-            NotImplementedError: 未実装
-        """
-        # TODO: 実装方針
-        #  1) ApplicationService 呼び出し
-        #     self.memo_app.delete(memo_id)
-        #  2) state から削除し、並び順維持
-        #     self.state.all_memos = [m for m in self.state.all_memos if m.id != memo_id]
-        #     self.state.set_all_memos(sort_memos(self.state.all_memos))
-        #  3) 選択状態整合（reconcile）
-        #     self.state.reconcile()
-        # 現状は未実装
-        msg_delete = "delete_memo is not yet implemented"
-        raise NotImplementedError(msg_delete)
+        remaining = [memo for memo in self.state.all_memos if memo.id != memo_id]
+        self.state.set_all_memos(sort_memos(remaining))
+        if self.state.selected_memo_id == memo_id:
+            self.state.set_selected_memo(None)
+
+        if self.state.search_results is not None:
+            filtered = [memo for memo in self.state.search_results if memo.id != memo_id]
+            self.state.set_search_result(self.state.search_query, filtered)
+
+        if self.state.search_query:
+            self._refresh_search_results()
+
+        self.state.reconcile()
+
+    def _refresh_search_results(self) -> None:
+        """現在のクエリに基づいて検索結果を再取得する。"""
+
+        query = self.state.search_query
+        if not query:
+            return
+
+        try:
+            results = self.memo_app.search(
+                query,
+                with_details=False,
+                status=self.state.current_tab,
+            )
+        except NotFoundError:
+            results = []
+
+        self.state.set_search_result(query, results)

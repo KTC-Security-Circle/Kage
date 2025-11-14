@@ -131,6 +131,12 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             task_service = uow.service_factory.get_service(TaskService)
             return task_service.list_by_status(status, with_details=with_details)
 
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[TaskRead]:
+        """タグIDでタスク一覧を取得する。"""
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.service_factory.get_service(TaskService)
+            return task_service.list_by_tag(tag_id, with_details=with_details)
+
     def search(
         self,
         query: str,

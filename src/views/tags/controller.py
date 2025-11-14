@@ -1,220 +1,271 @@
 """Tags View Controller
 
-ユースケースレベルの操作 (初期ロード/検索更新/選択/削除スタブ/更新) を
-State に適用する。永続化やサービス呼び出しは後続で ApplicationServices に
-差し替えるため、現在は軽量 Mock 実装。
+ApplicationService を介してタグ・関連メモ/タスクを操作し、State を更新する。
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from datetime import datetime
+import uuid
+from typing import TYPE_CHECKING, Protocol
+
+from loguru import logger
+
+from models import TagUpdate
 
 from .utils import sort_tags_by_name
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
+    from models import MemoRead, TagRead, TaskRead
+
     from .query import SearchQuery
     from .state import TagDict, TagsViewState
 
 
+class TagApplicationPort(Protocol):
+    """TagApplicationService の利用に必要なポート。"""
+
+    def get_all_tags(self) -> list["TagRead"]:  # pragma: no cover - interface
+        """全タグを取得する。"""
+
+    def search(self, query: str) -> list["TagRead"]:  # pragma: no cover - interface
+        """検索キーワードに一致したタグを返す。"""
+
+    def create(self, name: str, description: str | None = None, color: str | None = None) -> "TagRead":  # pragma: no cover - interface
+        """タグを作成する。"""
+
+    def update(self, tag_id: uuid.UUID, update_data: TagUpdate) -> "TagRead":  # pragma: no cover - interface
+        """タグを更新する。"""
+
+    def delete(self, tag_id: uuid.UUID) -> bool:  # pragma: no cover - interface
+        """タグを削除する。"""
+
+
+class MemoApplicationPort(Protocol):
+    """MemoApplicationService を抽象化するポート。"""
+
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list["MemoRead"]:  # pragma: no cover - interface
+        """タグIDでメモ一覧を取得する。"""
+
+
+class TaskApplicationPort(Protocol):
+    """TaskApplicationService を抽象化するポート。"""
+
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list["TaskRead"]:  # pragma: no cover - interface
+        """タグIDでタスク一覧を取得する。"""
+
+
+@dataclass(slots=True)
+class _TagUsageCacheEntry:
+    """タグに紐づくメモ・タスクのキャッシュ。"""
+
+    memos: list["MemoRead"]
+    tasks: list["TaskRead"]
+
+
 class TagsController:
-    """Tags用Controller。"""
+    """Tags View の調停役。"""
 
-    def __init__(self, state: TagsViewState) -> None:
+    def __init__(
+        self,
+        state: "TagsViewState",
+        tag_service: TagApplicationPort,
+        memo_service: MemoApplicationPort,
+        task_service: TaskApplicationPort,
+    ) -> None:
         self.state = state
-        # TODO: ApplicationService依存注入
-        # 理由: 永続化層への接続（TagApplicationService, MemoApplicationService, TaskApplicationService）
-        # 実装: __init__(self, state: TagsViewState, tag_service: TagApplicationService, ...)
-        # 置換先: src/logic/application/tag_application_service.py
-
-        # 関連アイテムのMockデータ（将来はApplicationService経由で取得）
-        self._mock_memos: list[dict[str, str]] = [
-            {
-                "id": "memo-1",
-                "title": "緊急タスクのメモ",
-                "description": "本日中に完了すべきタスクの詳細",
-                "tag_name": "緊急",
-            },
-            {
-                "id": "memo-2",
-                "title": "開発ガイドライン",
-                "description": "新規開発時の注意事項まとめ",
-                "tag_name": "開発",
-            },
-        ]
-        self._mock_tasks: list[dict[str, str]] = [
-            {
-                "id": "task-1",
-                "title": "UI実装",
-                "description": "ダッシュボード画面の実装",
-                "status": "todays",
-                "tag_name": "開発",
-            },
-            {
-                "id": "task-2",
-                "title": "バグ修正",
-                "description": "ログイン画面のバグ修正",
-                "status": "completed",
-                "tag_name": "緊急",
-            },
-        ]
+        self._tag_service = tag_service
+        self._memo_service = memo_service
+        self._task_service = task_service
+        self._usage_cache: dict[str, _TagUsageCacheEntry] = {}
 
     # ------------------------------------------------------------------
-    # Initial Load
+    # Initial Load / Refresh
     # ------------------------------------------------------------------
     def load_initial_tags(self) -> None:
-        """初期タグをロードする (Mock)。"""
-        # TODO: ApplicationService経由でタグ一覧を取得
-        # 理由: DBからタグデータをロード（models.Tag → TagDict変換）
-        # 実装: tags = await self.tag_service.get_all_tags()
-        # 置換先: src/logic/application/tag_application_service.py の get_all_tags()
+        """初回ロード時にタグを取得する。"""
         if self.state.initial_loaded:
             return
-        mock: list[TagDict] = [
-            {
-                "id": "1",
-                "name": "緊急",
-                "color": "#f44336",
-                "description": "緊急度の高いタスクやメモに使用するタグです。",
-                "created_at": "2024-01-15 10:30:00",
-                "updated_at": "2024-03-20 14:45:00",
-            },
-            {
-                "id": "2",
-                "name": "開発",
-                "color": "#2196f3",
-                "description": "開発関連のタスクやメモに使用します。コーディング、レビュー、テストなど。",
-                "created_at": "2024-01-10 09:00:00",
-                "updated_at": "2024-03-18 16:20:00",
-            },
-            {
-                "id": "3",
-                "name": "デザイン",
-                "color": "#e91e63",
-                "description": "UI/UXデザイン関連のタスクやメモに付与します。",
-                "created_at": "2024-01-20 11:15:00",
-                "updated_at": "2024-02-28 10:00:00",
-            },
-        ]
-        self.state.items = sort_tags_by_name(mock)
+        tags = self._tag_service.get_all_tags()
+        self._usage_cache.clear()
+        self._apply_tags(tags, preserve_selection=False)
         self.state.initial_loaded = True
 
+    def refresh(self) -> None:
+        """最新のタグを再取得する。"""
+        tags = self._tag_service.get_all_tags()
+        self._usage_cache.clear()
+        self._apply_tags(tags, preserve_selection=True)
+
     # ------------------------------------------------------------------
-    # Search
+    # Search / Select
     # ------------------------------------------------------------------
-    def update_search(self, query: SearchQuery) -> None:
+    def update_search(self, query: "SearchQuery") -> None:
         """検索文字列を更新する。"""
         self.state.search_text = query.normalized
 
-    # ------------------------------------------------------------------
-    # Select
-    # ------------------------------------------------------------------
     def select_tag(self, tag_id: str) -> None:
-        """タグを選択。存在しなければ何もしない。"""
-        if any(t["id"] == tag_id for t in self.state.items):
+        """指定タグを選択する。"""
+        if any(tag["id"] == tag_id for tag in self.state.items):
             self.state.selected_id = tag_id
 
     # ------------------------------------------------------------------
-    # Delete (Stub)
+    # Mutations
     # ------------------------------------------------------------------
-    def delete_tag_stub(self, tag_id: str) -> None:
-        """削除スタブ。永続層未接続のため State 内配列から除去のみ。"""
-        # TODO: ApplicationService経由でタグを削除
-        # 理由: DB上のタグレコードを削除（カスケード: Task_Tag, Memo_Tag も削除）
-        # 実装: await self.tag_service.delete_tag(tag_id)
-        # 置換先: src/logic/application/tag_application_service.py の delete_tag()
-        # 注意: 削除前に関連メモ・タスクの件数を確認し、ユーザーに警告ダイアログ表示が望ましい
-        self.state.items = [t for t in self.state.items if t["id"] != tag_id]
-        self.state.reconcile_after_delete()
+    def create_tag(self, name: str, color: str | None = None, description: str | None = None) -> "TagDict":
+        """タグを新規作成し状態に反映する。"""
+        normalized_description = description.strip() if description else None
+        normalized_color = color.strip() if color else None
+        created = self._tag_service.create(name, normalized_description, normalized_color)
+        created_dict = self._serialize_tag(created)
+        self.state.items = sort_tags_by_name([*self.state.items, created_dict])
+        self.state.selected_id = created_dict["id"]
+        self._usage_cache[created_dict["id"]] = _TagUsageCacheEntry(memos=[], tasks=[])
+        return created_dict
 
-    # ------------------------------------------------------------------
-    # Create (Stub)
-    # ------------------------------------------------------------------
-    def create_tag_stub(self) -> None:
-        """新規作成スタブ。Mockタグを追加。"""
-        # TODO: ApplicationService経由でタグを作成
-        # 理由: DB上にタグレコードを新規追加
-        # 実装: new_tag = await self.tag_service.create_tag(name, color, description)
-        # 置換先: src/logic/application/tag_application_service.py の create_tag()
-        # 注意: 実際はダイアログから入力値を受け取る（name, color, description）
-        from datetime import datetime
-
-        new_id = str(len(self.state.items) + 1)
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.state.items.append(
-            {
-                "id": new_id,
-                "name": f"新規タグ{new_id}",
-                "color": "#607d8b",
-                "description": "新規作成されたタグです(スタブ)",
-                "created_at": now,
-                "updated_at": now,
-            }
+    def update_tag(
+        self,
+        tag_id: str,
+        *,
+        name: str | None = None,
+        color: str | None = None,
+        description: str | None = None,
+    ) -> "TagDict":
+        """タグ情報を更新し State を同期する。"""
+        tag_uuid = self._to_uuid(tag_id)
+        update_data = TagUpdate(
+            name=name.strip() if name is not None else None,
+            color=color.strip() if color is not None else None,
+            description=description.strip() if description is not None else None,
         )
-        self.state.items = sort_tags_by_name(self.state.items)
+        updated = self._tag_service.update(tag_uuid, update_data)
+        updated_dict = self._serialize_tag(updated)
+        self.state.items = sort_tags_by_name(
+            [updated_dict if tag["id"] == tag_id else tag for tag in self.state.items]
+        )
+        self.state.selected_id = tag_id
+        self._reset_usage_cache(tag_id)
+        return updated_dict
+
+    def delete_tag(self, tag_id: str) -> bool:
+        """タグを削除し状態へ反映する。"""
+        tag_uuid = self._to_uuid(tag_id)
+        success = self._tag_service.delete(tag_uuid)
+        if not success:
+            return False
+        self.state.items = [tag for tag in self.state.items if tag["id"] != tag_id]
+        self.state.reconcile_after_delete()
+        self._reset_usage_cache(tag_id)
+        return True
 
     # ------------------------------------------------------------------
-    # Refresh (Stub)
+    # Related Data
     # ------------------------------------------------------------------
-    def refresh(self) -> None:
-        """更新処理スタブ。現在は並び替えのみ。"""
-        # TODO: ApplicationService経由でタグ一覧を再取得
-        # 理由: DBの最新状態を反映（他ユーザーの変更等）
-        # 実装: tags = await self.tag_service.get_all_tags()
-        # 置換先: src/logic/application/tag_application_service.py の get_all_tags()
-        self.state.items = sort_tags_by_name(self.state.items)
+    def get_related_memos(self, tag_id: str) -> list[dict[str, str]]:
+        """タグに紐づくメモを取得する。"""
+        usage = self._ensure_usage(tag_id)
+        related: list[dict[str, str]] = []
+        for memo in usage.memos:
+            memo_id = getattr(memo, "id", None)
+            related.append(
+                {
+                    "id": str(memo_id) if memo_id else "",
+                    "title": getattr(memo, "title", "") or "(無題のメモ)",
+                    "description": getattr(memo, "content", "") or "",
+                }
+            )
+        return related
 
-    # ------------------------------------------------------------------
-    # Get Related Items
-    # ------------------------------------------------------------------
-    def get_related_memos(self, tag_name: str) -> list[dict[str, str]]:
-        """指定タグに関連するメモを取得する (Mock)。
+    def get_related_tasks(self, tag_id: str) -> list[dict[str, str]]:
+        """タグに紐づくタスクを取得する。"""
+        usage = self._ensure_usage(tag_id)
+        related: list[dict[str, str]] = []
+        for task in usage.tasks:
+            task_id = getattr(task, "id", None)
+            status = getattr(task, "status", None)
+            status_value = getattr(status, "value", str(status)) if status else ""
+            related.append(
+                {
+                    "id": str(task_id) if task_id else "",
+                    "title": getattr(task, "title", "") or "(無題のタスク)",
+                    "description": getattr(task, "description", "") or "",
+                    "status": status_value,
+                }
+            )
+        return related
 
-        Args:
-            tag_name: タグ名
-
-        Returns:
-            関連メモのリスト
-        """
-        # TODO: ApplicationService経由で関連メモを取得
-        # 理由: Memo_Tag中間テーブルを使用してタグに紐づくメモを取得
-        # 実装: memos = await self.memo_service.get_memos_by_tag_name(tag_name)
-        # 置換先: src/logic/application/memo_application_service.py の get_memos_by_tag_name()
-        # または: src/logic/queries/memo_queries.py に専用クエリを追加
-        return [m for m in self._mock_memos if m.get("tag_name") == tag_name]
-
-    def get_related_tasks(self, tag_name: str) -> list[dict[str, str]]:
-        """指定タグに関連するタスクを取得する (Mock)。
-
-        Args:
-            tag_name: タグ名
-
-        Returns:
-            関連タスクのリスト
-        """
-        # TODO: ApplicationService経由で関連タスクを取得
-        # 理由: Task_Tag中間テーブルを使用してタグに紐づくタスクを取得
-        # 実装: tasks = await self.task_service.get_tasks_by_tag_name(tag_name)
-        # 置換先: src/logic/application/task_application_service.py の get_tasks_by_tag_name()
-        # または: src/logic/queries/task_queries.py に専用クエリを追加
-        return [t for t in self._mock_tasks if t.get("tag_name") == tag_name]
-
-    def get_tag_counts(self, tag_name: str) -> dict[str, int]:
-        """指定タグのアイテムカウントを取得する (Mock)。
-
-        Args:
-            tag_name: タグ名
-
-        Returns:
-            カウント情報の辞書 (memo_count, task_count, total_count)
-        """
-        # TODO: ApplicationService/Queries経由で集計クエリを実行
-        # 理由: 毎回全件取得は非効率。COUNT()クエリで件数のみ取得
-        # 実装: counts = await self.tag_service.get_tag_item_counts(tag_name)
-        # 置換先: src/logic/queries/tag_queries.py に count_memos_by_tag(), count_tasks_by_tag() 追加
-        memo_count = sum(1 for m in self._mock_memos if m.get("tag_name") == tag_name)
-        task_count = sum(1 for t in self._mock_tasks if t.get("tag_name") == tag_name)
+    def get_tag_counts(self, tag_id: str) -> dict[str, int]:
+        """タグに紐づくメモ/タスク件数を返す。"""
+        usage = self._ensure_usage(tag_id)
+        memo_count = len(usage.memos)
+        task_count = len(usage.tasks)
         return {
             "memo_count": memo_count,
             "task_count": task_count,
             "total_count": memo_count + task_count,
         }
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _apply_tags(self, tags: list["TagRead"], *, preserve_selection: bool) -> None:
+        serialized = sort_tags_by_name([self._serialize_tag(tag) for tag in tags])
+        previous_selection = self.state.selected_id if preserve_selection else None
+        self.state.items = serialized
+        if previous_selection and any(tag["id"] == previous_selection for tag in serialized):
+            self.state.selected_id = previous_selection
+        elif not serialized:
+            self.state.selected_id = None
+
+    def _serialize_tag(self, tag: "TagRead") -> "TagDict":
+        tag_id = getattr(tag, "id", None)
+        name = getattr(tag, "name", "")
+        description = getattr(tag, "description", "") or ""
+        color = getattr(tag, "color", None) or "#607d8b"
+        created_at = self._format_datetime(getattr(tag, "created_at", None))
+        updated_at = self._format_datetime(getattr(tag, "updated_at", None))
+        if tag_id is None:
+            msg = "タグIDが取得できませんでした。"
+            logger.warning(msg)
+            generated = uuid.uuid4()
+            tag_id = generated
+        return {
+            "id": str(tag_id),
+            "name": name,
+            "color": color,
+            "description": description,
+            "created_at": created_at,
+            "updated_at": updated_at,
+        }
+
+    def _ensure_usage(self, tag_id: str) -> _TagUsageCacheEntry:
+        cached = self._usage_cache.get(tag_id)
+        if cached is not None:
+            return cached
+        tag_uuid = self._to_uuid(tag_id)
+        memos = self._memo_service.list_by_tag(tag_uuid, with_details=False)
+        tasks = self._task_service.list_by_tag(tag_uuid, with_details=False)
+        entry = _TagUsageCacheEntry(memos=memos, tasks=tasks)
+        self._usage_cache[tag_id] = entry
+        return entry
+
+    def _reset_usage_cache(self, tag_id: str | None = None) -> None:
+        if tag_id is None:
+            self._usage_cache.clear()
+        else:
+            self._usage_cache.pop(tag_id, None)
+
+    def _format_datetime(self, value: datetime | str | None) -> str:
+        if value is None:
+            return "-"
+        if isinstance(value, str):
+            return value
+        return value.replace(microsecond=0).isoformat(sep=" ")
+
+    def _to_uuid(self, tag_id: str) -> uuid.UUID:
+        try:
+            return uuid.UUID(tag_id)
+        except (ValueError, TypeError) as exc:  # pragma: no cover - バリデーション
+            msg = f"不正なタグIDです: {tag_id}"
+            raise ValueError(msg) from exc

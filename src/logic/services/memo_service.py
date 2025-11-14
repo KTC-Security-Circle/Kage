@@ -8,6 +8,7 @@ import uuid
 
 from loguru import logger
 
+from errors import NotFoundError
 from logic.repositories import MemoRepository, RepositoryFactory
 from logic.services.base import MyBaseError, ServiceBase, convert_read_model, handle_service_errors
 from models import Memo, MemoCreate, MemoRead, MemoStatus, MemoUpdate
@@ -215,6 +216,25 @@ class MemoService(ServiceBase):
         memos = self.memo_repo.list_by_status(status, with_details=with_details)
         logger.debug(f"ステータス '{status}' のメモを {len(memos)} 件取得しました。")
 
+        return memos
+
+    @handle_service_errors(SERVICE_NAME, "タグ取得", MemoServiceError)
+    @convert_read_model(MemoRead, is_list=True)
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Memo]:
+        """指定タグに紐づくメモ一覧を取得する。
+
+        Args:
+            tag_id: ひも付きを調べるタグID
+            with_details: メモの関連情報を含めるかどうか
+
+        Returns:
+            list[MemoRead]: 指定タグに紐づくメモ一覧
+        """
+        try:
+            memos = self.memo_repo.list_by_tag(tag_id, with_details=with_details)
+        except NotFoundError:
+            memos = []
+        logger.debug(f"タグ({tag_id})に紐づくメモを {len(memos)} 件取得しました。")
         return memos
 
     @handle_service_errors(SERVICE_NAME, "検索", MemoServiceError)

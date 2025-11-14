@@ -13,12 +13,16 @@ from models import Memo, MemoCreate, MemoRead, MemoStatus
 class DummyMemoRepo:
     def __init__(self) -> None:
         self.storage: dict[uuid.UUID, Memo] = {}
+        self.tag_links: dict[uuid.UUID, set[uuid.UUID]] = {}
 
     def create(self, create_data: MemoCreate) -> Memo:
         m = Memo(id=uuid.uuid4(), title=create_data.title, content=create_data.content)
         assert m.id is not None
         self.storage[m.id] = m
         return m
+
+    def link_tag(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        self.tag_links.setdefault(tag_id, set()).add(memo_id)
 
     def get_by_id(self, memo_id: uuid.UUID, *, with_details: bool = False) -> Memo:
         m = self.storage.get(memo_id)
@@ -58,6 +62,13 @@ class DummyMemoRepo:
 
     def search_by_content(self, query: str, *, with_details: bool = False) -> list[Memo]:
         return [memo for memo in self.storage.values() if query in memo.content]
+
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Memo]:
+        memo_ids = self.tag_links.get(tag_id)
+        if not memo_ids:
+            msg = "no memos with tag"
+            raise NotFoundError(msg)
+        return [self.storage[m_id] for m_id in memo_ids if m_id in self.storage]
 
 
 class RepoRaiser(DummyMemoRepo):
@@ -161,6 +172,30 @@ def test_list_by_status_with_details(memo_service: MemoService) -> None:
 
     res = memo_service.list_by_status(MemoStatus.INBOX, with_details=True)
     assert any(item.id == memo.id for item in res)
+
+
+def test_list_by_tag_returns_entries_when_exists() -> None:
+    repo = DummyMemoRepo()
+    service = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+    created = service.create(MemoCreate(title="tagged", content="memo"))
+    assert isinstance(created, MemoRead)
+    assert created.id is not None
+    tag_id = uuid.uuid4()
+    repo.link_tag(created.id, tag_id)
+
+    result = service.list_by_tag(tag_id)
+
+    assert len(result) == 1
+    assert result[0].id == created.id
+
+
+def test_list_by_tag_returns_empty_when_repo_raises_not_found() -> None:
+    repo = DummyMemoRepo()
+    service = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+
+    result = service.list_by_tag(uuid.uuid4())
+
+    assert result == []
 
 
 def test_list_by_status_not_found(memo_service: MemoService) -> None:

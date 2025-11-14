@@ -201,6 +201,25 @@ class TaskService(ServiceBase):
         logger.info(f"ステータス '{status}' のタスクを取得しました: {len(tasks)} 件")
         return tasks
 
+    @handle_service_errors(SERVICE_NAME, "タグ取得", TaskServiceError)
+    @convert_read_model(TaskRead, is_list=True)
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Task]:
+        """タグIDでタスクを取得する。
+
+        Args:
+            tag_id: 取得対象のタグID
+            with_details: 関連エンティティを含めるかどうか
+
+        Returns:
+            list[TaskRead]: タグにひも付くタスク一覧
+        """
+        try:
+            tasks = self.task_repo.list_by_tag(tag_id, with_details=with_details)
+        except NotFoundError:
+            tasks = []
+        logger.debug(f"タグ({tag_id})に紐づくタスクを {len(tasks)} 件取得しました。")
+        return tasks
+
     @handle_service_errors(SERVICE_NAME, "検索", TaskServiceError)
     @convert_read_model(TaskRead, is_list=True)
     def search_tasks(self, query: str, *, with_details: bool = False) -> list[Task]:

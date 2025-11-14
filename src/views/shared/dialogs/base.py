@@ -129,12 +129,17 @@ class BaseDialog(ft.AlertDialog, ABC):
 
     def show(self) -> None:
         """ダイアログを表示する。"""
-        if hasattr(self.page, "dialog"):
-            self.page.dialog = self
+        try:
+            # Flet のダイアログ表示は page.open(dialog) を利用する
+            self.page.open(self)
+            self.page.update()
+            logger.debug(f"Dialog shown: {self.title_text}")
+        except Exception:
+            # 互換性がない環境ではダイアログの open フラグを立てて更新を試みる
             self.open = True
             if hasattr(self.page, "update"):
                 self.page.update()
-            logger.debug(f"Dialog shown: {self.title_text}")
+            logger.debug(f"Dialog shown (fallback open): {self.title_text}")
 
     def hide(self) -> None:
         """ダイアログを閉じる。"""
@@ -271,11 +276,12 @@ class BaseFormDialog(BaseDialog):
 
         error_messages = "\n".join(self._validation_errors.values())
         if hasattr(self.page, "snack_bar"):
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(error_messages),
-                bgcolor=ft.Colors.ERROR,
+            self.page.open(
+                ft.SnackBar(
+                    content=ft.Text(error_messages),
+                    bgcolor=ft.Colors.ERROR,
+                )
             )
-            self.page.snack_bar.open = True
             if hasattr(self.page, "update"):
                 self.page.update()
 

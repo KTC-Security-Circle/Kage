@@ -37,7 +37,7 @@ from __future__ import annotations
 import flet as ft
 from loguru import logger
 
-from logic.application.apps import ApplicationServices
+from logic.application.memo_application_service import MemoApplicationService
 from models import MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 
@@ -72,8 +72,7 @@ class MemosView(BaseView):
 
         self.memos_state = MemosViewState()
         if memo_app is None:
-            apps = ApplicationServices.create()
-            memo_app = apps.memo
+            memo_app = self.apps.get_service(MemoApplicationService)
         self.controller = MemosController(memo_app=memo_app, state=self.memos_state)
 
         # UIコンポーネント
@@ -307,20 +306,124 @@ class MemosView(BaseView):
         self.show_info_snackbar("AI提案機能は統合フェーズで実装予定です")
 
     def _handle_edit_memo(self, _: ft.ControlEvent) -> None:
-        """メモ編集ハンドラー。"""
+        """メモ編集ハンドラー。編集ダイアログを表示し、保存時に Controller 経由で更新する。
+
+        Args:
+            _: ft.ControlEvent (未使用)
+        """
         selected_memo = self.controller.current_selection()
-        if selected_memo:
-            logger.info(f"Edit memo requested: {selected_memo.id}")
-            # TODO: メモ編集ダイアログまたは画面遷移を実装
-            self.show_info_snackbar("メモ編集機能は統合フェーズで実装予定です")
+        if selected_memo is None:
+            return
+
+        # ダイアログの入力コントロールを構築
+        title_field = ft.TextField(value=selected_memo.title or "", label="タイトル", expand=True)
+        content_field = ft.TextField(
+            value=selected_memo.content or "", label="内容", multiline=True, min_lines=6, expand=True
+        )
+
+        def _on_save(_: ft.ControlEvent | None = None) -> None:
+            title = (title_field.value or "").strip() or "無題のメモ"
+            content = (content_field.value or "").strip()
+            if not content:
+                self.show_snack_bar("内容を入力してください", bgcolor=ft.Colors.ERROR)
+                return
+
+            def _save() -> None:
+                try:
+                    updated = self.controller.update_memo(
+                        selected_memo.id,
+                        title=title,
+                        content=content,
+                        status=selected_memo.status,
+                    )
+                except Exception as exc:  # Application層の例外をUIに伝える
+                    self.notify_error("メモの更新に失敗しました", details=f"{type(exc).__name__}: {exc}")
+                    raise
+
+                logger.info(f"Memo updated via edit dialog: id={updated.id}")
+                self.show_success_snackbar("メモを更新しました")
+                # ダイアログを閉じて表示を更新
+                try:
+                    dlg.open = False
+                    dlg.update()
+                except Exception:
+                    logger.exception("Failed to close edit dialog")
+                self._refresh()
+
+            self.with_loading(_save, user_error_message="メモの更新に失敗しました")
+
+        # ダイアログ定義
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("メモを編集"),
+            content=ft.Column(controls=[title_field, content_field], spacing=12),
+            actions=[
+                ft.TextButton("キャンセル", on_click=lambda _: _close()),
+                ft.ElevatedButton("保存", on_click=_on_save),
+            ],
+        )
+
+        def _close(_: ft.ControlEvent | None = None) -> None:
+            try:
+                dlg.open = False
+                dlg.update()
+            except Exception:
+                logger.exception("Failed to close edit dialog")
+
+        # 表示
+        try:
+            self.page.open(dlg)
+        except Exception:
+            dlg.open = True
+            dlg.update()
 
     def _handle_delete_memo(self, _: ft.ControlEvent) -> None:
-        """メモ削除ハンドラー。"""
+        """メモ削除ハンドラー。確認ダイアログ表示のうえ Controller 経由で削除する。"""
         selected_memo = self.controller.current_selection()
-        if selected_memo:
-            logger.info(f"Delete memo requested: {selected_memo.id}")
-            # TODO: 削除確認ダイアログと実際の削除処理を実装
-            self.show_info_snackbar("メモ削除機能は統合フェーズで実装予定です")
+        if selected_memo is None:
+            return
+
+        def _confirm_delete(_: ft.ControlEvent | None = None) -> None:
+            def _do_delete() -> None:
+                try:
+                    self.controller.delete_memo(selected_memo.id)
+                except Exception as exc:
+                    self.notify_error("メモの削除に失敗しました", details=f"{type(exc).__name__}: {exc}")
+                    raise
+
+                logger.info(f"Memo deleted: id={selected_memo.id}")
+                self.show_success_snackbar("メモを削除しました")
+                try:
+                    confirm_dlg.open = False
+                    confirm_dlg.update()
+                except Exception:
+                    logger.exception("Failed to close edit dialog")
+                self._refresh()
+
+            self.with_loading(_do_delete, user_error_message="メモの削除に失敗しました")
+
+        def _cancel(_: ft.ControlEvent | None = None) -> None:
+            try:
+                confirm_dlg.open = False
+                confirm_dlg.update()
+            except Exception:
+                logger.exception("Failed to close edit dialog")
+
+        confirm_dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("メモを削除しますか？"),
+            content=ft.Text("この操作は取り消せません。よろしいですか？"),
+            actions=[
+                ft.TextButton("キャンセル", on_click=_cancel),
+                ft.ElevatedButton("削除", bgcolor=ft.Colors.ERROR, on_click=_confirm_delete),
+            ],
+        )
+
+        try:
+            self.page.open(confirm_dlg)
+        except Exception:
+            confirm_dlg.open = True
+            confirm_dlg.update()
 
     def _update_detail_panel(self) -> None:
         """詳細パネルを更新。"""

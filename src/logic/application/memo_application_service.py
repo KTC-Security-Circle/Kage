@@ -72,12 +72,19 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     @override
     def get_instance(cls, *args: Any, **kwargs: Any) -> MemoApplicationService: ...
 
-    def create(self, title: str, content: str) -> MemoRead:
+    def create(
+        self,
+        title: str,
+        content: str,
+        *,
+        status: MemoStatus = MemoStatus.INBOX,
+    ) -> MemoRead:
         """メモを作成する
 
         Args:
             title: メモタイトル
             content: メモ内容
+            status: 初期ステータス（省略時は INBOX）
 
         Returns:
             MemoRead: 作成されたメモ
@@ -93,7 +100,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             msg = "メモ内容を入力してください"
             raise ContentValidationError(msg)
 
-        memo = MemoCreate(title=title, content=content)
+        memo = MemoCreate(title=title, content=content, status=status)
 
         with self._unit_of_work_factory() as uow:
             memo_service = uow.get_service(MemoService)

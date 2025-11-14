@@ -1,6 +1,6 @@
 ---
 description: 'Kage Flet Layered Views Engineer. Build production-ready MVP-layered views like memos quickly, consistently, and autonomously.'
-tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'runTests', 'context7/*']
+tools: ['runCommands', 'runTasks', 'edit', 'search', 'new', 'serena/*', 'context7/*', 'extensions', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'todos', 'runTests']
 ---
 # Flet Layered Views Engineer v1
 

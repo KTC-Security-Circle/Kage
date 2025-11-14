@@ -106,7 +106,7 @@ class ErrorHandlingMixin:
         """ダイアログを閉じる。"""
         dialog_obj = getattr(page, "dialog", None)
         if dialog_obj:
-            dialog_obj.open = False
+            page.close(dialog_obj)
             page.update()
 
 

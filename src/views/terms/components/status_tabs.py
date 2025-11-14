@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.sample import SampleTermStatus
+from models import TermStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -21,7 +21,7 @@ class StatusTabsProps:
     approved_count: int = 0
     draft_count: int = 0
     deprecated_count: int = 0
-    on_status_change: Callable[[SampleTermStatus], None] | None = None
+    on_status_change: Callable[[TermStatus], None] | None = None
 
 
 class TermStatusTabs(ft.Tabs):
@@ -35,7 +35,7 @@ class TermStatusTabs(ft.Tabs):
         """
         super().__init__()
         self.props = props
-        self.selected_status = SampleTermStatus.APPROVED
+        self.selected_status = TermStatus.APPROVED
 
         self._build_tabs()
         self.on_change = self._on_tab_change
@@ -54,15 +54,27 @@ class TermStatusTabs(ft.Tabs):
         tab_index = e.control.selected_index
 
         status_map = {
-            0: SampleTermStatus.APPROVED,
-            1: SampleTermStatus.DRAFT,
-            2: SampleTermStatus.DEPRECATED,
+            0: TermStatus.APPROVED,
+            1: TermStatus.DRAFT,
+            2: TermStatus.DEPRECATED,
         }
 
-        self.selected_status = status_map.get(tab_index, SampleTermStatus.APPROVED)
+        self.selected_status = status_map.get(tab_index, TermStatus.APPROVED)
 
         if self.props.on_status_change:
             self.props.on_status_change(self.selected_status)
+
+    def set_active_status(self, status: TermStatus) -> None:
+        """外部からステータスを指定してタブ選択を変更する。"""
+        status_to_index = {
+            TermStatus.APPROVED: 0,
+            TermStatus.DRAFT: 1,
+            TermStatus.DEPRECATED: 2,
+        }
+        self.selected_status = status
+        self.selected_index = status_to_index.get(status, 0)
+        with contextlib.suppress(AssertionError):
+            self.update()
 
     def set_props(self, props: StatusTabsProps) -> None:
         """新しいプロパティを設定する。

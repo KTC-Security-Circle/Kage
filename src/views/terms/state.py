@@ -36,12 +36,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from uuid import UUID
 
-from views.sample import SampleTerm, SampleTermStatus
-
-if TYPE_CHECKING:
-    from uuid import UUID
+from models import TermRead, TermStatus
 
 
 @dataclass(slots=True)
@@ -55,15 +52,15 @@ class TermsViewState:
     View 自体は UI 制御のみに集中させ、状態の保持と派生計算をこのクラスへ委譲する。
     """
 
-    current_tab: SampleTermStatus = SampleTermStatus.APPROVED
+    current_tab: TermStatus = TermStatus.APPROVED
     search_query: str = ""
-    all_terms: list[SampleTerm] = field(default_factory=list)
-    search_results: list[SampleTerm] | None = None
+    all_terms: list[TermRead] = field(default_factory=list)
+    search_results: list[TermRead] | None = None
     selected_term_id: UUID | None = None
-    # id -> SampleTerm のインデックス。全用語(all_terms)に対して構築する。
-    _by_id: dict[UUID, SampleTerm] = field(default_factory=dict, repr=False)
+    # id -> TermRead のインデックス。全用語(all_terms)に対して構築する。
+    _by_id: dict[UUID, TermRead] = field(default_factory=dict, repr=False)
 
-    def set_all_terms(self, terms: list[SampleTerm]) -> None:
+    def set_all_terms(self, terms: list[TermRead]) -> None:
         """全用語一覧を更新する。
 
         Args:
@@ -73,7 +70,7 @@ class TermsViewState:
         self.rebuild_index()
         self._validate_selection()
 
-    def set_search_result(self, query: str, results: list[SampleTerm] | None) -> None:
+    def set_search_result(self, query: str, results: list[TermRead] | None) -> None:
         """検索クエリと結果を保存する。
 
         Args:
@@ -84,7 +81,7 @@ class TermsViewState:
         self.search_results = results
         self._validate_selection()
 
-    def set_current_tab(self, tab: SampleTermStatus) -> None:
+    def set_current_tab(self, tab: TermStatus) -> None:
         """アクティブなタブを設定する。
 
         Args:
@@ -101,7 +98,7 @@ class TermsViewState:
         """
         self.selected_term_id = term_id
 
-    def upsert_term(self, term: SampleTerm) -> None:
+    def upsert_term(self, term: TermRead) -> None:
         """単一の用語を追加または更新する。
 
         Args:
@@ -128,7 +125,7 @@ class TermsViewState:
             self.selected_term_id = None
 
     @property
-    def visible_terms(self) -> list[SampleTerm]:
+    def visible_terms(self) -> list[TermRead]:
         """現在のタブと検索条件でフィルタリングした用語一覧を返す（derived property）。
 
         Returns:
@@ -149,7 +146,7 @@ class TermsViewState:
         """
         return self.search_results is not None and bool(self.search_query)
 
-    def derived_terms(self) -> list[SampleTerm]:
+    def derived_terms(self) -> list[TermRead]:
         """【非推奨】visible_terms プロパティを使用してください。
 
         このメソッドは後方互換性のために残されていますが、
@@ -183,7 +180,7 @@ class TermsViewState:
         return self.visible_terms
 
     @property
-    def selected_term(self) -> SampleTerm | None:
+    def selected_term(self) -> TermRead | None:
         """選択中の用語を返す（derived property）。
 
         Returns:
@@ -194,16 +191,16 @@ class TermsViewState:
         return self._by_id.get(self.selected_term_id)
 
     @property
-    def counts_by_status(self) -> dict[SampleTermStatus, int]:
+    def counts_by_status(self) -> dict[TermStatus, int]:
         """ステータス別の用語件数を集計する（derived property）。
 
         Returns:
             ステータスごとの件数を持つ辞書
         """
-        counts: dict[SampleTermStatus, int] = {
-            SampleTermStatus.APPROVED: 0,
-            SampleTermStatus.DRAFT: 0,
-            SampleTermStatus.DEPRECATED: 0,
+        counts: dict[TermStatus, int] = {
+            TermStatus.APPROVED: 0,
+            TermStatus.DRAFT: 0,
+            TermStatus.DEPRECATED: 0,
         }
         for term in self.all_terms:
             if term.status in counts:

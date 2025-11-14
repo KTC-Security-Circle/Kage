@@ -20,7 +20,7 @@
 【設計の拡張ポイント】
     - SearchQueryNormalizer: 検索クエリの正規化戦略（Strategy パターン）
     - TermApplicationPort: ApplicationServiceの抽象化（依存性逆転、Protocol実装済み）
-    - 依存性注入: service=None時は暫定的にサンプルデータを使用
+    - 依存性注入: ApplicationServiceのモック注入によるテスト容易性
 
 【アーキテクチャ上の位置づけ】
     View → Controller → ApplicationService
@@ -35,27 +35,27 @@
     - 検索実行と結果反映
     - 用語選択状態の管理
     - ステータス別件数の提供
-    - CRUD操作（create/update/delete）※ApplicationService統合時に完全動作
+    - CRUD操作
 """
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, TypedDict
+from typing import Any, Callable, Protocol, TypedDict, TypeVar
+from uuid import UUID
 
 from loguru import logger
 
-from views.sample import SampleTermStatus, get_sample_terms
+from errors import NotFoundError
+from logic.application.terminology_application_service import TerminologyApplicationService
+from models import TermRead, TermStatus, TermUpdate
 
 from .query import SearchQueryNormalizer
+from .state import TermsViewState
 from .utils import sort_terms
 
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from views.sample import SampleTerm
-
-    from .state import TermsViewState
+T = TypeVar("T")
 
 
 class TermFormData(TypedDict, total=False):
@@ -69,7 +69,7 @@ class TermFormData(TypedDict, total=False):
         key: 用語の一意キー（必須）
         title: 用語のタイトル（必須）
         description: 用語の説明（任意）
-        status: 用語のステータス（TermStatus.value）
+        status: 用語のステータス（TermStatus または str）
         source_url: 参照元URL（任意）
         synonyms: 同義語のリスト（任意）
     """
@@ -77,276 +77,180 @@ class TermFormData(TypedDict, total=False):
     key: str
     title: str
     description: str | None
-    status: str
+    status: str | TermStatus
     source_url: str | None
     synonyms: list[str]
 
 
 class TermApplicationPort(Protocol):
-    """用語管理ApplicationServiceの抽象インターフェース。
+    """用語管理ApplicationServiceの抽象インターフェース。"""
 
-    依存性逆転の原則に従い、Controller層が具体的なApplicationService実装に
-    依存しないよう、Protocolで抽象化する。
-
-    将来的な実装:
-        - src/logic/application/term_application_service.py に TermApplicationService を実装
-        - UnitOfWorkパターンによるトランザクション管理
-        - Repository経由のデータアクセス
-    """
-
-    async def list_terms(self, status: SampleTermStatus | None = None) -> list[SampleTerm]:
-        """用語一覧を取得する。
-
-        Args:
-            status: フィルタするステータス。Noneの場合は全件取得。
-
-        Returns:
-            用語のリスト
-        """
+    def list_terms(self, status: TermStatus | None = None) -> list[TermRead]:  # pragma: no cover - interface
+        """用語一覧を取得する。"""
         ...
 
-    async def search_terms(self, query: str) -> list[SampleTerm]:
-        """用語を検索する。
-
-        Args:
-            query: 検索クエリ
-
-        Returns:
-            検索にマッチした用語のリスト
-        """
+    def search_terms(self, query: str) -> list[TermRead]:  # pragma: no cover - interface
+        """用語を検索する。"""
         ...
 
-    async def create_term(self, form_data: TermFormData) -> SampleTerm:
-        """用語を作成する。
-
-        Args:
-            form_data: 用語作成フォームデータ
-
-        Returns:
-            作成された用語
-
-        Raises:
-            ValueError: バリデーションエラー
-        """
+    def create_term(self, form_data: TermFormData) -> TermRead:  # pragma: no cover - interface
+        """用語を作成する。"""
         ...
 
-    async def update_term(self, term_id: UUID, form_data: TermFormData) -> SampleTerm:
-        """用語を更新する。
-
-        Args:
-            term_id: 更新対象の用語ID
-            form_data: 用語更新フォームデータ
-
-        Returns:
-            更新された用語
-
-        Raises:
-            ValueError: バリデーションエラー
-        """
+    def update_term(self, term_id: UUID, form_data: TermFormData) -> TermRead:  # pragma: no cover - interface
+        """用語を更新する。"""
         ...
 
-    async def delete_term(self, term_id: UUID) -> bool:
-        """用語を削除する。
-
-        Args:
-            term_id: 削除対象の用語ID
-
-        Returns:
-            削除成功時True
-
-        Raises:
-            ValueError: 用語が見つからない場合
-        """
+    def delete_term(self, term_id: UUID) -> bool:  # pragma: no cover - interface
+        """用語を削除する。"""
         ...
 
 
 @dataclass(slots=True)
 class TermsController:
-    """TermsView 用の状態操作とサービス呼び出しを集約する。
-
-    依存性注入により、ApplicationServiceをモック可能な設計とする。
-    service=Noneの場合は暫定的にサンプルデータを使用する。
-    """
+    """TermsView 用の状態操作とサービス呼び出しを集約する。"""
 
     state: TermsViewState
-    service: TermApplicationPort | None = None
+    service: TermApplicationPort
     query_normalizer: SearchQueryNormalizer = field(default_factory=SearchQueryNormalizer)
 
     async def load_initial_terms(self) -> None:
         """初期表示に使用する用語一覧を読み込む。"""
         logger.info("Loading initial terms")
-
-        if self.service:
-            terms = await self.service.list_terms()
-        else:
-            # 暫定: サンプルデータ使用
-            terms = get_sample_terms()
-
+        terms = await self._call_service(self.service.list_terms)
         ordered = sort_terms(terms)
         self.state.set_all_terms(ordered)
         self.state.set_search_result("", None)
-        logger.info(f"Loaded {len(terms)} terms")
+        logger.info("Loaded {} terms", len(terms))
 
-    def update_tab(self, tab: SampleTermStatus) -> None:
-        """タブ変更時に状態を更新する。
-
-        Args:
-            tab: 選択されたタブのステータス
-        """
-        logger.debug(f"Switching to tab: {tab}")
+    def update_tab(self, tab: TermStatus) -> None:
+        """タブ変更時に状態を更新する。"""
+        logger.debug("Switching to tab: {}", tab)
         self.state.set_current_tab(tab)
 
     async def update_search(self, query: str) -> None:
-        """検索クエリを更新し結果を反映する。
-
-        Args:
-            query: 検索クエリ文字列
-        """
+        """検索クエリを更新し結果を反映する。"""
         normalized = self.query_normalizer.normalize(query)
-        logger.debug(f"Search query: {normalized.normalized}")
+        logger.debug("Search query: {}", normalized.normalized)
 
         if not normalized.normalized:
-            # 空クエリの場合は検索を無効化
             self.state.set_search_result("", None)
-        else:
-            # 検索を実行
-            results = await self._perform_search(normalized.normalized)
-            self.state.set_search_result(normalized.normalized, results)
+            return
+
+        results = await self._perform_search(normalized.normalized)
+        self.state.set_search_result(normalized.normalized, results)
 
     def select_term(self, term_id: UUID | None) -> None:
-        """用語を選択する。
-
-        Args:
-            term_id: 選択する用語のID。Noneの場合は選択解除。
-        """
-        logger.debug(f"Selecting term: {term_id}")
+        """用語を選択する。"""
+        logger.debug("Selecting term: {}", term_id)
         self.state.set_selected_term(term_id)
 
-    def get_counts(self) -> dict[SampleTermStatus, int]:
-        """ステータス別の用語件数を取得する。
-
-        Returns:
-            ステータスごとの件数
-        """
+    def get_counts(self) -> dict[TermStatus, int]:
+        """ステータス別の用語件数を取得する。"""
         return self.state.counts_by_status
 
-    async def _perform_search(self, query: str) -> list[SampleTerm]:
-        """検索を実行する。
-
-        Args:
-            query: 正規化済みの検索クエリ
-
-        Returns:
-            検索にマッチした用語のリスト
-        """
-        if self.service:
-            results = await self.service.search_terms(query)
-        else:
-            # 暫定: ローカル検索
-            results = [term for term in self.state.all_terms if self._matches_query(term, query)]
-
-        return sort_terms(results)
-
-    def _matches_query(self, term: SampleTerm, query: str) -> bool:
-        """用語が検索クエリにマッチするかを判定する。
-
-        Args:
-            term: 判定対象の用語
-            query: 検索クエリ（小文字）
-
-        Returns:
-            マッチする場合はTrue
-        """
-        # タイトル、キー、説明、同義語で検索
-        return (
-            query in term.title.lower()
-            or query in term.key.lower()
-            or (term.description and query in term.description.lower())
-            or any(query in synonym.lower() for synonym in term.synonyms)
-        )
-
-    async def create_term(self, form_data: TermFormData) -> SampleTerm:
-        """新しい用語を作成する。
-
-        Args:
-            form_data: 用語作成フォームデータ
-
-        Returns:
-            作成された用語
-
-        Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: ApplicationServiceが未設定の場合
-        """
-        if not self.service:
-            msg = "ApplicationService が設定されていません"
-            raise RuntimeError(msg)
-
-        logger.info(f"Creating term: {form_data.get('key')}")
-        created_term = await self.service.create_term(form_data)
-
-        # State を更新
+    async def create_term(self, form_data: TermFormData) -> TermRead:
+        """新しい用語を作成し、状態を更新する。"""
+        logger.info("Creating term: {}", form_data.get("key"))
+        created_term = await self._call_service(self.service.create_term, form_data)
         self.state.upsert_term(created_term)
-
-        logger.info(f"Created term: {created_term.key} (ID: {created_term.id})")
+        logger.info("Created term: {} (ID: {})", created_term.key, created_term.id)
         return created_term
 
-    async def update_term(self, term_id: UUID, form_data: TermFormData) -> SampleTerm:
-        """既存の用語を更新する。
-
-        Args:
-            term_id: 更新対象の用語ID
-            form_data: 用語更新フォームデータ
-
-        Returns:
-            更新された用語
-
-        Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: ApplicationServiceが未設定の場合
-        """
-        if not self.service:
-            msg = "ApplicationService が設定されていません"
-            raise RuntimeError(msg)
-
-        logger.info(f"Updating term: {term_id}")
-        updated_term = await self.service.update_term(term_id, form_data)
-
-        # State を更新
+    async def update_term(self, term_id: UUID, form_data: TermFormData) -> TermRead:
+        """既存の用語を更新する。"""
+        logger.info("Updating term: {}", term_id)
+        updated_term = await self._call_service(self.service.update_term, term_id, form_data)
         self.state.upsert_term(updated_term)
-
-        logger.info(f"Updated term: {updated_term.key} (ID: {updated_term.id})")
+        logger.info("Updated term: {} (ID: {})", updated_term.key, updated_term.id)
         return updated_term
 
     async def delete_term(self, term_id: UUID) -> bool:
-        """用語を削除する。
-
-        Args:
-            term_id: 削除対象の用語ID
-
-        Returns:
-            削除成功時True
-
-        Raises:
-            ValueError: 用語が見つからない場合
-            RuntimeError: ApplicationServiceが未設定の場合
-        """
-        if not self.service:
-            msg = "ApplicationService が設定されていません"
-            raise RuntimeError(msg)
-
-        logger.info(f"Deleting term: {term_id}")
-        success = await self.service.delete_term(term_id)
+        """用語を削除する。"""
+        logger.info("Deleting term: {}", term_id)
+        success = await self._call_service(self.service.delete_term, term_id)
 
         if success:
-            # State から削除
             self.state.all_terms = [t for t in self.state.all_terms if t.id != term_id]
+            if self.state.search_results is not None:
+                self.state.search_results = [t for t in self.state.search_results if t.id != term_id]
             self.state.rebuild_index()
-
-            # 選択状態をクリア
             if self.state.selected_term_id == term_id:
                 self.state.selected_term_id = None
-
-            logger.info(f"Deleted term: {term_id}")
+            logger.info("Deleted term: {}", term_id)
 
         return success
+
+    async def _perform_search(self, query: str) -> list[TermRead]:
+        """検索を実行する。"""
+        results = await self._call_service(self.service.search_terms, query)
+        return sort_terms(results)
+
+    async def _call_service(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+        """ブロッキングなサービス呼び出しをスレッドで実行する。"""
+        return await asyncio.to_thread(func, *args, **kwargs)
+
+
+class TerminologyApplicationPortAdapter(TermApplicationPort):
+    """TerminologyApplicationService を TermApplicationPort に適合させる。"""
+
+    def __init__(self, service: TerminologyApplicationService) -> None:
+        self._service = service
+
+    def list_terms(self, status: TermStatus | None = None) -> list[TermRead]:
+        try:
+            if status:
+                return self._service.search(query=None, status=status)
+            return self._service.get_all()
+        except NotFoundError:
+            logger.info("TerminologyApplicationService returned no records.")
+            return []
+
+    def search_terms(self, query: str) -> list[TermRead]:
+        return self._service.search(query=query)
+
+    def create_term(self, form_data: TermFormData) -> TermRead:
+        status = _parse_status(form_data.get("status"), default=TermStatus.DRAFT)
+        description = _clean_text(form_data.get("description"))
+        source_url = _clean_text(form_data.get("source_url"))
+        return self._service.create(
+            key=_clean_text(form_data.get("key"), default=""),
+            title=_clean_text(form_data.get("title"), default=""),
+            description=description,
+            status=status or TermStatus.DRAFT,
+            source_url=source_url,
+        )
+
+    def update_term(self, term_id: UUID, form_data: TermFormData) -> TermRead:
+        update_model = TermUpdate(
+            key=_clean_text(form_data.get("key")),
+            title=_clean_text(form_data.get("title")),
+            description=_clean_text(form_data.get("description")),
+            status=_parse_status(form_data.get("status")),
+            source_url=_clean_text(form_data.get("source_url")),
+        )
+        return self._service.update(term_id, update_model)
+
+    def delete_term(self, term_id: UUID) -> bool:
+        return self._service.delete(term_id)
+
+
+def _parse_status(value: str | TermStatus | None, *, default: TermStatus | None = None) -> TermStatus | None:
+    """フォームから渡されたステータス値を TermStatus に変換する。"""
+    if isinstance(value, TermStatus):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return TermStatus(value)
+        except ValueError:
+            logger.warning("Unknown term status value: {}", value)
+            return default
+    return default
+
+
+def _clean_text(value: str | None, *, default: str | None = None) -> str | None:
+    """文字列フィールドをトリムし、空文字の場合はデフォルト値を返す。"""
+    if value is None:
+        return default
+    stripped = value.strip()
+    return stripped if stripped else default

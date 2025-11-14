@@ -24,14 +24,14 @@ from uuid import UUID
 import flet as ft
 from loguru import logger
 
-from views.sample import SampleTermStatus
+from models import TermStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import create_page_header
 
 from .components.status_tabs import StatusTabsProps, TermStatusTabs
 from .components.term_detail import DetailPanelProps, TermDetailPanel
 from .components.term_list import TermList, TermListProps
-from .controller import TermFormData, TermsController
+from .controller import TermFormData, TerminologyApplicationPortAdapter, TermsController
 from .presenter import create_term_card_data, create_term_detail_data, get_empty_message
 from .state import TermsViewState
 
@@ -56,7 +56,11 @@ class TermsView(BaseView):
 
         # State & Controller
         self.term_state = TermsViewState()
-        self.controller = TermsController(state=self.term_state)
+        service = self.apps.terminology
+        self.controller = TermsController(
+            state=self.term_state,
+            service=TerminologyApplicationPortAdapter(service),
+        )
 
         # Components
         self.search_field: ft.TextField | None = None
@@ -80,6 +84,8 @@ class TermsView(BaseView):
             await self.controller.load_initial_terms()
             self._refresh_term_list()
             self._refresh_status_tabs()
+            if not self.term_state.all_terms:
+                self.show_info_snackbar("まだ用語が登録されていません。新しい用語を作成してください。")
         except Exception:
             logger.exception("Failed to load initial terms")
             if self.page:
@@ -119,9 +125,9 @@ class TermsView(BaseView):
         # ステータスタブ
         counts = self.controller.get_counts()
         status_tabs_props = StatusTabsProps(
-            approved_count=counts[SampleTermStatus.APPROVED],
-            draft_count=counts[SampleTermStatus.DRAFT],
-            deprecated_count=counts[SampleTermStatus.DEPRECATED],
+            approved_count=counts[TermStatus.APPROVED],
+            draft_count=counts[TermStatus.DRAFT],
+            deprecated_count=counts[TermStatus.DEPRECATED],
             on_status_change=self._handle_status_change,
         )
         self.status_tabs = TermStatusTabs(status_tabs_props)
@@ -206,7 +212,7 @@ class TermsView(BaseView):
             if self.page:
                 self.show_error_snackbar(self.page, "検索に失敗しました")
 
-    def _handle_status_change(self, status: SampleTermStatus) -> None:
+    def _handle_status_change(self, status: TermStatus) -> None:
         """ステータスタブの変更をハンドリングする。
 
         Args:
@@ -215,6 +221,7 @@ class TermsView(BaseView):
         self.controller.update_tab(status)
         self._refresh_term_list()
         self._refresh_status_tabs()
+        self._set_active_status_tab(status)
 
     def _handle_term_select_uuid(self, term_id: UUID) -> None:
         """用語選択をハンドリングする（UUID）。
@@ -273,6 +280,12 @@ class TermsView(BaseView):
         if not self.term_list:
             return
 
+        self.term_list.update_props(
+            TermListProps(
+                on_item_click=self._handle_term_select_str,
+                empty_message=get_empty_message(self.term_state.current_tab),
+            )
+        )
         derived_terms = self.term_state.visible_terms
         selected_id = self.term_state.selected_term_id
 
@@ -316,9 +329,9 @@ class TermsView(BaseView):
 
         counts = self.controller.get_counts()
         status_tabs_props = StatusTabsProps(
-            approved_count=counts[SampleTermStatus.APPROVED],
-            draft_count=counts[SampleTermStatus.DRAFT],
-            deprecated_count=counts[SampleTermStatus.DEPRECATED],
+            approved_count=counts[TermStatus.APPROVED],
+            draft_count=counts[TermStatus.DRAFT],
+            deprecated_count=counts[TermStatus.DEPRECATED],
             on_status_change=self._handle_status_change,
         )
         self.status_tabs.set_props(status_tabs_props)
@@ -356,25 +369,17 @@ class TermsView(BaseView):
         key = form_data.get("key", "")
 
         try:
-            # ApplicationServiceが設定されていない場合は暫定処理
-            if self.controller.service is None:
-                logger.warning("ApplicationService not configured, showing placeholder message")
-                self._close_create_dialog()
-                self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未設定）")
-                return
-
             # 用語作成
             created_term = await self.controller.create_term(cast("TermFormData", form_data))
             self._close_create_dialog()
             self.show_snack_bar(f"用語 '{created_term.key}' を作成しました")
+            normalized_status = self._normalize_status(created_term.status)
+            self.controller.update_tab(normalized_status)
+            self.controller.select_term(created_term.id)
             self._refresh_term_list()
             self._refresh_status_tabs()
-
-        except RuntimeError as e:
-            # ApplicationService未設定
-            logger.warning("ApplicationService not configured", extra={"error": str(e)})
-            self._close_create_dialog()
-            self.show_snack_bar(f"用語 '{key}' を作成しました（ApplicationService未設定）")
+            self._set_active_status_tab(normalized_status)
+            self._show_detail()
 
         except ValueError as e:
             # バリデーションエラー
@@ -401,9 +406,25 @@ class TermsView(BaseView):
             self.page.update()  # 先にダイアログを閉じる表示を反映
 
             # 2. オーバーレイから削除
-            if self.create_dialog.dialog in self.page.overlay:
-                self.page.overlay.remove(self.create_dialog.dialog)
-                self.page.update()  # オーバーレイからの削除を反映
+            # if self.create_dialog.dialog in self.page.overlay:
+            #     self.page.overlay.remove(self.create_dialog.dialog)
+            #     self.page.update()  # オーバーレイからの削除を反映
 
-            # 3. 参照をクリア
-            self.create_dialog = None
+            # # 3. 参照をクリア
+            # self.create_dialog = None
+
+    def _set_active_status_tab(self, status: TermStatus) -> None:
+        """ステータスタブの選択状態を指定したステータスに同期する。"""
+        if self.status_tabs:
+            self.status_tabs.set_active_status(status)
+
+    def _normalize_status(self, status: TermStatus | str | None) -> TermStatus:
+        """TermStatusまたは文字列をTermStatusに正規化する。"""
+        if isinstance(status, TermStatus):
+            return status
+        if isinstance(status, str):
+            try:
+                return TermStatus(status)
+            except ValueError:
+                logger.warning("Unknown term status value: %s", status)
+        return TermStatus.APPROVED

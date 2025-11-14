@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.sample import SampleTermStatus
+from models import TermStatus
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -45,7 +45,7 @@ class TermDetailData:
     title: str
     key: str
     description: str
-    status: SampleTermStatus
+    status: TermStatus
     status_text: str
     synonyms: tuple[str, ...]
     tags: tuple[str, ...]
@@ -211,7 +211,7 @@ class TermDetailPanel:
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
-    def _get_status_badge(self, status: SampleTermStatus, status_text: str) -> ft.Control:
+    def _get_status_badge(self, status: TermStatus, status_text: str) -> ft.Control:
         """ステータスバッジを取得する。
 
         Args:
@@ -222,21 +222,21 @@ class TermDetailPanel:
             バッジコントロール
         """
         status_config = {
-            SampleTermStatus.APPROVED: {
+            TermStatus.APPROVED: {
                 "bgcolor": ft.Colors.BLUE_600,
                 "color": ft.Colors.WHITE,
             },
-            SampleTermStatus.DRAFT: {
+            TermStatus.DRAFT: {
                 "bgcolor": ft.Colors.GREY_300,
                 "color": ft.Colors.ON_SURFACE,
             },
-            SampleTermStatus.DEPRECATED: {
+            TermStatus.DEPRECATED: {
                 "bgcolor": ft.Colors.GREY_300,
                 "color": ft.Colors.ON_SURFACE,
             },
         }
 
-        config = status_config.get(status, status_config[SampleTermStatus.DRAFT])
+        config = status_config.get(status, status_config[TermStatus.DRAFT])
 
         return ft.Container(
             content=ft.Text(

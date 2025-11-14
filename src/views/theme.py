@@ -67,6 +67,39 @@ class StatusColors:
     completed: str = "#4caf50"  # グリーン - 完了
     on_hold: str = "#9e9e9e"  # グレー - 保留
     cancelled: str = "#f44336"  # レッド - 中止
+    todays: str = "#2196f3"  # ブルー - 今日のタスク
+
+
+@dataclass
+class UIColors:
+    """UI全般で使用する汎用色定義。"""
+
+    # グレースケール
+    grey_50: str = "#fafafa"
+    grey_100: str = "#f5f5f5"
+    grey_200: str = "#eeeeee"
+    grey_300: str = "#e0e0e0"
+    grey_400: str = "#bdbdbd"
+    grey_500: str = "#9e9e9e"
+    grey_600: str = "#757575"
+    grey_700: str = "#616161"
+    grey_800: str = "#424242"
+    grey_900: str = "#212121"
+
+    # 機能的な色
+    primary: str = "#2196f3"
+    primary_light: str = "#64b5f6"
+    primary_dark: str = "#1976d2"
+
+    error: str = "#f44336"
+    error_light: str = "#ef5350"
+
+    success: str = "#4caf50"
+    warning: str = "#ff9800"
+    info: str = "#2196f3"
+
+    # タグ関連の透明度付き色
+    tag_icon_bg_opacity: float = 0.1
 
 
 @dataclass
@@ -149,6 +182,7 @@ FONT = FontTokens()
 # Color palette instances
 TAG_COLORS = TagColors()
 STATUS_COLORS = StatusColors()
+UI_COLORS = UIColors()
 
 # Tag color palette for UI components
 TAG_COLOR_PALETTE = [
@@ -176,12 +210,14 @@ STATUS_COLOR_MAP = {
     "保留": STATUS_COLORS.on_hold,
     "中止": STATUS_COLORS.cancelled,
     "キャンセル": STATUS_COLORS.cancelled,
+    "今日": STATUS_COLORS.todays,
     # Internal English codes
     "active": STATUS_COLORS.in_progress,
     "planned": STATUS_COLORS.planned,
     "completed": STATUS_COLORS.completed,
     "on_hold": STATUS_COLORS.on_hold,
     "cancelled": STATUS_COLORS.cancelled,
+    "todays": STATUS_COLORS.todays,
 }
 
 
@@ -299,6 +335,209 @@ def get_tag_color_palette() -> list[dict[str, str]]:
         カラーパレットのリスト（name, value, hex を含む辞書）
     """
     return TAG_COLOR_PALETTE.copy()
+
+
+def get_task_status_color(status: str) -> str:
+    """タスクステータスから対応する色コードを取得する。
+
+    Args:
+        status: タスクステータス（completed, todays, active など）
+
+    Returns:
+        色コード（HEX形式）
+    """
+    # [AI GENERATED] get_status_color() を利用して重複を排除
+    return get_status_color(status)
+
+
+def get_grey_color(shade: int = 600) -> str:
+    """グレー色を取得する。
+
+    Args:
+        shade: グレーのシェード（50, 100, 200, ..., 900）
+
+    Returns:
+        色コード（HEX形式）
+    """
+    shade_map = {
+        50: UI_COLORS.grey_50,
+        100: UI_COLORS.grey_100,
+        200: UI_COLORS.grey_200,
+        300: UI_COLORS.grey_300,
+        400: UI_COLORS.grey_400,
+        500: UI_COLORS.grey_500,
+        600: UI_COLORS.grey_600,
+        700: UI_COLORS.grey_700,
+        800: UI_COLORS.grey_800,
+        900: UI_COLORS.grey_900,
+    }
+    return shade_map.get(shade, UI_COLORS.grey_600)
+
+
+def get_primary_color(variant: str = "base") -> str:
+    """プライマリカラーを取得する。
+
+    Args:
+        variant: カラーバリアント（base, light, dark）
+
+    Returns:
+        色コード（HEX形式）
+    """
+    if variant == "light":
+        return UI_COLORS.primary_light
+    if variant == "dark":
+        return UI_COLORS.primary_dark
+    return UI_COLORS.primary
+
+
+def get_tag_icon_bg_opacity() -> float:
+    """タグアイコン背景の透明度を取得する。
+
+    Returns:
+        透明度（0.0 - 1.0）
+
+    Note:
+        Fletでの使用例: ft.Colors.with_opacity(get_tag_icon_bg_opacity(), color)
+    """
+    return UI_COLORS.tag_icon_bg_opacity
+
+
+def get_status_label(status: str | None) -> str | None:
+    """ステータスコードから日本語ラベルを取得する。
+
+    Args:
+        status: ステータスコード（active, completed, on_hold, cancelled, todays など）
+
+    Returns:
+        日本語ラベル（進行中、完了、保留、中止、今日など）
+        status が None の場合は None を返す
+
+    Note:
+        ステータスラベルの一元管理。presenter等で重複実装しない。
+    """
+    if not status:
+        return None
+
+    status_label_map = {
+        # Task statuses
+        "completed": "完了",
+        "todays": "今日",
+        "active": "進行中",
+        # Project statuses
+        "planned": "計画中",
+        "on_hold": "保留",
+        "cancelled": "中止",
+    }
+    normalized = status.strip().lower()
+    return status_label_map.get(normalized, status)
+
+
+# Material Design 3 セマンティックカラー取得関数
+# NOTE: 現在はライトテーマのみ対応。将来的にはsettingsからテーマモードを取得して切り替える
+
+
+def get_on_primary_color() -> str:
+    """プライマリカラー上のテキスト色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        ボタンやチップなどのプライマリカラー背景上で使用するテキスト色。
+        ライト/ダークテーマで自動的に適切なコントラスト比を保証。
+    """
+    # TODO: テーマモード取得後、DARK_COLORS.on_primary にも対応
+    return LIGHT_COLORS.on_primary
+
+
+def get_on_surface_color() -> str:
+    """サーフェス上のテキスト色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        カードやパネル背景上で使用する基本テキスト色。
+    """
+    return LIGHT_COLORS.on_surface
+
+
+def get_surface_color() -> str:
+    """サーフェス（カード・パネル）背景色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return LIGHT_COLORS.surface
+
+
+def get_background_color() -> str:
+    """アプリ全体の背景色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return LIGHT_COLORS.background
+
+
+def get_error_color() -> str:
+    """エラー色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        エラーメッセージ、バリデーションエラー表示などに使用。
+    """
+    return LIGHT_COLORS.error
+
+
+def get_on_error_color() -> str:
+    """エラー色背景上のテキスト色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+    """
+    return LIGHT_COLORS.on_error
+
+
+# 役割ベースのカラーヘルパー（MD3ガイドライン準拠）
+
+
+def get_outline_color() -> str:
+    """アウトライン（境界線・Divider）用の色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        カードの枠線、Divider、入力フィールドのボーダーなど。
+    """
+    return get_grey_color(300)
+
+
+def get_text_secondary_color() -> str:
+    """補助テキスト用の色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        キャプション、タイムスタンプ、補足説明など、主要テキストより優先度が低い情報。
+    """
+    return get_grey_color(600)
+
+
+def get_surface_variant_color() -> str:
+    """サーフェスバリアント（強調背景）色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        選択状態、ホバー状態など、通常のサーフェスより少し強調したい背景。
+    """
+    return get_grey_color(100)
 
 
 # TODO: 統合フェーズで settings から現在のテーマモード設定を取得する機能を追加

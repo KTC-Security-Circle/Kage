@@ -1,68 +1,94 @@
-"""アクションバーコンポーネント
+"""アクションバーコンポーネント (Props駆動)。
 
-タグ管理画面のアクションバーUIコンポーネント。
-新規作成ボタン、検索フィールド、フィルターボタンを含む。
+新規作成、検索、更新の最小セットを提供。`ft.Container` を継承し、
+`set_props()` による差分更新APIを備える。
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+import flet as ft
+from loguru import logger
+
+from views.theme import get_on_primary_color, get_primary_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import flet as ft
+
+@dataclass(frozen=True, slots=True)
+class TagsActionBarProps:
+    """アクションバーに必要な表示・イベント情報。"""
+
+    search_placeholder: str
+    on_create: Callable[[ft.ControlEvent], None]
+    on_search: Callable[[ft.ControlEvent], None]
+    on_refresh: Callable[[ft.ControlEvent], None]
 
 
-def create_action_bar(
-    on_create: Callable[[ft.ControlEvent], None],  # type: ignore[name-defined]
-    on_search: Callable[[ft.ControlEvent], None],  # type: ignore[name-defined]
-    on_color_filter: Callable[[ft.ControlEvent], None],  # type: ignore[name-defined]
-    on_refresh: Callable[[ft.ControlEvent], None],  # type: ignore[name-defined]
-) -> ft.Control:  # type: ignore[name-defined]
-    """アクションバーを構築する。
+class TagsActionBar(ft.Container):
+    """Props駆動のアクションバー。"""
 
-    Args:
-        on_create: 新規作成ボタンクリック時のコールバック
-        on_search: 検索フィールド変更時のコールバック
-        on_color_filter: 色フィルターボタンクリック時のコールバック
-        on_refresh: 更新ボタンクリック時のコールバック
+    def __init__(self, props: TagsActionBarProps) -> None:
+        import flet as ft
 
-    Returns:
-        アクションバーコンポーネント
-    """
-    import flet as ft
-
-    return ft.Container(
-        content=ft.Row(
+        super().__init__()
+        self._props = props
+        self._search = ft.TextField(
+            hint_text=props.search_placeholder,
+            prefix_icon=ft.Icons.SEARCH,
+            width=300,
+            on_change=props.on_search,
+        )
+        self.content = ft.Row(
             controls=[
                 ft.ElevatedButton(
                     text="新規タグ",
                     icon=ft.Icons.ADD,
-                    on_click=on_create,
-                    bgcolor=ft.Colors.BLUE,
-                    color=ft.Colors.WHITE,
+                    on_click=props.on_create,
+                    bgcolor=get_primary_color(),
+                    color=get_on_primary_color(),
                 ),
-                ft.Container(expand=True),  # Spacer
-                ft.TextField(
-                    hint_text="タグを検索...",
-                    prefix_icon=ft.Icons.SEARCH,
-                    width=300,
-                    on_change=on_search,
-                ),
-                ft.IconButton(
-                    icon=ft.Icons.PALETTE,
-                    tooltip="カラーパレット表示切替",
-                    on_click=on_color_filter,
-                ),
-                ft.IconButton(
-                    icon=ft.Icons.REFRESH,
-                    tooltip="更新",
-                    on_click=on_refresh,
-                ),
+                ft.Container(expand=True),
+                self._search,
+                ft.IconButton(icon=ft.Icons.REFRESH, tooltip="更新", on_click=props.on_refresh),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        ),
-        padding=ft.padding.only(bottom=16),
+        )
+
+    def set_props(self, props: TagsActionBarProps) -> None:
+        """Props差し替えで差分更新する。"""
+        self._props = props
+        try:
+            self._search.hint_text = props.search_placeholder
+            self._search.on_change = props.on_search
+            # ボタンのハンドラ更新
+            row = self.content  # type: ignore[assignment]
+            if row and hasattr(row, "controls"):
+                # 左端ボタンと右端更新ボタンを更新
+                left_btn, _, _search, refresh_btn = row.controls  # type: ignore[misc]
+                left_btn.on_click = props.on_create
+                refresh_btn.on_click = props.on_refresh
+            self.update()
+        except (AttributeError, ValueError, RuntimeError) as exc:
+            # まだページに未追加の可能性があるため握りつぶさず記録のみ
+            logger.warning(f"TagsActionBar.set_props update skipped: {exc}")
+
+
+def create_action_bar(
+    on_create: Callable[[ft.ControlEvent], None],
+    on_search: Callable[[ft.ControlEvent], None],
+    _on_color_filter: Callable[[ft.ControlEvent], None],
+    on_refresh: Callable[[ft.ControlEvent], None],
+) -> ft.Control:
+    """従来ファクトリの後方互換API。クラス版を返す。"""
+    props = TagsActionBarProps(
+        search_placeholder="タグを検索…",
+        on_create=on_create,
+        on_search=on_search,
+        on_refresh=on_refresh,
     )
+    return TagsActionBar(props)

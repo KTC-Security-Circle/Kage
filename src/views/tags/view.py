@@ -1,7 +1,23 @@
-"""タグ管理画面
+"""タグ管理ビュー (Layered Architecture 版)
 
-タグの一覧表示、作成、編集、削除機能と色選択機能を提供するメインビュー。
-BaseViewパターンを採用し、一貫したUIと機能を提供する。
+`src/views_old/template/src/components/TagsScreen.tsx` を参考にした
+モダンな2カラムレイアウトでタグ管理機能を提供。
+
+レイアウト構成:
+    - 左カラム (1/3): タグリスト（選択可能なリストアイテム）
+    - 右カラム (2/3): 選択されたタグの詳細パネル（関連メモ・タスク表示）
+
+レイヤー構成:
+    - View: レイアウト構築とイベント配線のみ
+    - Controller: ユースケース的操作（ロード/検索/選択/関連アイテム取得）
+    - State: 表示状態の単一ソース
+    - Presenter: StateからUI用Propsへ整形
+    - Components: Props駆動の純粋UI
+
+今後の拡張ポイント:
+    - ApplicationServices 経由の永続化（現状はMock）
+    - タグ編集ダイアログの統合
+    - カラーパレットダイアログの統合
 """
 
 from __future__ import annotations
@@ -12,97 +28,110 @@ if TYPE_CHECKING:
     import flet as ft
 
 from views.shared.base_view import BaseView, BaseViewProps
-from views.theme import get_tag_color_palette
 
 from .components import (
-    create_action_bar,
-    create_empty_state,
-    create_page_header,
-    create_tag_card,
+    EmptyTagsState,
+    EmptyTagsStateProps,
+    TagDetailPanel,
+    TagFormData,
+    TagListItem,
+    TagsActionBar,
+    show_tag_create_dialog,
+    show_tag_edit_dialog,
 )
+from .components.page_header import create_page_header
+from .controller import TagsController
+from .presenter import TagsPresenter
+from .query import SearchQuery
+from .state import TagsViewState
 
 
 class TagsView(BaseView):
-    """タグ管理画面のメインビュー。
+    """タグ管理機能のトップレベルView。
 
-    タグの一覧表示（色付きチップ）、CRUD操作、検索・フィルタ、
-    カラーパレット機能を提供。BaseViewを継承し、エラーハンドリングと
-    ローディング機能を活用。
+    Notes:
+        - `src/views_old/template` の TagsScreen.tsx を参考に2カラムレイアウトを実装。
+        - 左カラム: タグリスト（選択可能）
+        - 右カラム: 選択されたタグの詳細パネル
+        - データ取得はControllerに委譲し、ViewはUI組立に集中する。
     """
 
     def __init__(self, props: BaseViewProps) -> None:  # type: ignore[name-defined]
-        """TagsViewを初期化する。
-
-        Args:
-            props: View共通プロパティ
-        """
         super().__init__(props)
-        self.tags_data: list[dict[str, str]] = []  # TODO: 実際のデータバインディング
-        self.available_colors = get_tag_color_palette()
+        self.tags_state = TagsViewState()
+        self.controller = TagsController(self.tags_state)
+        self.presenter = TagsPresenter()
 
+        # UIルート要素
+        self._action_bar: TagsActionBar | None = None
+        self._list_column: ft.Column | None = None  # type: ignore[name-defined]
+        self._detail_panel: TagDetailPanel | None = None
+        self._header: ft.Control | None = None  # type: ignore[name-defined]
+
+    # ------------------------------------------------------------------
+    # Build
+    # ------------------------------------------------------------------
     def build_content(self) -> ft.Control:  # type: ignore[name-defined]
-        """タグ画面のコンテンツを構築する。
-
-        Returns:
-            タグ画面のメインコンテンツ
-        """
         import flet as ft
 
-        # Mock data for development
-        self.tags_data = [
-            {
-                "id": "1",
-                "name": "緊急",
-                "color": "#f44336",
-                "description": "緊急度の高いタスク用",
-                "task_count": "15",
-                "created_at": "2024-01-15",
-            },
-            {
-                "id": "2",
-                "name": "開発",
-                "color": "#2196f3",
-                "description": "開発関連のタスク",
-                "task_count": "32",
-                "created_at": "2024-01-10",
-            },
-            {
-                "id": "3",
-                "name": "デザイン",
-                "color": "#e91e63",
-                "description": "UI/UXデザイン関連",
-                "task_count": "8",
-                "created_at": "2024-01-20",
-            },
-            {
-                "id": "4",
-                "name": "レビュー",
-                "color": "#ff9800",
-                "description": "コードレビューやドキュメントレビュー",
-                "task_count": "5",
-                "created_at": "2024-02-01",
-            },
-            {
-                "id": "5",
-                "name": "バグ修正",
-                "color": "#f44336",
-                "description": "バグ修正タスク",
-                "task_count": "12",
-                "created_at": "2024-01-25",
-            },
-        ]
+        # 初期ロード（一度のみ）
+        if not self.tags_state.initial_loaded:
+            self.controller.load_initial_tags()
 
+        # ヘッダー
+        self._header = create_page_header(self.tags_state.filtered_count)
+
+        # アクションバー
+        action_bar_props = self.presenter.build_action_bar_props(
+            self.tags_state,
+            on_create=self._on_create,
+            on_search=self._on_search,
+            on_refresh=self._on_refresh,
+        )
+        self._action_bar = TagsActionBar(action_bar_props)
+
+        # タグリスト（左カラム）
+        list_controls = self._build_list_controls()
+        self._list_column = ft.Column(
+            controls=list_controls,
+            spacing=8,
+            expand=True,
+            scroll=ft.ScrollMode.AUTO,
+        )
+
+        # 詳細パネル（右カラム）
+        selected_tag = self._get_selected_tag()
+        detail_props = self.presenter.build_tag_detail_panel_props(
+            selected_tag,
+            self.controller,
+            on_edit=self._on_edit_selected,
+            on_memo_click=self._on_memo_click,
+            on_task_click=self._on_task_click,
+        )
+        self._detail_panel = TagDetailPanel(detail_props)
+
+        # 2カラムレイアウト
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    create_page_header(len(self.tags_data)),
-                    create_action_bar(
-                        on_create=self._handle_create_tag,
-                        on_search=self._handle_search,
-                        on_color_filter=self._handle_color_filter,
-                        on_refresh=self._handle_refresh,
+                    self._header,
+                    self._action_bar,
+                    ft.Row(
+                        controls=[
+                            ft.Container(
+                                content=self._list_column,
+                                expand=1,
+                                padding=ft.padding.only(right=8),
+                            ),
+                            ft.Container(
+                                content=self._detail_panel,
+                                expand=2,
+                                padding=ft.padding.only(left=8),
+                            ),
+                        ],
+                        expand=True,
+                        spacing=0,
                     ),
-                    self._build_tags_list(),
                 ],
                 spacing=16,
                 expand=True,
@@ -111,90 +140,155 @@ class TagsView(BaseView):
             expand=True,
         )
 
-    def _build_tags_list(self) -> ft.Control:  # type: ignore[name-defined]
-        """タグ一覧を構築する。
+    # ------------------------------------------------------------------
+    # UI Building Helpers
+    # ------------------------------------------------------------------
+    def _build_list_controls(self) -> list[ft.Control]:  # type: ignore[name-defined]
+        """タグリストアイテムを構築する"""
+        if not self.tags_state.filtered_tags:
+            empty_props = EmptyTagsStateProps(on_create=self._on_create)
+            return [EmptyTagsState(empty_props)]
+
+        controls: list[ft.Control] = []  # type: ignore[name-defined]
+        for tag in self.tags_state.filtered_tags:
+            item_props = self.presenter.build_tag_list_item_props(
+                tag,
+                self.controller,
+                selected=tag["id"] == self.tags_state.selected_id,
+                on_click=self._on_tag_click,
+            )
+            controls.append(TagListItem(item_props))
+        return controls
+
+    def _tags_by_id(self) -> dict[str, dict[str, str]]:
+        """[AI GENERATED] タグIDをキーとしたタグ辞書を返す
 
         Returns:
-            タグ一覧コンテンツ
+            dict[str, dict[str, str]]: タグIDをキーとしたタグ辞書
         """
+        return {tag["id"]: tag for tag in self.tags_state.items}
+
+    def _get_selected_tag(self) -> dict[str, str] | None:
+        """選択中のタグを取得する
+
+        Returns:
+            dict[str, str] | None: 選択中のタグ、未選択の場合はNone
+        """
+        selected_id = self.tags_state.selected_id
+        if not selected_id:
+            return None
+        return self._tags_by_id().get(selected_id)
+
+    # ------------------------------------------------------------------
+    # Event Handlers
+    # ------------------------------------------------------------------
+    def _refresh_ui(self) -> None:
+        """State変更後にUIを更新する（差分更新）"""
         import flet as ft
 
-        if not self.tags_data:
-            return create_empty_state(on_create=self._handle_create_tag)
+        # ヘッダー件数更新（set_props的な更新が望ましいが、ヘッダーは単純なのでTextを直接更新）
+        if self._header and hasattr(self._header, "parent"):
+            parent_col = self._header.parent  # type: ignore[attr-defined]
+            if parent_col and isinstance(parent_col, ft.Column):
+                idx = parent_col.controls.index(self._header)  # type: ignore[arg-type]
+                parent_col.controls[idx] = create_page_header(self.tags_state.filtered_count)  # type: ignore[index]
+                self._header = parent_col.controls[idx]
 
-        tags_cards = [
-            create_tag_card(
-                tag=tag,
-                on_edit=self._handle_edit_tag,
-                on_delete=self._handle_delete_tag,
+        # リスト差分更新（全再構築より、個別アイテムのset_propsを呼ぶべきだが、
+        # フィルタ変更時は件数が変わるため、シンプルに全再構築）
+        # TODO: 仮想化（ListView等）を導入してパフォーマンス向上
+        if self._list_column:
+            new_controls = self._build_list_controls()
+            # 既存コントロールと新規コントロールのIDを比較して差分更新を実装
+            # ここでは簡易的に全置換（将来の改善ポイント）
+            self._list_column.controls = new_controls
+            self._list_column.update()
+
+        # 詳細パネル更新（Props経由で差分更新）
+        if self._detail_panel:
+            selected_tag = self._get_selected_tag()
+            detail_props = self.presenter.build_tag_detail_panel_props(
+                selected_tag,
+                self.controller,
+                on_edit=self._on_edit_selected,
+                on_memo_click=self._on_memo_click,
+                on_task_click=self._on_task_click,
             )
-            for tag in self.tags_data
-        ]
+            self._detail_panel.set_props(detail_props)
 
-        return ft.Container(
-            content=ft.Column(
-                controls=tags_cards,
-                spacing=16,
-                scroll=ft.ScrollMode.AUTO,
-            ),
-            expand=True,
-        )
+        self.safe_update()
 
-    def _handle_create_tag(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """新規タグ作成を処理する。
+    def _on_create(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        """新規作成ハンドラ"""
+        if not self.page:
+            return
 
-        Args:
-            _: イベントオブジェクト（未使用）
-        """
-        # TODO: タグ作成ダイアログを表示
-        self.show_info_snackbar("新規タグ作成機能は準備中です")
+        def on_submit(form_data: TagFormData) -> None:
+            """タグ作成時のコールバック"""
+            # [AI GENERATED] 注意: form_dataは現在スタブ実装のため使用されていない
+            # TODO: self.controller.create_tag(form_data.name, form_data.color, form_data.description)
+            self.controller.create_tag_stub()
+            self._refresh_ui()
+            self.show_success_snackbar(f"タグ「{form_data.name}」を作成しました")
 
-    def _handle_edit_tag(self, _: ft.ControlEvent, tag: dict[str, str]) -> None:  # type: ignore[name-defined]
-        """タグ編集を処理する。
+        show_tag_create_dialog(self.page, on_submit)
 
-        Args:
-            _: イベントオブジェクト（未使用）
-            tag: 編集対象のタグ
-        """
-        # TODO: タグ編集ダイアログを表示
-        self.show_info_snackbar(f"タグ「{tag['name']}」の編集機能は準備中です")
+    def _on_search(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        """検索ハンドラ"""
+        value = getattr(e.control, "value", "")  # type: ignore[attr-defined]
+        self.controller.update_search(SearchQuery(raw=value))
+        self._refresh_ui()
 
-    def _handle_delete_tag(self, _: ft.ControlEvent, tag: dict[str, str]) -> None:  # type: ignore[name-defined]
-        """タグ削除を処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-            tag: 削除対象のタグ
-        """
-        # TODO: 削除確認ダイアログを表示
-        self.show_info_snackbar(f"タグ「{tag['name']}」の削除機能は準備中です")
-
-    def _handle_search(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """検索を処理する。
-
-        Args:
-            e: イベントオブジェクト
-        """
-        # TODO: 検索機能を実装
-        search_text = e.control.value if e.control.value else ""  # type: ignore[attr-defined]
-        if search_text:
-            self.show_info_snackbar(f"「{search_text}」の検索機能は準備中です")
-
-    def _handle_color_filter(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """色フィルターを処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-        """
-        # TODO: 色フィルターダイアログを表示
-        self.show_info_snackbar("色フィルター機能は準備中です")
-
-    def _handle_refresh(self, _: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """データ更新を処理する。
-
-        Args:
-            _: イベントオブジェクト（未使用）
-        """
-        # TODO: 実際のデータ再読み込み
+    def _on_refresh(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        """更新ハンドラ"""
+        self.controller.refresh()
+        self._refresh_ui()
         self.show_success_snackbar("タグデータを更新しました")
-        self.page.update()
+
+    def _on_tag_click(self, _e: ft.ControlEvent, tag_id: str) -> None:  # type: ignore[name-defined]
+        """タグリストアイテムクリックハンドラ"""
+        self.controller.select_tag(tag_id)
+        self._refresh_ui()
+
+    def _on_edit_selected(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        """選択タグの編集ハンドラ"""
+        if not self.page:
+            return
+
+        selected_tag = self._get_selected_tag()
+        if not selected_tag:
+            self.show_info_snackbar("編集するタグを選択してください")
+            return
+
+        def on_submit(form_data: TagFormData) -> None:
+            """タグ編集時のコールバック"""
+            # TODO: Controllerにタグ編集を委譲（現状はスタブ）
+            # 理由: ApplicationServiceとの統合が未完了
+            # 実装:
+            # self.controller.update_tag(
+            #     selected_tag["id"], form_data.name, form_data.color, form_data.description
+            # )
+            # 置換先: controller.py の update_tag メソッドを実装
+            self._refresh_ui()
+            self.show_success_snackbar(f"タグ「{form_data.name}」を更新しました")
+
+        show_tag_edit_dialog(self.page, selected_tag, on_submit)
+
+    def _on_memo_click(self, _e: ft.ControlEvent, memo_id: str) -> None:  # type: ignore[name-defined]
+        """関連メモクリックハンドラ"""
+        # TODO: メモ詳細画面の実装待ち
+        # 理由: メモ詳細画面（/memos/:id）がまだ存在しない
+        # 実装: MemosViewで詳細表示機能を実装後、ここで遷移を有効化
+        # 置換先: src/views/memos/ 内に詳細表示機能を追加
+        # 暫定: メモ一覧画面へ遷移してユーザーに選択させる
+        if self.page:
+            self.page.go("/memos")
+            self.show_info_snackbar(f"メモ {memo_id} を一覧から選択してください")
+
+    def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:  # type: ignore[name-defined]
+        """関連タスククリックハンドラ"""
+        # タスク管理画面へ遷移
+        # 注意: TasksViewで特定タスクの選択・フォーカス機能があれば連携できる
+        if self.page:
+            self.page.go("/tasks")
+            self.show_info_snackbar(f"タスク {task_id} を一覧から確認してください")

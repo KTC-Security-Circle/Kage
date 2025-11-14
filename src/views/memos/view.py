@@ -37,7 +37,7 @@ from __future__ import annotations
 import flet as ft
 from loguru import logger
 
-from logic.application.apps import ApplicationServices
+from logic.application.memo_application_service import MemoApplicationService
 from models import MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 
@@ -72,8 +72,7 @@ class MemosView(BaseView):
 
         self.memos_state = MemosViewState()
         if memo_app is None:
-            apps = ApplicationServices.create()
-            memo_app = apps.memo
+            memo_app = self.apps.get_service(MemoApplicationService)
         self.controller = MemosController(memo_app=memo_app, state=self.memos_state)
 
         # UIコンポーネント

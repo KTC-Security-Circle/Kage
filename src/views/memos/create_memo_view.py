@@ -20,6 +20,7 @@ from typing import Literal
 import flet as ft
 from loguru import logger
 
+from logic.application.memo_application_service import MemoApplicationService
 from models import MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 
@@ -57,14 +58,14 @@ class CreateMemoState:
 class CreateMemoView(BaseView):
     """メモ作成用のフルスクリーンビュー。"""
 
-    def __init__(self, page: ft.Page) -> None:  # type: ignore[name-defined]
-        # TODO: [Logic] DIコンテナ経由で ApplicationServices を取得するよう差し替え予定
-        #  現状は簡易生成で props を構築
-        from logic.application.apps import ApplicationServices  # ローカルインポートで循環回避
-
-        apps = ApplicationServices.create()
-        props = BaseViewProps(page=page, apps=apps)
+    def __init__(
+        self,
+        props: BaseViewProps,
+        *,
+        memo_app: MemoApplicationService | None = None,
+    ) -> None:
         super().__init__(props)
+        self._memo_app = memo_app or self.apps.get_service(MemoApplicationService)
         self.state_local = CreateMemoState()
 
         # UI controls (late init)
@@ -218,12 +219,18 @@ class CreateMemoView(BaseView):
         content = self.state_local.content.strip()
         status = self.state_local.status
 
-        # TODO: ApplicationService 統合
-        #  1) controller.create_memo(title, content, status, tags=self.state_local.tags)
-        #  2) 成功: MemosView 側 state 反映 (upsert or 再読込) / 作成メモ選択
-        #  3) 失敗: notify_error でユーザ通知
-        #  4) 保存ボタン連打対策（保存中はdisabled）
-        # 現状は Controller 経由の永続化は未実装のため通知のみ
-        logger.info(f"Create memo requested: status={status}, title_length={len(title)}, content_length={len(content)}")
-        self.show_success_snackbar("メモを作成しました（暫定）")
-        self.page.go("/memos")
+        def _save() -> None:
+            if self._header is not None:
+                self._header.disable_save()
+            try:
+                created = self._memo_app.create(title=title, content=content, status=status)
+            except Exception:
+                if self._header is not None:
+                    self._header.enable_save()
+                raise
+
+            logger.info("Memo created via CreateMemoView: id=%s, status=%s", created.id, created.status)
+            self.show_success_snackbar("メモを作成しました")
+            self.page.go("/memos")
+
+        self.with_loading(_save, user_error_message="メモの作成に失敗しました")

@@ -81,12 +81,16 @@ def test_list_by_status_not_found_raises(task_service: TaskService) -> None:
 class DummyTaskRepo:
     def __init__(self) -> None:
         self.storage: dict[uuid.UUID, Task] = {}
+        self.tag_links: dict[uuid.UUID, set[uuid.UUID]] = {}
 
     def create(self, data: TaskCreate) -> Task:
         t = Task(id=uuid.uuid4(), title=data.title)
         assert t.id is not None
         self.storage[t.id] = t
         return t
+
+    def link_tag(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        self.tag_links.setdefault(tag_id, set()).add(task_id)
 
     def get_by_id(self, task_id: uuid.UUID, *, with_details: bool = False) -> Task:
         t = self.storage.get(task_id)
@@ -106,6 +110,13 @@ class DummyTaskRepo:
 
     def remove_all_tags(self, task_id: uuid.UUID) -> None:
         return None
+
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Task]:
+        ids = self.tag_links.get(tag_id)
+        if not ids:
+            msg = "no tasks with tag"
+            raise NotFoundError(msg)
+        return [self.storage[task_id] for task_id in ids if task_id in self.storage]
 
 
 class RepoRaiser(DummyTaskRepo):
@@ -188,6 +199,30 @@ def test_remove_tag_happy_path(task_service: TaskService, task_repository: TaskR
     assert isinstance(updated, TaskRead)
     task_entity = task_repository.get_by_id(task.id, with_details=True)
     assert all(t.id != tag.id for t in task_entity.tags)
+
+
+def test_list_by_tag_returns_entries_when_exists() -> None:
+    repo = DummyTaskRepo()
+    service = TaskService(task_repo=repo)  # type: ignore[arg-type]
+    created = service.create(TaskCreate(title="tagged"))
+    assert isinstance(created, TaskRead)
+    assert created.id is not None
+    tag_id = uuid.uuid4()
+    repo.link_tag(created.id, tag_id)
+
+    result = service.list_by_tag(tag_id)
+
+    assert len(result) == 1
+    assert result[0].id == created.id
+
+
+def test_list_by_tag_returns_empty_when_repo_raises_not_found() -> None:
+    repo = DummyTaskRepo()
+    service = TaskService(task_repo=repo)  # type: ignore[arg-type]
+
+    result = service.list_by_tag(uuid.uuid4())
+
+    assert result == []
 
 
 def test_search_tasks_deduplicates_and_uses_both_fields(task_repository: TaskRepository) -> None:

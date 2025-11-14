@@ -169,6 +169,20 @@ class TestMemoApplicationService:
         assert len(result) == EXPECTED_PAIR_COUNT
         mock_memo_service.get_all.assert_called_once_with(with_details=False)
 
+    def test_list_by_tag(self, memo_app_service: MemoApplicationService, mock_unit_of_work: Mock) -> None:
+        """正常系: タグIDでメモ取得"""
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
+        tag_id = uuid.uuid4()
+        expected = [
+            MemoRead(id=uuid.uuid4(), title="タグ付きメモ", content="memo", status=MemoStatus.INBOX),
+        ]
+        mock_memo_service.list_by_tag.return_value = expected
+
+        result = memo_app_service.list_by_tag(tag_id)
+
+        assert result == expected
+        mock_memo_service.list_by_tag.assert_called_once_with(tag_id, with_details=False)
+
     def test_clarify_memo_returns_clarify_for_empty_input(
         self,
         memo_app_service: MemoApplicationService,

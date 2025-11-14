@@ -44,7 +44,7 @@ class TagsViewState:
             object.__setattr__(self, "_filtered_tags_cache", None)
             object.__setattr__(self, "_filtered_tags_cache_search_text", None)
             object.__setattr__(self, "_filtered_tags_cache_items_id", None)
-        super().__setattr__(name, value)
+        object.__setattr__(self, name, value)
 
     @property
     def filtered_tags(self) -> list[TagDict]:

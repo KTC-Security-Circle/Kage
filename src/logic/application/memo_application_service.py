@@ -172,6 +172,20 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             memo_service = uow.service_factory.get_service(MemoService)
             return memo_service.get_all(with_details=with_details)
 
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[MemoRead]:
+        """タグIDでメモ一覧を取得する。
+
+        Args:
+            tag_id: タグID
+            with_details: 関連エンティティを含めるかどうか
+
+        Returns:
+            list[MemoRead]: タグに紐づくメモ一覧
+        """
+        with self._unit_of_work_factory() as uow:
+            memo_service = uow.get_service(MemoService)
+            return memo_service.list_by_tag(tag_id, with_details=with_details)
+
     def clarify_memo(self, memo: MemoRead) -> MemoToTaskAgentOutput:
         """自由記述メモを解析し、タスク候補とメモ状態の提案を返す。
 

@@ -371,9 +371,11 @@ class MemosView(BaseView):
                 pass
 
         # 表示
-        self.page.dialog = dlg
-        dlg.open = True
-        dlg.update()
+        try:
+            self.page.open(dlg)
+        except Exception:
+            dlg.open = True
+            dlg.update()
 
     def _handle_delete_memo(self, _: ft.ControlEvent) -> None:
         """メモ削除ハンドラー。確認ダイアログ表示のうえ Controller 経由で削除する。"""
@@ -417,9 +419,11 @@ class MemosView(BaseView):
             ],
         )
 
-        self.page.dialog = confirm_dlg
-        confirm_dlg.open = True
-        confirm_dlg.update()
+        try:
+            self.page.open(confirm_dlg)
+        except Exception:
+            confirm_dlg.open = True
+            confirm_dlg.update()
 
     def _update_detail_panel(self) -> None:
         """詳細パネルを更新。"""

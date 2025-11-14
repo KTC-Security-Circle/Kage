@@ -321,7 +321,7 @@ class MemosView(BaseView):
             value=selected_memo.content or "", label="内容", multiline=True, min_lines=6, expand=True
         )
 
-        def _on_save(e: ft.ControlEvent | None = None) -> None:
+        def _on_save(_: ft.ControlEvent | None = None) -> None:
             title = (title_field.value or "").strip() or "無題のメモ"
             content = (content_field.value or "").strip()
             if not content:
@@ -347,7 +347,7 @@ class MemosView(BaseView):
                     dlg.open = False
                     dlg.update()
                 except Exception:
-                    pass
+                    logger.exception("Failed to close edit dialog")
                 self._refresh()
 
             self.with_loading(_save, user_error_message="メモの更新に失敗しました")
@@ -358,17 +358,17 @@ class MemosView(BaseView):
             title=ft.Text("メモを編集"),
             content=ft.Column(controls=[title_field, content_field], spacing=12),
             actions=[
-                ft.TextButton("キャンセル", on_click=lambda e: _close()),
+                ft.TextButton("キャンセル", on_click=lambda _: _close()),
                 ft.ElevatedButton("保存", on_click=_on_save),
             ],
         )
 
-        def _close(e: ft.ControlEvent | None = None) -> None:
+        def _close(_: ft.ControlEvent | None = None) -> None:
             try:
                 dlg.open = False
                 dlg.update()
             except Exception:
-                pass
+                logger.exception("Failed to close edit dialog")
 
         # 表示
         try:
@@ -383,7 +383,7 @@ class MemosView(BaseView):
         if selected_memo is None:
             return
 
-        def _confirm_delete(e: ft.ControlEvent | None = None) -> None:
+        def _confirm_delete(_: ft.ControlEvent | None = None) -> None:
             def _do_delete() -> None:
                 try:
                     self.controller.delete_memo(selected_memo.id)
@@ -397,17 +397,17 @@ class MemosView(BaseView):
                     confirm_dlg.open = False
                     confirm_dlg.update()
                 except Exception:
-                    pass
+                    logger.exception("Failed to close edit dialog")
                 self._refresh()
 
             self.with_loading(_do_delete, user_error_message="メモの削除に失敗しました")
 
-        def _cancel(e: ft.ControlEvent | None = None) -> None:
+        def _cancel(_: ft.ControlEvent | None = None) -> None:
             try:
                 confirm_dlg.open = False
                 confirm_dlg.update()
             except Exception:
-                pass
+                logger.exception("Failed to close edit dialog")
 
         confirm_dlg = ft.AlertDialog(
             modal=True,

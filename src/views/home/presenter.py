@@ -21,6 +21,55 @@
     - build_daily_review_card(): デイリーレビューカード構築
     - build_inbox_memo_item(): Inboxメモアイテム構築
     - build_stat_card(): 統計カード構築
+
+# TODO: [ロジック担当者向け] デイリーレビューカードのアクセントカラー動的対応
+# 実装箇所: src/views/home/presenter.py - build_daily_review_card()
+# 依存: src/logic/services/ のデイリーレビュー生成ロジック
+#
+# 【現状の課題】
+# - アクセントカラー(amber, blue, green等)がハードコードマップで管理されている
+# - 新しいレビュータイプを追加する際に presenter.py の修正が必要
+#
+# 【実装提案】
+# 1. Logic層でレビュー生成時にカラー情報も含める
+#    例: {"message": "...", "color": "amber", "icon": "coffee", "severity": "info"}
+#
+# 2. theme.py に get_accent_colors() を追加して、color名から
+#    背景色・ボーダー色・アイコン色のセットを返すヘルパーを提供
+#
+# 3. presenter.py のマップを theme.py のヘルパーに置き換え
+#    メリット: 新しいアクセントカラー追加時に theme.py のみ修正で対応可能
+#
+# 【優先度】
+# - Priority: Low (現状でも動作しているため)
+# - 推奨実装時期: デイリーレビューロジック拡張時
+
+# TODO: [ロジック担当者向け] AIステータスバッジのコンポーネント化
+# 実装箇所: src/views/home/presenter.py - build_inbox_memo_item()
+# 依存: なし(View層のみのリファクタリング)
+#
+# 【現状の課題】
+# - AIステータスバッジの生成ロジックが build_inbox_memo_item() 内に埋め込まれている
+# - 同じバッジを他のView(タスク一覧、検索結果等)で再利用できない
+#
+# 【実装提案】
+# 1. 新しいヘルパー関数を追加
+#    def build_ai_status_badge(status: str | None) -> ft.Container | None:
+#        # AIステータスバッジを構築する(available/pending/not_requested)
+#
+# 2. バッジスタイルを theme.py に定義
+#    @dataclass
+#    class BadgeStyles:
+#        success: dict  # AI提案あり
+#        pending: dict  # AI処理中
+#        neutral: dict  # AI未実行
+#
+# 3. 他Viewでも同じバッジを再利用可能に
+#    例: タスク一覧でもAI提案状態を表示する場合など
+#
+# 【優先度】
+# - Priority: Low (リファクタリング)
+# - 推奨実装時期: AI機能を他Viewに展開する際
 """
 
 from __future__ import annotations
@@ -29,7 +78,19 @@ from typing import TYPE_CHECKING, Any
 
 import flet as ft
 
-from views.theme import SPACING
+from views.theme import (
+    BORDER_RADIUS,
+    BORDER_WIDTH,
+    OPACITY,
+    SPACING,
+    UI_COLORS,
+    create_medium_shadow,
+    create_subtle_shadow,
+    get_on_surface_color,
+    get_outline_color,
+    get_surface_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -45,7 +106,6 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
     Returns:
         デイリーレビューカードのコンテナ
     """
-    # アイコンマッピング
     icon_map = {
         "error": ft.Icons.GITE_ROUNDED,
         "coffee": ft.Icons.COFFEE,
@@ -56,37 +116,32 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
         "wb_sunny": ft.Icons.WB_SUNNY,
     }
 
-    # 背景色マッピング
     bg_color_map = {
-        "amber": ft.Colors.with_opacity(0.1, ft.Colors.AMBER),
-        "blue": ft.Colors.with_opacity(0.05, ft.Colors.BLUE_GREY_800),
-        "green": ft.Colors.with_opacity(0.05, ft.Colors.BLUE_GREY_800),
-        "primary": ft.Colors.with_opacity(0.05, ft.Colors.BLUE_GREY_800),
-        "purple": ft.Colors.with_opacity(0.05, ft.Colors.BLUE_GREY_800),
+        "amber": ft.Colors.with_opacity(OPACITY.light, ft.Colors.AMBER),
+        "blue": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
+        "green": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
+        "primary": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
+        "purple": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
     }
 
-    # ボーダー色マッピング
     border_color_map = {
-        "amber": ft.Colors.AMBER_400,
-        "blue": ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800),
-        "green": ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800),
-        "primary": ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800),
-        "purple": ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800),
-    }
-
-    # アイコン色
-    icon_color_map = {
-        "amber": ft.Colors.BLUE_GREY_900,
-        "blue": ft.Colors.BLUE_GREY_900,
-        "green": ft.Colors.BLUE_GREY_900,
-        "primary": ft.Colors.BLUE_GREY_900,
-        "purple": ft.Colors.BLUE_GREY_900,
+        "amber": "#FFC107",
+        "blue": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
+        "green": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
+        "primary": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
+        "purple": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
     }
 
     icon = icon_map.get(review.get("icon", ""), ft.Icons.INFO)
-    bg_color = bg_color_map.get(review.get("color", ""), ft.Colors.with_opacity(0.05, ft.Colors.BLUE_GREY_800))
-    border_color = border_color_map.get(review.get("color", ""), ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800))
-    icon_color = icon_color_map.get(review.get("color", ""), ft.Colors.BLUE_GREY_900)
+    bg_color = bg_color_map.get(
+        review.get("color", ""),
+        ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
+    )
+    border_color = border_color_map.get(
+        review.get("color", ""),
+        ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
+    )
+    icon_color = get_on_surface_color()
 
     return ft.Container(
         content=ft.Column(
@@ -95,15 +150,10 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
                     [
                         ft.Container(
                             content=ft.Icon(icon, size=24, color=icon_color),
-                            padding=12,
-                            bgcolor=ft.Colors.WHITE,
-                            border_radius=50,
-                            shadow=ft.BoxShadow(
-                                spread_radius=0,
-                                blur_radius=2,
-                                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
-                                offset=ft.Offset(0, 1),
-                            ),
+                            padding=SPACING.sm + SPACING.xs,
+                            bgcolor=get_surface_color(),
+                            border_radius=BORDER_RADIUS.round,
+                            shadow=create_medium_shadow(),
                         ),
                         ft.Container(
                             content=ft.Column(
@@ -112,7 +162,7 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
                                         review.get("message", ""),
                                         size=18,
                                         weight=ft.FontWeight.NORMAL,
-                                        color=ft.Colors.BLUE_GREY_900,
+                                        color=get_on_surface_color(),
                                     ),
                                 ],
                                 spacing=0,
@@ -129,9 +179,12 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
                         icon=ft.Icons.ARROW_FORWARD,
                         on_click=lambda _: on_action_click(review.get("action_route", "")),
                         style=ft.ButtonStyle(
-                            color=ft.Colors.BLUE_GREY_900,
-                            bgcolor=ft.Colors.WHITE,
-                            side=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800)),
+                            color=get_on_surface_color(),
+                            bgcolor=get_surface_color(),
+                            side=ft.BorderSide(
+                                BORDER_WIDTH.thin,
+                                ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
+                            ),
                         ),
                     ),
                     margin=ft.margin.only(top=SPACING.sm),
@@ -139,10 +192,10 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
             ],
             spacing=0,
         ),
-        padding=ft.padding.all(24),
+        padding=ft.padding.all(SPACING.lg),
         bgcolor=bg_color,
-        border_radius=12,
-        border=ft.border.all(1, border_color),
+        border_radius=BORDER_RADIUS.lg,
+        border=ft.border.all(BORDER_WIDTH.thin, border_color),
     )
 
 
@@ -161,7 +214,6 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[int], None])
         memo["content"][:max_content_length] + "..." if len(memo["content"]) > max_content_length else memo["content"]
     )
 
-    # AI提案ステータスのバッジ
     status_badge = None
     ai_status = memo.get("ai_suggestion_status")
 
@@ -171,12 +223,12 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[int], None])
                 "AI提案あり",
                 size=11,
                 weight=ft.FontWeight.W_500,
-                color=ft.Colors.BLUE_700,
+                color=UI_COLORS.primary_dark,
             ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
             bgcolor=ft.Colors.BLUE_50,
-            border_radius=4,
-            border=ft.border.all(1, ft.Colors.BLUE_300),
+            border_radius=BORDER_RADIUS.sm,
+            border=ft.border.all(BORDER_WIDTH.thin, ft.Colors.BLUE_300),
         )
     elif ai_status == "pending":
         status_badge = ft.Container(
@@ -184,12 +236,15 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[int], None])
                 "AI処理中",
                 size=11,
                 weight=ft.FontWeight.W_500,
-                color=ft.Colors.with_opacity(0.7, ft.Colors.BLUE_GREY_700),
+                color=ft.Colors.with_opacity(OPACITY.high, get_text_secondary_color()),
             ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLUE_GREY_100),
-            border_radius=4,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.BLUE_GREY_300)),
+            padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
+            bgcolor=ft.Colors.with_opacity(OPACITY.light, ft.Colors.BLUE_GREY_100),
+            border_radius=BORDER_RADIUS.sm,
+            border=ft.border.all(
+                BORDER_WIDTH.thin,
+                ft.Colors.with_opacity(OPACITY.border_medium, get_outline_color()),
+            ),
         )
     elif ai_status == "not_requested":
         status_badge = ft.Container(
@@ -197,12 +252,15 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[int], None])
                 "AI未実行",
                 size=11,
                 weight=ft.FontWeight.W_500,
-                color=ft.Colors.with_opacity(0.6, ft.Colors.BLUE_GREY_700),
+                color=ft.Colors.with_opacity(OPACITY.medium, get_text_secondary_color()),
             ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
             bgcolor=ft.Colors.TRANSPARENT,
-            border_radius=4,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.BLUE_GREY_300)),
+            border_radius=BORDER_RADIUS.sm,
+            border=ft.border.all(
+                BORDER_WIDTH.thin,
+                ft.Colors.with_opacity(OPACITY.border_medium, get_outline_color()),
+            ),
         )
 
     title_row = ft.Row(
@@ -225,17 +283,20 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[int], None])
                 ft.Text(
                     content_preview,
                     size=14,
-                    color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
+                    color=ft.Colors.with_opacity(OPACITY.medium, get_on_surface_color()),
                     max_lines=2,
                 ),
             ],
-            spacing=4,
+            spacing=SPACING.xs,
             tight=True,
         ),
-        padding=12,
-        bgcolor=ft.Colors.WHITE,
-        border_radius=8,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.BLUE_GREY_800)),
+        padding=SPACING.sm + SPACING.xs,
+        bgcolor=get_surface_color(),
+        border_radius=BORDER_RADIUS.md,
+        border=ft.border.all(
+            BORDER_WIDTH.thin,
+            ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
+        ),
         on_click=lambda _: on_click(memo.get("id", "")),
         ink=True,
     )
@@ -264,7 +325,7 @@ def build_stat_card(title: str, value: str, subtitle: str, icon: str, on_click: 
                             size=18,
                             weight=ft.FontWeight.W_600,
                         ),
-                        ft.Icon(icon, size=20, color=ft.Colors.BLUE_GREY_900),
+                        ft.Icon(icon, size=20, color=get_on_surface_color()),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
@@ -277,22 +338,20 @@ def build_stat_card(title: str, value: str, subtitle: str, icon: str, on_click: 
                 ft.Text(
                     subtitle,
                     size=14,
-                    color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
+                    color=ft.Colors.with_opacity(OPACITY.medium, get_text_secondary_color()),
                 ),
             ],
             spacing=0,
             tight=True,
         ),
-        padding=ft.padding.all(24),
-        bgcolor=ft.Colors.WHITE,
-        border_radius=12,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.BLACK)),
-        shadow=ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=2,
-            color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
-            offset=ft.Offset(0, 1),
+        padding=ft.padding.all(SPACING.lg),
+        bgcolor=get_surface_color(),
+        border_radius=BORDER_RADIUS.lg,
+        border=ft.border.all(
+            BORDER_WIDTH.thin,
+            ft.Colors.with_opacity(OPACITY.light, get_outline_color()),
         ),
+        shadow=create_subtle_shadow(),
         on_click=lambda _: on_click(),
         ink=True,
         col={"xs": 12, "sm": 6, "md": 4},

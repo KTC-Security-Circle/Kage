@@ -31,6 +31,7 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 
+# TODO: 以下のものを実装に置き換える
 class HomeQuery(Protocol):
     """ホーム画面データ取得のポート。"""
 

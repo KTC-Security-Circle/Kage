@@ -312,5 +312,136 @@ def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:
 
 ---
 
-**更新日**: 2025-01-13
+**更新日**: 2025-01-13 (2025-11-16 リファクタリング完了)
+**担当**: AI Agent (Flet Layered Views Engineer v1)
+
+---
+
+## 10. UI/UXリファクタリング完了事項 (2025-11-16)
+
+### 10.1 テーマトークン統合完了
+
+**実施内容:**
+- 全コンポーネントのハードコードされた値をテーマトークンに置き換え
+- `SPACING`, `BORDER_RADIUS`, `BORDER_WIDTH` を全面適用
+- カラーヘルパー関数 (`get_grey_color()`, `get_primary_color()` 等) の一貫使用
+
+**影響ファイル:**
+- `src/views/tags/components/tag_list_item.py`
+- `src/views/tags/components/tag_detail_panel.py`
+- `src/views/tags/components/tag_form_dialog.py`
+- `src/views/tags/components/color_palette.py`
+
+**効果:**
+- ダークモード対応が容易に（`theme.py`の修正のみで全体対応可能）
+- デザインの一貫性向上
+- 保守性の向上（マジックナンバー排除）
+
+---
+
+# TODO: [ロジック担当者向け] Tags View 実装メモ
+
+以下は、Tags View の完全な実装に必要なロジック部分の実装タスクです。
+
+## 【重要】実装優先度の再整理
+
+現在のTags Viewは、**View層のビジュアルデザインは完成**していますが、
+**Logic層（ApplicationService, Repository, Queries）の実装が未完了**です。
+
+### ✅ 完了済み (View層)
+- タグ一覧表示UI
+- タグ詳細パネル
+- タグ作成・編集ダイアログ
+- カラーパレット選択
+- テーマトークン統合（2025-11-16）
+
+### ⚠️ 未完了 (Logic層) - 実装必須
+- TagApplicationService の実装
+- MemoApplicationService / TaskApplicationService の拡張
+- Queries層の実装（件数取得、関連アイテム取得）
+- Controller の依存注入対応
+
+### 📌 実装ロードマップ
+
+**Phase 1: 基本CRUD（必須）**
+1. `TagApplicationService` 実装 → `src/logic/application/tag_application_service.py`
+2. `TagRepository` 実装 → `src/logic/repositories/tag.py`
+3. Controller の依存注入対応 → `src/views/tags/controller.py`
+4. 基本的なCRUD操作のテスト → `tests/logic/application/test_tag_application_service.py`
+
+**Phase 2: 関連アイテム表示（推奨）**
+1. `TagQueries` 実装 → `src/logic/queries/tag_queries.py`
+2. `MemoQueries` / `TaskQueries` 拡張
+3. Controller の関連アイテム取得を実サービスに置き換え
+
+**Phase 3: 画面遷移（推奨）**
+1. ルーティング設定確認 → `src/router.py`
+2. メモ/タスク詳細への遷移実装
+
+---
+
+# TODO: [ロジック担当者向け] ダークモード対応実装メモ
+
+**実装箇所**: `src/views/theme.py` (全View共通)
+**依存**: `settings/application_service.py` のテーマモード管理機能
+
+**実装内容:**
+1. テーマモード取得関数の追加
+   - `def get_current_theme_mode() -> ThemeMode:`
+   - settings からユーザーの選択テーマ(light/dark/system)を取得
+
+2. 動的カラー取得関数の修正
+   現在ライトテーマ固定の以下の関数をテーマモード対応に:
+   - `get_on_surface_color()`
+   - `get_surface_color()`
+   - `get_background_color()`
+   - `get_error_color()`
+   - `get_outline_color()`
+   - `get_text_secondary_color()`
+
+3. システムテーマ検出の実装
+   - Flet の `page.platform_brightness` を使用してOSのダーク/ライト設定を検出
+   - `ThemeMode.SYSTEM` 選択時に自動切り替え
+
+**影響範囲:**
+- 全View層で自動的にダークモード対応完了（ハードコードゼロのため）
+- `presenter.py` や各コンポーネントは修正不要
+
+**優先度:** Medium (Settings View統合完了後)
+
+---
+
+# TODO: [ロジック担当者向け] タグ関連アイテムのページング実装
+
+**実装箇所**: `src/logic/queries/tag_queries.py`
+**依存**: なし
+
+**現状の課題:**
+- タグに大量のメモ・タスクが紐づいている場合、全件取得によるパフォーマンス低下
+- 詳細パネルのスクロールが長大になる
+
+**実装提案:**
+1. ページング付きクエリの追加
+   ```python
+   def get_memos_by_tag_name_paginated(
+       session: Session,
+       tag_name: str,
+       limit: int = 20,
+       offset: int = 0
+   ) -> list[Memo]:
+   ```
+
+2. View層での「もっと見る」ボタン実装
+   - 初期表示: 10件
+   - 「もっと見る」クリックで20件ずつ追加読み込み
+
+3. 仮想スクロール（Virtual Scroll）の検討
+   - Fletの制限により実装困難な可能性あり
+   - 代替案: タブ切り替え（メモ/タスク別表示）
+
+**優先度:** Low (大量データが蓄積された後に実装)
+
+---
+
+**更新日**: 2025-11-16
 **担当**: AI Agent (Flet Layered Views Engineer v1)

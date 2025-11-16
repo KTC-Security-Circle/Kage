@@ -122,6 +122,44 @@ class BorderRadiusTokens:
     md: int = 8
     lg: int = 12
     xl: int = 16
+    round: int = 50
+
+
+@dataclass
+class OpacityTokens:
+    """透明度定義のデータクラス。"""
+
+    subtle: float = 0.05
+    light: float = 0.1
+    border_light: float = 0.2
+    border_medium: float = 0.3
+    medium: float = 0.6
+    high: float = 0.7
+    full: float = 1.0
+
+
+@dataclass
+class BorderWidthTokens:
+    """ボーダー幅定義のデータクラス。"""
+
+    thin: int = 1
+    medium: int = 2
+    thick: int = 3
+
+
+@dataclass
+class ShadowTokens:
+    """シャドウ定義のデータクラス。"""
+
+    subtle_spread: int = 0
+    subtle_blur: int = 2
+    subtle_offset_y: int = 1
+    subtle_opacity: float = 0.05
+
+    medium_spread: int = 0
+    medium_blur: int = 4
+    medium_offset_y: int = 2
+    medium_opacity: float = 0.1
 
 
 @dataclass
@@ -178,6 +216,9 @@ DARK_COLORS = ColorTokens(
 SPACING = SpacingTokens()
 BORDER_RADIUS = BorderRadiusTokens()
 FONT = FontTokens()
+OPACITY = OpacityTokens()
+BORDER_WIDTH = BorderWidthTokens()
+SHADOW = ShadowTokens()
 
 # Color palette instances
 TAG_COLORS = TagColors()
@@ -540,6 +581,113 @@ def get_surface_variant_color() -> str:
     return get_grey_color(100)
 
 
+def create_subtle_shadow() -> ft.BoxShadow:
+    """微妙なシャドウエフェクトを作成する。
+
+    Returns:
+        BoxShadow オブジェクト
+
+    Note:
+        カード、パネルなどに使用。
+    """
+    return ft.BoxShadow(
+        spread_radius=SHADOW.subtle_spread,
+        blur_radius=SHADOW.subtle_blur,
+        color=ft.Colors.with_opacity(SHADOW.subtle_opacity, ft.Colors.BLACK),
+        offset=ft.Offset(0, SHADOW.subtle_offset_y),
+    )
+
+
+def create_medium_shadow() -> ft.BoxShadow:
+    """中程度のシャドウエフェクトを作成する。
+
+    Returns:
+        BoxShadow オブジェクト
+
+    Note:
+        アイコンコンテナ、強調表示要素などに使用。
+    """
+    return ft.BoxShadow(
+        spread_radius=SHADOW.medium_spread,
+        blur_radius=SHADOW.medium_blur,
+        color=ft.Colors.with_opacity(SHADOW.medium_opacity, ft.Colors.BLACK),
+        offset=ft.Offset(0, SHADOW.medium_offset_y),
+    )
+
+
+def get_accent_background_color(color_name: str = "primary") -> str:
+    """アクセントカラーの背景色を取得する。
+
+    Args:
+        color_name: カラー名（primary, blue, amber など）
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        デイリーレビューカードなどのアクセント背景に使用。
+        色名に応じた適切な背景色を返す。
+    """
+    accent_map = {
+        "amber": UI_COLORS.warning,
+        "blue": UI_COLORS.primary,
+        "green": UI_COLORS.success,
+        "primary": LIGHT_COLORS.primary,
+        "purple": TAG_COLORS.purple,
+    }
+    return accent_map.get(color_name, LIGHT_COLORS.primary)
+
+
+def get_accent_border_color(color_name: str = "primary") -> str:
+    """アクセントカラーのボーダー色を取得する。
+
+    Args:
+        color_name: カラー名（primary, blue, amber など）
+
+    Returns:
+        色コード（HEX形式）
+    """
+    # amber は特別扱い（より明るいボーダー）
+    if color_name == "amber":
+        return "#FFC107"  # AMBER_400 相当
+
+    # その他は get_outline_color() をベースにする
+    return get_outline_color()
+
+
 # TODO: 統合フェーズで settings から現在のテーマモード設定を取得する機能を追加
 # 理由: ユーザー設定の永続化機能が未実装のため
 # 置換先: settings/application_service.py から theme_mode を取得
+
+# TODO: [ロジック担当者向け] ダークモード対応の実装計画
+# 実装箇所: src/views/theme.py
+# 依存: settings/application_service.py のテーマモード管理機能
+#
+# 【実装内容】
+# 1. テーマモード取得関数の追加
+#    - def get_current_theme_mode() -> ThemeMode:
+#      settings からユーザーの選択テーマ(light/dark/system)を取得
+#
+# 2. 動的カラー取得関数の修正
+#    現在ライトテーマ固定の以下の関数をテーマモード対応に:
+#    - get_on_primary_color()   → LIGHT_COLORS / DARK_COLORS 切り替え
+#    - get_on_surface_color()   → LIGHT_COLORS / DARK_COLORS 切り替え
+#    - get_surface_color()      → LIGHT_COLORS / DARK_COLORS 切り替え
+#    - get_background_color()   → LIGHT_COLORS / DARK_COLORS 切り替え
+#    - get_error_color()        → LIGHT_COLORS / DARK_COLORS 切り替え
+#    - get_on_error_color()     → LIGHT_COLORS / DARK_COLORS 切り替え
+#    - get_outline_color()      → グレーシェードをテーマで切り替え
+#    - get_text_secondary_color() → グレーシェードをテーマで切り替え
+#    - get_surface_variant_color() → グレーシェードをテーマで切り替え
+#
+# 3. システムテーマ検出の実装
+#    - Flet の page.platform_brightness を使用してOSのダーク/ライト設定を検出
+#    - ThemeMode.SYSTEM 選択時に自動切り替え
+#
+# 【影響範囲】
+# - 全Viewで自動的にダークモード対応完了(ハードコードゼロのため)
+# - presenter.py などは修正不要
+#
+# 【優先度】
+# - Priority: Medium (ユーザー体験向上)
+# - 推奨実装時期: Settings View 統合完了後

@@ -148,7 +148,7 @@ class WeeklyReviewPresenter:
             TaskItemData(
                 id=str(task.id),
                 title=task.title,
-                priority=task.priority if hasattr(task, "priority") else None,
+                priority=task.priority if task.priority is not None else None,
             )
             for task in tasks
         ]

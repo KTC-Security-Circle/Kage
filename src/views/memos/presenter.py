@@ -601,6 +601,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
     tasks: tuple[AiSuggestedTask, ...],
     selected_task_ids: set[str],
     editing_task_id: str | None,
+    error_message: str | None = None,
     on_request_ai: Callable[[ft.ControlEvent], None] | None = None,
     on_retry_ai: Callable[[ft.ControlEvent], None] | None = None,
     on_mark_as_idea: Callable[[ft.ControlEvent], None] | None = None,
@@ -716,7 +717,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                             controls=[ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR)],
                         ),
                         ft.Text(
-                            "MemoToTaskAgentでの生成に失敗しました。もう一度お試しください。",
+                            error_message or "MemoToTaskAgentでの生成に失敗しました。もう一度お試しください。",
                             style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.ON_SURFACE,
                         ),

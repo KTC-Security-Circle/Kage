@@ -72,6 +72,9 @@ class MemoAiFlowState:
     selected_task_ids: set[str] = field(default_factory=set)
     editing_task_id: str | None = None
     is_generating: bool = False
+    job_id: UUID | None = None
+    job_status: str | None = None
+    error_message: str | None = None
 
 
 @dataclass(slots=True)
@@ -217,6 +220,7 @@ class MemosViewState:
         state = self.ai_flow_state_for(memo_id)
         state.generated_tasks = list(tasks)
         state.selected_task_ids = {task.task_id for task in tasks}
+        state.is_generating = False
 
     def toggle_task_selection(self, memo_id: UUID, task_id: str) -> None:
         """タスクの選択状態をトグルする。"""
@@ -225,6 +229,22 @@ class MemosViewState:
             state.selected_task_ids.remove(task_id)
         else:
             state.selected_task_ids.add(task_id)
+
+    def track_ai_job(self, memo_id: UUID, job_id: UUID, status: str) -> None:
+        """ジョブ追跡情報を設定する。"""
+        state = self.ai_flow_state_for(memo_id)
+        state.job_id = job_id
+        state.job_status = status
+        state.error_message = None
+        state.is_generating = True
+
+    def update_job_status(self, memo_id: UUID, *, status: str, error: str | None = None) -> None:
+        """ジョブ状態を更新する。"""
+        state = self.ai_flow_state_for(memo_id)
+        state.job_status = status
+        state.error_message = error
+        if error:
+            state.is_generating = False
 
     def get_selected_tasks(self, memo_id: UUID) -> list[AiSuggestedTask]:
         """選択済みタスクを返す。"""

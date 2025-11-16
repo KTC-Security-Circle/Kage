@@ -12,12 +12,15 @@ from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color
 
+from .components.agent_section import AgentSection
 from .components.appearance_section import AppearanceSection
 from .components.database_section import DatabaseSection
 from .components.window_section import WindowSection
 from .controller import SettingsController
 from .query import SettingsQuery
-from .state import SettingsViewState
+from .state import SettingsSnapshot, SettingsViewState
+
+TEMPERATURE_EPSILON = 0.01
 
 
 class SettingsView(BaseView):
@@ -56,6 +59,7 @@ class SettingsView(BaseView):
         self.appearance_section = AppearanceSection(props.page, self._on_setting_changed)
         self.window_section = WindowSection(props.page, self._on_setting_changed)
         self.database_section = DatabaseSection(props.page, self._on_setting_changed)
+        self.agent_section = AgentSection(self._on_setting_changed)
 
         # 保存・リセットボタン（常時有効）
         self.save_button = ft.ElevatedButton(
@@ -107,6 +111,13 @@ class SettingsView(BaseView):
                                     "サイズと位置の設定",
                                     ft.Icons.WINDOW,
                                     self.window_section,
+                                ),
+                                # AIエージェント設定
+                                self._create_section_card(
+                                    "AIエージェント",
+                                    "LLM モデルやデバッグモードの設定",
+                                    ft.Icons.AUTO_AWESOME,
+                                    self.agent_section,
                                 ),
                                 # データベース設定
                                 self._create_section_card(
@@ -271,6 +282,24 @@ class SettingsView(BaseView):
         # データベース設定
         if self.database_section.url_field.value and self.database_section.url_field.value != current.database_url:
             self.controller.update_database_url(self.database_section.url_field.value)
+        self._sync_agent_settings(current)
+
+    def _sync_agent_settings(self, snapshot: SettingsSnapshot) -> None:
+        provider_value = self.agent_section.provider_dropdown.value
+        if provider_value and provider_value != snapshot.agent_provider.value:
+            self.controller.update_agent_provider(provider_value)
+
+        model_value = self.agent_section.model_field.value or ""
+        if model_value != (snapshot.agent.model or ""):
+            self.controller.update_agent_model(model_value)
+
+        temp_value = float(self.agent_section.temperature_slider.value or snapshot.agent.temperature)
+        if abs(temp_value - snapshot.agent.temperature) >= TEMPERATURE_EPSILON:
+            self.controller.update_agent_temperature(temp_value)
+
+        debug_value = bool(self.agent_section.debug_switch.value)
+        if debug_value != snapshot.agent.debug_mode:
+            self.controller.update_agent_debug_mode(debug_mode=debug_value)
 
     def _on_save_settings(self, _: ft.ControlEvent) -> None:
         """設定保存ボタンがクリックされた時の処理。"""
@@ -340,6 +369,14 @@ class SettingsView(BaseView):
 
             # データベース設定セクションの更新
             self.database_section.url_field.value = snapshot.database_url
+
+            # エージェント設定セクション
+            self.agent_section.set_values(
+                provider=snapshot.agent_provider.value,
+                model=snapshot.agent.model,
+                temperature=snapshot.agent.temperature,
+                debug_mode=snapshot.agent.debug_mode,
+            )
 
             # UIを更新
             if self.page:

@@ -35,12 +35,14 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import flet as ft
 from loguru import logger
 
+from logic.application.memo_ai_job_queue import GeneratedTaskPayload, MemoAiJobSnapshot, MemoAiJobStatus
 from logic.application.memo_application_service import MemoApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
@@ -202,6 +204,7 @@ class MemosView(BaseView):
             tasks=tuple(ai_state.generated_tasks),
             selected_task_ids=set(ai_state.selected_task_ids),
             editing_task_id=ai_state.editing_task_id,
+            error_message=ai_state.error_message,
             on_request_ai=lambda _e, target=memo: self._handle_request_ai_generation(target),
             on_retry_ai=lambda _e, memo_id=memo.id: self._handle_retry_ai_generation(memo_id),
             on_mark_as_idea=lambda _e, memo_id=memo.id: self._handle_mark_memo_as_idea(memo_id),
@@ -340,20 +343,28 @@ class MemosView(BaseView):
         self.show_info_snackbar("AI提案機能は統合フェーズで実装予定です")
 
     def _handle_request_ai_generation(self, memo: MemoRead) -> None:
-        """MemoToTaskAgentによるタスク生成を擬似的に開始する。"""
-        ai_state = self.memos_state.ai_flow_state_for(memo.id)
-        ai_state.editing_task_id = None
-        ai_state.is_generating = True
-        self.memos_state.set_ai_status_override(memo.id, AiSuggestionStatus.PENDING)
-        memo.ai_suggestion_status = AiSuggestionStatus.PENDING
-        if memo.status == MemoStatus.INBOX:
-            memo.status = MemoStatus.ACTIVE
-        self._refresh()
-        try:
-            self.page.run_task(self._simulate_ai_generation, memo.id)
-        except Exception:  # page.run_task未サポート時のフォールバック
-            task = asyncio.create_task(self._simulate_ai_generation(memo.id))
-            self._pending_async_tasks.append(task)
+        """MemoToTaskAgentによるタスク生成をキューに登録する。"""
+
+        def _enqueue() -> MemoAiJobSnapshot:
+            logger.debug(f"enqueue_ai_generation called: memo_id={memo.id}")
+            return self.controller.enqueue_ai_generation(memo.id)
+
+        def _after(snapshot: MemoAiJobSnapshot) -> None:
+            self.memos_state.track_ai_job(memo.id, snapshot.job_id, snapshot.status.value)
+            self.memos_state.set_ai_status_override(memo.id, AiSuggestionStatus.PENDING)
+            ai_state = self.memos_state.ai_flow_state_for(memo.id)
+            ai_state.generated_tasks.clear()
+            ai_state.selected_task_ids.clear()
+            ai_state.editing_task_id = None
+            self._refresh()
+            logger.debug(f"Polling scheduled for job_id={snapshot.job_id} memo_id={memo.id}")
+            self._start_ai_job_polling(snapshot.job_id, memo.id)
+
+        def _task() -> None:
+            snapshot = _enqueue()
+            _after(snapshot)
+
+        self.with_loading(_task, user_error_message="AIタスク生成の登録に失敗しました")
 
     def _handle_retry_ai_generation(self, memo_id: UUID) -> None:
         """AI生成処理を再実行する。"""
@@ -367,8 +378,11 @@ class MemosView(BaseView):
         memo = self._get_memo_by_id(memo_id)
         if memo is None:
             return
-        memo.status = MemoStatus.IDEA
-        memo.ai_suggestion_status = AiSuggestionStatus.NOT_REQUESTED
+
+        def _mark() -> None:
+            self.controller.update_memo(memo_id, status=MemoStatus.IDEA, ai_status=AiSuggestionStatus.NOT_REQUESTED)
+
+        self.with_loading(_mark, user_error_message="アイデアへの変更に失敗しました")
         self.memos_state.clear_ai_flow_state(memo_id)
         self.show_info_snackbar("メモをアイデアとして保存しました")
         self._refresh()
@@ -440,67 +454,82 @@ class MemosView(BaseView):
             self.show_snack_bar("承認するタスクを選択してください", bgcolor=ft.Colors.ERROR)
             return
         ai_state.status_override = AiSuggestionStatus.REVIEWED
-        memo.ai_suggestion_status = AiSuggestionStatus.REVIEWED
-        memo.status = MemoStatus.ARCHIVE
+        ai_state.is_generating = False
+
+        def _archive() -> None:
+            self.controller.mark_memo_archived(memo.id)
+
+        self.with_loading(_archive, user_error_message="メモのアーカイブに失敗しました")
         self.show_success_snackbar("タスクを承認し、メモをアーカイブしました")
         self._refresh()
 
-    async def _simulate_ai_generation(self, memo_id: UUID) -> None:
-        """AI提案生成処理を擬似的に遅延させる。"""
-        await asyncio.sleep(2)
-        self._complete_ai_generation(memo_id)
+    def _start_ai_job_polling(self, job_id: UUID, memo_id: UUID) -> None:
+        async def _poll() -> None:
+            while True:
+                snapshot = await asyncio.to_thread(self.controller.get_ai_job_snapshot, job_id)
+                self._process_ai_job_snapshot(memo_id, snapshot)
+                if snapshot.status in {MemoAiJobStatus.SUCCEEDED, MemoAiJobStatus.FAILED}:
+                    break
+                await asyncio.sleep(1.5)
 
-    def _complete_ai_generation(self, memo_id: UUID) -> None:
-        """モックのAI生成完了処理を行う。"""
-        memo = self._get_memo_by_id(memo_id)
-        if memo is None:
-            return
-        tasks = self._generate_mock_tasks(memo)
-        self.memos_state.set_generated_tasks(memo_id, tasks)
-        ai_state = self.memos_state.ai_flow_state_for(memo_id)
-        ai_state.status_override = AiSuggestionStatus.AVAILABLE
-        ai_state.is_generating = False
-        memo.ai_suggestion_status = AiSuggestionStatus.AVAILABLE
-        memo.status = MemoStatus.ACTIVE
-        self.show_success_snackbar("AI提案タスクを取得しました")
+        if self.page and hasattr(self.page, "run_task"):
+            try:
+                self.page.run_task(_poll)
+            except Exception:
+                logger.exception("Failed to schedule AI job polling via page.run_task")
+            else:
+                return
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            def _runner() -> None:
+                logger.debug(f"Starting polling thread for job_id={job_id} memo_id={memo_id}")
+                asyncio.run(_poll())
+
+            thread = threading.Thread(target=_runner, name="MemoAiJobPoller", daemon=True)
+            thread.start()
+        else:
+            task = loop.create_task(_poll())
+            self._pending_async_tasks.append(task)
+
+    def _process_ai_job_snapshot(self, memo_id: UUID, snapshot: MemoAiJobSnapshot) -> None:
+        self.memos_state.update_job_status(memo_id, status=snapshot.status.value, error=snapshot.error_message)
+        if snapshot.status == MemoAiJobStatus.SUCCEEDED:
+            tasks = [self._convert_payload_to_ai_task(payload) for payload in snapshot.tasks]
+            self.memos_state.set_generated_tasks(memo_id, tasks)
+            self.memos_state.set_ai_status_override(memo_id, AiSuggestionStatus.AVAILABLE)
+            self.controller.refresh_memo(memo_id)
+            logger.debug(
+                f"AI job succeeded: job_id={snapshot.job_id} memo_id={memo_id} tasks={len(snapshot.tasks)}"
+            )
+            self.show_success_snackbar("AI提案タスクを取得しました")
+        elif snapshot.status == MemoAiJobStatus.FAILED:
+            self.memos_state.set_ai_status_override(memo_id, AiSuggestionStatus.FAILED)
+            self.controller.refresh_memo(memo_id)
+            self.notify_error("AIタスク生成に失敗しました", details=snapshot.error_message)
+            logger.debug(
+                f"AI job failed: job_id={snapshot.job_id} memo_id={memo_id} error={snapshot.error_message}"
+            )
         self._refresh()
 
-    def _generate_mock_tasks(self, memo: MemoRead) -> list[AiSuggestedTask]:
-        """UIデモ用のモックタスクを生成する。"""
-        base_title = memo.title or "メモ"
-        now = datetime.now()
-        templates = [
-            (
-                f"{base_title}の要件整理",
-                "メモの内容を整理し、MemoToTaskAgentで扱いやすい形にまとめる",
-                ("planning",),
-                3,
-            ),
-            (
-                "実装ステップの洗い出し",
-                "必要なタスクを分解し、優先度付きで並べる",
-                ("execution", "priority"),
-                5,
-            ),
-            (
-                "承認準備",
-                "生成されたタスクをユーザーに提示できる形に整える",
-                ("review",),
-                7,
-            ),
-        ]
-        generated: list[AiSuggestedTask] = []
-        for idx, (title, description, tags, offset_days) in enumerate(templates, start=1):
-            generated.append(
-                AiSuggestedTask(
-                    task_id=f"temp-{memo.id}-{idx}-{uuid4().hex[:6]}",
-                    title=title,
-                    description=description,
-                    tags=tuple(tags),
-                    due_date=now + timedelta(days=offset_days),
-                )
-            )
-        return generated
+    def _convert_payload_to_ai_task(self, payload: GeneratedTaskPayload) -> AiSuggestedTask:
+        due: datetime | None = None
+        if payload.due_date:
+            try:
+                raw = payload.due_date
+                if raw.endswith("Z"):
+                    raw = raw.replace("Z", "+00:00")
+                due = datetime.fromisoformat(raw)
+            except ValueError:
+                due = None
+        return AiSuggestedTask(
+            task_id=payload.task_id,
+            title=payload.title,
+            description=payload.description or "",
+            tags=payload.tags,
+            due_date=due,
+        )
 
     def _get_memo_by_id(self, memo_id: UUID) -> MemoRead | None:
         """内部インデックスからメモを検索する。"""

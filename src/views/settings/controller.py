@@ -39,8 +39,9 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from agents.agent_conf import LLMProvider
 from errors import ValidationError
-from settings.models import EditableUserSettings, EditableWindowSettings
+from settings.models import EditableAgentRuntimeSettings, EditableUserSettings, EditableWindowSettings
 
 from .query import SettingsQuery  # noqa: TC001 - Runtime dependency
 from .state import SettingsSnapshot, SettingsViewState
@@ -83,6 +84,12 @@ class SettingsController:
             data = self.query.load_snapshot()
 
             # Snapshot生成
+            agent_data = data.get("agent", {})
+            provider_value = agent_data.get("provider", LLMProvider.FAKE.value)
+            try:
+                provider_enum = LLMProvider(provider_value)
+            except ValueError:
+                provider_enum = LLMProvider.FAKE
             snapshot = SettingsSnapshot(
                 appearance=EditableUserSettings(
                     theme=data["appearance"]["theme"],
@@ -94,6 +101,12 @@ class SettingsController:
                     position=data["window"]["position"],
                 ),
                 database_url=data["database_url"],
+                agent_provider=provider_enum,
+                agent=EditableAgentRuntimeSettings(
+                    model=agent_data.get("model"),
+                    temperature=float(agent_data.get("temperature", 0.2)),
+                    debug_mode=bool(agent_data.get("debug_mode", False)),
+                ),
             )
 
             # Stateに反映
@@ -137,6 +150,12 @@ class SettingsController:
                     "position": self.state.current.window.position,
                 },
                 "database_url": self.state.current.database_url,
+                "agent": {
+                    "provider": self.state.current.agent_provider.value,
+                    "model": self.state.current.agent.model,
+                    "temperature": self.state.current.agent.temperature,
+                    "debug_mode": self.state.current.agent.debug_mode,
+                },
             }
 
             # Query層で保存
@@ -186,12 +205,7 @@ class SettingsController:
         # PydanticモデルなのでmodelModel_copy()を使用
         new_appearance = self.state.current.appearance.model_copy(update={"theme": theme})
         # SettingsSnapshotはdataclassなので新しいインスタンスを作成
-        new_snapshot = SettingsSnapshot(
-            appearance=new_appearance,
-            window=self.state.current.window,
-            database_url=self.state.current.database_url,
-        )
-        self.state.update_current(new_snapshot)
+        self._update_snapshot(appearance=new_appearance)
 
     def update_user_name(self, user_name: str) -> None:
         """ユーザー名を更新する。
@@ -203,12 +217,7 @@ class SettingsController:
             return
 
         new_appearance = self.state.current.appearance.model_copy(update={"user_name": user_name})
-        new_snapshot = SettingsSnapshot(
-            appearance=new_appearance,
-            window=self.state.current.window,
-            database_url=self.state.current.database_url,
-        )
-        self.state.update_current(new_snapshot)
+        self._update_snapshot(appearance=new_appearance)
 
     def update_window_size(self, width: int, height: int) -> None:
         """ウィンドウサイズを更新する。
@@ -221,12 +230,7 @@ class SettingsController:
             return
 
         new_window = self.state.current.window.model_copy(update={"size": [width, height]})
-        new_snapshot = SettingsSnapshot(
-            appearance=self.state.current.appearance,
-            window=new_window,
-            database_url=self.state.current.database_url,
-        )
-        self.state.update_current(new_snapshot)
+        self._update_snapshot(window=new_window)
 
     def update_window_position(self, x: int, y: int) -> None:
         """ウィンドウ位置を更新する。
@@ -239,12 +243,7 @@ class SettingsController:
             return
 
         new_window = self.state.current.window.model_copy(update={"position": [x, y]})
-        new_snapshot = SettingsSnapshot(
-            appearance=self.state.current.appearance,
-            window=new_window,
-            database_url=self.state.current.database_url,
-        )
-        self.state.update_current(new_snapshot)
+        self._update_snapshot(window=new_window)
 
     def update_database_url(self, url: str) -> None:
         """データベースURLを更新する。
@@ -255,12 +254,46 @@ class SettingsController:
         if self.state.current is None:
             return
 
-        new_snapshot = SettingsSnapshot(
-            appearance=self.state.current.appearance,
-            window=self.state.current.window,
-            database_url=url,
-        )
-        self.state.update_current(new_snapshot)
+        self._update_snapshot(database_url=url)
+
+    def update_agent_provider(self, provider_value: str) -> None:
+        """LLMプロバイダを更新する。"""
+        if self.state.current is None:
+            return
+
+        try:
+            provider = LLMProvider(provider_value)
+        except ValueError:
+            self.state.set_error("LLMプロバイダの値が不正です")
+            return
+
+        self._update_snapshot(agent_provider=provider)
+
+    def update_agent_model(self, model: str) -> None:
+        """LLMモデル名を更新する。"""
+        if self.state.current is None:
+            return
+
+        sanitized = model.strip() or None
+        new_agent = self.state.current.agent.model_copy(update={"model": sanitized})
+        self._update_snapshot(agent=new_agent)
+
+    def update_agent_temperature(self, temperature: float) -> None:
+        """LLM温度を更新する。"""
+        if self.state.current is None:
+            return
+
+        clamped = max(0.0, min(1.0, float(temperature)))
+        new_agent = self.state.current.agent.model_copy(update={"temperature": clamped})
+        self._update_snapshot(agent=new_agent)
+
+    def update_agent_debug_mode(self, *, debug_mode: bool) -> None:
+        """デバッグモードの有効/無効を切り替える。"""
+        if self.state.current is None:
+            return
+
+        new_agent = self.state.current.agent.model_copy(update={"debug_mode": bool(debug_mode)})
+        self._update_snapshot(agent=new_agent)
 
     def apply_runtime_effects(self, page: Page) -> None:
         """ページに設定を適用する（ランタイム副作用）。
@@ -289,6 +322,27 @@ class SettingsController:
         except Exception as e:
             logger.warning(f"ランタイム設定の適用に失敗しました: {e}")
 
+    def _update_snapshot(
+        self,
+        *,
+        appearance: EditableUserSettings | None = None,
+        window: EditableWindowSettings | None = None,
+        database_url: str | None = None,
+        agent_provider: LLMProvider | None = None,
+        agent: EditableAgentRuntimeSettings | None = None,
+    ) -> None:
+        if self.state.current is None:
+            return
+
+        new_snapshot = SettingsSnapshot(
+            appearance=appearance or self.state.current.appearance,
+            window=window or self.state.current.window,
+            database_url=database_url if database_url is not None else self.state.current.database_url,
+            agent_provider=agent_provider or self.state.current.agent_provider,
+            agent=agent or self.state.current.agent,
+        )
+        self.state.update_current(new_snapshot)
+
     def _validate_current_settings(self) -> None:
         """現在の設定値を検証する。
 
@@ -314,3 +368,8 @@ class SettingsController:
         is_valid, error_msg = validate_database_url(self.state.current.database_url)
         if not is_valid:
             raise ValidationError(error_msg or "データベースURLが不正です")
+
+        temperature = self.state.current.agent.temperature
+        if not 0.0 <= temperature <= 1.0:
+            msg = "LLM温度は0.0〜1.0の範囲で指定してください"
+            raise ValidationError(msg)

@@ -11,18 +11,23 @@ from uuid import uuid4
 
 from loguru import logger
 
+from agents.agent_conf import LLMProvider
 from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
+from logic.application.memo_ai_job_queue import (
+    MemoAiJobSnapshot,
+    MemoAiJobStatus,
+    get_memo_ai_job_queue,
+)
 from logic.application.settings_application_service import SettingsApplicationService
 from logic.services.memo_service import MemoService
 from logic.services.tag_service import TagService
 from logic.unit_of_work import SqlModelUnitOfWork
-from models import MemoCreate, MemoRead, MemoStatus, MemoUpdate
+from models import AiSuggestionStatus, MemoCreate, MemoRead, MemoStatus, MemoUpdate
 
 if TYPE_CHECKING:
     import uuid
 
-    from agents.agent_conf import LLMProvider
     from agents.base import AgentError
     from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
     from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
@@ -70,7 +75,11 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
 
     @classmethod
     @override
-    def get_instance(cls, *args: Any, **kwargs: Any) -> MemoApplicationService: ...
+    def get_instance(cls, *args: Any, **kwargs: Any) -> MemoApplicationService:
+        from typing import cast
+
+        instance = super().get_instance(*args, **kwargs)
+        return cast("MemoApplicationService", instance)
 
     def create(
         self,
@@ -204,6 +213,16 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         if not str(memo_content).strip():
             return OutputModel(tasks=[], suggested_memo_status="clarify")
 
+        if self._provider == LLMProvider.FAKE:
+            agent = self._get_memo_to_task_agent()
+            logger.debug(f"MemoToTask: using FAKE provider, memo_id={memo.id}")
+            fake_output = agent.next_fake_response()
+            if fake_output is not None:
+                logger.debug(
+                    f"MemoToTask: returning fake output with {len(fake_output.tasks)} tasks"
+                )
+                return fake_output
+
         existing_tags = self._collect_existing_tag_names()
         state: MemoToTaskState = {
             "memo": memo,
@@ -242,6 +261,34 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         result = self.clarify_memo(memo)
         return list(result.tasks)
 
+    # --- AIタスク生成 -------------------------------------------------
+
+    def enqueue_ai_generation(self, memo_id: uuid.UUID) -> MemoAiJobSnapshot:
+        """メモをAIタスク生成キューに登録する。"""
+        memo = self.get_by_id(memo_id, with_details=True)
+        updated = self._mark_ai_status(
+            memo_id,
+            ai_status=AiSuggestionStatus.PENDING,
+            memo_status=MemoStatus.ACTIVE if memo.status == MemoStatus.INBOX else None,
+        )
+        queue = get_memo_ai_job_queue()
+        return queue.enqueue(updated, callback=self._handle_ai_job_callback)
+
+    def get_ai_job_snapshot(self, job_id: uuid.UUID) -> MemoAiJobSnapshot:
+        """ジョブ状態を取得する。"""
+        queue = get_memo_ai_job_queue()
+        snapshot = queue.get_snapshot(job_id)
+        if snapshot is None:
+            msg = f"AIジョブが見つかりません: job_id={job_id}"
+            raise MemoApplicationError(msg)
+        return snapshot
+
+    def _handle_ai_job_callback(self, snapshot: MemoAiJobSnapshot) -> None:
+        if snapshot.status == MemoAiJobStatus.SUCCEEDED:
+            self._mark_ai_status(snapshot.memo_id, ai_status=AiSuggestionStatus.AVAILABLE)
+        elif snapshot.status == MemoAiJobStatus.FAILED:
+            self._mark_ai_status(snapshot.memo_id, ai_status=AiSuggestionStatus.FAILED)
+
     def _collect_existing_tag_names(self) -> list[str]:
         """既存タグの名称一覧を取得する。"""
         names: list[str] = []
@@ -276,6 +323,20 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     def _current_datetime_iso(self) -> str:
         """現在日時のISO8601文字列を返す。"""
         return datetime.now(UTC).isoformat()
+
+    def _mark_ai_status(
+        self,
+        memo_id: uuid.UUID,
+        *,
+        ai_status: AiSuggestionStatus,
+        memo_status: MemoStatus | None = None,
+    ) -> MemoRead:
+        """メモのAIステータスを更新する。"""
+        if memo_status is not None:
+            payload = MemoUpdate(ai_suggestion_status=ai_status, status=memo_status)
+        else:
+            payload = MemoUpdate(ai_suggestion_status=ai_status)
+        return self.update(memo_id, payload)
 
     def search(
         self,

@@ -35,7 +35,9 @@ from typing import TYPE_CHECKING
 from views.shared.base_view import BaseViewState
 
 if TYPE_CHECKING:
+    from agents.agent_conf import LLMProvider
     from settings.models import (
+        EditableAgentRuntimeSettings,
         EditableUserSettings,
         EditableWindowSettings,
     )
@@ -52,6 +54,8 @@ class SettingsSnapshot:
     appearance: EditableUserSettings
     window: EditableWindowSettings
     database_url: str
+    agent_provider: LLMProvider
+    agent: EditableAgentRuntimeSettings
 
 
 @dataclass(slots=True)
@@ -93,6 +97,8 @@ class SettingsViewState(BaseViewState):
             appearance=snapshot.appearance.model_copy(deep=True),
             window=snapshot.window.model_copy(deep=True),
             database_url=snapshot.database_url,
+            agent_provider=snapshot.agent_provider,
+            agent=snapshot.agent.model_copy(deep=True),
         )
 
     def update_current(self, snapshot: SettingsSnapshot) -> None:
@@ -111,6 +117,8 @@ class SettingsViewState(BaseViewState):
                 appearance=self.current.appearance.model_copy(deep=True),
                 window=self.current.window.model_copy(deep=True),
                 database_url=self.current.database_url,
+                agent_provider=self.current.agent_provider,
+                agent=self.current.agent.model_copy(deep=True),
             )
 
     def start_loading(self) -> None:

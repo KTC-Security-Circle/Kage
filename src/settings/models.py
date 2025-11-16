@@ -204,7 +204,7 @@ class EditableAgentRuntimeSettings(BaseModel):
     model_config = ConfigDict(frozen=False)
 
     model: str | None = Field(default=None)
-    temperature: float = Field(default=0.2)
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0)
     debug_mode: bool = Field(default=False)
 
 

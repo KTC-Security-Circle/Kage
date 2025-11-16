@@ -338,7 +338,7 @@ class SettingsController:
             appearance=appearance or self.state.current.appearance,
             window=window or self.state.current.window,
             database_url=database_url if database_url is not None else self.state.current.database_url,
-            agent_provider=agent_provider or self.state.current.agent_provider,
+            agent_provider=agent_provider if agent_provider is not None else self.state.current.agent_provider,
             agent=agent or self.state.current.agent,
         )
         self.state.update_current(new_snapshot)

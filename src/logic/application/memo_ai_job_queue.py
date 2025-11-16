@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from threading import Event, Lock, Thread
 from typing import TYPE_CHECKING, cast
@@ -88,6 +88,15 @@ class MemoAiJobQueue:
         self._worker = Thread(target=self._worker_loop, name="MemoAiJobWorker", daemon=True)
         self._worker.start()
 
+        # Cleanup/retention configuration
+        self._job_retention_seconds: int = 600  # 完了したジョブの保持期間（秒）
+        self._job_max_entries: int = 10  # 最大件数制限（無制限増加防止）
+        self._cleanup_interval_seconds: int = 60  # クリーナー実行間隔（秒）
+
+        # Start background cleaner to evict old/too-many jobs
+        self._cleaner = Thread(target=self._cleaner_loop, name="MemoAiJobCleaner", daemon=True)
+        self._cleaner.start()
+
     def enqueue(
         self,
         memo: MemoRead,
@@ -130,12 +139,81 @@ class MemoAiJobQueue:
                 return None
             return self._queue.popleft()
 
+    def _cleaner_loop(self) -> None:
+        """バックグラウンドで古い完了ジョブを削除し、最大件数を超えたら古いものから削除する。"""
+        while True:
+            # Sleep via Event wait to be interruptible in future if needed
+            self._has_items.wait(timeout=self._cleanup_interval_seconds)
+            try:
+                self._cleanup_jobs()
+            except Exception:
+                logger.exception("MemoAIジョブクリーナーで例外が発生しました")
+
+    def _cleanup_jobs(self) -> None:
+        """内部ジョブ辞書を掃除する。
+
+        - 完了（SUCCEEDED/FAILED）してから一定時間経過したジョブを削除する。
+        - 総件数が `_job_max_entries` を超えた場合、古いジョブから削除する。
+        """
+        now = datetime.now(UTC)
+        retention = timedelta(seconds=self._job_retention_seconds)
+        removed: list[UUID] = []
+        with self._lock:
+            removed.extend(self._remove_old_completed(now, retention))
+            removed.extend(self._enforce_max_entries())
+
+        if removed:
+            logger.info("MemoAIジョブをクリーンアップしました: removed=%d", len(removed))
+
+    def _remove_old_completed(self, now: datetime, retention: timedelta) -> list[UUID]:
+        """完了済みで保持期間を超えたジョブを削除して、その job_id を返す。"""
+        removed: list[UUID] = []
+        for job_id, record in list(self._jobs.items()):
+            if record.status in (MemoAiJobStatus.SUCCEEDED, MemoAiJobStatus.FAILED) and (
+                now - record.updated_at > retention
+            ):
+                removed.append(job_id)
+                del self._jobs[job_id]
+                try:
+                    while job_id in self._queue:
+                        self._queue.remove(job_id)
+                except ValueError:
+                    pass
+        return removed
+
+    def _enforce_max_entries(self) -> list[UUID]:
+        """総件数が上限を超えていたら、古いジョブから削除する。削除した job_id を返す。"""
+        removed: list[UUID] = []
+        if len(self._jobs) <= self._job_max_entries:
+            return removed
+
+        # sort candidates: prefer completed then by updated_at asc
+        candidates = sorted(
+            self._jobs.items(),
+            key=lambda kv: (
+                0 if kv[1].status in (MemoAiJobStatus.SUCCEEDED, MemoAiJobStatus.FAILED) else 1,
+                kv[1].updated_at,
+            ),
+        )
+        to_remove = len(self._jobs) - self._job_max_entries
+        for i in range(to_remove):
+            job_id, _ = candidates[i]
+            try:
+                del self._jobs[job_id]
+            except KeyError:
+                continue
+            try:
+                while job_id in self._queue:
+                    self._queue.remove(job_id)
+            except ValueError:
+                pass
+            removed.append(job_id)
+        return removed
+
     def _process(self, record: _MemoAiJobRecord) -> None:
         self._update_status(record, MemoAiJobStatus.RUNNING)
         try:
-            logger.debug(
-                f"MemoAIジョブ処理開始: job_id={record.job_id} memo_id={record.memo.id}"
-            )
+            logger.debug(f"MemoAIジョブ処理開始: job_id={record.job_id} memo_id={record.memo.id}")
             output = self._run_agent(record.memo)
             record.tasks = [self._convert_task(task) for task in output.tasks]
             record.suggested_memo_status = output.suggested_memo_status
@@ -174,8 +252,9 @@ class MemoAiJobQueue:
         )
 
     def _update_status(self, record: _MemoAiJobRecord, status: MemoAiJobStatus) -> None:
-        record.status = status
-        record.updated_at = datetime.now(UTC)
+        with self._lock:
+            record.status = status
+            record.updated_at = datetime.now(UTC)
 
 
 _queue_instance: MemoAiJobQueue | None = None

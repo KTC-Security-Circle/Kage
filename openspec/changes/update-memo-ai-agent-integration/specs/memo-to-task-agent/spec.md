@@ -14,7 +14,14 @@ MemoToTaskAgent を起動する公開 API (`generate_tasks_from_memo` など) �
 
 ### Requirement: Serialized Generation Queue
 
-MemoToTaskAgent の実行は 1 件ずつ順序通りに処理する in-memory キューで管理しなければならない (MUST)。キューマネージャは将来的な永続化バックエンド差し替えを想定した抽象を提供し、現在はメモリ実装＋永続化 TODO コメントを残すこと (SHOULD)。キューイング済みメモが完了したら結果と suggested_memo_status を呼び出し元へ通知しなければならない (MUST)。
+MemoToTaskAgent の実行は 1 件ずつ順序通りに処理する in-memory キューで管理しなければならない (MUST)。キューマネージャは将来的な永続化バックエンド差し替えを想定した抽象を提供し、現在はメモリ実装 s marking persistence extension points
+An abstract interface/protocol that would allow backend replacement
+Documentation about how to replace the in-memory implementation
+Consider adding:
+
+TODO comments at key extension points (e.g., \_jobs dictionary, enqueue, get_snapshot)
+A Protocol or ABC defining the queue interface
+Documentation about the persistence strategy ＋永続化 TODO コメントを残すこと (SHOULD)。キューイング済みメモが完了したら結果と suggested_memo_status を呼び出し元へ通知しなければならない (MUST)。
 
 #### Scenario: 単一並列キュー
 

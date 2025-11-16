@@ -40,6 +40,27 @@ class WeeklyStats:
     completed_last_week: int
 
 
+def _get_week_start() -> datetime:
+    """今週の開始日（月曜日）を取得
+
+    Returns:
+        今週の月曜日の日時
+    """
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # 0=月曜日, 6=日曜日
+    days_since_monday = today.weekday()
+    return today - timedelta(days=days_since_monday)
+
+
+def _get_week_end() -> datetime:
+    """今週の終了日（日曜日）を取得
+
+    Returns:
+        今週の日曜日の日時
+    """
+    return _get_week_start() + timedelta(days=6, hours=23, minutes=59, seconds=59)
+
+
 @dataclass(slots=True)
 class WeeklyReviewState:
     """週次レビューの状態を保持するデータクラス
@@ -126,24 +147,3 @@ class WeeklyReviewState:
         start_str = self.current_week_start.strftime("%Y/%m/%d")
         end_str = self.current_week_end.strftime("%Y/%m/%d")
         return f"{start_str} - {end_str}"
-
-
-def _get_week_start() -> datetime:
-    """今週の開始日（月曜日）を取得
-
-    Returns:
-        今週の月曜日の日時
-    """
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    # 0=月曜日, 6=日曜日
-    days_since_monday = today.weekday()
-    return today - timedelta(days=days_since_monday)
-
-
-def _get_week_end() -> datetime:
-    """今週の終了日（日曜日）を取得
-
-    Returns:
-        今週の日曜日の日時
-    """
-    return _get_week_start() + timedelta(days=6, hours=23, minutes=59, seconds=59)

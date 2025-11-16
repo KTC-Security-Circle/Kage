@@ -113,19 +113,20 @@ class TaskListCard(ft.Container):
                     )
 
                 # タスク行
+                title_control = ft.Text(
+                    task.title,
+                    size=14,
+                    max_lines=1,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                    expand=True,
+                )
+                controls_list: list[ft.Control] = [title_control]
+                if priority_badge:
+                    controls_list.append(priority_badge)
+
                 task_row = ft.Container(
                     content=ft.Row(
-                        controls=[
-                            # タイトルテキストは一度だけ生成
-                            task_title_text := ft.Text(
-                                task.title,
-                                size=14,
-                                max_lines=1,
-                                overflow=ft.TextOverflow.ELLIPSIS,
-                                expand=True,
-                            )
-                            *( [task_title_text, priority_badge] if priority_badge else [task_title_text] ),
-                        ],
+                        controls=controls_list,
                         spacing=8,
                     ),
                     padding=ft.padding.all(8),

@@ -34,17 +34,21 @@
 
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timedelta
+from uuid import UUID, uuid4
+
 import flet as ft
 from loguru import logger
 
 from logic.application.memo_application_service import MemoApplicationService
-from models import MemoRead, MemoStatus
+from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 
 from . import presenter
 from .components import MemoActionBar, MemoCardList, MemoFilters, MemoStatusTabs
 from .controller import MemoApplicationPort, MemosController
-from .state import MemosViewState
+from .state import AiSuggestedTask, MemosViewState
 
 
 class MemosView(BaseView):
@@ -81,6 +85,7 @@ class MemosView(BaseView):
         self._memo_list: MemoCardList | None = None
         self._memo_filters: MemoFilters | None = None
         self._detail_panel: ft.Container | None = None
+        self._pending_async_tasks: list[asyncio.Task[None]] = []
 
         self.did_mount()
         self.with_loading(self._load_initial_memos, user_error_message="メモの読み込みに失敗しました")
@@ -176,11 +181,40 @@ class MemosView(BaseView):
         if selected_memo is None:
             return ft.Container(content=presenter.build_empty_detail_panel())
 
+        ai_section = self._build_ai_task_flow_section(selected_memo)
+        extra_sections = (ai_section,) if ai_section is not None else None
+
         return presenter.build_detail_panel(
             selected_memo,
             on_ai_suggestion=self._handle_ai_suggestion,
             on_edit=self._handle_edit_memo,
             on_delete=self._handle_delete_memo,
+            extra_sections=extra_sections,
+        )
+
+    def _build_ai_task_flow_section(self, memo: MemoRead) -> ft.Control | None:
+        """AI提案→タスク承認フローのUIを構築する。"""
+        ai_status = self.memos_state.effective_ai_status(memo)
+        ai_state = self.memos_state.ai_flow_state_for(memo.id)
+        return presenter.build_ai_task_flow_panel(
+            memo,
+            ai_status=ai_status,
+            tasks=tuple(ai_state.generated_tasks),
+            selected_task_ids=set(ai_state.selected_task_ids),
+            editing_task_id=ai_state.editing_task_id,
+            on_request_ai=lambda _e, target=memo: self._handle_request_ai_generation(target),
+            on_retry_ai=lambda _e, memo_id=memo.id: self._handle_retry_ai_generation(memo_id),
+            on_mark_as_idea=lambda _e, memo_id=memo.id: self._handle_mark_memo_as_idea(memo_id),
+            on_toggle_task=lambda task_id, memo_id=memo.id: self._handle_toggle_ai_task(memo_id, task_id),
+            on_start_edit=lambda task_id, memo_id=memo.id: self._handle_start_edit_ai_task(memo_id, task_id),
+            on_cancel_edit=lambda e, memo_id=memo.id: self._handle_cancel_edit_ai_task(memo_id, e),
+            on_edit_field_change=lambda task_id, field, value, memo_id=memo.id: self._handle_update_ai_task_field(
+                memo_id, task_id, field, value
+            ),
+            on_save_edit=lambda task_id, memo_id=memo.id: self._handle_save_ai_task_edit(memo_id, task_id),
+            on_delete_task=lambda task_id, memo_id=memo.id: self._handle_delete_ai_task(memo_id, task_id),
+            on_add_task=lambda _=None, memo_id=memo.id: self._handle_add_ai_task(memo_id),
+            on_approve_tasks=lambda _=None, target=memo: self._handle_approve_ai_tasks(target),
         )
 
     def _get_tab_counts(self) -> dict[MemoStatus, int]:
@@ -304,6 +338,173 @@ class MemosView(BaseView):
         logger.info("AI suggestion requested")
         # TODO: AI提案機能を実装
         self.show_info_snackbar("AI提案機能は統合フェーズで実装予定です")
+
+    def _handle_request_ai_generation(self, memo: MemoRead) -> None:
+        """MemoToTaskAgentによるタスク生成を擬似的に開始する。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo.id)
+        ai_state.editing_task_id = None
+        ai_state.is_generating = True
+        self.memos_state.set_ai_status_override(memo.id, AiSuggestionStatus.PENDING)
+        memo.ai_suggestion_status = AiSuggestionStatus.PENDING
+        if memo.status == MemoStatus.INBOX:
+            memo.status = MemoStatus.ACTIVE
+        self._refresh()
+        try:
+            self.page.run_task(self._simulate_ai_generation, memo.id)
+        except Exception:  # page.run_task未サポート時のフォールバック
+            task = asyncio.create_task(self._simulate_ai_generation(memo.id))
+            self._pending_async_tasks.append(task)
+
+    def _handle_retry_ai_generation(self, memo_id: UUID) -> None:
+        """AI生成処理を再実行する。"""
+        memo = self._get_memo_by_id(memo_id)
+        if memo is None:
+            return
+        self._handle_request_ai_generation(memo)
+
+    def _handle_mark_memo_as_idea(self, memo_id: UUID) -> None:
+        """メモをアイデア扱いにしてAIフローをリセットする。"""
+        memo = self._get_memo_by_id(memo_id)
+        if memo is None:
+            return
+        memo.status = MemoStatus.IDEA
+        memo.ai_suggestion_status = AiSuggestionStatus.NOT_REQUESTED
+        self.memos_state.clear_ai_flow_state(memo_id)
+        self.show_info_snackbar("メモをアイデアとして保存しました")
+        self._refresh()
+
+    def _handle_toggle_ai_task(self, memo_id: UUID, task_id: str) -> None:
+        """AI提案タスクの選択状態をトグルする。"""
+        self.memos_state.toggle_task_selection(memo_id, task_id)
+        self._refresh()
+
+    def _handle_start_edit_ai_task(self, memo_id: UUID, task_id: str) -> None:
+        """指定タスクを編集モードに切り替える。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        ai_state.editing_task_id = task_id
+        self._refresh()
+
+    def _handle_cancel_edit_ai_task(self, memo_id: UUID, _: ft.ControlEvent | None = None) -> None:
+        """AI提案タスクの編集をキャンセルする。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        ai_state.editing_task_id = None
+        self._refresh()
+
+    def _handle_update_ai_task_field(self, memo_id: UUID, task_id: str, field: str, value: str) -> None:
+        """編集中タスクのフィールド値を更新する。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        for task in ai_state.generated_tasks:
+            if task.task_id == task_id:
+                if field == "title":
+                    task.title = value
+                elif field == "description":
+                    task.description = value
+                break
+
+    def _handle_save_ai_task_edit(self, memo_id: UUID, task_id: str) -> None:
+        """AI提案タスクの編集結果を確定する。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        if ai_state.editing_task_id == task_id:
+            ai_state.editing_task_id = None
+        self.show_success_snackbar("タスク内容を更新しました")
+        self._refresh()
+
+    def _handle_delete_ai_task(self, memo_id: UUID, task_id: str) -> None:
+        """AI提案タスクを削除する。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        ai_state.generated_tasks = [task for task in ai_state.generated_tasks if task.task_id != task_id]
+        ai_state.selected_task_ids.discard(task_id)
+        if ai_state.editing_task_id == task_id:
+            ai_state.editing_task_id = None
+        self._refresh()
+
+    def _handle_add_ai_task(self, memo_id: UUID) -> None:
+        """AI提案リストに空のタスクを追加する。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        task = AiSuggestedTask(
+            task_id=f"temp-{uuid4().hex}",
+            title="新しいタスク",
+            description="",
+            tags=(),
+            due_date=datetime.now() + timedelta(days=7),
+        )
+        ai_state.generated_tasks.append(task)
+        ai_state.editing_task_id = task.task_id
+        ai_state.selected_task_ids.add(task.task_id)
+        self._refresh()
+
+    def _handle_approve_ai_tasks(self, memo: MemoRead) -> None:
+        """選択されたAI提案タスクを承認済みとして扱う。"""
+        ai_state = self.memos_state.ai_flow_state_for(memo.id)
+        if not ai_state.selected_task_ids:
+            self.show_snack_bar("承認するタスクを選択してください", bgcolor=ft.Colors.ERROR)
+            return
+        ai_state.status_override = AiSuggestionStatus.REVIEWED
+        memo.ai_suggestion_status = AiSuggestionStatus.REVIEWED
+        memo.status = MemoStatus.ARCHIVE
+        self.show_success_snackbar("タスクを承認し、メモをアーカイブしました")
+        self._refresh()
+
+    async def _simulate_ai_generation(self, memo_id: UUID) -> None:
+        """AI提案生成処理を擬似的に遅延させる。"""
+        await asyncio.sleep(2)
+        self._complete_ai_generation(memo_id)
+
+    def _complete_ai_generation(self, memo_id: UUID) -> None:
+        """モックのAI生成完了処理を行う。"""
+        memo = self._get_memo_by_id(memo_id)
+        if memo is None:
+            return
+        tasks = self._generate_mock_tasks(memo)
+        self.memos_state.set_generated_tasks(memo_id, tasks)
+        ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        ai_state.status_override = AiSuggestionStatus.AVAILABLE
+        ai_state.is_generating = False
+        memo.ai_suggestion_status = AiSuggestionStatus.AVAILABLE
+        memo.status = MemoStatus.ACTIVE
+        self.show_success_snackbar("AI提案タスクを取得しました")
+        self._refresh()
+
+    def _generate_mock_tasks(self, memo: MemoRead) -> list[AiSuggestedTask]:
+        """UIデモ用のモックタスクを生成する。"""
+        base_title = memo.title or "メモ"
+        now = datetime.now()
+        templates = [
+            (
+                f"{base_title}の要件整理",
+                "メモの内容を整理し、MemoToTaskAgentで扱いやすい形にまとめる",
+                ("planning",),
+                3,
+            ),
+            (
+                "実装ステップの洗い出し",
+                "必要なタスクを分解し、優先度付きで並べる",
+                ("execution", "priority"),
+                5,
+            ),
+            (
+                "承認準備",
+                "生成されたタスクをユーザーに提示できる形に整える",
+                ("review",),
+                7,
+            ),
+        ]
+        generated: list[AiSuggestedTask] = []
+        for idx, (title, description, tags, offset_days) in enumerate(templates, start=1):
+            generated.append(
+                AiSuggestedTask(
+                    task_id=f"temp-{memo.id}-{idx}-{uuid4().hex[:6]}",
+                    title=title,
+                    description=description,
+                    tags=tuple(tags),
+                    due_date=now + timedelta(days=offset_days),
+                )
+            )
+        return generated
+
+    def _get_memo_by_id(self, memo_id: UUID) -> MemoRead | None:
+        """内部インデックスからメモを検索する。"""
+        return self.memos_state.memo_by_id(memo_id)
 
     def _handle_edit_memo(self, _: ft.ControlEvent) -> None:
         """メモ編集ハンドラー。編集ダイアログを表示し、保存時に Controller 経由で更新する。

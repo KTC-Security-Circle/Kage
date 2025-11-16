@@ -73,7 +73,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from models import MemoStatus
+from models import AiSuggestionStatus, MemoStatus
 
 from .components.action_bar import DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH, ActionBarData
 from .components.filters import FilterConfig, FilterData
@@ -87,6 +87,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from models import MemoRead
+
+    from .state import AiSuggestedTask
 
 
 # ========================================
@@ -486,6 +488,7 @@ def build_detail_panel(
     on_ai_suggestion: Callable,
     on_edit: Callable,
     on_delete: Callable,
+    extra_sections: tuple[ft.Control, ...] | None = None,
 ) -> ft.Container:
     """メモ詳細パネルを構築する。
 
@@ -494,6 +497,7 @@ def build_detail_panel(
         on_ai_suggestion: AI提案ボタンのコールバック
         on_edit: 編集ボタンのコールバック
         on_delete: 削除ボタンのコールバック
+        extra_sections: 詳細カードの下に追加表示する追加セクション群
 
     Returns:
         詳細パネルコンテナ
@@ -546,9 +550,13 @@ def build_detail_panel(
         ),
     )
 
+    column_controls: list[ft.Control] = [detail_card]
+    if extra_sections:
+        column_controls.extend(extra_sections)
+
     return ft.Container(
         content=ft.Column(
-            controls=[detail_card],
+            controls=column_controls,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         ),
@@ -583,6 +591,412 @@ def build_empty_detail_panel() -> ft.Control:
         ),
         alignment=ft.alignment.center,
         expand=True,
+    )
+
+
+def build_ai_task_flow_panel(  # noqa: PLR0913
+    memo: MemoRead,
+    *,
+    ai_status: AiSuggestionStatus,
+    tasks: tuple[AiSuggestedTask, ...],
+    selected_task_ids: set[str],
+    editing_task_id: str | None,
+    on_request_ai: Callable[[ft.ControlEvent], None] | None = None,
+    on_retry_ai: Callable[[ft.ControlEvent], None] | None = None,
+    on_mark_as_idea: Callable[[ft.ControlEvent], None] | None = None,
+    on_toggle_task: Callable[[str], None] | None = None,
+    on_start_edit: Callable[[str], None] | None = None,
+    on_cancel_edit: Callable[[ft.ControlEvent | None], None] | None = None,
+    on_edit_field_change: Callable[[str, str, str], None] | None = None,
+    on_save_edit: Callable[[str], None] | None = None,
+    on_delete_task: Callable[[str], None] | None = None,
+    on_add_task: Callable[[ft.ControlEvent | None], None] | None = None,
+    on_approve_tasks: Callable[[ft.ControlEvent | None], None] | None = None,
+) -> ft.Control:
+    """AI提案→タスク承認フローのカードを構築する。"""
+    header_title, header_description = _ai_flow_header_copy(memo.status)
+    status_badge = _build_ai_status_badge(ai_status)
+
+    body_controls: list[ft.Control] = []
+    match ai_status:
+        case AiSuggestionStatus.NOT_REQUESTED:
+            body_controls.append(
+                ft.Text(
+                    "InboxメモはMemoToTaskAgentにタスク生成を依頼する前段階です。AIに生成を許可するとアクティブ状態に遷移します。",
+                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                )
+            )
+            actions = ft.Row(
+                controls=[
+                    ft.ElevatedButton(
+                        "AIにタスク生成を依頼",
+                        icon=ft.Icons.AUTO_AWESOME,
+                        on_click=on_request_ai,
+                        expand=True,
+                    ),
+                    ft.OutlinedButton(
+                        "アイデアとして残す",
+                        icon=ft.Icons.LIGHTBULB,
+                        on_click=on_mark_as_idea,
+                        expand=True,
+                    ),
+                ],
+                spacing=12,
+            )
+            body_controls.append(actions)
+        case AiSuggestionStatus.PENDING:
+            body_controls.append(
+                ft.Row(
+                    controls=[
+                        ft.ProgressRing(width=32, height=32),
+                        ft.Column(
+                            controls=[
+                                ft.Text(
+                                    "MemoToTaskAgentがタスクを生成しています",
+                                    style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                ),
+                                ft.Text(
+                                    "生成が完了すると承認待ちとしてActiveメモに切り替わります",
+                                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
+                                ),
+                            ],
+                            spacing=4,
+                        ),
+                    ],
+                    spacing=16,
+                )
+            )
+        case AiSuggestionStatus.AVAILABLE:
+            body_controls.extend(
+                _build_available_tasks_section(
+                    tasks=tasks,
+                    selected_task_ids=selected_task_ids,
+                    editing_task_id=editing_task_id,
+                    on_toggle_task=on_toggle_task,
+                    on_start_edit=on_start_edit,
+                    on_cancel_edit=on_cancel_edit,
+                    on_edit_field_change=on_edit_field_change,
+                    on_save_edit=on_save_edit,
+                    on_delete_task=on_delete_task,
+                    on_add_task=on_add_task,
+                )
+            )
+            footer_row = ft.Row(
+                controls=[
+                    ft.OutlinedButton(
+                        "アイデアとしてマーク",
+                        icon=ft.Icons.LIGHTBULB,
+                        on_click=on_mark_as_idea,
+                        expand=True,
+                    ),
+                    ft.ElevatedButton(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE),
+                                ft.Text(f"{len(selected_task_ids)}件を承認"),
+                            ],
+                            spacing=8,
+                            tight=True,
+                        ),
+                        on_click=on_approve_tasks,
+                        disabled=len(selected_task_ids) == 0,
+                        expand=True,
+                    ),
+                ],
+                spacing=12,
+            )
+            body_controls.append(footer_row)
+        case AiSuggestionStatus.FAILED:
+            body_controls.append(
+                ft.Column(
+                    controls=[
+                        ft.Row(
+                            controls=[ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR)],
+                        ),
+                        ft.Text(
+                            "MemoToTaskAgentでの生成に失敗しました。もう一度お試しください。",
+                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            color=ft.Colors.ON_SURFACE,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.ElevatedButton(
+                                    "再試行",
+                                    icon=ft.Icons.REFRESH,
+                                    on_click=on_retry_ai,
+                                    expand=True,
+                                ),
+                                ft.OutlinedButton(
+                                    "アイデアとして残す",
+                                    icon=ft.Icons.LIGHTBULB,
+                                    on_click=on_mark_as_idea,
+                                    expand=True,
+                                ),
+                            ],
+                            spacing=12,
+                        ),
+                    ],
+                    spacing=8,
+                )
+            )
+        case _:
+            body_controls.append(
+                ft.Text(
+                    "AI提案は処理済みです。詳細はタスク一覧で確認できます。",
+                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                )
+            )
+
+    return ft.Card(
+        content=ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Text(
+                                        header_title,
+                                        style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                        weight=ft.FontWeight.BOLD,
+                                    ),
+                                    ft.Text(
+                                        header_description,
+                                        style=ft.TextThemeStyle.BODY_MEDIUM,
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                    ),
+                                ],
+                                spacing=4,
+                            ),
+                            status_badge,
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.START,
+                    ),
+                    ft.Divider(),
+                    *body_controls,
+                ],
+                spacing=12,
+            ),
+            padding=ft.padding.all(20),
+        )
+    )
+
+
+def _ai_flow_header_copy(memo_status: MemoStatus) -> tuple[str, str]:
+    if memo_status == MemoStatus.INBOX:
+        return (
+            "Inbox → Active への準備",
+            "MemoToTaskAgentがタスク化する前に、ユーザーの許可を得る状態です。",
+        )
+    if memo_status == MemoStatus.ACTIVE:
+        return (
+            "Active メモの承認待ち",
+            "生成中または承認を待つタスクをレビューしてください。",
+        )
+    if memo_status == MemoStatus.IDEA:
+        return (
+            "アイデアとして保存済み",
+            "このメモはタスク化せず、インスピレーションとして保持されています。",
+        )
+    return (
+        "アーカイブ済みメモ",
+        "関連タスクが完了したため、履歴として残っています。",
+    )
+
+
+def _build_ai_status_badge(status: AiSuggestionStatus) -> ft.Control:
+    label_map = {
+        AiSuggestionStatus.NOT_REQUESTED: ("許可待ち", ft.Colors.SECONDARY_CONTAINER),
+        AiSuggestionStatus.PENDING: ("生成中", ft.Colors.PRIMARY_CONTAINER),
+        AiSuggestionStatus.AVAILABLE: ("承認待ち", ft.Colors.TERTIARY_CONTAINER),
+        AiSuggestionStatus.REVIEWED: ("承認済み", ft.Colors.SECONDARY_CONTAINER),
+        AiSuggestionStatus.FAILED: ("失敗", ft.Colors.ERROR_CONTAINER),
+    }
+    text, color = label_map.get(status, (status.value, ft.Colors.SURFACE))
+    return ft.Container(
+        content=ft.Text(text, style=ft.TextThemeStyle.BODY_SMALL),
+        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+        bgcolor=color,
+        border_radius=16,
+    )
+
+
+def _build_available_tasks_section(  # noqa: PLR0913
+    *,
+    tasks: tuple[AiSuggestedTask, ...],
+    selected_task_ids: set[str],
+    editing_task_id: str | None,
+    on_toggle_task: Callable[[str], None] | None,
+    on_start_edit: Callable[[str], None] | None,
+    on_cancel_edit: Callable[[ft.ControlEvent | None], None] | None,
+    on_edit_field_change: Callable[[str, str, str], None] | None,
+    on_save_edit: Callable[[str], None] | None,
+    on_delete_task: Callable[[str], None] | None,
+    on_add_task: Callable[[ft.ControlEvent | None], None] | None,
+) -> list[ft.Control]:
+    section_controls: list[ft.Control] = []
+    task_cards: list[ft.Control] = []
+    if not tasks:
+        section_controls.append(
+            ft.Container(
+                content=ft.Text(
+                    "AI提案タスクがまだありません。タスクを追加して承認フローをテストできます。",
+                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                padding=ft.padding.symmetric(vertical=8),
+            )
+        )
+
+    for task in tasks:
+        is_selected = task.task_id in selected_task_ids
+        if task.task_id == editing_task_id:
+            card_body = _build_editable_task_body(
+                task,
+                on_edit_field_change=on_edit_field_change,
+                on_save_edit=on_save_edit,
+                on_cancel_edit=on_cancel_edit,
+                on_delete_task=on_delete_task,
+            )
+        else:
+            card_body = _build_task_summary_body(
+                task,
+                is_selected=is_selected,
+                on_toggle_task=on_toggle_task,
+                on_start_edit=on_start_edit,
+                on_delete_task=on_delete_task,
+            )
+        task_cards.append(
+            ft.Container(
+                content=card_body,
+                border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                border_radius=12,
+                padding=ft.padding.all(12),
+                bgcolor=ft.Colors.SECONDARY_CONTAINER if is_selected else ft.Colors.SURFACE,
+            )
+        )
+
+    if task_cards:
+        section_controls.append(ft.Column(controls=task_cards, spacing=12))
+
+    add_button = ft.TextButton(
+        "タスクを追加",
+        icon=ft.Icons.ADD,
+        on_click=on_add_task,
+    )
+    section_controls.append(ft.Row(controls=[add_button], alignment=ft.MainAxisAlignment.END))
+
+    return section_controls
+
+
+def _build_task_summary_body(
+    task: AiSuggestedTask,
+    *,
+    is_selected: bool,
+    on_toggle_task: Callable[[str], None] | None,
+    on_start_edit: Callable[[str], None] | None,
+    on_delete_task: Callable[[str], None] | None,
+) -> ft.Control:
+    due_date_text = format_datetime(task.due_date)
+    detail_controls: list[ft.Control] = [
+        ft.Text(task.title, style=ft.TextThemeStyle.TITLE_SMALL, weight=ft.FontWeight.BOLD),
+        ft.Text(task.description, style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT),
+    ]
+    if due_date_text:
+        detail_controls.append(
+            ft.Text(due_date_text, style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT)
+        )
+    if task.tags:
+        tag_row = ft.Row(
+            controls=[
+                ft.Chip(
+                    label=ft.Text(tag, style=ft.TextThemeStyle.BODY_SMALL),
+                    bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                )
+                for tag in task.tags
+            ],
+            spacing=6,
+            wrap=True,
+        )
+        detail_controls.append(tag_row)
+
+    return ft.Row(
+        controls=[
+            ft.Checkbox(
+                value=is_selected,
+                on_change=(lambda _: on_toggle_task(task.task_id)) if on_toggle_task else None,
+            ),
+            ft.Column(controls=detail_controls, spacing=4, expand=True),
+            ft.Row(
+                controls=[
+                    ft.IconButton(
+                        icon=ft.Icons.EDIT,
+                        tooltip="編集",
+                        on_click=(lambda _: on_start_edit(task.task_id)) if on_start_edit else None,
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.DELETE_OUTLINE,
+                        tooltip="削除",
+                        on_click=(lambda _: on_delete_task(task.task_id)) if on_delete_task else None,
+                    ),
+                ],
+            ),
+        ],
+        spacing=12,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+    )
+
+
+def _build_editable_task_body(
+    task: AiSuggestedTask,
+    *,
+    on_edit_field_change: Callable[[str, str, str], None] | None,
+    on_save_edit: Callable[[str], None] | None,
+    on_cancel_edit: Callable[[ft.ControlEvent | None], None] | None,
+    on_delete_task: Callable[[str], None] | None,
+) -> ft.Control:
+    def _handle_change(field: str, value: str) -> None:
+        if on_edit_field_change:
+            on_edit_field_change(task.task_id, field, value)
+
+    return ft.Column(
+        controls=[
+            ft.TextField(
+                label="タスク名",
+                value=task.title,
+                on_change=lambda e: _handle_change("title", e.control.value or ""),
+            ),
+            ft.TextField(
+                label="説明",
+                multiline=True,
+                min_lines=3,
+                value=task.description,
+                on_change=lambda e: _handle_change("description", e.control.value or ""),
+            ),
+            ft.Row(
+                controls=[
+                    ft.ElevatedButton(
+                        "保存",
+                        icon=ft.Icons.SAVE,
+                        on_click=(lambda _: on_save_edit(task.task_id)) if on_save_edit else None,
+                    ),
+                    ft.TextButton(
+                        "キャンセル",
+                        on_click=on_cancel_edit,
+                    ),
+                    ft.TextButton(
+                        "削除",
+                        icon=ft.Icons.DELETE_OUTLINE,
+                        on_click=(lambda _: on_delete_task(task.task_id)) if on_delete_task else None,
+                    ),
+                ],
+                spacing=8,
+            ),
+        ],
+        spacing=8,
     )
 
 

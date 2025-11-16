@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from itertools import chain
 from typing import TYPE_CHECKING, cast
 
@@ -162,8 +163,6 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
     _description = "自由形式メモからタスク候補を抽出する"
     _state = MemoToTaskState
 
-    _fake_responses = cast("list[BaseModel]", list(_DEFAULT_FAKE_RESPONSES))
-
     def __init__(
         self,
         provider: LLMProvider = LLMProvider.FAKE,
@@ -179,7 +178,10 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             **kwargs: 親クラス引数（model_name等）
         """
         self._persist_on_finalize = persist_on_finalize
+        self._fake_response_index: int = 0
         super().__init__(provider, **kwargs)
+        if provider == LLMProvider.FAKE:
+            self._fake_responses = cast("list[BaseModel]", list(_DEFAULT_FAKE_RESPONSES))
 
     def create_graph(self, graph_builder: StateGraph) -> StateGraph:
         """エージェントの状態遷移グラフを構築する。
@@ -246,6 +248,32 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         graph_builder.add_edge("finalize_response", END)
 
         return graph_builder
+
+    def invoke(self, state: MemoToTaskState, thread_id: str) -> MemoToTaskResult | AgentError:
+        if self.provider == LLMProvider.FAKE:
+            fake_output = self.next_fake_response()
+            if fake_output is not None:
+                return MemoToTaskResult(
+                    tasks=list(fake_output.tasks),
+                    suggested_memo_status=fake_output.suggested_memo_status,
+                    processed_data=self._state,
+                )
+        return super().invoke(state, thread_id)
+
+    def next_fake_response(self) -> MemoToTaskAgentOutput | None:
+        """FAKEプロバイダ用のプリセット応答を返す。"""
+        if self.provider != LLMProvider.FAKE or not self._fake_responses:
+            return None
+        responses = self._fake_responses
+        index = self._fake_response_index % len(responses)
+        raw = deepcopy(responses[index])
+        self._fake_response_index = (self._fake_response_index + 1) % len(responses)
+        if not isinstance(raw, MemoToTaskAgentOutput):
+            return None
+        return MemoToTaskAgentOutput(
+            tasks=list(raw.tasks),
+            suggested_memo_status=raw.suggested_memo_status,
+        )
 
     def _create_return_response(
         self, final_response: dict[str, KwargsAny] | KwargsAny
@@ -1063,7 +1091,6 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     from copy import deepcopy
     from uuid import uuid4
 
-    from agents.agent_conf import HuggingFaceModel
     from logging_conf import setup_logger
     from models import MemoRead, MemoStatus
     from settings.models import EnvSettings
@@ -1075,8 +1102,7 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     # 実行環境に依存するため、失敗時は FAKE へフォールバックします。
     try:
         agent = MemoToTaskAgent(
-            LLMProvider.OPENVINO,
-            model_name=HuggingFaceModel.QWEN_3_8B_INT4,
+            LLMProvider.FAKE,
             verbose=True,
             error_response=False,
             persist_on_finalize=True,
@@ -1132,7 +1158,7 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     ]
     # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）
     # 必要に応じて下記のラベル配列を書き換えて、1件ずつ確認してください。
-    selected_labels = ["task_with_schedule"]  # 例: ["project_planning"] に変更
+    selected_labels = ["task_with_schedule", "project_planning", "idea_handling"]
     sample_inputs = [item for item in all_samples if item[0] in selected_labels]
 
     for label, sample_state in sample_inputs:

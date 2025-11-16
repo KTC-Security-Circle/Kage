@@ -17,6 +17,7 @@ from uuid import uuid4
 
 from loguru import logger
 
+from agents.agent_conf import LLMProvider
 from agents.base import AgentError
 from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
 from errors import ApplicationError
@@ -50,7 +51,11 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
 
     @classmethod
     @override
-    def get_instance(cls, *args: Any, **kwargs: Any) -> MemoToTaskApplicationService: ...
+    def get_instance(cls, *args: Any, **kwargs: Any) -> MemoToTaskApplicationService:
+        from typing import cast
+
+        instance = super().get_instance(*args, **kwargs)
+        return cast("MemoToTaskApplicationService", instance)
 
     # Public API ---------------------------------------------------------
     def clarify_memo(self, memo: MemoRead) -> MemoToTaskAgentOutput:
@@ -70,6 +75,16 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         memo_content = getattr(memo, "content", "")
         if not str(memo_content).strip():
             return OutputModel(tasks=[], suggested_memo_status="clarify")
+
+        if self._get_provider() == LLMProvider.FAKE:
+            agent = self._get_agent()
+            fake_output = agent.next_fake_response()
+            if fake_output is not None:
+                logger.debug(
+                    "MemoToTaskApplicationService: returning fake output "
+                    f"tasks={len(fake_output.tasks)}"
+                )
+                return fake_output
 
         state: MemoToTaskState = {
             "memo": memo,
@@ -146,7 +161,6 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
 
 # 型ヒント用の前方宣言
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from agents.agent_conf import LLMProvider
     from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
     from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
     from agents.task_agents.memo_to_task.state import MemoToTaskState

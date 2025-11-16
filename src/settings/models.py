@@ -119,6 +119,16 @@ class GeminiAgentModels(BaseModel):
     )
 
 
+class AgentRuntimeSettings(BaseModel):
+    """LLM 実行時設定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    model: str | None = Field(default=None, description="LLMモデル名。None の場合は内部既定を使用。")
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0, description="LLM温度 (0.0〜1.0)")
+    debug_mode: bool = Field(default=False, description="詳細ログやデバッグモードを有効にする")
+
+
 class AgentsSettings(BaseModel):
     """エージェント全体設定 (互換性考慮せず再構築)。"""
 
@@ -128,6 +138,7 @@ class AgentsSettings(BaseModel):
         default=LLMProvider.FAKE,
         description="全エージェント共通で使用する LLM プロバイダ。",
     )
+    runtime: AgentRuntimeSettings = Field(default_factory=AgentRuntimeSettings, description="LLM 実行時設定")
     huggingface: HuggingFaceAgentModels | EditableHuggingFaceAgentModels = Field(
         default_factory=HuggingFaceAgentModels, description="HuggingFace/OPENVINO 系モデル設定"
     )
@@ -169,6 +180,15 @@ class AgentsSettings(BaseModel):
             return GeminiAgentModels.model_validate(v.model_dump())
         return v
 
+    @field_validator("runtime", mode="before")
+    @classmethod
+    def _from_editable_runtime(
+        cls, v: AgentRuntimeSettings | EditableAgentRuntimeSettings | dict[str, Any] | None
+    ) -> AgentRuntimeSettings | dict[str, Any] | None:
+        if isinstance(v, EditableAgentRuntimeSettings) and not isinstance(v, AgentRuntimeSettings):
+            return AgentRuntimeSettings.model_validate(v.model_dump())
+        return v
+
 
 class EditableHuggingFaceAgentModels(BaseModel):
     model_config = ConfigDict(frozen=False)
@@ -180,12 +200,21 @@ class EditableGeminiAgentModels(BaseModel):
     one_liner: str | None = Field(default=None)
 
 
+class EditableAgentRuntimeSettings(BaseModel):
+    model_config = ConfigDict(frozen=False)
+
+    model: str | None = Field(default=None)
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+    debug_mode: bool = Field(default=False)
+
+
 class EditableAgentsSettings(BaseModel):
     """編集可能: provider とプロバイダ別モデル設定。"""
 
     model_config = ConfigDict(frozen=False)
 
     provider: LLMProvider = Field(default=LLMProvider.FAKE)
+    runtime: EditableAgentRuntimeSettings | AgentRuntimeSettings = Field(default_factory=EditableAgentRuntimeSettings)
     huggingface: EditableHuggingFaceAgentModels | HuggingFaceAgentModels = Field(
         default_factory=EditableHuggingFaceAgentModels
     )
@@ -218,6 +247,15 @@ class EditableAgentsSettings(BaseModel):
     ) -> EditableGeminiAgentModels | dict[str, Any] | None:
         if isinstance(v, GeminiAgentModels) and not isinstance(v, EditableGeminiAgentModels):
             return EditableGeminiAgentModels.model_validate(v.model_dump())
+        return v
+
+    @field_validator("runtime", mode="before")
+    @classmethod
+    def _convert_runtime(
+        cls, v: EditableAgentRuntimeSettings | AgentRuntimeSettings | dict[str, Any] | None
+    ) -> EditableAgentRuntimeSettings | dict[str, Any] | None:
+        if isinstance(v, AgentRuntimeSettings) and not isinstance(v, EditableAgentRuntimeSettings):
+            return EditableAgentRuntimeSettings.model_validate(v.model_dump())
         return v
 
 

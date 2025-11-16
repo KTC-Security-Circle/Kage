@@ -45,10 +45,36 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from models import MemoRead, MemoStatus
+from models import AiSuggestionStatus, MemoRead, MemoStatus
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from uuid import UUID
+
+
+@dataclass(slots=True)
+class AiSuggestedTask:
+    """AI提案タスクのUI状態を表すデータ。"""
+
+    task_id: str
+    title: str
+    description: str
+    tags: tuple[str, ...] = field(default_factory=tuple)
+    due_date: datetime | None = None
+
+
+@dataclass(slots=True)
+class MemoAiFlowState:
+    """メモごとのAI提案フロー状態。"""
+
+    status_override: AiSuggestionStatus | None = None
+    generated_tasks: list[AiSuggestedTask] = field(default_factory=list)
+    selected_task_ids: set[str] = field(default_factory=set)
+    editing_task_id: str | None = None
+    is_generating: bool = False
+    job_id: UUID | None = None
+    job_status: str | None = None
+    error_message: str | None = None
 
 
 @dataclass(slots=True)
@@ -65,6 +91,7 @@ class MemosViewState:
     selected_memo_id: UUID | None = None
     # id -> MemoRead のインデックス。全メモ(all_memos)に対して構築する。
     _by_id: dict[UUID, MemoRead] = field(default_factory=dict, repr=False)
+    _ai_flow: dict[UUID, MemoAiFlowState] = field(default_factory=dict, repr=False)
 
     def set_all_memos(self, memos: list[MemoRead]) -> None:
         """全メモ一覧を更新する。
@@ -140,6 +167,10 @@ class MemosViewState:
         # O(1) での取得を優先（all_memos に対するインデックス）
         return self._by_id.get(self.selected_memo_id)
 
+    def memo_by_id(self, memo_id: UUID) -> MemoRead | None:
+        """指定IDのメモを返す。"""
+        return self._by_id.get(memo_id)
+
     def _filter_by_tab(self, memos: list[MemoRead]) -> list[MemoRead]:
         """タブの状態に応じてメモをフィルタリングする。"""
         if self.current_tab is None:
@@ -160,6 +191,65 @@ class MemosViewState:
     def _rebuild_index(self) -> None:
         """all_memos から id -> MemoRead のインデックスを再構築する。"""
         self._by_id = {memo.id: memo for memo in self.all_memos}
+
+    # --- AI提案UI状態の管理 ---
+
+    def ai_flow_state_for(self, memo_id: UUID) -> MemoAiFlowState:
+        """指定メモのAI提案状態を取得（未作成なら初期化）。"""
+        if memo_id not in self._ai_flow:
+            self._ai_flow[memo_id] = MemoAiFlowState()
+        return self._ai_flow[memo_id]
+
+    def clear_ai_flow_state(self, memo_id: UUID) -> None:
+        """AI提案状態をリセットする。"""
+        self._ai_flow.pop(memo_id, None)
+
+    def set_ai_status_override(self, memo_id: UUID, status: AiSuggestionStatus | None) -> None:
+        """UI表示用のAIステータスを上書き設定する。"""
+        self.ai_flow_state_for(memo_id).status_override = status
+
+    def effective_ai_status(self, memo: MemoRead) -> AiSuggestionStatus:
+        """表示に用いるAIステータスを返す。"""
+        state = self._ai_flow.get(memo.id)
+        if state and state.status_override is not None:
+            return state.status_override
+        return getattr(memo, "ai_suggestion_status", AiSuggestionStatus.NOT_REQUESTED)
+
+    def set_generated_tasks(self, memo_id: UUID, tasks: list[AiSuggestedTask]) -> None:
+        """生成済みタスク一覧を更新する。"""
+        state = self.ai_flow_state_for(memo_id)
+        state.generated_tasks = list(tasks)
+        state.selected_task_ids = {task.task_id for task in tasks}
+        state.is_generating = False
+
+    def toggle_task_selection(self, memo_id: UUID, task_id: str) -> None:
+        """タスクの選択状態をトグルする。"""
+        state = self.ai_flow_state_for(memo_id)
+        if task_id in state.selected_task_ids:
+            state.selected_task_ids.remove(task_id)
+        else:
+            state.selected_task_ids.add(task_id)
+
+    def track_ai_job(self, memo_id: UUID, job_id: UUID, status: str) -> None:
+        """ジョブ追跡情報を設定する。"""
+        state = self.ai_flow_state_for(memo_id)
+        state.job_id = job_id
+        state.job_status = status
+        state.error_message = None
+        state.is_generating = True
+
+    def update_job_status(self, memo_id: UUID, *, status: str, error: str | None = None) -> None:
+        """ジョブ状態を更新する。"""
+        state = self.ai_flow_state_for(memo_id)
+        state.job_status = status
+        state.error_message = error
+        if error:
+            state.is_generating = False
+
+    def get_selected_tasks(self, memo_id: UUID) -> list[AiSuggestedTask]:
+        """選択済みタスクを返す。"""
+        state = self.ai_flow_state_for(memo_id)
+        return [task for task in state.generated_tasks if task.task_id in state.selected_task_ids]
 
     # --- Priority C: optional helper for single-memo updates ---
     def upsert_memo(self, memo: MemoRead) -> None:

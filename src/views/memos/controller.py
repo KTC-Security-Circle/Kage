@@ -46,7 +46,8 @@ from typing import TYPE_CHECKING, Protocol
 from loguru import logger
 
 from errors import NotFoundError
-from models import MemoRead, MemoStatus, MemoUpdate
+from logic.application.memo_ai_job_queue import MemoAiJobSnapshot  # noqa: TC001 - runtime dependency
+from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate
 
 from .ordering import sort_memos
 from .query import SearchQueryNormalizer
@@ -94,6 +95,14 @@ class MemoApplicationPort(Protocol):
 
     def delete(self, memo_id: UUID) -> bool:
         """メモを削除する。"""
+        ...
+
+    def enqueue_ai_generation(self, memo_id: UUID) -> MemoAiJobSnapshot:
+        """AIタスク生成ジョブを登録する。"""
+        ...
+
+    def get_ai_job_snapshot(self, job_id: UUID) -> MemoAiJobSnapshot:
+        """AIジョブの状態を取得する。"""
         ...
 
 
@@ -163,6 +172,35 @@ class MemosController:
         """選択中のメモを返す。"""
         return self.state.selected_memo()
 
+    def enqueue_ai_generation(self, memo_id: UUID) -> MemoAiJobSnapshot:
+        """AI生成処理をキューに登録し、最新メモ情報をStateへ反映する。"""
+        snapshot = self.memo_app.enqueue_ai_generation(memo_id)
+        updated = self.memo_app.get_by_id(memo_id, with_details=True)
+        self.state.upsert_memo(updated)
+        self.state.reconcile()
+        return snapshot
+
+    def get_ai_job_snapshot(self, job_id: UUID) -> MemoAiJobSnapshot:
+        """AIジョブの状態を取得する。"""
+        return self.memo_app.get_ai_job_snapshot(job_id)
+
+    def refresh_memo(self, memo_id: UUID) -> MemoRead:
+        """指定メモを再取得してStateへ反映する。"""
+        refreshed = self.memo_app.get_by_id(memo_id, with_details=True)
+        self.state.upsert_memo(refreshed)
+        self.state.reconcile()
+        return refreshed
+
+    def mark_memo_archived(self, memo_id: UUID) -> MemoRead:
+        """承認後にメモをアーカイブ扱いに更新する。"""
+        updated = self.memo_app.update(
+            memo_id,
+            MemoUpdate(status=MemoStatus.ARCHIVE, ai_suggestion_status=AiSuggestionStatus.REVIEWED),
+        )
+        self.state.upsert_memo(updated)
+        self.state.reconcile()
+        return updated
+
     # --- CRUD operations ---
 
     def create_memo(
@@ -189,9 +227,10 @@ class MemosController:
         title: str | None = None,
         content: str | None = None,
         status: MemoStatus | None = None,
+        ai_status: AiSuggestionStatus | None = None,
     ) -> MemoRead:
         """既存のメモを更新する。"""
-        update_payload = MemoUpdate(title=title, content=content, status=status)
+        update_payload = MemoUpdate(title=title, content=content, status=status, ai_suggestion_status=ai_status)
         updated = self.memo_app.update(memo_id, update_payload)
         self.state.upsert_memo(updated)
         self.state.set_all_memos(sort_memos(self.state.all_memos))

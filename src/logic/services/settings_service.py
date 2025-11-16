@@ -9,10 +9,16 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from agents.agent_conf import LLMProvider
 from errors import ValidationError
 from logic.services.base import ServiceBase
 from settings.manager import ConfigManager, get_config_manager
-from settings.models import EditableDatabaseSettings, EditableUserSettings, EditableWindowSettings
+from settings.models import (
+    EditableAgentRuntimeSettings,
+    EditableDatabaseSettings,
+    EditableUserSettings,
+    EditableWindowSettings,
+)
 
 if TYPE_CHECKING:
     from settings.models import (
@@ -265,6 +271,12 @@ class SettingsService(ServiceBase):
                 "position": settings.window.position.copy(),
             },
             "database_url": self._config_manager.database_url,
+            "agent": {
+                "provider": settings.agents.provider.value,
+                "model": settings.agents.runtime.model,
+                "temperature": settings.agents.runtime.temperature,
+                "debug_mode": settings.agents.runtime.debug_mode,
+            },
         }
 
     def save_settings_snapshot(self, snapshot: dict[str, Any]) -> None:
@@ -298,4 +310,25 @@ class SettingsService(ServiceBase):
             database_url = snapshot.get("database_url", "")
             editable.database = EditableDatabaseSettings(
                 url=database_url,
+            )
+
+            agent = snapshot.get("agent", {})
+            provider_value = agent.get("provider")
+            if provider_value is not None:
+                try:
+                    editable.agents.provider = LLMProvider(provider_value)
+                except ValueError as exc:  # pragma: no cover - Validation layer handles user errors
+                    msg = f"LLMプロバイダが不正です: {provider_value}"
+                    raise ValidationError(msg) from exc
+
+            try:
+                temperature = float(agent.get("temperature", editable.agents.runtime.temperature))
+            except (TypeError, ValueError) as exc:
+                msg = "温度は数値で入力してください"
+                raise ValidationError(msg) from exc
+
+            editable.agents.runtime = EditableAgentRuntimeSettings(
+                model=agent.get("model"),
+                temperature=temperature,
+                debug_mode=bool(agent.get("debug_mode", editable.agents.runtime.debug_mode)),
             )

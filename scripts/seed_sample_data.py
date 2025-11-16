@@ -1,3 +1,12 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "kage",
+# ]
+#
+# [tool.uv.sources]
+# kage = { path = "../", editable = true }
+# ///
 """UI 検証用のサンプルデータ投入スクリプト。
 
 アプリケーション層 (`ApplicationServices`) を経由して、主要エンティティに
@@ -5,18 +14,22 @@
 プロジェクト/タスク/メモ/タグ/社内用語を作成・更新します。
 
 使用方法:
+    # データ投入のみ
     uv run python scripts/seed_sample_data.py
+
+    # マイグレーション実行後にデータ投入 (推奨)
+    uv run poe sample-data
+    # または
+    poe sample-data
 
 データベースを初期化した直後、または UI をまとめて確認したいタイミングで実行してください。
 """
 
 from __future__ import annotations
 
-import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
-from typing import TypeVar
+from datetime import UTC, date, datetime, timedelta
+from typing import TYPE_CHECKING, TypeVar
 
 from loguru import logger
 
@@ -33,6 +46,10 @@ from models import (
     TermStatus,
     TermUpdate,
 )
+
+if TYPE_CHECKING:
+    import uuid
+    from collections.abc import Callable
 
 _T = TypeVar("_T")
 
@@ -419,7 +436,7 @@ def _calculate_due_date(offset_days: int | None) -> date | None:
     """
     if offset_days is None:
         return None
-    return date.today() + timedelta(days=offset_days)
+    return datetime.now(UTC).date() + timedelta(days=offset_days)
 
 
 def _calculate_completed_at(offset_days: int | None) -> datetime | None:
@@ -433,7 +450,7 @@ def _calculate_completed_at(offset_days: int | None) -> datetime | None:
     """
     if offset_days is None:
         return None
-    return datetime.now() - timedelta(days=offset_days)
+    return datetime.now(UTC) - timedelta(days=offset_days)
 
 
 def seed_tags(apps: ApplicationServices) -> dict[str, uuid.UUID]:
@@ -477,6 +494,7 @@ def seed_projects(apps: ApplicationServices) -> dict[str, uuid.UUID]:
 
     for seed in PROJECT_SEEDS:
         project = existing.get(seed.title)
+        due_date = _calculate_due_date(seed.due_in_days)
         if project is None:
             project = apps.project.create(
                 title=seed.title,
@@ -486,17 +504,15 @@ def seed_projects(apps: ApplicationServices) -> dict[str, uuid.UUID]:
             logger.info(f"[PROJECT] 作成: {seed.title}")
         else:
             logger.info(f"[PROJECT] 更新: {seed.title}")
-
-        due_date = _calculate_due_date(seed.due_in_days)
-        project = apps.project.update(
-            project.id,
-            ProjectUpdate(
-                title=seed.title,
-                description=seed.description,
-                status=seed.status,
-                due_date=due_date,
-            ),
-        )
+            project = apps.project.update(
+                project.id,
+                ProjectUpdate(
+                    title=seed.title,
+                    description=seed.description,
+                    status=seed.status,
+                    due_date=due_date,
+                ),
+            )
         results[seed.key] = project.id
     return results
 
@@ -556,18 +572,17 @@ def seed_tasks(
             )
             logger.info(f"[TASK] 作成: {seed.title}")
         else:
+            update_payload = TaskUpdate(
+                title=seed.title,
+                description=seed.description,
+                status=seed.status,
+                due_date=_calculate_due_date(seed.due_in_days),
+                completed_at=_calculate_completed_at(seed.completed_offset_days),
+                project_id=_resolve_reference(project_ids, seed.project_key, "プロジェクト"),
+                memo_id=_resolve_reference(memo_ids, seed.memo_key, "メモ"),
+            )
+            task = apps.task.update(task.id, update_payload)
             logger.info(f"[TASK] 更新: {seed.title}")
-
-        update_payload = TaskUpdate(
-            title=seed.title,
-            description=seed.description,
-            status=seed.status,
-            due_date=_calculate_due_date(seed.due_in_days),
-            completed_at=_calculate_completed_at(seed.completed_offset_days),
-            project_id=_resolve_reference(project_ids, seed.project_key, "プロジェクト"),
-            memo_id=_resolve_reference(memo_ids, seed.memo_key, "メモ"),
-        )
-        task = apps.task.update(task.id, update_payload)
         results[seed.key] = task.id
     return results
 
@@ -612,11 +627,10 @@ def seed_terms(apps: ApplicationServices) -> dict[str, uuid.UUID]:
 
 
 def main() -> None:
-    """サンプルデータ投入を実行する。
+    """サンプルデータ投入を実行する。"""
+    from logging_conf import setup_logger
 
-    Returns:
-        None
-    """
+    setup_logger()
     logger.info("サンプルデータ投入を開始します。")
     apps = ApplicationServices.create()
 

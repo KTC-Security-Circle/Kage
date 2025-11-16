@@ -366,8 +366,6 @@ class TermsView(BaseView):
         Args:
             form_data: フォームデータ
         """
-        key = form_data.get("key", "")
-
         try:
             # 用語作成
             created_term = await self.controller.create_term(cast("TermFormData", form_data))

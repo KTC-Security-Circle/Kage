@@ -31,7 +31,11 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 
-# TODO: 以下のものを実装に置き換える
+# TODO: [ロジック担当者向け] 実際のApplicationServiceと連携するHomeQueryの実装
+# 実装箇所: src/logic/application/home_application_service.py
+# 依存: TaskApplicationService, MemoApplicationService, ProjectApplicationService
+# 優先度: High (Home View統合完了後に必須)
+# 担当: TBD
 class HomeQuery(Protocol):
     """ホーム画面データ取得のポート。"""
 

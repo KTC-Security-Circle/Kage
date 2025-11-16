@@ -69,7 +69,7 @@ class WeeklyReviewState:
 
     # 期間設定
     current_week_start: datetime = field(default_factory=lambda: _get_week_start())
-    current_week_end: datetime = field(default_factory=lambda: _get_week_end())
+    current_week_end: datetime = field(default_factory=_get_week_end)
 
     def toggle_checklist_item(self, item_id: str) -> None:
         """チェックリスト項目の完了状態を切り替える

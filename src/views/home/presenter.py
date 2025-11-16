@@ -199,7 +199,7 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
     )
 
 
-def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[int], None]) -> ft.Container:
+def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None]) -> ft.Container:
     """Inboxメモアイテムを構築する。
 
     Args:

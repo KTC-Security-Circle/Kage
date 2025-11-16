@@ -319,7 +319,7 @@ class WeeklyReviewView(BaseView):
             self.notify_error(f"項目の更新に失敗しました: {e}")
         except Exception as e:
             logger.exception("チェックリスト更新に失敗")
-            self.notify_error(f"予期しないエラーが発生しました: {type(e).__name__}")
+            self.notify_error(f"予期しないエラーが発生しました: {type(e).__name__}: {e}")
 
     def _handle_start_wizard(self, _: ft.ControlEvent) -> None:
         """ウィザード開始処理

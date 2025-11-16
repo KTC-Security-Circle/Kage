@@ -54,18 +54,16 @@ def format_hours(minutes: int) -> str:
     return f"{hours:.1f}h"
 
 
-def format_count(count: int, singular: str = "件", plural: str | None = None) -> str:
-    """カウントと単位を整形
+def format_count(count: int, unit: str = "件") -> str:
+    """カウントと単位を整形（日本語専用）
 
     Args:
         count: カウント数
-        singular: 単数形の単位
-        plural: 複数形の単位（省略時はsingularを使用）
+        unit: 単位（日本語では単数・複数の区別なし、例: "件"）
 
     Returns:
         整形されたカウント文字列（例: "3件"）
     """
-    unit = plural if count != 1 and plural else singular
     return f"{count}{unit}"
 
 

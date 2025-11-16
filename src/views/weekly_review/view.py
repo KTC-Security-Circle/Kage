@@ -1,338 +1,387 @@
-"""Weekly review view implementation."""
+"""週次レビュービュー実装
 
-from datetime import datetime, timedelta
+GTD週次レビューの画面実装。
+"""
+
+from typing import TYPE_CHECKING
 
 import flet as ft
+from loguru import logger
 
 from views.shared.base_view import BaseView, BaseViewProps
 
-from .components.review_components import (
-    ProductivityInsights,
-    ReflectionCard,
-    TaskCompletionChart,
-    WeeklyStatsCard,
-)
+if TYPE_CHECKING:
+    from logic.application.task_application_service import TaskApplicationService
 
-# ReviewWizardは一時的に無効化
-# from .components.review_wizard import ReviewWizard
+
+from .components import (
+    AlertCard,
+    AlertCardProps,
+    ReviewChecklist,
+    ReviewChecklistProps,
+    StatsCard,
+    StatsCardProps,
+    TaskListCard,
+    TaskListCardProps,
+)
+from .controller import WeeklyReviewController
+from .presenter import WeeklyReviewPresenter
+from .state import WeeklyReviewState
 
 
 class WeeklyReviewView(BaseView):
-    """Main view for weekly retrospective and planning."""
+    """週次レビューのメインビュー
+
+    Controller/Presenter/State パターンで構築。
+    """
 
     def __init__(self, props: BaseViewProps) -> None:
-        """Initialize weekly review view.
+        """ビューを初期化
 
         Args:
-            props: View共通プロパティ
+            props: ビュー共通プロパティ
         """
         super().__init__(props)
-        self.title = "週次振り返り"
-        self.description = "今週の振り返りと来週の計画"
 
-        # View state
-        self.show_wizard = False
-        self.current_week = self._get_current_week()
+        # 依存性注入
+        self.task_app_service: TaskApplicationService = props.apps.task
 
-        # Components
-        self.main_content: ft.Container | None = None
-        self.wizard_container: ft.Container | None = None
+        # 状態・コントローラー・プレゼンター初期化
+        self.review_state = WeeklyReviewState()
+        self.controller = WeeklyReviewController(
+            task_app_service=self.task_app_service,
+            state=self.review_state,
+        )
+        self.presenter = WeeklyReviewPresenter(state=self.review_state)
+
+        # UIコンポーネント
+        self.stats_cards: list[StatsCard] = []
+        self.checklist_component: ReviewChecklist | None = None
+        self.alert_card: AlertCard | None = None
+        self.next_tasks_card: TaskListCard | None = None
+        self.waiting_tasks_card: TaskListCard | None = None
+        self.someday_tasks_card: TaskListCard | None = None
 
     def build_content(self) -> ft.Control:
-        """Build the main content area."""
-        if self.show_wizard:
-            return self._build_wizard_view()
-        return self._build_dashboard_view()
+        """メインコンテンツを構築
 
-    def _build_dashboard_view(self) -> ft.Control:
-        """Build the main dashboard view."""
-        # Header with week info
-        header = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Column(
-                                controls=[
-                                    ft.Text(
-                                        self.title,
-                                        size=32,
-                                        weight=ft.FontWeight.BOLD,
-                                    ),
-                                    ft.Text(
-                                        f"{self.current_week} • {self.description}",
-                                        size=16,
-                                        color=ft.Colors.OUTLINE,
-                                    ),
-                                ],
-                                spacing=4,
-                            ),
-                            ft.ElevatedButton(
-                                text="振り返りを開始",
-                                icon=ft.Icons.PSYCHOLOGY,
-                                style=ft.ButtonStyle(
-                                    bgcolor=ft.Colors.PRIMARY,
-                                    color=ft.Colors.ON_PRIMARY,
-                                ),
-                                on_click=self._start_review_wizard,
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                ],
-            ),
-            padding=ft.padding.all(24),
-        )
+        Returns:
+            構築されたコンテンツ
+        """
+        # ヘッダー
+        header = self._build_header()
 
-        # Stats cards row
-        stats_row = ft.Row(
+        # 統計カード行
+        stats_row = self._build_stats_row()
+
+        # メインコンテンツエリア（3カラム）
+        main_content = ft.Row(
             controls=[
-                WeeklyStatsCard(
-                    title="完了タスク",
-                    value="47",
-                    subtitle="今週",
-                    icon=ft.Icons.CHECK_CIRCLE,
-                    color=ft.Colors.GREEN,
-                    trend="↑ 15%",
-                ),
-                WeeklyStatsCard(
-                    title="集中時間",
-                    value="28.5h",
-                    subtitle="深い作業",
-                    icon=ft.Icons.ACCESS_TIME,
-                    color=ft.Colors.BLUE,
-                    trend="↑ 3.2h",
-                ),
-                WeeklyStatsCard(
-                    title="達成率",
-                    value="87%",
-                    subtitle="目標達成",
-                    icon=ft.Icons.TRENDING_UP,
-                    color=ft.Colors.PURPLE,
-                    trend="↑ 12%",
-                ),
-                WeeklyStatsCard(
-                    title="新しい学び",
-                    value="5",
-                    subtitle="記録された気づき",
-                    icon=ft.Icons.LIGHTBULB,
-                    color=ft.Colors.AMBER,
-                    trend="+2",
-                ),
-            ],
-            spacing=20,
-            scroll=ft.ScrollMode.AUTO,
-        )
-
-        # Main content grid
-        content_grid = ft.Row(
-            controls=[
-                # Left column - Charts and insights
+                # 左カラム: チェックリストとアラート
                 ft.Column(
                     controls=[
-                        TaskCompletionChart(),
-                        ft.Container(height=20),
-                        ProductivityInsights(),
+                        self._build_checklist(),
+                        self._build_alert_if_needed(),
                     ],
+                    spacing=16,
                     expand=2,
-                    spacing=16,
                 ),
-                # Right column - Reflection
+                # 右カラム: タスクリスト
                 ft.Column(
                     controls=[
-                        ReflectionCard(
-                            on_save_reflection=self._handle_save_reflection,
-                        ),
-                        ft.Container(height=20),
-                        self._build_previous_reviews(),
+                        self._build_next_tasks_card(),
+                        self._build_waiting_tasks_card(),
+                        self._build_someday_tasks_card(),
                     ],
-                    expand=1,
                     spacing=16,
+                    scroll=ft.ScrollMode.AUTO,
+                    expand=1,
                 ),
             ],
-            spacing=24,
+            spacing=16,
             expand=True,
-            vertical_alignment=ft.CrossAxisAlignment.START,
         )
+
+        # アクションボタン
+        actions = self._build_actions()
 
         return ft.Column(
             controls=[
                 header,
-                ft.Container(
-                    content=stats_row,
-                    padding=ft.padding.symmetric(horizontal=24),
-                ),
                 ft.Container(height=20),
-                ft.Container(
-                    content=content_grid,
-                    padding=ft.padding.symmetric(horizontal=24),
-                    expand=True,
-                ),
+                stats_row,
+                ft.Container(height=20),
+                main_content,
+                ft.Container(height=20),
+                ft.Divider(),
+                ft.Container(height=10),
+                actions,
             ],
+            spacing=0,
+            scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
 
-    def _build_wizard_view(self) -> ft.Control:
-        """Build the wizard view."""
-        # Header with back button
-        header = ft.Container(
+    def _build_header(self) -> ft.Container:
+        """ヘッダーを構築
+
+        Returns:
+            ヘッダーコンテナ
+        """
+        return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.IconButton(
-                        icon=ft.Icons.ARROW_BACK,
-                        tooltip="ダッシュボードに戻る",
-                        on_click=self._close_wizard,
-                    ),
-                    ft.Text(
-                        "週次振り返りウィザード",
-                        size=24,
-                        weight=ft.FontWeight.BOLD,
+                    ft.Column(
+                        controls=[
+                            ft.Text(
+                                "週次レビュー",
+                                size=32,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            ft.Text(
+                                "GTDの週次レビュー - システム全体を見直して整理する時間",
+                                size=16,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
+                            ),
+                        ],
+                        spacing=8,
                     ),
                 ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.padding.all(24),
+        )
+
+    def _build_stats_row(self) -> ft.ResponsiveRow:
+        """統計カード行を構築
+
+        Returns:
+            統計カード行
+        """
+        stats_data = self.presenter.create_stats_cards_data()
+        self.stats_cards = [
+            StatsCard(
+                props=StatsCardProps(
+                    title=data.title,
+                    value=data.value,
+                    subtitle=data.subtitle,
+                    icon_name=data.icon_name,
+                )
+            )
+            for data in stats_data
+        ]
+
+        # ResponsiveRowで4カラムグリッドを実現
+        for card in self.stats_cards:
+            card.col = {"sm": 12, "md": 6, "lg": 3}
+
+        return ft.ResponsiveRow(
+            controls=self.stats_cards,
+            spacing=16,
+        )
+
+    def _build_checklist(self) -> ft.Container:
+        """チェックリストを構築
+
+        Returns:
+            チェックリストコンテナ
+        """
+        checklist_data = self.presenter.create_checklist_data()
+        self.checklist_component = ReviewChecklist(
+            props=ReviewChecklistProps(
+                items=checklist_data,
+                on_toggle=self._handle_checklist_toggle,
+            )
+        )
+        return ft.Container(content=self.checklist_component, expand=True)
+
+    def _build_alert_if_needed(self) -> ft.Container:
+        """必要に応じてアラートカードを構築
+
+        Returns:
+            アラートカードコンテナ（不要な場合は空）
+        """
+        alert_message = self.presenter.get_inbox_alert_message()
+        if not alert_message:
+            return ft.Container()
+
+        self.alert_card = AlertCard(
+            props=AlertCardProps(
+                title="要整理",
+                message=alert_message,
+                action_label="タスクを整理する",
+                icon_name=ft.Icons.INBOX,
+                on_action=self._handle_goto_tasks,
+            )
+        )
+        return ft.Container(content=self.alert_card)
+
+    def _build_next_tasks_card(self) -> ft.Container:
+        """次のアクションタスクカードを構築
+
+        Returns:
+            タスクリストカードコンテナ
+        """
+        tasks = self.controller.get_tasks_by_status("next")
+        task_data = self.presenter.create_task_list_data(tasks)
+
+        self.next_tasks_card = TaskListCard(
+            props=TaskListCardProps(
+                title="次のアクション",
+                icon_name=ft.Icons.CHECK_CIRCLE,
+                tasks=task_data,
+                on_task_click=self._handle_task_click,
+                on_show_more=self._handle_goto_tasks,
+            )
+        )
+        return ft.Container(content=self.next_tasks_card)
+
+    def _build_waiting_tasks_card(self) -> ft.Container:
+        """待機中タスクカードを構築
+
+        Returns:
+            タスクリストカードコンテナ
+        """
+        tasks = self.controller.get_tasks_by_status("waiting")
+        task_data = self.presenter.create_task_list_data(tasks)
+
+        self.waiting_tasks_card = TaskListCard(
+            props=TaskListCardProps(
+                title="待機中",
+                icon_name=ft.Icons.SCHEDULE,
+                tasks=task_data,
+                on_task_click=self._handle_task_click,
+                on_show_more=self._handle_goto_tasks,
+            )
+        )
+        return ft.Container(content=self.waiting_tasks_card)
+
+    def _build_someday_tasks_card(self) -> ft.Container:
+        """いつか/多分タスクカードを構築
+
+        Returns:
+            タスクリストカードコンテナ
+        """
+        tasks = self.controller.get_tasks_by_status("someday")
+        task_data = self.presenter.create_task_list_data(tasks)
+
+        self.someday_tasks_card = TaskListCard(
+            props=TaskListCardProps(
+                title="いつか/多分",
+                icon_name=ft.Icons.CALENDAR_MONTH,
+                tasks=task_data,
+                on_task_click=self._handle_task_click,
+                on_show_more=self._handle_goto_tasks,
+            )
+        )
+        return ft.Container(content=self.someday_tasks_card)
+
+    def _build_actions(self) -> ft.Container:
+        """アクションボタン行を構築
+
+        Returns:
+            アクションボタンコンテナ
+        """
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.OutlinedButton(
+                        text="タスクを整理する",
+                        on_click=lambda _: self._handle_goto_tasks(),
+                    ),
+                    ft.OutlinedButton(
+                        text="プロジェクトを確認",
+                        on_click=lambda _: self._handle_goto_projects(),
+                    ),
+                    ft.ElevatedButton(
+                        text="レビュー完了",
+                        on_click=lambda _: self._handle_complete_review(),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
                 spacing=16,
             ),
             padding=ft.padding.all(24),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
         )
 
-        # 一時的にシンプルなプレースホルダーを表示
-        placeholder = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        "週次振り返りウィザードは準備中です",
-                        size=18,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        "現在開発中のため、しばらくお待ちください。",
-                        size=14,
-                        color=ft.Colors.OUTLINE,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=16,
-            ),
-            padding=ft.padding.all(48),
-            alignment=ft.alignment.center,
-        )
+    def _handle_checklist_toggle(self, item_id: str) -> None:
+        """チェックリスト項目のトグル処理
 
-        return ft.Column(
-            controls=[
-                header,
-                placeholder,
-            ],
-            expand=True,
-        )
+        Args:
+            item_id: 項目ID
+        """
+        try:
+            self.controller.toggle_checklist_item(item_id)
+            self._update_checklist()
+        except Exception:
+            logger.exception("チェックリスト更新に失敗")
+            self.notify_error("チェックリスト更新に失敗しました")
 
-    def _build_previous_reviews(self) -> ft.Control:
-        """Build previous reviews section."""
-        # Sample previous reviews
-        previous_reviews = [
-            {
-                "week": "10月14日 - 10月20日",
-                "highlights": "新機能のプロトタイプ完成、チーム研修実施",
-                "date": "2日前",
-            },
-            {
-                "week": "10月7日 - 10月13日",
-                "highlights": "APIドキュメント更新、バグ修正5件",
-                "date": "9日前",
-            },
-            {
-                "week": "9月30日 - 10月6日",
-                "highlights": "要件定義完了、UI設計レビュー",
-                "date": "16日前",
-            },
-        ]
+    def _handle_start_wizard(self, _: ft.ControlEvent) -> None:
+        """ウィザード開始処理
 
-        review_cards = []
-        for review in previous_reviews:
-            card = ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Text(
-                                    review["week"],
-                                    size=14,
-                                    weight=ft.FontWeight.BOLD,
-                                ),
-                                ft.Text(
-                                    review["date"],
-                                    size=12,
-                                    color=ft.Colors.OUTLINE,
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        ),
-                        ft.Text(
-                            review["highlights"],
-                            size=12,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                            max_lines=2,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                    ],
-                    spacing=4,
-                    tight=True,
-                ),
-                padding=12,
-                border_radius=8,
-                bgcolor=ft.Colors.SECONDARY_CONTAINER,
-                border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
-            )
-            review_cards.append(card)
+        Args:
+            _: イベント
+        """
+        logger.info("レビューウィザードを開始（未実装）")
+        self.show_info_snackbar("ウィザード機能は近日公開予定です")
 
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        "📋 過去の振り返り",
-                        size=18,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                    ft.Container(height=12),
-                    *review_cards,
-                ],
-                spacing=8,
-            ),
-            padding=24,
-            border_radius=16,
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
-        )
+    def _handle_task_click(self, task_id: str) -> None:
+        """タスククリック処理
 
-    def _get_current_week(self) -> str:
-        """Get current week date range string."""
-        today = datetime.now()
-        # Get Monday of current week
-        monday = today - timedelta(days=today.weekday())
-        # Get Sunday of current week
-        sunday = monday + timedelta(days=6)
+        Args:
+            task_id: タスクID
+        """
+        self.page.go(f"/tasks/{task_id}")
 
-        return f"{monday.strftime('%m月%d日')} - {sunday.strftime('%m月%d日')}"
+    def _handle_goto_tasks(self) -> None:
+        """タスク画面への遷移"""
+        self.page.go("/tasks")
 
-    def _start_review_wizard(self, _: ft.ControlEvent) -> None:
-        """Start the review wizard."""
-        self.show_wizard = True
-        self.update()
+    def _handle_goto_projects(self) -> None:
+        """プロジェクト画面への遷移"""
+        self.page.go("/projects")
 
-    def _close_wizard(self, _: ft.ControlEvent) -> None:
-        """Close the wizard and return to dashboard."""
-        self.show_wizard = False
-        self.update()
+    def _handle_complete_review(self) -> None:
+        """レビュー完了処理"""
+        self.page.go("/home")
 
-    def _handle_wizard_complete(self, _: dict) -> None:
-        """Handle wizard completion."""
-        # TODO: Save review data to database
-        self.show_snack_bar("週次振り返りが完了しました！")
-        self.show_wizard = False
-        self.update()
+    def _update_checklist(self) -> None:
+        """チェックリストを更新"""
+        if self.checklist_component:
+            checklist_data = self.presenter.create_checklist_data()
+            self.checklist_component.update_items(checklist_data)
 
-    def _handle_save_reflection(self, _: dict) -> None:
-        """Handle reflection save."""
-        # TODO: Save reflection to database
-        self.show_snack_bar("振り返りを保存しました")
+    def did_mount(self) -> None:
+        """マウント時の初期化"""
+        super().did_mount()
+        try:
+            self.controller.load_initial_data()
+            self._refresh_all()
+        except Exception:
+            logger.exception("初期データ読み込みに失敗")
+            self.notify_error("データの読み込みに失敗しました")
+
+    def _refresh_all(self) -> None:
+        """全コンポーネントをリフレッシュ"""
+        # 統計カード更新
+        stats_data = self.presenter.create_stats_cards_data()
+        for i, card in enumerate(self.stats_cards):
+            if i < len(stats_data):
+                data = stats_data[i]
+                card.set_props(
+                    StatsCardProps(
+                        title=data.title,
+                        value=data.value,
+                        subtitle=data.subtitle,
+                        icon_name=data.icon_name,
+                    )
+                )
+
+        # チェックリスト更新
+        self._update_checklist()
+
+        # ページ更新
+        if hasattr(self, "page") and self.page:
+            self.page.update()

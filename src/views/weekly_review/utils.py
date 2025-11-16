@@ -11,13 +11,13 @@ def format_percentage(value: float) -> str:
 
     Args:
         value: 0.0 ~ 1.0 の値（0.0 = 0%, 1.0 = 100%）
-               範囲外の値が渡された場合も変換は行われるが、
-               0-100%外の表示になる可能性がある
+               範囲外の値が渡された場合は自動的に0.0~1.0に丸められる
 
     Returns:
         整形されたパーセンテージ文字列（例: "75%"）
     """
-    return f"{int(value * 100)}%"
+    clamped = max(0.0, min(1.0, value))  # [AI GENERATED] 入力値を0.0~1.0に丸める
+    return f"{int(clamped * 100)}%"
 
 
 def format_trend(current: int, previous: int) -> str:

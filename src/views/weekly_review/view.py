@@ -383,5 +383,5 @@ class WeeklyReviewView(BaseView):
         self._update_checklist()
 
         # ページ更新
-        if hasattr(self, "page") and self.page:
+        if self.page:
             self.page.update()

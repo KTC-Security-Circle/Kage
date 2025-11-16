@@ -152,7 +152,19 @@ class InMemoryHomeQuery:
 
 @dataclass(slots=True)
 class ApplicationHomeQuery(HomeQuery):
-    """ApplicationServiceを経由して実データを取得するQuery実装。"""
+    """ApplicationServiceを経由して実データを取得するQuery実装。
+
+    このクラスは、各Application Serviceからデータを取得し、
+    ホーム画面で必要な形式に変換して提供します。
+    パフォーマンスのため、取得したデータは内部でキャッシュされます。
+
+    Attributes:
+        memo_service: メモデータ取得用サービス
+        task_service: タスクデータ取得用サービス
+        project_service: プロジェクトデータ取得用サービス
+        one_liner_service: 一言メッセージ生成用サービス
+        max_inbox_items: Inboxメモの最大表示件数
+    """
 
     memo_service: MemoServicePort
     task_service: TaskServicePort
@@ -214,17 +226,65 @@ class ApplicationHomeQuery(HomeQuery):
         return created_at.timestamp()
 
     def _build_daily_review(self, tasks: list[TaskRead], memos: list[MemoRead]) -> dict[str, Any]:
-        todays_tasks = [task for task in tasks if task.status == TaskStatus.TODAYS]
-        todo_tasks = [task for task in tasks if task.status == TaskStatus.TODO]
-        progress_tasks = [task for task in tasks if task.status == TaskStatus.PROGRESS]
-        overdue_tasks = [task for task in tasks if task.status == TaskStatus.OVERDUE]
-        completed_tasks = [task for task in tasks if task.status == TaskStatus.COMPLETED]
-        inbox_memos = [memo for memo in memos if memo.status == MemoStatus.INBOX]
+        # タスクリストを複数回走査するのではなく、単一パスで分類する。
+        # 理由: 大きなタスクリストでの効率化（O(n)）と可読性向上のため。
+        todays_tasks: list[TaskRead] = []
+        todo_tasks: list[TaskRead] = []
+        progress_tasks: list[TaskRead] = []
+        overdue_tasks: list[TaskRead] = []
+        completed_tasks: list[TaskRead] = []
 
+        for task in tasks:
+            status = task.status
+            if status == TaskStatus.TODAYS:
+                todays_tasks.append(task)
+            elif status == TaskStatus.TODO:
+                todo_tasks.append(task)
+            elif status == TaskStatus.PROGRESS:
+                progress_tasks.append(task)
+            elif status == TaskStatus.OVERDUE:
+                overdue_tasks.append(task)
+            elif status == TaskStatus.COMPLETED:
+                completed_tasks.append(task)
+
+        # メモのInbox抽出は単純なフィルタでよい（メモは通常少数）
+        inbox_memos = [memo for memo in memos if memo.status == MemoStatus.INBOX]
+        return self._select_review_scenario(
+            todays_tasks=todays_tasks,
+            todo_tasks=todo_tasks,
+            progress_tasks=progress_tasks,
+            overdue_tasks=overdue_tasks,
+            completed_tasks=completed_tasks,
+            inbox_memos=inbox_memos,
+        )
+
+    def _select_review_scenario(
+        self,
+        *,
+        todays_tasks: list[TaskRead],
+        todo_tasks: list[TaskRead],
+        progress_tasks: list[TaskRead],
+        overdue_tasks: list[TaskRead],
+        completed_tasks: list[TaskRead],
+        inbox_memos: list[MemoRead],
+    ) -> dict[str, Any]:
+        """デイリーレビュー表示用のシナリオを判定して返す。
+
+        Args:
+            todays_tasks: 今日のタスク一覧
+            todo_tasks: TODO 状態のタスク一覧
+            progress_tasks: 進行中のタスク一覧
+            overdue_tasks: 期限超過のタスク一覧
+            completed_tasks: 完了済みタスク一覧
+            inbox_memos: Inbox のメモ一覧
+
+        Returns:
+            選択されたシナリオのデータ辞書
+        """
         review_scenarios = [
-            {
-                "condition": bool(overdue_tasks),
-                "data": {
+            (
+                bool(overdue_tasks),
+                {
                     "icon": "error",
                     "color": "amber",
                     "message": f"{len(overdue_tasks)}件の期限超過タスクがあります。優先的に対処しましょう。",
@@ -232,10 +292,10 @@ class ApplicationHomeQuery(HomeQuery):
                     "action_route": "/tasks",
                     "priority": "high",
                 },
-            },
-            {
-                "condition": not todays_tasks and bool(todo_tasks),
-                "data": {
+            ),
+            (
+                not todays_tasks and bool(todo_tasks),
+                {
                     "icon": "coffee",
                     "color": "blue",
                     "message": (
@@ -245,68 +305,64 @@ class ApplicationHomeQuery(HomeQuery):
                     "action_route": "/tasks",
                     "priority": "medium",
                 },
-            },
-            {
-                "condition": bool(todays_tasks) and not progress_tasks,
-                "data": {
+            ),
+            (
+                bool(todays_tasks) and not progress_tasks,
+                {
                     "icon": "play_arrow",
                     "color": "green",
-                    "message": (f"{len(todays_tasks)}件のタスクが待っています。さあ、最初の一歩を踏み出しましょう！"),
+                    "message": f"{len(todays_tasks)}件のタスクが待っています。さあ、最初の一歩を踏み出しましょう！",
                     "action_text": "タスクを開始する",
                     "action_route": "/tasks",
                     "priority": "medium",
                 },
-            },
-            {
-                "condition": bool(progress_tasks),
-                "data": {
+            ),
+            (
+                bool(progress_tasks),
+                {
                     "icon": "trending_up",
                     "color": "primary",
-                    "message": (
-                        f"{len(progress_tasks)}件のタスクが進行中です。良いペースです、その調子で続けましょう！"
-                    ),
+                    "message": f"{len(progress_tasks)}件のタスクが進行中です。良いペースです、その調子で続けましょう！",
                     "action_text": "進行中のタスクを見る",
                     "action_route": "/tasks",
                     "priority": "normal",
                 },
-            },
-            {
-                "condition": bool(inbox_memos),
-                "data": {
+            ),
+            (
+                bool(inbox_memos),
+                {
                     "icon": "lightbulb",
                     "color": "purple",
-                    "message": (f"{len(inbox_memos)}件のInboxメモがあります。AIにタスクを生成させて整理しましょう。"),
+                    "message": f"{len(inbox_memos)}件のInboxメモがあります。AIにタスクを生成させて整理しましょう。",
                     "action_text": "メモを整理する",
                     "action_route": "/memos",
                     "priority": "medium",
                 },
-            },
-            {
-                "condition": bool(completed_tasks) and not todays_tasks,
-                "data": {
+            ),
+            (
+                bool(completed_tasks) and not todays_tasks,
+                {
                     "icon": "check_circle",
                     "color": "green",
-                    "message": (
-                        "素晴らしい！全てのタスクが完了しています。新しいメモを書いて次の目標を設定しましょう。"
-                    ),
+                    "message": "素晴らしい！全てのタスクが完了しています。新しいメモを書いて次の目標を設定しましょう。",
                     "action_text": "新しいメモを作成",
                     "action_route": "/memos",
                     "priority": "low",
                 },
-            },
+            ),
         ]
 
-        selected = None
-        for scenario in review_scenarios:
-            if scenario["condition"]:
-                selected = scenario["data"]
+        selected: dict[str, Any] | None = None
+        for condition, data in review_scenarios:
+            if condition:
+                selected = data
                 break
 
         if selected is None:
             selected = {
                 "icon": "wb_sunny",
                 "color": "primary",
-                "message": ("今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか？"),
+                "message": "今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか？",
                 "action_text": "メモを作成する",
                 "action_route": "/memos",
                 "priority": "low",

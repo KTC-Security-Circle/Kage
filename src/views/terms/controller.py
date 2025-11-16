@@ -42,18 +42,25 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol, TypedDict, TypeVar
-from uuid import UUID
+from typing import TYPE_CHECKING, Protocol, TypedDict, TypeVar
 
 from loguru import logger
 
 from errors import NotFoundError
-from logic.application.terminology_application_service import TerminologyApplicationService
 from models import TermRead, TermStatus, TermUpdate
 
 from .query import SearchQueryNormalizer
-from .state import TermsViewState
 from .utils import sort_terms
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from uuid import UUID
+
+    from logic.application.terminology_application_service import (
+        TerminologyApplicationService,
+    )
+
+    from .state import TermsViewState
 
 T = TypeVar("T")
 
@@ -186,7 +193,7 @@ class TermsController:
         results = await self._call_service(self.service.search_terms, query)
         return sort_terms(results)
 
-    async def _call_service(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    async def _call_service(self, func: Callable[..., T], *args: object, **kwargs: object) -> T:
         """ブロッキングなサービス呼び出しをスレッドで実行する。"""
         return await asyncio.to_thread(func, *args, **kwargs)
 

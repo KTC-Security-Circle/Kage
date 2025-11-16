@@ -13,9 +13,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from models import TermRead
+if TYPE_CHECKING:
+    from models import TermRead
 
 
 def format_date(dt: datetime | None) -> str:
@@ -57,7 +59,7 @@ def get_term_sort_key(term: TermRead) -> tuple[float, str]:
     Returns:
         ソートキーのタプル（更新日時の逆順、タイトル）
     """
-    updated_at = term.updated_at or datetime.fromtimestamp(0)
+    updated_at = term.updated_at or datetime.fromtimestamp(0, tz=UTC)
     return (-updated_at.timestamp(), (term.title or "").lower())
 
 

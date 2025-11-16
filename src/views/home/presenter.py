@@ -86,6 +86,8 @@ from views.theme import (
     UI_COLORS,
     create_medium_shadow,
     create_subtle_shadow,
+    get_accent_background_color,
+    get_accent_border_color,
     get_on_surface_color,
     get_outline_color,
     get_surface_color,
@@ -116,31 +118,10 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
         "wb_sunny": ft.Icons.WB_SUNNY,
     }
 
-    bg_color_map = {
-        "amber": ft.Colors.with_opacity(OPACITY.light, ft.Colors.AMBER),
-        "blue": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
-        "green": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
-        "primary": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
-        "purple": ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
-    }
-
-    border_color_map = {
-        "amber": "#FFC107",
-        "blue": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
-        "green": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
-        "primary": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
-        "purple": ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
-    }
-
+    color_name = review.get("color", "primary")
     icon = icon_map.get(review.get("icon", ""), ft.Icons.INFO)
-    bg_color = bg_color_map.get(
-        review.get("color", ""),
-        ft.Colors.with_opacity(OPACITY.subtle, get_on_surface_color()),
-    )
-    border_color = border_color_map.get(
-        review.get("color", ""),
-        ft.Colors.with_opacity(OPACITY.border_light, get_outline_color()),
-    )
+    bg_color = ft.Colors.with_opacity(OPACITY.subtle, get_accent_background_color(color_name))
+    border_color = ft.Colors.with_opacity(OPACITY.border_light, get_accent_border_color(color_name))
     icon_color = get_on_surface_color()
 
     return ft.Container(

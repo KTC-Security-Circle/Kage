@@ -17,7 +17,9 @@ from .utils import sort_tags_by_name
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
     from datetime import datetime
+
     from models import MemoRead, TagRead, TaskRead
+
     from .query import SearchQuery
     from .state import TagDict, TagsViewState
 

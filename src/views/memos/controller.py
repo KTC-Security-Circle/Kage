@@ -49,12 +49,11 @@ from errors import NotFoundError
 from models import MemoRead, MemoStatus, MemoUpdate
 
 from .ordering import sort_memos
-
-if TYPE_CHECKING:
-    from uuid import UUID
 from .query import SearchQueryNormalizer
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from .state import MemosViewState
 
 

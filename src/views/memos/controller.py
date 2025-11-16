@@ -42,7 +42,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
-from uuid import UUID
 
 from loguru import logger
 
@@ -53,6 +52,8 @@ from .ordering import sort_memos
 from .query import SearchQueryNormalizer
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from .state import MemosViewState
 
 
@@ -172,7 +173,6 @@ class MemosController:
         status: MemoStatus = MemoStatus.INBOX,
     ) -> MemoRead:
         """新しいメモを作成する。"""
-
         created = self.memo_app.create(title=title, content=content, status=status)
         self.state.upsert_memo(created)
         self.state.set_all_memos(sort_memos(self.state.all_memos))
@@ -191,7 +191,6 @@ class MemosController:
         status: MemoStatus | None = None,
     ) -> MemoRead:
         """既存のメモを更新する。"""
-
         update_payload = MemoUpdate(title=title, content=content, status=status)
         updated = self.memo_app.update(memo_id, update_payload)
         self.state.upsert_memo(updated)
@@ -203,7 +202,6 @@ class MemosController:
 
     def delete_memo(self, memo_id: UUID) -> None:
         """メモを削除する。"""
-
         success = self.memo_app.delete(memo_id)
         if not success:
             msg = f"メモが見つかりません (id={memo_id})"
@@ -225,7 +223,6 @@ class MemosController:
 
     def _refresh_search_results(self) -> None:
         """現在のクエリに基づいて検索結果を再取得する。"""
-
         query = self.state.search_query
         if not query:
             return

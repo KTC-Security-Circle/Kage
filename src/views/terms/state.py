@@ -36,9 +36,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from models import TermRead, TermStatus
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 @dataclass(slots=True)

@@ -23,13 +23,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from models import TermRead, TermStatus
+
 from .components.term_card import TermCardData
 from .components.term_detail import RelatedItemData, TermDetailData
 from .utils import format_date, format_datetime
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
 
 
 def create_term_card_data(
@@ -132,7 +135,7 @@ def _extract_tags(term: TermRead) -> tuple[str, ...]:
 def _extract_texts(items: Sequence[Any] | None, *, attr: str) -> tuple[str, ...]:
     """Sequence内の要素から指定属性を抽出し文字列化する。"""
     if not items:
-        return tuple()
+        return ()
     normalized: list[str] = []
     for item in items:
         if isinstance(item, str):

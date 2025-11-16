@@ -5,9 +5,8 @@ ApplicationService を介してタグ・関連メモ/タスクを操作し、Sta
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
 import uuid
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from loguru import logger
@@ -17,6 +16,8 @@ from models import TagUpdate
 from .utils import sort_tags_by_name
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
+    from datetime import datetime
+
     from models import MemoRead, TagRead, TaskRead
 
     from .query import SearchQuery
@@ -26,16 +27,21 @@ if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
 class TagApplicationPort(Protocol):
     """TagApplicationService の利用に必要なポート。"""
 
-    def get_all_tags(self) -> list["TagRead"]:  # pragma: no cover - interface
+    def get_all_tags(self) -> list[TagRead]:  # pragma: no cover - interface
         """全タグを取得する。"""
 
-    def search(self, query: str) -> list["TagRead"]:  # pragma: no cover - interface
+    def search(self, query: str) -> list[TagRead]:  # pragma: no cover - interface
         """検索キーワードに一致したタグを返す。"""
 
-    def create(self, name: str, description: str | None = None, color: str | None = None) -> "TagRead":  # pragma: no cover - interface
+    def create(
+        self,
+        name: str,
+        description: str | None = None,
+        color: str | None = None,
+    ) -> TagRead:  # pragma: no cover - interface
         """タグを作成する。"""
 
-    def update(self, tag_id: uuid.UUID, update_data: TagUpdate) -> "TagRead":  # pragma: no cover - interface
+    def update(self, tag_id: uuid.UUID, update_data: TagUpdate) -> TagRead:  # pragma: no cover - interface
         """タグを更新する。"""
 
     def delete(self, tag_id: uuid.UUID) -> bool:  # pragma: no cover - interface
@@ -45,14 +51,18 @@ class TagApplicationPort(Protocol):
 class MemoApplicationPort(Protocol):
     """MemoApplicationService を抽象化するポート。"""
 
-    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list["MemoRead"]:  # pragma: no cover - interface
+    def list_by_tag(
+        self, tag_id: uuid.UUID, *, with_details: bool = False
+    ) -> list[MemoRead]:  # pragma: no cover - interface
         """タグIDでメモ一覧を取得する。"""
 
 
 class TaskApplicationPort(Protocol):
     """TaskApplicationService を抽象化するポート。"""
 
-    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list["TaskRead"]:  # pragma: no cover - interface
+    def list_by_tag(
+        self, tag_id: uuid.UUID, *, with_details: bool = False
+    ) -> list[TaskRead]:  # pragma: no cover - interface
         """タグIDでタスク一覧を取得する。"""
 
 
@@ -60,8 +70,8 @@ class TaskApplicationPort(Protocol):
 class _TagUsageCacheEntry:
     """タグに紐づくメモ・タスクのキャッシュ。"""
 
-    memos: list["MemoRead"]
-    tasks: list["TaskRead"]
+    memos: list[MemoRead]
+    tasks: list[TaskRead]
 
 
 class TagsController:
@@ -69,7 +79,7 @@ class TagsController:
 
     def __init__(
         self,
-        state: "TagsViewState",
+        state: TagsViewState,
         tag_service: TagApplicationPort,
         memo_service: MemoApplicationPort,
         task_service: TaskApplicationPort,
@@ -101,7 +111,7 @@ class TagsController:
     # ------------------------------------------------------------------
     # Search / Select
     # ------------------------------------------------------------------
-    def update_search(self, query: "SearchQuery") -> None:
+    def update_search(self, query: SearchQuery) -> None:
         """検索文字列を更新する。"""
         self.state.search_text = query.normalized
 
@@ -113,7 +123,7 @@ class TagsController:
     # ------------------------------------------------------------------
     # Mutations
     # ------------------------------------------------------------------
-    def create_tag(self, name: str, color: str | None = None, description: str | None = None) -> "TagDict":
+    def create_tag(self, name: str, color: str | None = None, description: str | None = None) -> TagDict:
         """タグを新規作成し状態に反映する。"""
         normalized_description = description.strip() if description else None
         normalized_color = color.strip() if color else None
@@ -131,7 +141,7 @@ class TagsController:
         name: str | None = None,
         color: str | None = None,
         description: str | None = None,
-    ) -> "TagDict":
+    ) -> TagDict:
         """タグ情報を更新し State を同期する。"""
         tag_uuid = self._to_uuid(tag_id)
         update_data = TagUpdate(
@@ -141,9 +151,7 @@ class TagsController:
         )
         updated = self._tag_service.update(tag_uuid, update_data)
         updated_dict = self._serialize_tag(updated)
-        self.state.items = sort_tags_by_name(
-            [updated_dict if tag["id"] == tag_id else tag for tag in self.state.items]
-        )
+        self.state.items = sort_tags_by_name([updated_dict if tag["id"] == tag_id else tag for tag in self.state.items])
         self.state.selected_id = tag_id
         self._reset_usage_cache(tag_id)
         return updated_dict
@@ -209,7 +217,7 @@ class TagsController:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-    def _apply_tags(self, tags: list["TagRead"], *, preserve_selection: bool) -> None:
+    def _apply_tags(self, tags: list[TagRead], *, preserve_selection: bool) -> None:
         serialized = sort_tags_by_name([self._serialize_tag(tag) for tag in tags])
         previous_selection = self.state.selected_id if preserve_selection else None
         self.state.items = serialized
@@ -218,7 +226,7 @@ class TagsController:
         elif not serialized:
             self.state.selected_id = None
 
-    def _serialize_tag(self, tag: "TagRead") -> "TagDict":
+    def _serialize_tag(self, tag: TagRead) -> TagDict:
         tag_id = getattr(tag, "id", None)
         name = getattr(tag, "name", "")
         description = getattr(tag, "description", "") or ""

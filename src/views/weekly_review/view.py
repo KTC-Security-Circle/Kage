@@ -314,9 +314,12 @@ class WeeklyReviewView(BaseView):
         try:
             self.controller.toggle_checklist_item(item_id)
             self._update_checklist()
-        except Exception:
+        except ValueError as e:
+            logger.warning(f"無効なチェックリスト項目ID: {item_id}")
+            self.notify_error(f"項目の更新に失敗しました: {e}")
+        except Exception as e:
             logger.exception("チェックリスト更新に失敗")
-            self.notify_error("チェックリスト更新に失敗しました")
+            self.notify_error(f"予期しないエラーが発生しました: {type(e).__name__}")
 
     def _handle_start_wizard(self, _: ft.ControlEvent) -> None:
         """ウィザード開始処理
@@ -359,9 +362,10 @@ class WeeklyReviewView(BaseView):
         try:
             self.controller.load_initial_data()
             self._refresh_all()
-        except Exception:
+        except Exception as e:
             logger.exception("初期データ読み込みに失敗")
-            self.notify_error("データの読み込みに失敗しました")
+            self.notify_error(f"データの読み込みに失敗しました: {type(e).__name__}")
+            # UIは空の状態で表示を継続
 
     def _refresh_all(self) -> None:
         """全コンポーネントをリフレッシュ"""

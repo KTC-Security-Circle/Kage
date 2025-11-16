@@ -34,37 +34,41 @@ class WeeklyReviewController:
         """初期データを読み込み
 
         タスク統計を取得して状態を更新する。
+
+        Note:
+            現在は TaskApplicationService からのデータ取得が未実装のため、
+            すべての統計値を 0 で初期化している。
+            実装時は task_app_service を使用してタスクデータを取得する。
         """
         logger.info("週次レビューの統計データを読み込み中")
 
-        # タスク統計を取得（簡易実装）
-        # TODO: 実際のタスクデータを取得するメソッドを実装
-        tasks_by_status = {}
+        try:
+            # TODO: TaskApplicationService を使用してタスクデータを取得
+            # 実装例:
+            # all_tasks = self.task_app_service.get_all_tasks()
+            # tasks_by_status = self._group_tasks_by_status(all_tasks)
+            # completed_this_week = self._filter_completed_this_week(all_tasks)
 
-        # 統計データを計算
-        inbox_tasks = tasks_by_status.get("inbox", [])
-        waiting_tasks = tasks_by_status.get("waiting", [])
-        someday_tasks = tasks_by_status.get("someday", [])
-        completed_tasks = tasks_by_status.get("completed", [])
+            # 暫定: 空の統計データで初期化
+            self.state.stats = WeeklyStats(
+                completed_tasks=0,
+                focus_hours=0.0,
+                inbox_count=0,
+                waiting_count=0,
+                someday_count=0,
+                active_projects=0,
+                completed_last_week=0,
+            )
 
-        # アクティブなプロジェクト数（簡易実装: Noneで代用）
-        active_projects = 0
+            logger.info(f"統計データ読み込み完了（暫定値）: {self.state.stats}")
 
-        # 今週完了したタスク数を計算
-        completed_last_week = sum(1 for task in completed_tasks if self._is_completed_this_week(task))
-
-        # 状態を更新
-        self.state.stats = WeeklyStats(
-            completed_tasks=len(completed_tasks),
-            focus_hours=0.0,  # TODO: 集中時間の取得機能実装
-            inbox_count=len(inbox_tasks),
-            waiting_count=len(waiting_tasks),
-            someday_count=len(someday_tasks),
-            active_projects=active_projects,
-            completed_last_week=completed_last_week,
-        )
+        except Exception as e:
+            logger.exception("統計データの読み込みに失敗")
+            error_msg = f"統計データの初期化に失敗しました: {e}"
+            raise RuntimeError(error_msg) from e
 
         logger.info(f"統計データ読み込み完了: {self.state.stats}")
+
     def toggle_checklist_item(self, item_id: str) -> None:
         """チェックリスト項目の完了状態を切り替え
 
@@ -90,28 +94,20 @@ class WeeklyReviewController:
             item.completed = False
         logger.info("チェックリストをリセット")
 
-    def get_tasks_by_status(self, _status: str) -> list:
+    def get_tasks_by_status(self, status: str) -> list:
         """指定ステータスのタスクを取得
 
         Args:
-            _status: タスクステータス (next/waiting/someday)
+            status: タスクステータス (todo/progress/waiting/completed など)
 
         Returns:
             タスクリスト
+
+        Note:
+            実装時は TaskApplicationService を使用してフィルタリングを行う。
+            現在は暫定実装として空リストを返す。
         """
-        # TODO: 実際のタスク取得メソッドを実装
-        # 現在は簡易実装として空リストを返す
+        # TODO: task_app_service を使用した実装
+        # return self.task_app_service.get_tasks_by_status(status)
+        logger.debug(f"get_tasks_by_status called with status={status} (not implemented)")
         return []
-
-    def _is_completed_this_week(self, _task: dict) -> bool:
-        """タスクが今週完了したかチェック
-
-        Args:
-            _task: タスクオブジェクト
-
-        Returns:
-            今週完了した場合True
-        """
-        # TODO: タスクの完了日時を取得して判定
-        # 現在は簡易実装としてFalseを返す
-        return False

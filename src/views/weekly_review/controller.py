@@ -35,42 +35,36 @@ class WeeklyReviewController:
 
         タスク統計を取得して状態を更新する。
         """
-        try:
-            logger.info("週次レビューの統計データを読み込み中")
+        logger.info("週次レビューの統計データを読み込み中")
 
-            # タスク統計を取得（簡易実装）
-            # TODO: 実際のタスクデータを取得するメソッドを実装
-            tasks_by_status = {}
+        # タスク統計を取得（簡易実装）
+        # TODO: 実際のタスクデータを取得するメソッドを実装
+        tasks_by_status = {}
 
-            # 統計データを計算
-            inbox_tasks = tasks_by_status.get("inbox", [])
-            waiting_tasks = tasks_by_status.get("waiting", [])
-            someday_tasks = tasks_by_status.get("someday", [])
-            completed_tasks = tasks_by_status.get("completed", [])
+        # 統計データを計算
+        inbox_tasks = tasks_by_status.get("inbox", [])
+        waiting_tasks = tasks_by_status.get("waiting", [])
+        someday_tasks = tasks_by_status.get("someday", [])
+        completed_tasks = tasks_by_status.get("completed", [])
 
-            # アクティブなプロジェクト数（簡易実装: Noneで代用）
-            active_projects = 0
+        # アクティブなプロジェクト数（簡易実装: Noneで代用）
+        active_projects = 0
 
-            # 今週完了したタスク数を計算
-            completed_last_week = sum(1 for task in completed_tasks if self._is_completed_this_week(task))
+        # 今週完了したタスク数を計算
+        completed_last_week = sum(1 for task in completed_tasks if self._is_completed_this_week(task))
 
-            # 状態を更新
-            self.state.stats = WeeklyStats(
-                completed_tasks=len(completed_tasks),
-                focus_hours=0.0,  # TODO: 集中時間の取得機能実装
-                inbox_count=len(inbox_tasks),
-                waiting_count=len(waiting_tasks),
-                someday_count=len(someday_tasks),
-                active_projects=active_projects,
-                completed_last_week=completed_last_week,
-            )
+        # 状態を更新
+        self.state.stats = WeeklyStats(
+            completed_tasks=len(completed_tasks),
+            focus_hours=0.0,  # TODO: 集中時間の取得機能実装
+            inbox_count=len(inbox_tasks),
+            waiting_count=len(waiting_tasks),
+            someday_count=len(someday_tasks),
+            active_projects=active_projects,
+            completed_last_week=completed_last_week,
+        )
 
-            logger.info(f"統計データ読み込み完了: {self.state.stats}")
-
-        except Exception:
-            logger.exception("統計データの読み込みに失敗")
-            raise
-
+        logger.info(f"統計データ読み込み完了: {self.state.stats}")
     def toggle_checklist_item(self, item_id: str) -> None:
         """チェックリスト項目の完了状態を切り替え
 

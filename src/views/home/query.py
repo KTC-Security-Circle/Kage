@@ -28,14 +28,55 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Protocol
+
+from models import (
+    AiSuggestionStatus,
+    MemoRead,
+    MemoStatus,
+    ProjectRead,
+    ProjectStatus,
+    TaskRead,
+    TaskStatus,
+)
+
+if TYPE_CHECKING:
+    from agents.task_agents.one_liner.state import OneLinerState
 
 
-# TODO: [ロジック担当者向け] 実際のApplicationServiceと連携するHomeQueryの実装
-# 実装箇所: src/logic/application/home_application_service.py
-# 依存: TaskApplicationService, MemoApplicationService, ProjectApplicationService
-# 優先度: High (Home View統合完了後に必須)
-# 担当: TBD
+class MemoServicePort(Protocol):
+    """MemoApplicationService互換のポート。"""
+
+    def get_all_memos(self, *, with_details: bool = False) -> list[MemoRead]:
+        """メモを全件取得する。"""
+        ...
+
+
+class TaskServicePort(Protocol):
+    """TaskApplicationService互換のポート。"""
+
+    def get_all_tasks(self) -> list[TaskRead]:
+        """タスクを全件取得する。"""
+        ...
+
+
+class ProjectServicePort(Protocol):
+    """ProjectApplicationService互換のポート。"""
+
+    def get_all_projects(self) -> list[ProjectRead]:
+        """プロジェクトを全件取得する。"""
+        ...
+
+
+class OneLinerServicePort(Protocol):
+    """OneLinerApplicationService互換のポート。"""
+
+    def generate_one_liner(self, query: OneLinerState | None = None) -> str:
+        """一言メッセージを生成する。"""
+        ...
+
+
 class HomeQuery(Protocol):
     """ホーム画面データ取得のポート。"""
 
@@ -107,3 +148,178 @@ class InMemoryHomeQuery:
             統計情報を含む辞書
         """
         return self._stats
+
+
+@dataclass(slots=True)
+class ApplicationHomeQuery(HomeQuery):
+    """ApplicationServiceを経由して実データを取得するQuery実装。"""
+
+    memo_service: MemoServicePort
+    task_service: TaskServicePort
+    project_service: ProjectServicePort
+    one_liner_service: OneLinerServicePort
+    max_inbox_items: int = 20
+    _memo_cache: list[MemoRead] | None = field(default=None, init=False, repr=False)
+    _task_cache: list[TaskRead] | None = field(default=None, init=False, repr=False)
+    _project_cache: list[ProjectRead] | None = field(default=None, init=False, repr=False)
+
+    def get_daily_review(self) -> dict[str, Any]:
+        """タスクとメモの状況を基にデイリーレビューを生成する。"""
+        return self._build_daily_review(self._get_tasks(), self._get_memos())
+
+    def get_inbox_memos(self) -> list[dict[str, Any]]:
+        """Inboxステータスのメモを最新順で返す。"""
+        inbox_candidates = (memo for memo in self._get_memos() if memo.status == MemoStatus.INBOX)
+        inbox_memos = sorted(inbox_candidates, key=self._memo_sort_key, reverse=True)
+        return [self._memo_to_dict(memo) for memo in inbox_memos[: self.max_inbox_items]]
+
+    def get_stats(self) -> dict[str, int]:
+        """タスク・プロジェクトの集計値を返す。"""
+        tasks = self._get_tasks()
+        projects = self._get_projects()
+        return {
+            "todays_tasks": sum(1 for task in tasks if task.status == TaskStatus.TODAYS),
+            "todo_tasks": sum(1 for task in tasks if task.status == TaskStatus.TODO),
+            "active_projects": sum(1 for project in projects if project.status == ProjectStatus.ACTIVE),
+        }
+
+    def _get_memos(self) -> list[MemoRead]:
+        if self._memo_cache is None:
+            self._memo_cache = self.memo_service.get_all_memos(with_details=True)
+        return self._memo_cache
+
+    def _get_tasks(self) -> list[TaskRead]:
+        if self._task_cache is None:
+            self._task_cache = self.task_service.get_all_tasks()
+        return self._task_cache
+
+    def _get_projects(self) -> list[ProjectRead]:
+        if self._project_cache is None:
+            self._project_cache = self.project_service.get_all_projects()
+        return self._project_cache
+
+    def _memo_to_dict(self, memo: MemoRead) -> dict[str, Any]:
+        ai_status = memo.ai_suggestion_status or AiSuggestionStatus.NOT_REQUESTED
+        return {
+            "id": str(memo.id) if memo.id is not None else "",
+            "title": memo.title or "",
+            "content": memo.content or "",
+            "ai_suggestion_status": ai_status.value,
+        }
+
+    def _memo_sort_key(self, memo: MemoRead) -> float:
+        created_at = memo.created_at
+        if created_at is None:
+            return float("-inf")
+        return created_at.timestamp()
+
+    def _build_daily_review(self, tasks: list[TaskRead], memos: list[MemoRead]) -> dict[str, Any]:
+        todays_tasks = [task for task in tasks if task.status == TaskStatus.TODAYS]
+        todo_tasks = [task for task in tasks if task.status == TaskStatus.TODO]
+        progress_tasks = [task for task in tasks if task.status == TaskStatus.PROGRESS]
+        overdue_tasks = [task for task in tasks if task.status == TaskStatus.OVERDUE]
+        completed_tasks = [task for task in tasks if task.status == TaskStatus.COMPLETED]
+        inbox_memos = [memo for memo in memos if memo.status == MemoStatus.INBOX]
+
+        review_scenarios = [
+            {
+                "condition": bool(overdue_tasks),
+                "data": {
+                    "icon": "error",
+                    "color": "amber",
+                    "message": f"{len(overdue_tasks)}件の期限超過タスクがあります。優先的に対処しましょう。",
+                    "action_text": "期限超過のタスクを確認",
+                    "action_route": "/tasks",
+                    "priority": "high",
+                },
+            },
+            {
+                "condition": not todays_tasks and bool(todo_tasks),
+                "data": {
+                    "icon": "coffee",
+                    "color": "blue",
+                    "message": (
+                        f"今日のタスクがまだ設定されていません。{len(todo_tasks)}件のTODOから選んで始めましょう！"
+                    ),
+                    "action_text": "タスクを設定する",
+                    "action_route": "/tasks",
+                    "priority": "medium",
+                },
+            },
+            {
+                "condition": bool(todays_tasks) and not progress_tasks,
+                "data": {
+                    "icon": "play_arrow",
+                    "color": "green",
+                    "message": (f"{len(todays_tasks)}件のタスクが待っています。さあ、最初の一歩を踏み出しましょう！"),
+                    "action_text": "タスクを開始する",
+                    "action_route": "/tasks",
+                    "priority": "medium",
+                },
+            },
+            {
+                "condition": bool(progress_tasks),
+                "data": {
+                    "icon": "trending_up",
+                    "color": "primary",
+                    "message": (
+                        f"{len(progress_tasks)}件のタスクが進行中です。良いペースです、その調子で続けましょう！"
+                    ),
+                    "action_text": "進行中のタスクを見る",
+                    "action_route": "/tasks",
+                    "priority": "normal",
+                },
+            },
+            {
+                "condition": bool(inbox_memos),
+                "data": {
+                    "icon": "lightbulb",
+                    "color": "purple",
+                    "message": (f"{len(inbox_memos)}件のInboxメモがあります。AIにタスクを生成させて整理しましょう。"),
+                    "action_text": "メモを整理する",
+                    "action_route": "/memos",
+                    "priority": "medium",
+                },
+            },
+            {
+                "condition": bool(completed_tasks) and not todays_tasks,
+                "data": {
+                    "icon": "check_circle",
+                    "color": "green",
+                    "message": (
+                        "素晴らしい！全てのタスクが完了しています。新しいメモを書いて次の目標を設定しましょう。"
+                    ),
+                    "action_text": "新しいメモを作成",
+                    "action_route": "/memos",
+                    "priority": "low",
+                },
+            },
+        ]
+
+        selected = None
+        for scenario in review_scenarios:
+            if scenario["condition"]:
+                selected = scenario["data"]
+                break
+
+        if selected is None:
+            selected = {
+                "icon": "wb_sunny",
+                "color": "primary",
+                "message": ("今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか？"),
+                "action_text": "メモを作成する",
+                "action_route": "/memos",
+                "priority": "low",
+            }
+
+        one_liner_message = self._generate_one_liner_message()
+        if one_liner_message:
+            selected["message"] = one_liner_message
+
+        return selected
+
+    def _generate_one_liner_message(self) -> str | None:
+        try:
+            return self.one_liner_service.generate_one_liner()
+        except Exception:
+            return None

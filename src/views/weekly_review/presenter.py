@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import flet as ft
 
+from models import TaskRead
 from views.weekly_review.components.task_list_card import TaskItemData
 
 from .state import WeeklyReviewState
@@ -134,7 +135,7 @@ class WeeklyReviewPresenter:
         """
         return self.state.format_week_range()
 
-    def create_task_list_data(self, tasks: Sequence) -> list["TaskItemData"]:
+    def create_task_list_data(self, tasks: Sequence[TaskRead]) -> list[TaskItemData]:
         """タスクリスト用データを生成
 
         Args:

@@ -157,8 +157,8 @@ poe docs-build
 | `test-integration` | `uv run pytest -m integration` |
 | `deps-list` | `uv pip list` |
 | `deps-outdated` | `uv pip list --outdated` |
-| `db-downgrade` | `cd src/models && uv run alembic downgrade -1` |
-| `db-history` | `cd src/models && uv run alembic history` |
+| `db-downgrade` | `uv run alembic -c src/models/migrations/alembic.ini downgrade -1` |
+| `db-history` | `uv run alembic -c src/models/migrations/alembic.ini history` |
 | PowerShell固有コマンド | OS固有のコマンドを直接使用 |
 
 ## ❓ トラブルシューティング

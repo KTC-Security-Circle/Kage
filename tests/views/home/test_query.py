@@ -188,3 +188,32 @@ def test_daily_review_fallback_when_one_liner_fails() -> None:
     review = query.get_daily_review()
 
     assert "期限超過タスク" in review["message"]
+
+
+def test_get_tasks_handles_not_found_error_and_returns_empty(caplog: pytest.LogCaptureFixture) -> None:
+    """TaskServiceが NotFoundError を送出する場合、get_daily_review は空データを扱えること。"""
+
+    from errors import NotFoundError
+
+    class BrokenTaskService:
+        def get_all_tasks(self):
+            raise NotFoundError("no tasks in db")
+
+    memos = []
+    tasks: list[TaskRead] = []
+    projects: list[ProjectRead] = []
+
+    query = ApplicationHomeQuery(
+        memo_service=FakeMemoService(memos),
+        task_service=BrokenTaskService(),
+        project_service=FakeProjectService(projects),
+        one_liner_service=FakeOneLinerService(),
+    )
+
+    caplog.set_level(logging.INFO)
+    review = query.get_daily_review()
+
+    # タスクが見つからない -> 空扱い -> レビューはデフォルトの low priority シナリオ
+    assert isinstance(review, dict)
+    assert "message" in review
+    assert any("No tasks found" in r.message for r in caplog.records)

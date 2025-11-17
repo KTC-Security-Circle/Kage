@@ -118,7 +118,8 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
 
         if not results:
             msg = f"{self.model_class.__name__} のエンティティが見つかりません。"
-            logger.warning(msg)
+            # 空の一覧は許容されることが多いためINFOログへ落とす
+            logger.info(msg)
             raise NotFoundError(msg)
 
         logger.info(f"{self.model_class.__name__} のエンティティが {len(results)} 件見つかりました。")

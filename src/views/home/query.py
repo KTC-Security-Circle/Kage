@@ -31,6 +31,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
+from loguru import logger
+
+from errors import NotFoundError
 from models import (
     AiSuggestionStatus,
     MemoRead,
@@ -197,17 +200,31 @@ class ApplicationHomeQuery(HomeQuery):
 
     def _get_memos(self) -> list[MemoRead]:
         if self._memo_cache is None:
-            self._memo_cache = self.memo_service.get_all_memos(with_details=True)
+            try:
+                self._memo_cache = self.memo_service.get_all_memos(with_details=True)
+            except NotFoundError as e:
+                # メモが存在しない場合は空リストで扱う（UIではエラーにしない）
+                logger.info("No memos found in MemoService: {}", e)
+                self._memo_cache = []
         return self._memo_cache
 
     def _get_tasks(self) -> list[TaskRead]:
         if self._task_cache is None:
-            self._task_cache = self.task_service.get_all_tasks()
+            try:
+                self._task_cache = self.task_service.get_all_tasks()
+            except NotFoundError as e:
+                # タスクが存在しない場合は空リストで扱う
+                logger.info("No tasks found in TaskService: {}", e)
+                self._task_cache = []
         return self._task_cache
 
     def _get_projects(self) -> list[ProjectRead]:
         if self._project_cache is None:
-            self._project_cache = self.project_service.get_all_projects()
+            try:
+                self._project_cache = self.project_service.get_all_projects()
+            except NotFoundError as e:
+                logger.info("No projects found in ProjectService: {}", e)
+                self._project_cache = []
         return self._project_cache
 
     def _memo_to_dict(self, memo: MemoRead) -> dict[str, Any]:

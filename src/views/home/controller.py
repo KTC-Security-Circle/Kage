@@ -64,9 +64,14 @@ class HomeController:
             stats = self.query.get_stats()
             self.state.set_stats(stats)
 
-            logger.debug(f"Loaded: {len(inbox_memos)} inbox memos, stats={stats}")
+            # Empty data is not an error — 表示上未登録/未利用状態であるためINFO扱いでログ出力
+            if not review and not inbox_memos and not stats:
+                logger.info("Home initial data empty: no review, no inbox memos, no stats")
+            else:
+                logger.debug(f"Loaded: {len(inbox_memos)} inbox memos, stats={stats}")
 
         except Exception as e:
+            # それ以外の例外はエラーとしてログ出力し再送出
             logger.error(f"Failed to load initial home data: {e}")
             raise
 

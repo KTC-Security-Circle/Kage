@@ -30,7 +30,9 @@ from __future__ import annotations
 from typing import cast
 
 import flet as ft
+from loguru import logger
 
+from logic.application.apps import ApplicationServicesError
 from logic.application.memo_application_service import MemoApplicationService
 from logic.application.one_liner_application_service import OneLinerApplicationService
 from logic.application.project_application_service import ProjectApplicationService
@@ -40,7 +42,7 @@ from views.theme import SPACING, get_light_color
 
 from .controller import HomeController
 from .presenter import build_daily_review_card, build_inbox_memo_item, build_stat_card
-from .query import ApplicationHomeQuery, HomeQuery
+from .query import ApplicationHomeQuery, HomeQuery, InMemoryHomeQuery
 from .state import HomeViewState
 
 
@@ -69,20 +71,37 @@ class HomeView(BaseView):
         self.controller = HomeController(state=self.home_state, query=query)
 
         # 初期データ読み込み
-        self.controller.load_initial_data()
+        try:
+            self.controller.load_initial_data()
+        except ApplicationServicesError as e:
+            # サービスが未登録 (テスト/軽量環境) の場合は Home を空の状態で表示する。
+            # これは異常ではなく、INFOレベルで記録する。
+            logger.info(
+                "Application services unavailable for HomeView, falling back to empty data: {}",
+                e,
+            )
+        except Exception:
+            # 予期せぬエラーは従来通り再送出してUIに表示されるようにする
+            raise
 
     def _create_application_query(self) -> ApplicationHomeQuery:
         """ApplicationServicesを利用したHomeQueryを生成する。"""
-        memo_service = self.apps.get_service(MemoApplicationService)
-        task_service = self.apps.get_service(TaskApplicationService)
-        project_service = self.apps.get_service(ProjectApplicationService)
-        one_liner_service = self.apps.get_service(OneLinerApplicationService)
-        return ApplicationHomeQuery(
-            memo_service=memo_service,
-            task_service=task_service,
-            project_service=project_service,
-            one_liner_service=one_liner_service,
-        )
+        try:
+            memo_service = self.apps.get_service(MemoApplicationService)
+            task_service = self.apps.get_service(TaskApplicationService)
+            project_service = self.apps.get_service(ProjectApplicationService)
+            one_liner_service = self.apps.get_service(OneLinerApplicationService)
+            return ApplicationHomeQuery(
+                memo_service=memo_service,
+                task_service=task_service,
+                project_service=project_service,
+                one_liner_service=one_liner_service,
+            )
+        except Exception as e:
+            # ApplicationServices が利用できない場合はエラーとして扱わず
+            # デフォルトの空データ(HomeQueryのInMemory実装)を使う
+            logger.info("HomeView: Application services missing, using InMemoryHomeQuery: {}", e)
+            return InMemoryHomeQuery()
 
     @property
     def home_state(self) -> HomeViewState:

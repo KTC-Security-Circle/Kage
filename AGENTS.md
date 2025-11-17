@@ -175,7 +175,6 @@ Flet のコントロールを効果的に使用し、クリーンで応答性の
 予測可能で保守性の高い開発のため、以下の現状のディレクトリ構造例を参照してください。
 
 Kage/
-├── alembic.ini
 ├── pyproject.toml
 ├── README.md
 ├── uv.lock
@@ -193,48 +192,50 @@ Kage/
 │ ├── router.py # ルーティング
 │ ├── agents/ # エージェント関連
 │ ├── assets/ # 画像・フォント等
-│ ├── cli/ # CLI 関連
-│ ├── logic/ # ドメインロジック
+│ ├── cli/ # CLI関連
+│ ├── logic/ # ビジネスロジック層
 │ ├── models/ # データモデル
+│ │ └── migrations/ # Alembicマイグレーション
 │ ├── settings/ # 設定管理
-│ └── views/ # Flet 画面(View)
-├── tests/ # テストコード
-│ ├── agents/
-│ ├── logic/
-│ ├── migrations/
-│ ├── settings/
-│ └── ...
-└── migrations/ # DB マイグレーション
+│ └── views/ # Flet画面(View)
+└── tests/ # テストコード
+├── agents/
+├── logic/
+├── settings/
+└── ...
 
 ※主要なサブディレクトリの役割：
 
 - src/：アプリケーションのコア実装（エージェント、ロジック、モデル、ビュー等を含む）
-- tests/：pytest によるユニット・統合テスト
+- tests/：pytestによるユニット・統合テスト
 - docs/：開発・設計・利用ドキュメント
 - scripts/：補助スクリプト
-- migrations/：DB マイグレーション関連
 
 src/配下の構成：
 src/
-├── agents/ # LLM エージェント等
+├── agents/ # LLMエージェント等
 ├── assets/ # 画像・フォント等
-├── cli/ # CLI コマンド
+├── cli/ # CLIコマンド
 ├── logic/ # ビジネスロジック層
-│ ├── application/ # Application Service 層（View 層と Service 層の橋渡し、トランザクション管理、バリデーションなど）
-│ ├── services/ # サービス（ビジネスルール実装、Repository 連携）
-│ ├── repositories/ # リポジトリ（データアクセス抽象化、SQLModel ベース）
-│ ├── container.py # 依存性注入コンテナ
-│ ├── factory.py # ファクトリ
-│ └── unit_of_work.py # Unit of Work パターン
+│ ├── application/ # Application Service層（View層とService層の橋渡し、トランザクション管理）
+│ ├── services/ # Domain Service層（ビジネスルール実装）
+│ ├── repositories/ # Repository層（データアクセス抽象化、SQLModelベース）
+│ ├── factory.py # サービスファクトリ（依存性注入）
+│ └── unit_of_work.py # Unit of Workパターン（トランザクション管理）
 ├── models/ # データモデル
+│ └── migrations/ # Alembicマイグレーション
 ├── settings/ # 設定管理
-└── views/ # Flet ビュー層
+└── views/ # Fletビュー層
 ├── layout.py # 全体レイアウト生成
-├── shared/ # 共通部品（BaseView, AppBar, エラーハンドリング Mixin 等）
-├── home/ # ホーム画面（view.py, components.py）
-├── task/ # タスク管理画面（view.py, components/）
-│ └── components/ # タスクボード、クイックアクション、ダイアログ等
-└── **init**.py # 主要 View のエクスポート
+├── shared/ # 共通部品（BaseView, AppBar等）
+├── home/ # ホーム画面
+├── tasks/ # タスク管理画面
+├── memos/ # メモ管理画面
+├── projects/ # プロジェクト管理画面
+├── tags/ # タグ管理画面
+├── terms/ # 用語管理画面
+├── weekly_review/ # 週次レビュー画面
+└── **init**.py # 主要Viewのエクスポート
 
 ### 5.3. アーキテクチャの改善
 

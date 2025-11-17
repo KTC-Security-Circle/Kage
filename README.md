@@ -24,45 +24,78 @@ GTD の考え方を取り入れたタスク管理デスクトップアプリケ�
 
 ## 🏗️ アーキテクチャ
 
-本プロジェクトでは、保守性・拡張性を高めるためにレイヤードアーキテクチャを採用しています。
+本プロジェクトでは、保守性・拡張性を高めるためにクリーンアーキテクチャに基づいたレイヤード設計を採用しています。
 
 - **UI Layer (views)**: Flet による UI コンポーネントと画面表示
-- **Logic Layer (logic)**: ビジネスロジック
-- **Agent Layer (agents)**: LangChain/LangGraph による自律的なタスク実行
-- **Model Layer (models)**: データ構造とデータベースアクセス
+- **Application Layer (logic/application)**: トランザクション管理と View/Service 層の橋渡し
+- **Domain Service Layer (logic/services)**: ビジネスルールの実装
+- **Repository Layer (logic/repositories)**: データアクセスの抽象化
+- **Agent Layer (agents)**: LangChain/LangGraph による AI/自動化機能
+- **Model Layer (models)**: データ構造とデータベーススキーマ
 
 詳細な設計思想については、以下のドキュメントを参照してください。
 
-- [アーキテクチャ設計ガイド](docs/architecture-design.md)
-- [Views の書き方ガイド](docs/views_guide.md)
-- [Agent 層 設計ガイド](docs/agents_guide.md)
+- [アーキテクチャ設計ガイド](docs/dev/architecture-design.md)
+- [Views の書き方ガイド](docs/dev/views_guide.md)
+- [Agent 層 設計ガイド](docs/dev/agents_guide.md)
 
 ## 📂 ディレクトリ構造
 
 ```plain text
 src
-├── agents/
+├── agents/                 # AI/LLMエージェント
 │   ├── __init__.py
-│   ├── tools/              # 共通ツール
-│   └── [agent_name]/       # 特定のエージェント
-│       ├── agent.py
-│       └── graph.py
-├── logic/
+│   ├── base.py
+│   ├── task_agents/        # タスク関連エージェント
+│   └── utils.py
+├── cli/                    # CLIコマンド
+│   ├── commands/
+│   │   ├── task.py
+│   │   ├── memo.py
+│   │   ├── project.py
+│   │   ├── tag.py
+│   │   └── agent.py
+│   └── main.py
+├── logic/                  # ビジネスロジック層
+│   ├── application/        # Application Service層（トランザクション管理）
+│   │   ├── task_application_service.py
+│   │   ├── memo_application_service.py
+│   │   ├── project_application_service.py
+│   │   └── ...
+│   ├── services/           # Domain Service層（ビジネスルール）
+│   │   ├── task_service.py
+│   │   ├── memo_service.py
+│   │   └── ...
+│   ├── repositories/       # Repository層（データアクセス）
+│   │   ├── task.py
+│   │   ├── memo.py
+│   │   └── ...
+│   ├── factory.py          # サービスファクトリ（DI）
+│   └── unit_of_work.py     # トランザクション管理
+├── models/                 # データモデル
 │   ├── __init__.py
-│   ├── repositories/       # データアクセス層 (DB操作)
-│   │   └── task_repository.py
-│   └── services/           # ビジネスロジック層
-│       └── task_service.py
-├── models/
-│   ├── __init__.py
-│   └── task.py             # SQLModelのテーブル定義
-├── views/
-│   ├── __init__.py
+│   └── migrations/         # Alembicマイグレーション
+│       ├── alembic.ini
+│       ├── env.py
+│       └── versions/
+├── settings/               # 設定管理
+│   ├── manager.py
+│   └── models.py
+├── views/                  # UI層（Flet）
 │   ├── shared/             # 共通UIコンポーネント
-│   └── [feature_name]/     # 機能ごとのView
-│       ├── view.py
-│       └── components.py
-└── main.py                 # アプリケーションのエントリーポイント
+│   ├── home/               # ホーム画面
+│   ├── tasks/              # タスク管理画面
+│   ├── memos/              # メモ管理画面
+│   ├── projects/           # プロジェクト管理画面
+│   ├── tags/               # タグ管理画面
+│   ├── terms/              # 用語管理画面
+│   ├── weekly_review/      # 週次レビュー画面
+│   ├── layout.py           # レイアウト定義
+│   └── theme.py            # テーマ設定
+├── config.py               # アプリケーション設定
+├── logging_conf.py         # ログ設定
+├── router.py               # ルーティング
+└── main.py                 # アプリケーションエントリーポイント
 ```
 
 ## 🚀 環境構築

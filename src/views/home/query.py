@@ -28,6 +28,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -205,6 +206,7 @@ class ApplicationHomeQuery(HomeQuery):
             except NotFoundError as e:
                 # メモが存在しない場合は空リストで扱う（UIではエラーにしない）
                 logger.info("No memos found in MemoService: {}", e)
+                logging.getLogger(__name__).info("No memos found")
                 self._memo_cache = []
         return self._memo_cache
 
@@ -215,6 +217,7 @@ class ApplicationHomeQuery(HomeQuery):
             except NotFoundError as e:
                 # タスクが存在しない場合は空リストで扱う
                 logger.info("No tasks found in TaskService: {}", e)
+                logging.getLogger(__name__).info("No tasks found")
                 self._task_cache = []
         return self._task_cache
 
@@ -224,6 +227,7 @@ class ApplicationHomeQuery(HomeQuery):
                 self._project_cache = self.project_service.get_all_projects()
             except NotFoundError as e:
                 logger.info("No projects found in ProjectService: {}", e)
+                logging.getLogger(__name__).info("No projects found")
                 self._project_cache = []
         return self._project_cache
 

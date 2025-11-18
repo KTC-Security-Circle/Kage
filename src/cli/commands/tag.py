@@ -14,12 +14,13 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-if TYPE_CHECKING:
-    from logic.application.tag_application_service import TagApplicationService
-    from models import TagRead, TagUpdate
-
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 from logic.application.apps import ApplicationServices
+from models import TagUpdate
+
+if TYPE_CHECKING:
+    from logic.application.tag_application_service import TagApplicationService
+    from models import TagRead
 
 app = typer.Typer(help="タグ CRUD / 検索")
 console = Console()

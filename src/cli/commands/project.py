@@ -15,12 +15,12 @@ from rich.table import Table
 
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 from logic.application.apps import ApplicationServices
-from logic.application.project_application_service import ProjectApplicationService
 from models import ProjectStatus
 
 if TYPE_CHECKING:
     import uuid
 
+    from logic.application.project_application_service import ProjectApplicationService
     from models import ProjectRead, ProjectUpdate
 
 app = typer.Typer(help="プロジェクト CRUD / 検索 コマンド")

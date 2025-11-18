@@ -64,11 +64,11 @@ def _create_task(title: str, description: str, status: TaskStatus | None = None)
 
 @elapsed_time()
 @with_spinner("Fetching task...")
-def _get_task(task_id) -> TaskRead | None:
+def _get_task(task_id: uuid.UUID) -> TaskRead | None:
     """IDでタスク取得サービス呼び出し [AI GENERATED]
 
     Args:
-        query (GetTaskByIdQuery): タスク取得クエリ
+        task_id: タスクID (UUID)
 
     Returns:
         TaskRead | None: 取得結果（存在しない場合 None）
@@ -79,11 +79,12 @@ def _get_task(task_id) -> TaskRead | None:
 
 @elapsed_time()
 @with_spinner("Updating task...")
-def _update_task(task_id, update_data: TaskUpdate) -> TaskRead:
+def _update_task(task_id: uuid.UUID, update_data: TaskUpdate) -> TaskRead:
     """タスク更新サービス呼び出し [AI GENERATED]
 
     Args:
-        cmd (UpdateTaskCommand): 更新コマンド
+        task_id: 対象タスクID (UUID)
+        update_data: 更新データ
 
     Returns:
         TaskRead: 更新後タスク
@@ -94,24 +95,24 @@ def _update_task(task_id, update_data: TaskUpdate) -> TaskRead:
 
 @elapsed_time()
 @with_spinner("Deleting task...")
-def _delete_task(task_id) -> bool:
+def _delete_task(task_id: uuid.UUID) -> bool:
     """タスク削除サービス呼び出し [AI GENERATED]
 
     Args:
-        cmd (DeleteTaskCommand): 削除コマンド
+        task_id: 削除対象タスクID (UUID)
     """
     service = _get_service()
-    success = service.delete(task_id)
-    return success
+    return service.delete(task_id)
 
 
 @elapsed_time()
 @with_spinner("Changing status...")
-def _change_status(task_id, update_data) -> TaskRead:
+def _change_status(task_id: uuid.UUID, update_data: TaskUpdate) -> TaskRead:
     """ステータス変更（更新再利用）サービス呼び出し [AI GENERATED]
 
     Args:
-        cmd (UpdateTaskCommand): 更新コマンド
+        task_id: 対象タスクID (UUID)
+        update_data: 更新データ
 
     Returns:
         TaskRead: 更新後タスク
@@ -374,21 +375,18 @@ def change_status(task_id: str, new_status: TaskStatus) -> None:
         task_id: 対象タスク UUID
         new_status: 新しいステータス
     """
-    from logic.commands.task_commands import UpdateTaskCommand
-
     tid = uuid.UUID(task_id)
     current = _get_task(task_id=tid)
     if current.result is None:
         console.print("[red]Not found[/red]")
         raise typer.Exit(code=1)
-    cmd = UpdateTaskCommand(
-        task_id=tid,
+    update_data = TaskUpdate(
         title=current.result.title,
         description=current.result.description or "",
         status=new_status,
         due_date=current.result.due_date,
     )
-    updated = _change_status(task_id, cmd)
+    updated = _change_status(tid, update_data)
     console.print(f"[green]Status -> {updated.result.status.value}[/green] Elapsed: {updated.elapsed:.2f}s")
 
 

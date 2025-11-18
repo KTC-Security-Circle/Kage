@@ -85,7 +85,7 @@ def _get_one_liner_service(
     if provider is None and model is None:
         return OneLinerApplicationService()
     try:
-        resolved_provider, resolved_model = _resolve_provider_model(provider, model)
+        _, resolved_model = _resolve_provider_model(provider, model)
     except typer.BadParameter:
         raise
     except Exception as e:  # pragma: no cover
@@ -104,9 +104,9 @@ def _build_context_auto() -> OneLinerState:  # [AI GENERATED]
     # OneLinerState 型の辞書を返します（プレースホルダ）。
     return OneLinerState(
         {
-            "today_task_count": 0,
-            "completed_task_count": 0,
-            "overdue_task_count": 0,
+            "today_task_count": 0,  # 開発段階のため、デフォルト値を使用
+            "completed_task_count": 0,  # 開発段階のため、デフォルト値を使用
+            "overdue_task_count": 0,  # 開発段階のため、デフォルト値を使用
             "progress_summary": "",
             "user_name": "",
         }
@@ -114,25 +114,29 @@ def _build_context_auto() -> OneLinerState:  # [AI GENERATED]
 
 
 def _build_context_interactive() -> OneLinerState:  # [AI GENERATED]
-    """Questionary を用いて手動でカウント値を入力しコンテキスト構築 [AI GENERATED]"""
-    today = int(questionary.text("today_task_count?", default="0").ask() or 0)
-    completed = int(questionary.text("completed_task_count?", default="0").ask() or 0)
-    overdue = int(questionary.text("overdue_task_count?", default="0").ask() or 0)
+    """Questionary を用いて手動でコンテキスト情報を入力する [AI GENERATED]
+
+    注: today_task_count, completed_task_count, overdue_task_count は
+    開発段階のため、デフォルト値を使用しています。
+    """
+    # 注: 以下のフィールドは開発段階のため使用していません
+    # today = int(questionary.text("today_task_count?", default="0").ask() or 0)
+    # completed = int(questionary.text("completed_task_count?", ...))
+    # overdue = int(questionary.text("overdue_task_count?", ...))
+
     # 注: `logic.queries.one_liner_queries.build_one_liner_context` は削除されました。
     # TODO: 対話的なコンテキストビルダを復活するか、適切な実装に置き換えてください。
-    # 安全なプレースホルダとして、収集した入力から OneLinerState を直接構築して返します。
     # from logic.queries.one_liner_queries import build_one_liner_context
     # return build_one_liner_context(
     #     today_task_count=today,
     #     completed_task_count=completed,
     #     overdue_task_count=overdue,
     # )
-    # 収集した入力から構築した OneLinerState 型の辞書を返します（プレースホルダ）。
     return OneLinerState(
         {
-            "today_task_count": int(today),
-            "completed_task_count": int(completed),
-            "overdue_task_count": int(overdue),
+            "today_task_count": 0,  # 開発段階のため、デフォルト値を使用
+            "completed_task_count": 0,  # 開発段階のため、デフォルト値を使用
+            "overdue_task_count": 0,  # 開発段階のため、デフォルト値を使用
             "progress_summary": "",
             "user_name": "",
         }
@@ -190,10 +194,7 @@ def _generate_one_liner(
 ) -> str:  # [AI GENERATED] TimingResult[str]
     """One-liner 生成 (TimingResult[str] 相当オブジェクトを返却) [AI GENERATED]"""
     service = _get_one_liner_service(provider=provider, model=model)
-
-    if isinstance(ctx, OneLinerState):
-        return service.generate_one_liner(ctx)
-    return service.generate_one_liner()
+    return service.generate_one_liner(ctx)
 
 
 def _print_one_liner(
@@ -202,7 +203,7 @@ def _print_one_liner(
     *,
     provider: LLMProvider | None = None,
     model: str | HuggingFaceModel | None = None,
-    ctx: OneLinerState | None = None,
+    ctx: OneLinerState | None = None,  # 開発段階のため、一時的に未使用
 ) -> None:  # [AI GENERATED]
     """結果表示用ヘルパー (Provider/Model/Context 情報付き) [AI GENERATED]
 
@@ -211,8 +212,9 @@ def _print_one_liner(
         elapsed: 経過秒数
         provider: 実際に使用した Provider
         model: 使用モデル (文字列または Enum)
-        ctx: コンテキスト (件数表示用)
+        ctx: コンテキスト (件数表示用。開発段階のため、一時的に表示しない)
     """
+    _ = ctx  # 将来的な使用に備える
     meta_parts: list[str] = []
     if provider:
         meta_parts.append(f"provider={provider.value}")
@@ -222,8 +224,11 @@ def _print_one_liner(
             meta_parts.append(f"model={model.name}")
         else:
             meta_parts.append(f"model={model}")
-    if ctx is not None:
-        meta_parts.append(f"counts(t={ctx.today_task_count},c={ctx.completed_task_count},o={ctx.overdue_task_count})")
+    # 開発段階のため、カウント情報の表示は一時的に無効化
+    # if ctx is not None:
+    #     meta_parts.append(
+    #         f"counts(t={ctx.today_task_count},c={ctx.completed_task_count},...)"
+    #     )
     caption = f"[dim]elapsed={elapsed:.2f}s | "
     caption += " | ".join(meta_parts) if meta_parts else ""
     caption += "[/dim]"

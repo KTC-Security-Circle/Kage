@@ -26,6 +26,10 @@ if TYPE_CHECKING:  # import grouping for type checking only
 app = typer.Typer(help="メモ CRUD / 検索")
 console = Console()
 
+# Typer Option definitions (lint 対応: デフォルト評価を関数外で実行)
+CONTENT_OPT = typer.Option(None, "--content", "-c", help="新しい内容")
+STATUS_OPT = typer.Option(None, "--status", "-s", help="新しいステータス")
+
 
 def _get_service() -> MemoApplicationService:
     apps = ApplicationServices.create()
@@ -141,8 +145,8 @@ def create(
 @handle_cli_errors()
 def update(
     memo_id: str = typer.Argument(...),
-    content: str | None = typer.Option(None, "--content", "-c", help="新しい内容"),
-    status: MemoStatus | None = typer.Option(None, "--status", "-s", help="新しいステータス"),
+    content: str | None = CONTENT_OPT,
+    status: MemoStatus | None = STATUS_OPT,
 ) -> None:  # [AI GENERATED]
     """既存メモの内容を更新するコマンド [AI GENERATED]
 

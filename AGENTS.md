@@ -192,12 +192,12 @@ Kage/
 │ ├── router.py # ルーティング
 │ ├── agents/ # エージェント関連
 │ ├── assets/ # 画像・フォント等
-│ ├── cli/ # CLI関連
+│ ├── cli/ # CLI 関連
 │ ├── logic/ # ビジネスロジック層
 │ ├── models/ # データモデル
-│ │ └── migrations/ # Alembicマイグレーション
+│ │ └── migrations/ # Alembic マイグレーション
 │ ├── settings/ # 設定管理
-│ └── views/ # Flet画面(View)
+│ └── views/ # Flet 画面(View)
 └── tests/ # テストコード
 ├── agents/
 ├── logic/
@@ -207,27 +207,27 @@ Kage/
 ※主要なサブディレクトリの役割：
 
 - src/：アプリケーションのコア実装（エージェント、ロジック、モデル、ビュー等を含む）
-- tests/：pytestによるユニット・統合テスト
+- tests/：pytest によるユニット・統合テスト
 - docs/：開発・設計・利用ドキュメント
 - scripts/：補助スクリプト
 
 src/配下の構成：
 src/
-├── agents/ # LLMエージェント等
+├── agents/ # LLM エージェント等
 ├── assets/ # 画像・フォント等
-├── cli/ # CLIコマンド
+├── cli/ # CLI コマンド
 ├── logic/ # ビジネスロジック層
-│ ├── application/ # Application Service層（View層とService層の橋渡し、トランザクション管理）
-│ ├── services/ # Domain Service層（ビジネスルール実装）
-│ ├── repositories/ # Repository層（データアクセス抽象化、SQLModelベース）
+│ ├── application/ # Application Service 層（View 層と Service 層の橋渡し、トランザクション管理）
+│ ├── services/ # Domain Service 層（ビジネスルール実装）
+│ ├── repositories/ # Repository 層（データアクセス抽象化、SQLModel ベース）
 │ ├── factory.py # サービスファクトリ（依存性注入）
-│ └── unit_of_work.py # Unit of Workパターン（トランザクション管理）
+│ └── unit_of_work.py # Unit of Work パターン（トランザクション管理）
 ├── models/ # データモデル
-│ └── migrations/ # Alembicマイグレーション
+│ └── migrations/ # Alembic マイグレーション
 ├── settings/ # 設定管理
-└── views/ # Fletビュー層
+└── views/ # Flet ビュー層
 ├── layout.py # 全体レイアウト生成
-├── shared/ # 共通部品（BaseView, AppBar等）
+├── shared/ # 共通部品（BaseView, AppBar 等）
 ├── home/ # ホーム画面
 ├── tasks/ # タスク管理画面
 ├── memos/ # メモ管理画面
@@ -235,7 +235,7 @@ src/
 ├── tags/ # タグ管理画面
 ├── terms/ # 用語管理画面
 ├── weekly_review/ # 週次レビュー画面
-└── **init**.py # 主要Viewのエクスポート
+└── **init**.py # 主要 View のエクスポート
 
 ### 5.3. アーキテクチャの改善
 
@@ -362,7 +362,7 @@ uv run poe cli # cli app (testing logic)
 
 コードの変更を送信する前に:
 
-[ ] コード品質: `poe fix` および `poe test` がパスしたか。
+[ ] コード品質: `uv run poe fix` および `uv run poe test` がパスしたか。
 [ ] 型ヒント: 全ての関数に型ヒントと戻り値の型が追加されているか。
 [ ] ドキュメンテーション: 公開関数に Google スタイルの docstring が記述されているか。
 [ ] テスト: 新機能・修正に対するテストが追加され、全てパスしているか。

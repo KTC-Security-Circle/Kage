@@ -19,7 +19,7 @@ Always adhere to the following core software design principles:
 
 - PEP 8: All Python code must follow the PEP 8 style guide.
 - Formatter & Linter: We use Ruff for formatting and linting.
-    - Before committing, run poe fix (which executes ruff format and ruff check --fix) to format your code and automatically fix any issues. Manually correct any remaining warnings or errors.
+  - Before committing, run `uv run poe fix` (which executes ruff format and ruff check --fix) to format your code and automatically fix any issues. Manually correct any remaining warnings or errors.
 - Indentation: Use 4 spaces for each level of indentation.
 - Line Length: Limit all lines to a maximum of 79 characters where possible, though slight extensions are permissible if they improve readability.
 - Blank Lines: Use blank lines to separate functions, classes, and logical blocks of code to improve readability.

@@ -1,6 +1,6 @@
 # CLI クイックリファレンス
 
-Kage の CLI は Typer ベースで `poe cli <group> <command>` 形式で利用します。以下は主要なサブコマンドの概要です。
+Kage の CLI は Typer ベースで `uv run poe cli <group> <command>` 形式で利用します。以下は主要なサブコマンドの概要です。
 
 ## グループ一覧
 
@@ -16,19 +16,19 @@ Kage の CLI は Typer ベースで `poe cli <group> <command>` 形式で利用�
 
 ```bash
 # タスク一覧 (INBOX)
-poe cli task list
+uv run poe cli task list
 
 # すべてのタスク一覧
-poe cli task list --all
+uv run poe cli task list --all
 
 # タスク作成
-poe cli task create --title "Write docs" --desc "CLI pages" --due 2025-09-30
+uv run poe cli task create --title "Write docs" --desc "CLI pages" --due 2025-09-30
 
 # プロジェクト検索
-poe cli project search refactor
+uv run poe cli project search refactor
 
 # タグ検索
-poe cli tag search urgent
+uv run poe cli tag search urgent
 ```
 
 詳細: [Task コマンド](task.md) / [Task-Tag コマンド](task_tag.md) / [Memo コマンド](memo.md) / [Tag コマンド](tag.md) / [Project コマンド](project.md) / [エラーハンドリング](error_handling.md) / [開発者向け](dev.md)

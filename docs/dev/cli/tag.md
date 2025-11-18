@@ -5,38 +5,38 @@
 ## 一覧
 
 ```bash
-poe cli tag list
+uv run poe cli tag list
 ```
 
 ## 作成
 
 ```bash
-poe cli tag create --name "#urgent"
+uv run poe cli tag create --name "#urgent"
 ```
 
 ## 検索
 
 ```bash
-poe cli tag search urgent
+uv run poe cli tag search urgent
 ```
 
 ## 取得
 
 ```bash
-poe cli tag get <TAG_ID>
+uv run poe cli tag get <TAG_ID>
 ```
 
 ## 更新
 
 ```bash
-poe cli tag update <TAG_ID> --name "#important"
+uv run poe cli tag update <TAG_ID> --name "#important"
 ```
 
 ## 削除
 
 ```bash
-poe cli tag delete <TAG_ID>
-poe cli tag delete <TAG_ID> --force
+uv run poe cli tag delete <TAG_ID>
+uv run poe cli tag delete <TAG_ID> --force
 ```
 
 ## 内部ヘルパー対応表
@@ -53,5 +53,5 @@ poe cli tag delete <TAG_ID> --force
 ## API リファレンス
 
 ::: src.cli.commands.tag
-    options:
-        show_root_heading: false
+options:
+show_root_heading: false

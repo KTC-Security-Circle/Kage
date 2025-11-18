@@ -31,9 +31,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from views.shared.base_view import BaseViewState
+
 
 @dataclass(slots=True)
-class HomeViewState:
+class HomeViewState(BaseViewState):
     """HomeView の表示状態を管理するデータクラス。
 
     View 自体は UI 制御のみに集中させ、状態の保持と派生計算をこのクラスへ委譲する。

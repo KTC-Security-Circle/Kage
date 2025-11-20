@@ -20,7 +20,7 @@
     # マイグレーション実行後にデータ投入 (推奨)
     uv run poe sample-data
     # または
-    poe sample-data
+    uv run poe sample-data
 
 データベースを初期化した直後、または UI をまとめて確認したいタイミングで実行してください。
 """

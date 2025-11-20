@@ -175,7 +175,6 @@ Flet のコントロールを効果的に使用し、クリーンで応答性の
 予測可能で保守性の高い開発のため、以下の現状のディレクトリ構造例を参照してください。
 
 Kage/
-├── alembic.ini
 ├── pyproject.toml
 ├── README.md
 ├── uv.lock
@@ -194,17 +193,16 @@ Kage/
 │ ├── agents/ # エージェント関連
 │ ├── assets/ # 画像・フォント等
 │ ├── cli/ # CLI 関連
-│ ├── logic/ # ドメインロジック
+│ ├── logic/ # ビジネスロジック層
 │ ├── models/ # データモデル
+│ │ └── migrations/ # Alembic マイグレーション
 │ ├── settings/ # 設定管理
 │ └── views/ # Flet 画面(View)
-├── tests/ # テストコード
-│ ├── agents/
-│ ├── logic/
-│ ├── migrations/
-│ ├── settings/
-│ └── ...
-└── migrations/ # DB マイグレーション
+└── tests/ # テストコード
+├── agents/
+├── logic/
+├── settings/
+└── ...
 
 ※主要なサブディレクトリの役割：
 
@@ -212,7 +210,6 @@ Kage/
 - tests/：pytest によるユニット・統合テスト
 - docs/：開発・設計・利用ドキュメント
 - scripts/：補助スクリプト
-- migrations/：DB マイグレーション関連
 
 src/配下の構成：
 src/
@@ -220,20 +217,24 @@ src/
 ├── assets/ # 画像・フォント等
 ├── cli/ # CLI コマンド
 ├── logic/ # ビジネスロジック層
-│ ├── application/ # Application Service 層（View 層と Service 層の橋渡し、トランザクション管理、バリデーションなど）
-│ ├── services/ # サービス（ビジネスルール実装、Repository 連携）
-│ ├── repositories/ # リポジトリ（データアクセス抽象化、SQLModel ベース）
-│ ├── container.py # 依存性注入コンテナ
-│ ├── factory.py # ファクトリ
-│ └── unit_of_work.py # Unit of Work パターン
+│ ├── application/ # Application Service 層（View 層と Service 層の橋渡し、トランザクション管理）
+│ ├── services/ # Domain Service 層（ビジネスルール実装）
+│ ├── repositories/ # Repository 層（データアクセス抽象化、SQLModel ベース）
+│ ├── factory.py # サービスファクトリ（依存性注入）
+│ └── unit_of_work.py # Unit of Work パターン（トランザクション管理）
 ├── models/ # データモデル
+│ └── migrations/ # Alembic マイグレーション
 ├── settings/ # 設定管理
 └── views/ # Flet ビュー層
 ├── layout.py # 全体レイアウト生成
-├── shared/ # 共通部品（BaseView, AppBar, エラーハンドリング Mixin 等）
-├── home/ # ホーム画面（view.py, components.py）
-├── task/ # タスク管理画面（view.py, components/）
-│ └── components/ # タスクボード、クイックアクション、ダイアログ等
+├── shared/ # 共通部品（BaseView, AppBar 等）
+├── home/ # ホーム画面
+├── tasks/ # タスク管理画面
+├── memos/ # メモ管理画面
+├── projects/ # プロジェクト管理画面
+├── tags/ # タグ管理画面
+├── terms/ # 用語管理画面
+├── weekly_review/ # 週次レビュー画面
 └── **init**.py # 主要 View のエクスポート
 
 ### 5.3. アーキテクチャの改善
@@ -361,7 +362,7 @@ uv run poe cli # cli app (testing logic)
 
 コードの変更を送信する前に:
 
-[ ] コード品質: `poe fix` および `poe test` がパスしたか。
+[ ] コード品質: `uv run poe fix` および `uv run poe test` がパスしたか。
 [ ] 型ヒント: 全ての関数に型ヒントと戻り値の型が追加されているか。
 [ ] ドキュメンテーション: 公開関数に Google スタイルの docstring が記述されているか。
 [ ] テスト: 新機能・修正に対するテストが追加され、全てパスしているか。

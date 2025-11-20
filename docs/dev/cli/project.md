@@ -5,38 +5,38 @@
 ## 一覧
 
 ```bash
-poe cli project list
+uv run poe cli project list
 ```
 
 ## 作成
 
 ```bash
-poe cli project create --title "Refactor" --desc "Improve CLI layer" --status active
+uv run poe cli project create --title "Refactor" --desc "Improve CLI layer" --status active
 ```
 
 ## 検索
 
 ```bash
-poe cli project search refactor
+uv run poe cli project search refactor
 ```
 
 ## 取得
 
 ```bash
-poe cli project get <PROJECT_ID>
+uv run poe cli project get <PROJECT_ID>
 ```
 
 ## 更新
 
 ```bash
-poe cli project update <PROJECT_ID> --title "Refactor v2" --desc "More improvements" --status on_hold
+uv run poe cli project update <PROJECT_ID> --title "Refactor v2" --desc "More improvements" --status on_hold
 ```
 
 ## 削除
 
 ```bash
-poe cli project delete <PROJECT_ID>
-poe cli project delete <PROJECT_ID> --force
+uv run poe cli project delete <PROJECT_ID>
+uv run poe cli project delete <PROJECT_ID> --force
 ```
 
 ## 内部ヘルパー対応表
@@ -53,5 +53,5 @@ poe cli project delete <PROJECT_ID> --force
 ## API リファレンス
 
 ::: src.cli.commands.project
-    options:
-        show_root_heading: false
+options:
+show_root_heading: false

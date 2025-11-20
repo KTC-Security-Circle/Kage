@@ -31,32 +31,32 @@
 
 5. **環境セットアップ**: poethepoet タスクランナーを使用した初回セットアップを実行します。
 
-   ```bash
-   # 初回セットアップ（依存関係同期 + DB更新）
-   poe setup
-   ```
+```bash
+# 初回セットアップ（依存関係同期 + DB更新）
+uv run poe setup
+```
 
 6. **コードの変更**: コーディング規約に従って、コードの追加・修正を行います。
 
 7. **テストとコード品質チェック**: 変更によって既存の機能が壊れていないことを確認します。
 
-   ```bash
-   # 品質チェック（lint + format-check + type-check）
-   poe check
+```bash
+# 品質チェック（lint + format-check + type-check）
+uv run poe check
 
-   # 自動修正（lint-fix + format）
-   poe fix
+# 自動修正（lint-fix + format）
+uv run poe fix
 
-   # テスト実行
-   poe test
-   ```
+# テスト実行
+uv run poe test
+```
 
 8. **開発中の動作確認**: アプリケーションを起動して動作を確認します。
 
-   ```bash
-   # 開発モード（ホットリロード）
-   poe app-dev
-   ```
+```bash
+# 開発モード（ホットリロード）
+uv run poe dev
+```
 
 9. **コミット**: 変更内容をコミットします。コミットメッセージは分かりやすく記述してください。
 
@@ -124,10 +124,10 @@
 
 ```bash
 # ローカルプレビュー（推奨）
-poe docs-serve
+uv run poe docs-serve
 
 # ビルドテスト
-poe docs-build
+uv run poe docs-build
 
 # 従来のコマンド
 uv run mkdocs serve

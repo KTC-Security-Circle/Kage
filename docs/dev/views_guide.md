@@ -560,51 +560,50 @@ class LoginForm(ft.Column):
     pass
 ```
 
-## 依存性注入と Service Container 使用
+## 依存性注入と ApplicationServices の使用
 
-Views 層で Application Service を使用する際は、Service Container パターンを活用して依存性注入を実現します。これにより、テスタビリティと保守性を向上させます。
+Views 層で Application Service を使用する際は、ApplicationServices コンテナを活用して依存性注入を実現します。これにより、テスタビリティと保守性を向上させます。
 
-### 1. Service Container の基本的な使用方法
+### 1. ApplicationServices の基本的な使用方法
 
 ```python
-# views/task/view.py - Service Container使用例
+# views/tasks/view.py - ApplicationServices使用例
 class TaskView(BaseView):
-    """Service Containerを使用したタスクビュー"""
+    """ApplicationServicesを使用したタスクビュー"""
 
-    def __init__(self, page: ft.Page) -> None:
-        super().__init__(page)
+    def __init__(self, page: ft.Page, app_services: ApplicationServices) -> None:
+        super().__init__(page, app_services)
 
-        # BaseViewで管理されているcontainerから必要なサービスを取得
-        self._task_service = self.container.get_task_application_service()
-        self._project_service = self.container.get_project_application_service()
-        self._tag_service = self.container.get_tag_application_service()
+        # プロパティアクセスで必要なサービスを取得
+        self._task_service = app_services.task
+        self._project_service = app_services.project
+        self._tag_service = app_services.tag
 ```
 
 ### 2. 依存性の明示的な管理
 
 ```python
-# views/shared/service_aware_view.py - サービス対応ベースビュー
+# views/shared/base_view.py - サービス対応ベースビュー
 class ServiceAwareView(BaseView):
     """Application Serviceに依存するビューの基底クラス"""
 
     def __init__(
         self,
         page: ft.Page,
-        container: ApplicationServiceContainer | None = None
+        app_services: ApplicationServices | None = None
     ) -> None:
-        # BaseViewを初期化（containerは自動的に設定される）
-        super().__init__(page)
-
-        # テスト時にはモックコンテナで上書き可能
-        if container is not None:
-            self.container = container
+        # ApplicationServicesがNoneの場合は新規作成
+        if app_services is None:
+            app_services = ApplicationServices.create()
+        
+        super().__init__(page, app_services)
 
         # 必要なサービスを初期化時に取得
         self._initialize_services()
 
     def _initialize_services(self) -> None:
         """必要なApplication Serviceを初期化"""
-        self._task_service = self.container.get_task_application_service()
+        self._task_service = self.app_services.task
         # 他のサービスも必要に応じて取得
 ```
 
@@ -662,35 +661,39 @@ class TaskView(ServiceAwareView):
 
 ```python
 # tests/views/test_task_view.py - テスト用モック注入例
-class MockApplicationServiceContainer:
-    """テスト用のモックコンテナ"""
+from unittest.mock import Mock
+from logic.application.apps import ApplicationServices
+
+class MockApplicationServices:
+    """テスト用のモックApplicationServices"""
 
     def __init__(self):
         self.mock_task_service = Mock(spec=TaskApplicationService)
 
-    def get_task_application_service(self) -> TaskApplicationService:
+    @property
+    def task(self) -> TaskApplicationService:
         return self.mock_task_service
 
 def test_task_creation():
     """タスク作成のテスト"""
-    # モックコンテナを準備
-    mock_container = MockApplicationServiceContainer()
-    mock_container.mock_task_service.create_task.return_value = TaskRead(
-        id="test-id",
+    # モックApplicationServicesを準備
+    mock_app_services = MockApplicationServices()
+    mock_app_services.mock_task_service.create_task.return_value = TaskRead(
+        id=UUID("12345678-1234-1234-1234-123456789012"),
         title="Test Task",
         status=TaskStatus.INBOX
     )
 
     # テスト対象のビューにモックを注入
     page = Mock(spec=ft.Page)
-    view = TaskView(page=page, container=mock_container)
+    view = TaskView(page=page, app_services=mock_app_services)
 
     # テスト実行
     command = CreateTaskCommand(title="Test Task")
     view._on_task_created(command)
 
     # モックが正しく呼ばれたことを確認
-    mock_container.mock_task_service.create_task.assert_called_once_with(command)
+    mock_app_services.mock_task_service.create_task.assert_called_once_with(command)
 ```
 
 ## リアルタイム更新とイベント処理
@@ -704,8 +707,10 @@ GTD タスク管理では、タスクの状態変更やプロジェクトの進�
 class ObservableView(ServiceAwareView):
     """状態変更を観察するビューの基底クラス"""
 
-    def __init__(self, page: ft.Page, container: ApplicationServiceContainer | None = None):
-        super().__init__(page, container)
+    def __init__(self, page: ft.Page, app_services: ApplicationServices | None = None):
+        if app_services is None:
+            app_services = ApplicationServices.create()
+        super().__init__(page, app_services)
         self._observers: list[Callable] = []
 
     def add_observer(self, callback: Callable) -> None:

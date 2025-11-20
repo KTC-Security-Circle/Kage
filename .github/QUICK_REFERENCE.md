@@ -9,7 +9,7 @@
 uv tool install poethepoet
 
 # 初回セットアップ
-poe setup
+uv run poe setup
 ```
 
 ## 📝 ブランチ作成
@@ -30,16 +30,16 @@ git checkout -b fix/123-null-pointer
 
 ```bash
 # 開発モード起動
-poe app-dev
+uv run poe app-dev
 
 # コード品質チェック
-poe check
+uv run poe check
 
 # 自動修正
-poe fix
+uv run poe fix
 
 # テスト実行
-poe test
+uv run poe test
 ```
 
 ## 📂 アーキテクチャ

@@ -6,28 +6,28 @@ title: Task-Tag コマンド
 
 ## 主なコマンド
 
-| コマンド例                                   | 説明                           |
-| -------------------------------------------- | ------------------------------ |
-| `poe cli task-tag add <TASK_ID> <TAG_ID>`    | タスクへタグを付与             |
-| `poe cli task-tag remove <TASK_ID> <TAG_ID>` | タスクから特定タグを解除       |
-| `poe cli task-tag list`                      | すべての関連を一覧             |
-| `poe cli task-tag list --task <TASK_ID>`     | 特定タスクに紐づくタグ一覧     |
-| `poe cli task-tag list --tag <TAG_ID>`       | 特定タグが付与されたタスク一覧 |
-| `poe cli task-tag clear-task <TASK_ID>`      | タスクに付与された全タグ解除   |
-| `poe cli task-tag clear-tag <TAG_ID>`        | タグが付与された全タスク解除   |
-| `poe cli task-tag exists <TASK_ID> <TAG_ID>` | 存在確認 (exit code 0/1)       |
+| コマンド例                                          | 説明                           |
+| --------------------------------------------------- | ------------------------------ |
+| `uv run poe cli task-tag add <TASK_ID> <TAG_ID>`    | タスクへタグを付与             |
+| `uv run poe cli task-tag remove <TASK_ID> <TAG_ID>` | タスクから特定タグを解除       |
+| `uv run poe cli task-tag list`                      | すべての関連を一覧             |
+| `uv run poe cli task-tag list --task <TASK_ID>`     | 特定タスクに紐づくタグ一覧     |
+| `uv run poe cli task-tag list --tag <TAG_ID>`       | 特定タグが付与されたタスク一覧 |
+| `uv run poe cli task-tag clear-task <TASK_ID>`      | タスクに付与された全タグ解除   |
+| `uv run poe cli task-tag clear-tag <TAG_ID>`        | タグが付与された全タスク解除   |
+| `uv run poe cli task-tag exists <TASK_ID> <TAG_ID>` | 存在確認 (exit code 0/1)       |
 
 ## 例
 
 ```bash
 # 付与
-poe cli task-tag add 11111111-1111-1111-1111-111111111111 22222222-2222-2222-2222-222222222222
+uv run poe cli task-tag add 11111111-1111-1111-1111-111111111111 22222222-2222-2222-2222-222222222222
 
 # 一覧 (タスクフィルタ)
-poe cli task-tag list --task 11111111-1111-1111-1111-111111111111
+uv run poe cli task-tag list --task 11111111-1111-1111-1111-111111111111
 
 # 存在確認 (シェル条件分岐に利用)
-poe cli task-tag exists 11111111-1111-1111-1111-111111111111 22222222-2222-2222-2222-222222222222 && echo OK
+uv run poe cli task-tag exists 11111111-1111-1111-1111-111111111111 22222222-2222-2222-2222-222222222222 && echo OK
 ```
 
 ## 内部ヘルパー対応表
@@ -47,5 +47,5 @@ poe cli task-tag exists 11111111-1111-1111-1111-111111111111 22222222-2222-2222-
 ## API リファレンス
 
 ::: src.cli.commands.task_tag
-    options:
-        show_root_heading: false
+options:
+show_root_heading: false

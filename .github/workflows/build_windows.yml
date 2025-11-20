@@ -1,30 +1,37 @@
 name: build-windows
 
-# 手動実行のみに変更
+# 手動実行 (推奨入力構成: 自動SemVer + 任意プレリリース + メタデータ)
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: "リリースタグ名 (例: v1.0.0)"
+      bump:
+        description: "バージョンを上げる種別 (patch|minor|major)"
         required: true
-        default: "v0.0.1"
-      version:
-        description: "バージョン番号（例: 1.0.0）"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      prerelease:
+        description: "プレリリースを付与するか (true/false)"
+        required: true
+        type: boolean
+        default: false
+      prerelease_id:
+        description: "プレリリース識別子 (例: alpha, beta, rc, internal)"
         required: false
-        default: "0.0.1"
-      build_number:
-        description: "ビルド番号"
+        default: alpha
+      build_metadata:
+        description: "任意のbuildメタデータ (例: commitsha)"
         required: false
-        default: "1"
+      manual_override_version:
+        description: "SemVerを手動指定 (例: 1.2.3-alpha) 指定時 bump 無視"
+        required: false
 
-# 環境変数
+# グローバル環境 (Python/Flutter 等)。BUILD_NUMBER/BUILD_VERSION/RELEASE_TAG は計算後ジョブで再設定。
 env:
-  BUILD_NUMBER: ${{ github.event.inputs.build_number }}
-  BUILD_VERSION: ${{ github.event.inputs.version }}
-  RELEASE_TAG: ${{ github.event.inputs.tag }}
-  PYTHON_VERSION: 3.12.5
   FLUTTER_VERSION: 3.27.4
-  PYTHONUTF8: 1
 
 # Releaseの作成
 jobs:
@@ -42,29 +49,99 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      new_version: ${{ steps.compute_version.outputs.new_version }}
+      new_tag: ${{ steps.compute_version.outputs.new_tag }}
+      is_prerelease: ${{ steps.compute_version.outputs.is_prerelease }}
+      build_number: ${{ steps.compute_version.outputs.build_number }}
     steps:
-      - uses: actions/checkout@v4
-      - name: "Create Release"
-        run: gh release create ${{ env.RELEASE_TAG }} --draft --notes "Release ${{ env.RELEASE_TAG }} created"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute Version
+        id: compute_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "[INFO] Fetching tags" >&2
+          git fetch --tags --quiet || true
+          latest_tag=$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)
+          if [ -z "${latest_tag}" ]; then
+            base_version="0.1.0"
+          else
+            base_version="${latest_tag#v}"
+          fi
+          bump="${{ github.event.inputs.bump }}"
+          manual_override="${{ github.event.inputs.manual_override_version }}"
+          prerelease_flag="${{ github.event.inputs.prerelease }}"
+          prerelease_id="${{ github.event.inputs.prerelease_id }}"
+          build_metadata="${{ github.event.inputs.build_metadata }}"
+          # Parse base version (major.minor.patch)
+          IFS='.' read -r major minor patch <<< "${base_version}"
+          if [ -n "${manual_override}" ]; then
+            new_version="${manual_override}"
+          else
+            case "$bump" in
+              major)
+                major=$((major+1)); minor=0; patch=0 ;;
+              minor)
+                minor=$((minor+1)); patch=0 ;;
+              patch)
+                patch=$((patch+1)) ;;
+              *) echo "[ERROR] Invalid bump: $bump"; exit 1 ;;
+            esac
+            new_version="${major}.${minor}.${patch}"
+            if [ "${prerelease_flag}" = "true" ]; then
+              if [ -n "${prerelease_id}" ]; then
+                new_version="${new_version}-${prerelease_id}"
+              fi
+            fi
+            if [ -n "${build_metadata}" ]; then
+              new_version="${new_version}+${build_metadata}"
+            fi
+          fi
+          # Basic SemVer validation (simplified)
+          if ! echo "${new_version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "[ERROR] Computed version is not valid SemVer: ${new_version}" >&2
+            exit 1
+          fi
+          new_tag="v${new_version}"
+          build_number="${{ github.run_number }}"
+          echo "new_version=${new_version}" >> "$GITHUB_OUTPUT"
+          echo "new_tag=${new_tag}" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${prerelease_flag}" >> "$GITHUB_OUTPUT"
+          echo "build_number=${build_number}" >> "$GITHUB_OUTPUT"
+          echo "[INFO] Computed: version=${new_version} tag=${new_tag} build_number=${build_number}" >&2
+
+      - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          tag="${{ steps.compute_version.outputs.new_tag }}"
+          version="${{ steps.compute_version.outputs.new_version }}"
+          build_number="${{ steps.compute_version.outputs.build_number }}"
+          prerelease_flag="${{ steps.compute_version.outputs.is_prerelease }}"
+          notes="Release ${tag} (build #${build_number})"
+          if [ "${prerelease_flag}" = "true" ]; then
+            gh release create "${tag}" --draft --prerelease --notes "${notes}" || exit 1
+          else
+            gh release create "${tag}" --draft --notes "${notes}" || exit 1
+          fi
+          echo "[INFO] Release created: ${tag}" >&2
 
   windows-build:
     needs: create-release
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      BUILD_NUMBER: ${{ needs.create-release.outputs.build_number }}
+      BUILD_VERSION: ${{ needs.create-release.outputs.new_version }}
+      RELEASE_TAG: ${{ needs.create-release.outputs.new_tag }}
     steps:
       - name: Checkout Codes
         uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Set environment variable for UTF-8
-        run: echo "PYTHONUTF8=1" >> $env:GITHUB_ENV
 
       - name: Set up Python with uv
         uses: ./.github/actions/setup-python-with-uv
@@ -80,17 +157,20 @@ jobs:
           chcp 65001
           flutter config --no-analytics
           uv run flet build windows --verbose --no-rich-output --build-number=${{ env.BUILD_NUMBER }} --build-version=${{ env.BUILD_VERSION }}
-          Compress-Archive -Path ./build/windows/* -DestinationPath ./build/windows/${{ vars.APP_NAME }}_windows.zip
+          $zipName = "${{ vars.APP_NAME }}_v${{ env.BUILD_VERSION }}_b${{ env.BUILD_NUMBER }}_windows.zip"
+          Compress-Archive -Path ./build/windows/* -DestinationPath "./build/windows/$zipName"
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build-artifact
+          name: windows-build-artifact-v${{ env.BUILD_VERSION }}-b${{ env.BUILD_NUMBER }}
           path: build/windows
           if-no-files-found: error
           overwrite: false
 
-      - name: Upload Release
-        run: gh release upload ${{ env.RELEASE_TAG }} ./build/windows/${{ vars.APP_NAME }}_windows.zip
+      - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $zipName = "${{ vars.APP_NAME }}_v${{ env.BUILD_VERSION }}_b${{ env.BUILD_NUMBER }}_windows.zip"
+          gh release upload ${{ env.RELEASE_TAG }} "./build/windows/$zipName" --clobber

@@ -220,9 +220,11 @@ class TerminologyApplicationPortAdapter(TermApplicationPort):
         status = _parse_status(form_data.get("status"), default=TermStatus.DRAFT)
         description = _clean_text(form_data.get("description"))
         source_url = _clean_text(form_data.get("source_url"))
+        key = _clean_text(form_data.get("key"), default="") or ""
+        title = _clean_text(form_data.get("title"), default="") or ""
         return self._service.create(
-            key=_clean_text(form_data.get("key"), default=""),
-            title=_clean_text(form_data.get("title"), default=""),
+            key=key,
+            title=title,
             description=description,
             status=status or TermStatus.DRAFT,
             source_url=source_url,

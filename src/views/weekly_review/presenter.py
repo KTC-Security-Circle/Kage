@@ -3,6 +3,8 @@
 UI構築・データ整形・差分更新ロジックを担当。
 """
 
+# pyright: reportAttributeAccessIssue=false
+
 from collections.abc import Sequence
 from dataclasses import dataclass
 

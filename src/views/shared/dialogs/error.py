@@ -56,7 +56,7 @@ class ErrorDialog(BaseDialog):
         Returns:
             エラーメッセージと詳細情報を含むコンテンツ
         """
-        content_controls = [
+        content_controls: list[ft.Control] = [
             # エラーアイコンとメッセージ
             ft.Row(
                 [
@@ -86,12 +86,11 @@ class ErrorDialog(BaseDialog):
                 on_click=lambda _: self._toggle_details(),
             )
 
-            content_controls.append(
-                ft.Container(
-                    content=self.details_button,
-                    margin=ft.margin.only(top=SPACING.sm),
-                )
+            details_button_container: ft.Control = ft.Container(
+                content=self.details_button,
+                margin=ft.margin.only(top=SPACING.sm),
             )
+            content_controls.append(details_button_container)
 
             # 詳細情報コンテナ
             self.details_container = ft.Container(
@@ -124,7 +123,8 @@ class ErrorDialog(BaseDialog):
                 margin=ft.margin.only(top=SPACING.sm),
             )
 
-            content_controls.append(self.details_container)
+            details_ctrl: ft.Control = self.details_container
+            content_controls.append(details_ctrl)
 
         return ft.Container(
             content=ft.Column(
@@ -154,7 +154,7 @@ class ErrorDialog(BaseDialog):
         self.details_visible = not self.details_visible
         self.details_container.visible = self.details_visible
         self.details_button.text = "詳細を非表示" if self.details_visible else "詳細を表示"
-        if hasattr(self.page, "update"):
+        if self.page is not None and hasattr(self.page, "update"):
             self.page.update()
 
     def _on_ok_clicked(self) -> None:
@@ -202,9 +202,14 @@ class CriticalErrorDialog(ErrorDialog):
         content = super()._build_content()
 
         # アイコンを致命的エラー用に変更
-        if hasattr(content, "content") and hasattr(content.content, "controls"):
+        if (
+            isinstance(content, ft.Container)
+            and isinstance(content.content, ft.Column)
+            and content.content.controls
+            and isinstance(content.content.controls[0], ft.Row)
+        ):
             first_row = content.content.controls[0]
-            if hasattr(first_row, "controls") and len(first_row.controls) > 0:
+            if first_row.controls and len(first_row.controls) > 0:
                 first_row.controls[0] = ft.Icon(
                     ft.Icons.DANGEROUS,
                     color=ft.Colors.RED,
@@ -254,9 +259,14 @@ class ValidationErrorDialog(ErrorDialog):
         content = super()._build_content()
 
         # アイコンを警告用に変更
-        if hasattr(content, "content") and hasattr(content.content, "controls"):
+        if (
+            isinstance(content, ft.Container)
+            and isinstance(content.content, ft.Column)
+            and content.content.controls
+            and isinstance(content.content.controls[0], ft.Row)
+        ):
             first_row = content.content.controls[0]
-            if hasattr(first_row, "controls") and len(first_row.controls) > 0:
+            if first_row.controls and len(first_row.controls) > 0:
                 first_row.controls[0] = ft.Icon(
                     ft.Icons.WARNING,
                     color=ft.Colors.ORANGE,

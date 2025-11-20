@@ -29,9 +29,11 @@ class TagApplicationPort(Protocol):
 
     def get_all_tags(self) -> list[TagRead]:  # pragma: no cover - interface
         """全タグを取得する。"""
+        ...
 
     def search(self, query: str) -> list[TagRead]:  # pragma: no cover - interface
         """検索キーワードに一致したタグを返す。"""
+        ...
 
     def create(
         self,
@@ -40,12 +42,15 @@ class TagApplicationPort(Protocol):
         color: str | None = None,
     ) -> TagRead:  # pragma: no cover - interface
         """タグを作成する。"""
+        ...
 
     def update(self, tag_id: uuid.UUID, update_data: TagUpdate) -> TagRead:  # pragma: no cover - interface
         """タグを更新する。"""
+        ...
 
     def delete(self, tag_id: uuid.UUID) -> bool:  # pragma: no cover - interface
         """タグを削除する。"""
+        ...
 
 
 class MemoApplicationPort(Protocol):
@@ -55,6 +60,7 @@ class MemoApplicationPort(Protocol):
         self, tag_id: uuid.UUID, *, with_details: bool = False
     ) -> list[MemoRead]:  # pragma: no cover - interface
         """タグIDでメモ一覧を取得する。"""
+        ...
 
 
 class TaskApplicationPort(Protocol):
@@ -64,6 +70,7 @@ class TaskApplicationPort(Protocol):
         self, tag_id: uuid.UUID, *, with_details: bool = False
     ) -> list[TaskRead]:  # pragma: no cover - interface
         """タグIDでタスク一覧を取得する。"""
+        ...
 
 
 @dataclass(slots=True)

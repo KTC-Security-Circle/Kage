@@ -129,6 +129,9 @@ class BaseDialog(ft.AlertDialog, ABC):
 
     def show(self) -> None:
         """ダイアログを表示する。"""
+        if self.page is None:
+            logger.warning(f"Cannot show dialog '{self.title_text}': page is None")
+            return
         try:
             # Flet のダイアログ表示は page.open(dialog) を利用する
             self.page.open(self)
@@ -144,7 +147,7 @@ class BaseDialog(ft.AlertDialog, ABC):
     def hide(self) -> None:
         """ダイアログを閉じる。"""
         self.open = False
-        if hasattr(self.page, "update"):
+        if self.page is not None and hasattr(self.page, "update"):
             self.page.update()
         logger.debug(f"Dialog hidden: {self.title_text}")
 
@@ -275,7 +278,7 @@ class BaseFormDialog(BaseDialog):
             return
 
         error_messages = "\n".join(self._validation_errors.values())
-        if hasattr(self.page, "snack_bar"):
+        if self.page is not None and hasattr(self.page, "snack_bar"):
             self.page.open(
                 ft.SnackBar(
                     content=ft.Text(error_messages),

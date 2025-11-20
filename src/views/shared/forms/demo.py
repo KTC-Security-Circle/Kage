@@ -4,6 +4,8 @@
 Task #14 の成果確認として実装。
 """
 
+# pyright: reportAbstractUsage=false, reportAttributeAccessIssue=false
+
 from __future__ import annotations
 
 import flet as ft

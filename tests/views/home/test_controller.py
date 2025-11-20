@@ -56,7 +56,7 @@ def test_homeview_uses_inmemory_query_when_services_missing() -> None:
             msg = "missing"
             raise RuntimeError(msg)
 
-    props = BaseViewProps(page=object(), apps=FakeApps())
+    props = BaseViewProps(page=object(), apps=FakeApps())  # type: ignore[arg-type]
 
     view = HomeView(props)
 

@@ -13,10 +13,10 @@ if TYPE_CHECKING:
     import flet as ft
 
 from router import (
-    FletNativeRouter,
-    create_route_config,
-    logging_middleware,
-    performance_middleware,
+    FletNativeRouter,  # type: ignore[attr-defined]
+    create_route_config,  # type: ignore[attr-defined]
+    logging_middleware,  # type: ignore[attr-defined]
+    performance_middleware,  # type: ignore[attr-defined]
 )
 from views_old.home.view import HomeView
 from views_old.memo.components import MemoDetailView

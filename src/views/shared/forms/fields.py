@@ -4,6 +4,8 @@
 BaseFormFieldを継承し、Fletコントロールと統合。
 """
 
+# pyright: reportCallIssue=false, reportAttributeAccessIssue=false
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

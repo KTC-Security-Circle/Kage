@@ -270,7 +270,7 @@ def create_light_theme() -> ft.Theme:
     """
     colors = LIGHT_COLORS
 
-    color_scheme = ft.Colorscheme(
+    color_scheme = ft.ColorScheme(
         primary=colors.primary,
         on_primary=colors.on_primary,
         secondary=colors.secondary,
@@ -294,7 +294,7 @@ def create_dark_theme() -> ft.Theme:
     """
     colors = DARK_COLORS
 
-    color_scheme = ft.Colorscheme(
+    color_scheme = ft.ColorScheme(
         primary=colors.primary,
         on_primary=colors.on_primary,
         secondary=colors.secondary,

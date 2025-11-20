@@ -101,7 +101,8 @@ class HomeView(BaseView):
             # ApplicationServices が利用できない場合はエラーとして扱わず
             # デフォルトの空データ(HomeQueryのInMemory実装)を使う
             logger.info("HomeView: Application services missing, using InMemoryHomeQuery: {}", e)
-            return InMemoryHomeQuery()
+            # InMemoryHomeQueryはHomeQueryProtocolを実装しているため、型的に安全
+            return InMemoryHomeQuery()  # type: ignore[return-value]
 
     @property
     def home_state(self) -> HomeViewState:

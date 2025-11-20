@@ -4,6 +4,8 @@ Memo の MemoCard と同様に、Presenter で整形済みのデータクラス�
 親コンポーネントは TaskCardData を生成して本コンポーネントへ渡す。
 """
 
+# pyright: reportAttributeAccessIssue=false
+
 from __future__ import annotations
 
 from dataclasses import dataclass

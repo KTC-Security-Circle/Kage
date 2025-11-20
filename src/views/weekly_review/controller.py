@@ -67,7 +67,6 @@ class WeeklyReviewController:
             error_msg = f"統計データの初期化に失敗しました: {e}"
             raise RuntimeError(error_msg) from e
 
-
     def toggle_checklist_item(self, item_id: str) -> None:
         """チェックリスト項目の完了状態を切り替え
 

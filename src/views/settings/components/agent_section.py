@@ -21,8 +21,7 @@ class AgentSection(ft.Column):
         self.on_change = on_change
 
         provider_options = [
-            ft.dropdown.Option(key=provider.value, text=provider.name.title())
-            for provider in LLMProvider
+            ft.dropdown.Option(key=provider.value, text=provider.name.title()) for provider in LLMProvider
         ]
 
         self.provider_dropdown = ft.Dropdown(

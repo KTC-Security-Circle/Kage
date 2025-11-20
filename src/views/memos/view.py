@@ -483,6 +483,7 @@ class MemosView(BaseView):
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
+
             def _runner() -> None:
                 logger.debug(f"Starting polling thread for job_id={job_id} memo_id={memo_id}")
                 asyncio.run(_poll())
@@ -500,17 +501,13 @@ class MemosView(BaseView):
             self.memos_state.set_generated_tasks(memo_id, tasks)
             self.memos_state.set_ai_status_override(memo_id, AiSuggestionStatus.AVAILABLE)
             self.controller.refresh_memo(memo_id)
-            logger.debug(
-                f"AI job succeeded: job_id={snapshot.job_id} memo_id={memo_id} tasks={len(snapshot.tasks)}"
-            )
+            logger.debug(f"AI job succeeded: job_id={snapshot.job_id} memo_id={memo_id} tasks={len(snapshot.tasks)}")
             self.show_success_snackbar("AI提案タスクを取得しました")
         elif snapshot.status == MemoAiJobStatus.FAILED:
             self.memos_state.set_ai_status_override(memo_id, AiSuggestionStatus.FAILED)
             self.controller.refresh_memo(memo_id)
             self.notify_error("AIタスク生成に失敗しました", details=snapshot.error_message)
-            logger.debug(
-                f"AI job failed: job_id={snapshot.job_id} memo_id={memo_id} error={snapshot.error_message}"
-            )
+            logger.debug(f"AI job failed: job_id={snapshot.job_id} memo_id={memo_id} error={snapshot.error_message}")
         self._refresh()
 
     def _convert_payload_to_ai_task(self, payload: GeneratedTaskPayload) -> AiSuggestedTask:

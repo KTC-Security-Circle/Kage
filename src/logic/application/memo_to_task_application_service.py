@@ -80,10 +80,7 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
             agent = self._get_agent()
             fake_output = agent.next_fake_response()
             if fake_output is not None:
-                logger.debug(
-                    "MemoToTaskApplicationService: returning fake output "
-                    f"tasks={len(fake_output.tasks)}"
-                )
+                logger.debug(f"MemoToTaskApplicationService: returning fake output tasks={len(fake_output.tasks)}")
                 return fake_output
 
         state: MemoToTaskState = {

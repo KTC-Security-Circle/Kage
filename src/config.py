@@ -22,6 +22,7 @@ ALEMBIC_INI_PATH = Path(__file__).parent / "models" / "migrations" / "alembic.in
 alembic_cfg = Config(ALEMBIC_INI_PATH)
 Base = SQLModel
 
+
 # Alembicを使用してデータベースを最新の状態にマイグレーションする関数
 def migrate_db() -> None:
     # alembicを介してマイグレーションを実行

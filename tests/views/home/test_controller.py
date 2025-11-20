@@ -1,10 +1,12 @@
-"""HomeController の振る舞い（空データ時のログレベル確認など）のユニットテスト。"""
+"""HomeController の振る舞い(空データ時のログレベル確認など)のユニットテスト。"""
 
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Never
 
-import pytest
+if TYPE_CHECKING:
+    import pytest
 
 from views.home.controller import HomeController
 from views.home.query import InMemoryHomeQuery
@@ -50,8 +52,9 @@ def test_homeview_uses_inmemory_query_when_services_missing() -> None:
     """サービス不在時に HomeView は例外を出さず InMemoryHomeQuery へフォールバックすることを確認する。"""
 
     class FakeApps:
-        def get_service(self, _):
-            raise RuntimeError("missing")
+        def get_service(self, _: object) -> Never:
+            msg = "missing"
+            raise RuntimeError(msg)
 
     props = BaseViewProps(page=object(), apps=FakeApps())
 

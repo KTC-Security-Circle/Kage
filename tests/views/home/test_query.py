@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Never
 from uuid import uuid4
 
-import pytest
+if TYPE_CHECKING:
+    import pytest
 
-from agents.task_agents.one_liner.state import OneLinerState
 from models import (
     AiSuggestionStatus,
     MemoRead,
@@ -58,7 +59,7 @@ class FakeOneLinerService(OneLinerServicePort):
         self._message = message
         self._should_raise = should_raise
 
-    def generate_one_liner(self, query: OneLinerState | None = None) -> str:
+    def generate_one_liner(self, query: object | None = None) -> str:
         if self._should_raise:
             error_message = "one liner generation failed"
             raise RuntimeError(error_message)
@@ -199,11 +200,11 @@ def test_get_tasks_handles_not_found_error_and_returns_empty(caplog: pytest.LogC
     from errors import NotFoundError
 
     class BrokenTaskService:
-        def get_all_tasks(self):
-            raise NotFoundError("no tasks in db")
+        def get_all_tasks(self) -> Never:
+            msg = "no tasks in db"
+            raise NotFoundError(msg)
 
     memos = []
-    tasks: list[TaskRead] = []
     projects: list[ProjectRead] = []
 
     query = ApplicationHomeQuery(

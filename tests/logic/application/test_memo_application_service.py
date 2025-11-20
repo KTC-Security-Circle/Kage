@@ -298,6 +298,7 @@ class TestMemoApplicationService:
 
         assert tasks == agent_output.tasks
         assert tasks is not agent_output.tasks
+
     # 追加: 検索API
     def test_search_empty_query_returns_empty(self, memo_app_service: MemoApplicationService) -> None:
         """空クエリは空配列を返す"""

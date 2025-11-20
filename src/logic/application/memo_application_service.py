@@ -218,9 +218,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             logger.debug(f"MemoToTask: using FAKE provider, memo_id={memo.id}")
             fake_output = agent.next_fake_response()
             if fake_output is not None:
-                logger.debug(
-                    f"MemoToTask: returning fake output with {len(fake_output.tasks)} tasks"
-                )
+                logger.debug(f"MemoToTask: returning fake output with {len(fake_output.tasks)} tasks")
                 return fake_output
 
         existing_tags = self._collect_existing_tag_names()

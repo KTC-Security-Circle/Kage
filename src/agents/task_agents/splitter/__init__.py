@@ -1,4 +1,6 @@
-from agents.task_agents.splitter.agent import TaskSplitterAgent
-from agents.task_agents.splitter.state import TaskSplitterState
+"""TaskSplitter agent package is deprecated and kept only for legacy path references.
 
-__all__ = ["TaskSplitterAgent", "TaskSplitterState"]
+No public symbols are exported.
+"""
+
+__all__: list[str] = []

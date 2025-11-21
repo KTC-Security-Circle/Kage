@@ -1,15 +1,15 @@
-"""TagApplicationServiceのテストケース
+"""TagApplicationServiceのテストケース（現行API対応）
 
 このモジュールは、TagApplicationServiceクラスの
-Application Service層の機能をテストするためのテストケースを提供します。
+Application Service層の機能をテストする。
 
-テスト対象：
-- create_tag: タグ作成のApplication Service層ロジック
-- update_tag: タグ更新のApplication Service層ロジック
-- delete_tag: タグ削除のApplication Service層ロジック
-- get_tag_by_id: ID指定タグ取得
-- get_all_tags: 全タグ取得
-- search_tags_by_name: 名前検索
+対象API:
+- create(name, description?, color?)
+- update(tag_id, TagUpdate)
+- delete(tag_id)
+- get_by_id(tag_id)
+- get_all_tags()
+- search_by_name(query)
 """
 
 import uuid
@@ -17,18 +17,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from errors import NotFoundError
 from logic.application.tag_application_service import TagApplicationService
-from logic.commands.tag_commands import (
-    CreateTagCommand,
-    DeleteTagCommand,
-    UpdateTagCommand,
-)
-from logic.queries.tag_queries import (
-    GetAllTagsQuery,
-    GetTagByIdQuery,
-    SearchTagsByNameQuery,
-)
-from models import TagRead
+from models import TagRead, TagUpdate
 
 
 class TestTagApplicationService:
@@ -69,7 +60,7 @@ class TestTagApplicationService:
             name="サンプルタグ",
         )
 
-    def test_create_tag_success(
+    def test_create_success(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -78,32 +69,25 @@ class TestTagApplicationService:
         """正常系: タグ作成成功"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.create_tag.return_value = sample_tag_read
-
-        # コマンド作成
-        command = CreateTagCommand(
-            name="新しいタグ",
-        )
+        mock_tag_service.create.return_value = sample_tag_read
 
         # 実行
-        result = tag_application_service.create_tag(command)
+        result = tag_application_service.create(name="新しいタグ")
 
         # 検証
         assert isinstance(result, TagRead)
         assert result.name == sample_tag_read.name
-        mock_tag_service.create_tag.assert_called_once()
-        mock_unit_of_work.commit.assert_called_once()
+        mock_tag_service.create.assert_called_once()
 
-    def test_create_tag_validation_error(self, tag_application_service: TagApplicationService) -> None:
+    def test_create_validation_error(self, tag_application_service: TagApplicationService) -> None:
         """異常系: タグ作成時のバリデーションエラー"""
-        # 空の名前でコマンド作成
-        command = CreateTagCommand(name="")
-
         # 実行と検証
-        with pytest.raises(ValueError, match="タグ名を入力してください"):
-            tag_application_service.create_tag(command)
+        from logic.application.tag_application_service import TagValidationError
 
-    def test_get_tag_by_id_success(
+        with pytest.raises(TagValidationError, match="タグ名を入力してください"):
+            tag_application_service.create("")
+
+    def test_get_by_id_success(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -112,19 +96,16 @@ class TestTagApplicationService:
         """正常系: ID指定タグ取得成功"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.get_tag_by_id.return_value = sample_tag_read
-
-        # クエリ作成
-        query = GetTagByIdQuery(tag_id=sample_tag_read.id)
+        mock_tag_service.get_by_id.return_value = sample_tag_read
 
         # 実行
-        result = tag_application_service.get_tag_by_id(query)
+        result = tag_application_service.get_by_id(sample_tag_read.id)
 
         # 検証
         assert result == sample_tag_read
-        mock_tag_service.get_tag_by_id.assert_called_once_with(sample_tag_read.id)
+        mock_tag_service.get_by_id.assert_called_once_with(sample_tag_read.id)
 
-    def test_get_tag_by_id_not_found(
+    def test_get_by_id_not_found(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -132,14 +113,12 @@ class TestTagApplicationService:
         """異常系: ID指定タグ取得でタグが見つからない"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.get_tag_by_id.return_value = None
+        mock_tag_service.get_by_id.side_effect = NotFoundError("not found")
 
         tag_id = uuid.uuid4()
-        query = GetTagByIdQuery(tag_id=tag_id)
-
         # 実行と検証
-        with pytest.raises(ValueError, match=f"タグが見つかりません: {tag_id}"):
-            tag_application_service.get_tag_by_id(query)
+        with pytest.raises(NotFoundError, match="not found"):
+            tag_application_service.get_by_id(tag_id)
 
     def test_get_all_tags(
         self,
@@ -150,21 +129,18 @@ class TestTagApplicationService:
         """正常系: 全タグ取得"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.get_all_tags.return_value = [sample_tag_read]
-
-        # クエリ作成
-        query = GetAllTagsQuery()
+        mock_tag_service.get_all.return_value = [sample_tag_read]
 
         # 実行
-        result = tag_application_service.get_all_tags(query)
+        result = tag_application_service.get_all_tags()
 
         # 検証
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0] == sample_tag_read
-        mock_tag_service.get_all_tags.assert_called_once()
+        mock_tag_service.get_all.assert_called_once()
 
-    def test_search_tags_by_name(
+    def test_search_by_name(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -173,22 +149,20 @@ class TestTagApplicationService:
         """正常系: 名前検索"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.search_tags.return_value = [sample_tag_read]
+        mock_tag_service.search_by_name.return_value = [sample_tag_read]
 
-        # クエリ作成
         search_name = "サンプル"
-        query = SearchTagsByNameQuery(name_query=search_name)
 
         # 実行
-        result = tag_application_service.search_tags_by_name(query)
+        result = tag_application_service.search_by_name(search_name)
 
         # 検証
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0] == sample_tag_read
-        mock_tag_service.search_tags.assert_called_once_with(search_name)
+        mock_tag_service.search_by_name.assert_called_once_with(search_name)
 
-    def test_update_tag_success(
+    def test_update_success(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -201,36 +175,27 @@ class TestTagApplicationService:
             id=sample_tag_read.id,
             name="更新されたタグ",
         )
-        mock_tag_service.update_tag.return_value = updated_tag
+        mock_tag_service.update.return_value = updated_tag
 
-        # コマンド作成
-        command = UpdateTagCommand(
-            tag_id=sample_tag_read.id,
-            name="更新されたタグ",
-        )
+        update_data = TagUpdate(name="更新されたタグ")
 
         # 実行
-        result = tag_application_service.update_tag(command)
+        result = tag_application_service.update(sample_tag_read.id, update_data)
 
         # 検証
         assert isinstance(result, TagRead)
         assert result.name == "更新されたタグ"
-        mock_tag_service.update_tag.assert_called_once()
-        mock_unit_of_work.commit.assert_called_once()
+        mock_tag_service.update.assert_called_once()
 
-    def test_update_tag_validation_error(self, tag_application_service: TagApplicationService) -> None:
+    def test_update_validation_error(self, tag_application_service: TagApplicationService) -> None:
         """異常系: タグ更新時のバリデーションエラー"""
-        # 空の名前でコマンド作成
-        command = UpdateTagCommand(
-            tag_id=uuid.uuid4(),
-            name="",  # 空の名前
-        )
-
         # 実行と検証
-        with pytest.raises(ValueError, match="タグ名を入力してください"):
-            tag_application_service.update_tag(command)
+        from logic.application.tag_application_service import TagValidationError
 
-    def test_delete_tag_success(
+        with pytest.raises(TagValidationError, match="タグ名を入力してください"):
+            tag_application_service.create("")
+
+    def test_delete_success(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -238,19 +203,16 @@ class TestTagApplicationService:
         """正常系: タグ削除成功"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.delete_tag.return_value = True  # 削除成功
+        mock_tag_service.delete.return_value = True  # 削除成功
 
         tag_id = uuid.uuid4()
-        command = DeleteTagCommand(tag_id=tag_id)
-
         # 実行
-        tag_application_service.delete_tag(command)
+        tag_application_service.delete(tag_id)
 
         # 検証
-        mock_tag_service.delete_tag.assert_called_once_with(tag_id)
-        mock_unit_of_work.commit.assert_called_once()
+        mock_tag_service.delete.assert_called_once_with(tag_id)
 
-    def test_delete_tag_failure(
+    def test_delete_failure(
         self,
         tag_application_service: TagApplicationService,
         mock_unit_of_work: Mock,
@@ -258,11 +220,23 @@ class TestTagApplicationService:
         """異常系: タグ削除失敗"""
         # モックの設定
         mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
-        mock_tag_service.delete_tag.return_value = False  # 削除失敗
+        mock_tag_service.delete.return_value = False  # 削除失敗
 
         tag_id = uuid.uuid4()
-        command = DeleteTagCommand(tag_id=tag_id)
-
         # 実行と検証
-        with pytest.raises(ValueError, match=f"タグの削除に失敗しました: {tag_id}"):
-            tag_application_service.delete_tag(command)
+        result = tag_application_service.delete(tag_id)
+        assert result is False
+
+    def test_search_alias(
+        self,
+        tag_application_service: TagApplicationService,
+        mock_unit_of_work: Mock,
+        sample_tag_read: TagRead,
+    ) -> None:
+        """search は search_by_name のエイリアスとして動作する"""
+        mock_tag_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_tag_service.search_by_name.return_value = [sample_tag_read]
+
+        res = tag_application_service.search("x")
+        assert res == [sample_tag_read]
+        mock_tag_service.search_by_name.assert_called_once_with("x")

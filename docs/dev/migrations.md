@@ -1,5 +1,10 @@
 # マイグレーションの方法
 
+## マイグレーション設定の場所
+
+Alembicマイグレーションの設定は `src/models/migrations/alembic.ini` に配置されています。
+マイグレーションスクリプトは `src/models/migrations/versions/` ディレクトリに格納されます。
+
 ## 基本的なコマンド
 
 ```bash
@@ -7,27 +12,32 @@
 # マイグレーションの適用
 # ここでは、最新のマイグレーションを適用するコマンド
 # 基本的に最初に行うこと
-uv run alembic upgrade head
+uv run alembic -c src/models/migrations/alembic.ini upgrade head
+
+# または poeコマンドを使用（推奨）
+poe migrate
 
 # マイグレーションのダウングレード
 ## ここでは、1つ前のバージョンに戻すコマンド
-uv run alembic downgrade -1
+uv run alembic -c src/models/migrations/alembic.ini downgrade -1
 
 # マイグレーションの履歴を表示
-uv run alembic history
+uv run alembic -c src/models/migrations/alembic.ini history
 
 # 特定のバージョンのマイグレーションを適用
 ## ここでは、特定のバージョンIDを指定してマイグレーションを適用
-uv run alembic upgrade <version_id>
+uv run alembic -c src/models/migrations/alembic.ini upgrade <version_id>
 
 # 特定のバージョンにダウングレード
 ## ここでは、特定のバージョンIDを指定してダウングレード
-uv run alembic downgrade <version_id>
+uv run alembic -c src/models/migrations/alembic.ini downgrade <version_id>
 
 # マイグレーションの状態を確認
 ## ここでは、現在のデータベースの状態を確認するコマンド
+uv run alembic -c src/models/migrations/alembic.ini current
 
-uv run alembic current
+# または poeコマンドを使用（推奨）
+poe db-status
 ```
 
 ## モデルの追加方法
@@ -67,5 +77,11 @@ target_metadata = [
 
 ```bash
 # 新しいマイグレーションを作成
-uv run alembic revision --autogenerate -m "add project table"
+uv run alembic -c src/models/migrations/alembic.ini revision --autogenerate -m "add project table"
+
+# または poeコマンドを使用（推奨）
+poe revision "add project table"
 ```
+
+**注意**: マイグレーション作成後は、必ず生成されたファイル (`src/models/migrations/versions/` 内) を確認し、
+意図した変更が反映されているか確認してください。

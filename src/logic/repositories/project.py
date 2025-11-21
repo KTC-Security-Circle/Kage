@@ -1,10 +1,13 @@
 """プロジェクトリポジトリの実装"""
 
+import uuid
+
 from loguru import logger
 from sqlmodel import Session, func, select
 
+from errors import NotFoundError
 from logic.repositories.base import BaseRepository
-from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate
+from models import Project, ProjectCreate, ProjectStatus, ProjectUpdate, Task
 
 
 class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
@@ -21,23 +24,111 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             session: データベースセッション
         """
         self.model_class = Project
-        super().__init__(session)
+        super().__init__(session, load_options=[Project.tasks])
 
-    def get_all(self) -> list[Project]:
-        """全てのプロジェクト一覧を取得する
+    def _check_exists_task(self, task_id: str) -> Task:
+        """タスクが存在するか確認する
+
+        Args:
+            task_id: 確認するタスクのID
 
         Returns:
-            list[Project]: 全てのプロジェクト一覧
-        """
-        try:
-            statement = select(Project)
-            results = self.session.exec(statement).all()
-        except Exception as e:
-            logger.exception(f"プロジェクト取得に失敗しました: {e}")
-            raise
-        return list(results)
+            Task: 存在するタスク
 
-    def get_by_status(self, status: ProjectStatus) -> list[Project]:
+        Raises:
+            NotFoundError: タスクが存在しない場合
+        """
+        task = self.session.get(Task, task_id)
+        if task is None:
+            msg = f"タスクが見つかりません: {task_id}"
+            logger.warning(msg)
+            raise NotFoundError(msg)
+        return task
+
+    def add_task(self, project_id: uuid.UUID, task_id: str) -> Project:
+        """プロジェクトにタスクを追加する
+
+        Args:
+            project_id: プロジェクトのID
+            task_id: 追加するタスクのID
+
+        Returns:
+            Project: 更新されたプロジェクト
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+        """
+        project = self.get_by_id(project_id, with_details=True)
+        task = self._check_exists_task(task_id)
+
+        # 既に追加済みでないか確認
+        if task not in project.tasks:
+            project.tasks.append(task)
+            self._commit_and_refresh(project)
+            logger.debug(f"プロジェクト({project_id})にタスク({task_id})を追加しました。")
+        else:
+            logger.warning(f"プロジェクト({project_id})にタスク({task_id})は既に追加されています。")
+
+        return project
+
+    def remove_task(self, project_id: uuid.UUID, task_id: str) -> Project:
+        """プロジェクトからタスクを削除する
+
+        Args:
+            project_id: プロジェクトのID
+            task_id: 削除するタスクのID
+
+        Returns:
+            Project: 更新されたプロジェクト
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+        """
+        project = self.get_by_id(project_id, with_details=True)
+        task = self._check_exists_task(task_id)
+
+        if task in project.tasks:
+            project.tasks.remove(task)
+            self._commit_and_refresh(project)
+            logger.debug(f"プロジェクト({project_id})からタスク({task_id})を削除しました。")
+        else:
+            logger.warning(f"プロジェクト({project_id})にタスク({task_id})は存在しません。")
+
+        return project
+
+    def remove_all_tasks(self, project_id: uuid.UUID) -> Project:
+        """プロジェクトから全てのタスクを削除する
+
+        もしタスクが存在しない場合は何もしない
+
+        Args:
+            project_id: プロジェクトのID
+
+        Returns:
+            Project: 更新されたプロジェクト
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+        """
+        project = self.get_by_id(project_id, with_details=True)
+
+        if project.tasks:
+            num_tasks = len(project.tasks)
+            project.tasks.clear()
+            self._commit_and_refresh(project)
+            logger.debug(f"プロジェクト({project_id})から {num_tasks} 個のタスクを削除しました。")
+        else:
+            logger.debug(f"プロジェクト({project_id})にはタスクが存在しません。")
+
+        return project
+
+    # ==============================================================================
+    # ==============================================================================
+    # get functions
+    # ==============================================================================
+    # ==============================================================================
+
+    def list_by_status(self, status: ProjectStatus) -> list[Project]:
         """指定されたステータスのプロジェクト一覧を取得する
 
         Args:
@@ -45,14 +136,12 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
 
         Returns:
             list[Project]: 指定された条件に一致するプロジェクト一覧
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
         """
-        try:
-            statement = select(Project).where(Project.status == status)
-            results = self.session.exec(statement).all()
-        except Exception as e:
-            logger.exception(f"ステータス別プロジェクト取得に失敗しました: {e}")
-            raise
-        return list(results)
+        stmt = select(Project).where(Project.status == status)
+        return self._gets_by_statement(stmt)
 
     def search_by_title(self, title_query: str) -> list[Project]:
         """タイトルでプロジェクトを検索する
@@ -62,30 +151,9 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
 
         Returns:
             list[Project]: 検索条件に一致するプロジェクト一覧
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
         """
-        try:
-            # SQLModelでフィルタリングを実行（大きめの検索が来た際にPython側だと遅くなるため）
-            # [AI GENERATED] 大文字小文字を区別しない検索のためfunc.lower()を使用
-            statement = select(Project).where(func.lower(Project.title).contains(func.lower(title_query)))  # pyright: ignore[reportAttributeAccessIssue]
-            filtered_projects = list(self.session.exec(statement).all())
-
-        except Exception as e:
-            logger.exception(f"タイトル検索に失敗しました: {e}")
-            raise
-        return filtered_projects
-
-    def get_active_projects(self) -> list[Project]:
-        """アクティブなプロジェクト一覧を取得する
-
-        Returns:
-            list[Project]: アクティブなプロジェクト一覧
-        """
-        return self.get_by_status(ProjectStatus.ACTIVE)
-
-    def get_completed_projects(self) -> list[Project]:
-        """完了済みプロジェクト一覧を取得する
-
-        Returns:
-            list[Project]: 完了済みプロジェクト一覧
-        """
-        return self.get_by_status(ProjectStatus.COMPLETED)
+        stmt = select(Project).where(func.lower(Project.title).like(f"%{title_query.lower()}%"))
+        return self._gets_by_statement(stmt)

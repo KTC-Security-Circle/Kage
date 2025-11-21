@@ -1,17 +1,15 @@
 import flet as ft
 from loguru import logger
 
-from config import APP_TITLE, create_db_and_tables
+from config import APP_TITLE, migrate_db
 from logging_conf import setup_logger
-from router_config import setup_enhanced_routing
+from logic.application.apps import ApplicationServices
+from router import configure_routes  # [AI UPDATED] 新しいルーティングシステムを使用
 from settings.manager import apply_page_settings, get_config_manager  # [AI GENERATED] 設定管理を追加
 
 # ログの設定
 setup_logger()
 logger.info("アプリケーションを起動します。")
-
-# DB初期化（全テーブル作成）
-create_db_and_tables()
 
 
 def main(page: ft.Page) -> None:
@@ -22,6 +20,8 @@ def main(page: ft.Page) -> None:
     """
     # ページの初期設定
     page.title = APP_TITLE
+    # DBマイグレーション実行
+    migrate_db()
     # 設定ファイル読み込み（初期生成含む）
     get_config_manager()
     # 設定適用（テーマ等）
@@ -43,8 +43,10 @@ def main(page: ft.Page) -> None:
         font_family="default",
     )
 
-    # FletNativeRouterを使用したルーティング設定
-    setup_enhanced_routing(page)
+    apps = ApplicationServices.create()
+
+    # 新しいviewsシステムを使用したルーティング設定
+    configure_routes(page, apps)
 
     logger.info("セッションが開始されました。設定適用済み。")
 

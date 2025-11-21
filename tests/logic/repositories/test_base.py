@@ -1,21 +1,41 @@
-"""BaseRepositoryのテストケース
+"""BaseRepositoryのテスト項目（現行仕様）
 
-このモジュールは、BaseRepositoryクラスの基本的なCRUD操作を
-テストするためのテストケースを提供します。
+このモジュールは、BaseRepository（TaskRepository経由）のCRUDと取得系、
+および例外方針（errors.pyに準拠）を検証する。
 
-テスト対象：
-- create: 新しいエンティティの作成
-- get_by_id: IDによるエンティティの取得
-- get_all: 全エンティティの取得
-- update: エンティティの更新
-- delete: エンティティの削除
-- エラーハンドリング
+テスト項目（実装前の項目定義）:
+- create: 正常作成でモデルが返る（必要フィールドのみでOK）
+- get_by_id:
+    - 正常: 既存IDで取得できる
+    - 異常: 存在しないIDは NotFoundError を送出
+- get_all:
+    - 正常: データがある場合に一覧取得できる
+    - 異常: データが0件のとき NotFoundError を送出（[]ではない）
+- update:
+    - 正常: 差分更新が反映される
+    - 異常: 存在しないID指定時は RepositoryError（内部でNotFoundが集約）
+- delete:
+    - 正常: True を返す（削除後に get_by_id は NotFoundError）
+    - 異常: 存在しないID指定時は False を返す
+- eager load:
+    - with_details=True で関連（tags/project/memo等）にアクセス可能で例外にならない
+- find/list API（必要に応じてTaskRepositoryの search_by_title / list_by_status を使用）:
+    - 条件一致時: リストが返る
+    - 条件不一致時: NotFoundError を送出
+
+注記:
+- BaseRepository._gets_by_statement は0件時に NotFoundError を送出するため、
+    空リストを期待する旧テストは例外期待に置き換える。
+- update の存在しないIDは check_exists の NotFoundError が try 範囲で捕捉され
+    RepositoryError に集約される実装のため、RepositoryError を期待する。
 """
 
 import uuid
 
+import pytest
 from sqlmodel import Session
 
+from errors import NotFoundError, RepositoryError
 from logic.repositories.task import TaskRepository
 from models import TaskStatus
 from tests.logic.helpers import create_test_task, create_test_task_create
@@ -40,7 +60,7 @@ class TestBaseRepository:
         assert created_task.id is not None
         assert created_task.title == "新しいタスク"
         assert created_task.description == "作成テスト用のタスクです"
-        assert created_task.status == TaskStatus.INBOX
+        assert created_task.status == TaskStatus.TODO
 
     def test_get_by_id_success(self, task_repository: TaskRepository, test_session: Session) -> None:
         """正常系: IDによるタスクの取得"""
@@ -62,23 +82,15 @@ class TestBaseRepository:
         assert retrieved_task.title == "取得テスト"
 
     def test_get_by_id_not_found(self, task_repository: TaskRepository) -> None:
-        """異常系: 存在しないIDでの取得"""
-        # 存在しないIDを指定
+        """異常系: 存在しないIDでの取得は NotFoundError"""
         non_existent_id = uuid.uuid4()
-
-        # 実行
-        result = task_repository.get_by_id(non_existent_id)
-
-        # 検証
-        assert result is None
+        with pytest.raises(NotFoundError):
+            task_repository.get_by_id(non_existent_id)
 
     def test_get_all_empty(self, task_repository: TaskRepository) -> None:
-        """正常系: 空のデータベースからの全件取得"""
-        # 実行
-        all_tasks = task_repository.get_all()
-
-        # 検証
-        assert all_tasks == []
+        """異常系: データ0件時 get_all は NotFoundError"""
+        with pytest.raises(NotFoundError):
+            task_repository.get_all()
 
     def test_get_all_with_data(self, task_repository: TaskRepository, test_session: Session) -> None:
         """正常系: データが存在する場合の全件取得"""
@@ -114,7 +126,7 @@ class TestBaseRepository:
         # 更新データの準備
         from models import TaskUpdate
 
-        update_data = TaskUpdate(title="更新後タスク", status=TaskStatus.NEXT_ACTION)
+        update_data = TaskUpdate(title="更新後タスク", status=TaskStatus.PROGRESS)
 
         # 実行
         updated_task = task_repository.update(test_task.id, update_data)
@@ -123,25 +135,18 @@ class TestBaseRepository:
         assert updated_task is not None
         assert updated_task.id == test_task.id
         assert updated_task.title == "更新後タスク"
-        assert updated_task.status == TaskStatus.NEXT_ACTION
+        assert updated_task.status == TaskStatus.PROGRESS
         # 更新されていない項目は元の値を保持
         assert updated_task.description == "更新前の説明"
 
     def test_update_not_found(self, task_repository: TaskRepository) -> None:
-        """異常系: 存在しないIDでの更新"""
-        # 存在しないIDを指定
+        """異常系: 存在しないIDでの更新は RepositoryError 集約"""
         non_existent_id = uuid.uuid4()
-
-        # 更新データの準備
         from models import TaskUpdate
 
         update_data = TaskUpdate(title="存在しないタスク")
-
-        # 実行
-        result = task_repository.update(non_existent_id, update_data)
-
-        # 検証
-        assert result is None
+        with pytest.raises(RepositoryError):
+            task_repository.update(non_existent_id, update_data)
 
     def test_delete_success(self, task_repository: TaskRepository, test_session: Session) -> None:
         """正常系: タスクの削除"""
@@ -160,20 +165,17 @@ class TestBaseRepository:
         # 検証
         assert result is True
 
-        # 削除されたことを確認
-        deleted_task = task_repository.get_by_id(test_task.id)
-        assert deleted_task is None
+        # 削除されたことを確認（NotFoundError）
+        with pytest.raises(NotFoundError):
+            task_repository.get_by_id(test_task.id)
 
     def test_delete_not_found(self, task_repository: TaskRepository) -> None:
         """異常系: 存在しないIDでの削除"""
         # 存在しないIDを指定
         non_existent_id = uuid.uuid4()
 
-        # 実行
-        result = task_repository.delete(non_existent_id)
-
-        # 検証
-        assert result is False
+        # 実行 / 検証
+        assert task_repository.delete(non_existent_id) is False
 
     def test_create_with_empty_title(self, task_repository: TaskRepository) -> None:
         """現在の実装では空のタイトルでもタスクが作成可能
@@ -218,5 +220,5 @@ class TestBaseRepository:
         assert delete_result is True
 
         # 5. 削除後確認
-        final_check = task_repository.get_by_id(created_task.id)
-        assert final_check is None
+        with pytest.raises(NotFoundError):
+            task_repository.get_by_id(created_task.id)

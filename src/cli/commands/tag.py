@@ -14,28 +14,26 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
+from cli.utils import elapsed_time, handle_cli_errors, with_spinner
+from logic.application.apps import ApplicationServices
+from models import TagUpdate
+
 if TYPE_CHECKING:
     from logic.application.tag_application_service import TagApplicationService
-    from logic.commands.tag_commands import CreateTagCommand, DeleteTagCommand, UpdateTagCommand
-    from logic.queries.tag_queries import GetAllTagsQuery, GetTagByIdQuery, SearchTagsByNameQuery
     from models import TagRead
-
-from cli.utils import elapsed_time, handle_cli_errors, with_spinner
 
 app = typer.Typer(help="タグ CRUD / 検索")
 console = Console()
 
 
 def _get_service() -> TagApplicationService:
-    from logic.application.tag_application_service import TagApplicationService
-    from logic.container import service_container
-
-    return service_container.get_service(TagApplicationService)
+    apps = ApplicationServices.create()
+    return apps.tag
 
 
 @elapsed_time()
 @with_spinner("Loading tags...")
-def _get_all_tags(query: GetAllTagsQuery) -> list[TagRead]:  # [AI GENERATED] helper for list
+def _get_all_tags() -> list[TagRead]:  # [AI GENERATED] helper for list
     """全タグ取得サービス呼び出し [AI GENERATED]
 
     Args:
@@ -45,51 +43,57 @@ def _get_all_tags(query: GetAllTagsQuery) -> list[TagRead]:  # [AI GENERATED] he
         list: TagRead のリスト
     """
     service = _get_service()
-    return service.get_all_tags(query)
+    return service.get_all_tags()
 
 
 @elapsed_time()
 @with_spinner("Creating tag...")
-def _create_tag(cmd: CreateTagCommand) -> TagRead:  # [AI GENERATED] return TagRead
+def _create_tag(name: str) -> TagRead:  # [AI GENERATED] return TagRead
     service = _get_service()
-    return service.create_tag(cmd)
+    return service.create(name)
 
 
 @elapsed_time()
 @with_spinner("Searching tags...")
-def _search_tags(query: SearchTagsByNameQuery) -> list[TagRead]:  # [AI GENERATED] list[TagRead]
+def _search_tags(query: str) -> list[TagRead]:  # [AI GENERATED]
+    """名前で部分一致検索を行うヘルパー。
+
+    `TagApplicationService` 側の部分一致検索メソッドを呼び出します。
+    """
     service = _get_service()
-    return service.search_tags_by_name(query)
+    # TagApplicationService.search / search_by_name は部分一致で複数件を返す
+    return service.search(query)
 
 
 @elapsed_time()
 @with_spinner("Fetching tag...")
-def _get_tag(query: GetTagByIdQuery) -> TagRead | None:  # [AI GENERATED] TagRead | None
+def _get_tag(tag_id: str) -> TagRead | None:  # [AI GENERATED] TagRead | None
+    utag_id = uuid.UUID(tag_id)
     service = _get_service()
-    return service.get_tag_by_id(query)
+    return service.get_by_id(utag_id)
 
 
 @elapsed_time()
 @with_spinner("Updating tag...")
-def _update_tag(cmd: UpdateTagCommand) -> TagRead:  # [AI GENERATED] TagRead
+def _update_tag(tag_id: str, update_data: TagUpdate) -> TagRead:  # [AI GENERATED] TagRead
+    utag_id = uuid.UUID(tag_id)
     service = _get_service()
-    return service.update_tag(cmd)
+    return service.update(utag_id, update_data)
 
 
 @elapsed_time()
 @with_spinner("Deleting tag...")
-def _delete_tag(cmd: DeleteTagCommand) -> None:  # [AI GENERATED]
+def _delete_tag(tag_id: str) -> bool:  # [AI GENERATED]
+    utag_id = uuid.UUID(tag_id)
     service = _get_service()
-    service.delete_tag(cmd)
+    return service.delete(utag_id)
 
 
 @app.command("list", help="全タグ一覧")
 @handle_cli_errors()
 def list_tags() -> None:
     """全タグを一覧表示するコマンド [AI GENERATED]"""
-    from logic.queries.tag_queries import GetAllTagsQuery
-
-    tags = _get_all_tags(GetAllTagsQuery())
+    tags = _get_all_tags()
     table = Table(title="Tags", box=box.SIMPLE, caption=f"Total: {len(tags.result)} Elapsed: {tags.elapsed:.2f}s")
     table.add_column("ID")
     table.add_column("Name")
@@ -106,14 +110,12 @@ def create_tag(name: str | None = typer.Option(None, "--name", "-n")) -> None:
     Args:
         name: タグ名 (未指定なら対話入力)
     """
-    from logic.commands.tag_commands import CreateTagCommand
-
     if name is None:
         name = questionary.text("Tag name?").ask()
     if name is None:
         msg = "name 必須"
         raise typer.BadParameter(msg)
-    created = _create_tag(CreateTagCommand(name=name))
+    created = _create_tag(name=name)
     console.print(
         f"[green]Created:[/green] {created.result.name} ({created.result.id}) Elapsed: {created.elapsed:.2f}s"
     )
@@ -127,20 +129,19 @@ def search_tags(query: str) -> None:
     Args:
         query: 検索語
     """
-    from logic.queries.tag_queries import SearchTagsByNameQuery
-
-    results = _search_tags(SearchTagsByNameQuery(name_query=query))
+    results = _search_tags(query=query)
     if not results.result:
         console.print("[yellow]No results[/yellow]")
         raise typer.Exit(code=0)
+    tags = results.result
     table = Table(
         title=f"Search: {query}",
         box=box.SIMPLE,
-        caption=f"Hits: {len(results.result)} Elapsed: {results.elapsed:.2f}s",
+        caption=f"Hits: {len(tags)} Elapsed: {results.elapsed:.2f}s",
     )
     table.add_column("ID")
     table.add_column("Name")
-    for t in results.result:
+    for t in tags:
         table.add_row(str(t.id), t.name)
     console.print(table)
 
@@ -153,10 +154,7 @@ def get_tag(tag_id: str) -> None:
     Args:
         tag_id: タグ UUID 文字列
     """
-    from logic.queries.tag_queries import GetTagByIdQuery
-
-    tid = uuid.UUID(tag_id)
-    tag = _get_tag(GetTagByIdQuery(tag_id=tid))
+    tag = _get_tag(tag_id)
     if tag.result is None:
         console.print("[yellow]Not found[/yellow]")
         raise typer.Exit(code=1)
@@ -177,15 +175,12 @@ def update_tag(tag_id: str, name: str | None = typer.Option(None, "--name", "-n"
         tag_id: タグ UUID
         name: 新しいタグ名
     """
-    from logic.commands.tag_commands import UpdateTagCommand
-
-    tid = uuid.UUID(tag_id)
     if name is None:
         name = questionary.text("New name?").ask()
     if name is None:
         console.print("[yellow]Cancelled[/yellow]")
         raise typer.Exit(code=1)
-    updated = _update_tag(UpdateTagCommand(tag_id=tid, name=name))
+    updated = _update_tag(tag_id, update_data=TagUpdate(name=name))
     console.print(f"[green]Updated:[/green] {updated.result.name} Elapsed: {updated.elapsed:.2f}s")
 
 
@@ -198,11 +193,8 @@ def delete_tag(tag_id: str, force: bool = typer.Option(default=False, help="関�
         tag_id: 削除対象 UUID
         force: 確認を省略するか
     """
-    from logic.commands.tag_commands import DeleteTagCommand
-
-    tid = uuid.UUID(tag_id)
     if (not force) and (not questionary.confirm("Delete this tag?").ask()):
         console.print("[yellow]Cancelled[/yellow]")
         raise typer.Exit(code=1)
-    deleted = _delete_tag(DeleteTagCommand(tag_id=tid))
-    console.print(f"[red]Deleted:[/red] {tid} Elapsed: {deleted.elapsed:.2f}s")
+    deleted = _delete_tag(tag_id)
+    console.print(f"[red]Deleted:[/red] {tag_id} Elapsed: {deleted.elapsed:.2f}s")

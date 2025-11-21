@@ -8,114 +8,49 @@ import uuid
 
 from loguru import logger
 
-from logic.repositories.project import ProjectRepository
-from logic.repositories.task import TaskRepository
-from logic.services.base import MyBaseError, ServiceBase
-from models import ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate, TaskRead
+from errors import NotFoundError
+from logic.repositories import ProjectRepository, RepositoryFactory
+from logic.services.base import MyBaseError, ServiceBase, convert_read_model, handle_service_errors
+from models import Project, ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate
+
+SERVICE_NAME = "プロジェクトサービス"
 
 
-# Custom exceptions for project service errors
-class ProjectServiceCreateError(MyBaseError):
-    """プロジェクト作成時のカスタム例外クラス
+class ProjectServiceError(MyBaseError):
+    """プロジェクトサービス層で発生する汎用的なエラー"""
 
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"プロジェクト作成エラー: {self.arg}"
+    def __init__(self, message: str, operation: str = "不明な操作") -> None:
+        super().__init__(f"プロジェクトの{operation}処理でエラーが発生しました: {message}")
+        self.operation = operation
 
 
-class ProjectServiceCheckError(MyBaseError):
-    """プロジェクト存在確認時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"プロジェクト存在確認エラー: {self.arg}"
-
-
-class ProjectServiceUpdateError(MyBaseError):
-    """プロジェクト更新時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"プロジェクト更新エラー: {self.arg}"
-
-
-class ProjectServiceDeleteError(MyBaseError):
-    """プロジェクト削除時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"プロジェクト削除エラー: {self.arg}"
-
-
-class ProjectServiceGetError(MyBaseError):
-    """プロジェクト取得時のカスタム例外クラス
-
-    Args:
-        arg (str): エラーメッセージ
-    """
-
-    def __str__(self) -> str:
-        return f"プロジェクト取得エラー: {self.arg}"
-
-
-type ProjectServiceError = (
-    ProjectServiceGetError
-    | ProjectServiceCreateError
-    | ProjectServiceCheckError
-    | ProjectServiceUpdateError
-    | ProjectServiceDeleteError
-)
-
-
-class ProjectService(ServiceBase[ProjectServiceError]):
+class ProjectService(ServiceBase):
     """プロジェクトサービス
 
     プロジェクトに関するビジネスロジックを提供するサービスクラス。
     複数のリポジトリを組み合わせて、複雑なプロジェクト操作を実装します。
     """
 
-    def __init__(self, project_repo: ProjectRepository, task_repo: TaskRepository) -> None:
+    def __init__(self, project_repo: ProjectRepository) -> None:
         """ProjectServiceを初期化する
 
         Args:
             project_repo: プロジェクトリポジトリ
-            task_repo: タスクリポジトリ
         """
         self.project_repo = project_repo
-        self.task_repo = task_repo
 
-    # プロジェクトの存在を確認を確認するメソッド
-    def _check_project_exists(self, project_id: uuid.UUID) -> ProjectRead:
-        """プロジェクトの存在を確認する
-
-        Args:
-            project_id: プロジェクトのID
+    @classmethod
+    def build_service(cls, repo_factory: RepositoryFactory) -> "ProjectService":
+        """ProjectServiceのインスタンスを生成するファクトリメソッド
 
         Returns:
-            ProjectRead: 存在するプロジェクト
-
-        Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            ProjectService: プロジェクトサービスのインスタンス
         """
-        project = self.project_repo.get_by_id(project_id)
-        if not project:
-            self._log_error_and_raise(f"プロジェクトID {project_id} が見つかりません", ProjectServiceCheckError)
-        return ProjectRead.model_validate(project)
+        return cls(project_repo=repo_factory.create(ProjectRepository))
 
-    def create_project(self, project_data: ProjectCreate) -> ProjectRead:
+    @handle_service_errors(SERVICE_NAME, "作成", ProjectServiceError)
+    @convert_read_model(ProjectRead)
+    def create(self, project_data: ProjectCreate) -> Project:
         """新しいプロジェクトを作成する
 
         Args:
@@ -125,17 +60,17 @@ class ProjectService(ServiceBase[ProjectServiceError]):
             ProjectRead: 作成されたプロジェクト
 
         Raises:
-            ProjectServiceCreateError: プロジェクト作成に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            NotFoundError: エンティティが存在しない場合
+            ProjectServiceError: プロジェクト作成に失敗した場合
         """
         project = self.project_repo.create(project_data)
-        if not project:
-            self._log_error_and_raise("プロジェクトの作成に失敗しました", ProjectServiceCreateError)
+        logger.debug(f"プロジェクト '{project.title}' を作成しました (ID: {project.id})")
 
-        logger.info(f"プロジェクト '{project.title}' を作成しました (ID: {project.id})")
-        return ProjectRead.model_validate(project)
+        return project
 
-    def update_project(self, project_id: uuid.UUID, project_data: ProjectUpdate) -> ProjectRead:
+    @handle_service_errors(SERVICE_NAME, "更新", ProjectServiceError)
+    @convert_read_model(ProjectRead)
+    def update(self, project_id: uuid.UUID, project_data: ProjectUpdate) -> Project:
         """プロジェクトを更新する
 
         Args:
@@ -146,21 +81,16 @@ class ProjectService(ServiceBase[ProjectServiceError]):
             ProjectRead: 更新されたプロジェクト
 
         Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceUpdateError: プロジェクト更新に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            NotFoundError: プロジェクトが存在しない場合
+            ProjectServiceError: プロジェクト更新に失敗した場合
         """
-        # プロジェクトの存在を確認
-        self._check_project_exists(project_id)
-
         updated_project = self.project_repo.update(project_id, project_data)
-        if not updated_project:
-            self._log_error_and_raise(f"プロジェクトの更新に失敗しました (ID: {project_id})", ProjectServiceUpdateError)
+        logger.debug(f"プロジェクト '{updated_project.title}' を更新しました (ID: {project_id})")
 
-        logger.info(f"プロジェクト '{updated_project.title}' を更新しました (ID: {project_id})")
-        return ProjectRead.model_validate(updated_project)
+        return updated_project
 
-    def delete_project(self, project_id: uuid.UUID, *, force: bool = False) -> bool:
+    @handle_service_errors(SERVICE_NAME, "削除", ProjectServiceError)
+    def delete(self, project_id: uuid.UUID, *, force: bool = False) -> bool:
         """プロジェクトを削除する
 
         Args:
@@ -171,75 +101,91 @@ class ProjectService(ServiceBase[ProjectServiceError]):
             bool: 削除が成功した場合True
 
         Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceDeleteError: タスクが関連している場合、または削除に失敗した場合
+            NotFoundError: プロジェクトが存在しない場合
+            ProjectServiceError: タスクが関連している場合、または削除に失敗した場合
         """
-        # プロジェクトの存在を確認
-        existing_project = self._check_project_exists(project_id)
+        # プロジェクトの存在を確認し、関連タスクを取得
+        existing_project = self.project_repo.get_by_id(project_id)
 
-        # 関連するタスクがあるかチェック
-        related_tasks = self.task_repo.get_by_project_id(project_id)
-        if related_tasks and not force:
-            self._log_error_and_raise(
-                f"プロジェクト '{existing_project.title}' には {len(related_tasks)} 個のタスクが関連しています。force=Trueで強制削除できます",  # noqa: E501
-                ProjectServiceDeleteError,
-            )
-
-        # 強制削除の場合、関連タスクのproject_idをNoneに更新
-        if force and related_tasks:
-            from models.task import TaskUpdate
-
-            for task in related_tasks:
-                if task.id is not None:  # IDがNoneでないことを確認
-                    task_update = TaskUpdate(project_id=None)
-                    self.task_repo.update(task.id, task_update)
-            logger.info(f"{len(related_tasks)} 個のタスクからプロジェクト関連を削除しました")
-
-        success = self.project_repo.delete(project_id)
-        if not success:
-            self._log_error_and_raise(f"プロジェクトの削除に失敗しました (ID: {project_id})", ProjectServiceDeleteError)
+        if not force:
+            # 強制削除でない場合は関連タスクを外してから削除
+            self.project_repo.remove_all_tasks(project_id)
+            self.project_repo.delete(project_id)
+            success = True
+        else:
+            self.project_repo.delete(project_id)
+            success = True
 
         logger.info(f"プロジェクト '{existing_project.title}' を削除しました (ID: {project_id})")
         return success
 
-    def get_project_by_id(self, project_id: uuid.UUID) -> ProjectRead | None:
+    @handle_service_errors(SERVICE_NAME, "タスク削除", ProjectServiceError)
+    @convert_read_model(ProjectRead)
+    def remove_task(self, project_id: uuid.UUID, task_id: str) -> Project:
+        """プロジェクトからタスクを削除する
+
+        Args:
+            project_id: プロジェクトのID
+            task_id: 削除するタスクのID
+
+        Returns:
+            ProjectRead: 更新されたプロジェクト
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+        """
+        project = self.project_repo.get_by_id(project_id, with_details=True)
+
+        for task in project.tasks:
+            if task.id == task_id:
+                updated_project = self.project_repo.remove_task(project_id, task_id)
+                logger.debug(f"プロジェクト({project_id})からタスク({task_id})を削除しました。")
+                break
+        else:
+            msg = f"プロジェクト({project_id})にタスク({task_id})は存在しません。"
+            logger.warning(msg)
+            raise NotFoundError(msg)
+
+        return updated_project
+
+    @handle_service_errors(SERVICE_NAME, "取得", ProjectServiceError)
+    @convert_read_model(ProjectRead)
+    def get_by_id(self, project_id: uuid.UUID) -> Project:
         """IDでプロジェクトを取得する
 
         Args:
             project_id: プロジェクトのID
 
         Returns:
-            ProjectRead | None: 見つかったプロジェクト、存在しない場合はNone
+            ProjectRead: 見つかったプロジェクト、存在しない場合はNone
 
         Raises:
-            ProjectServiceGetError: プロジェクト取得に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            NotFoundError: プロジェクトが存在しない場合
+            ProjectServiceError: プロジェクトの取得に失敗した場合
         """
-        try:
-            project = self.project_repo.get_by_id(project_id)
-            if not project:
-                self._log_error_and_raise(f"プロジェクトID {project_id} が見つかりません", ProjectServiceGetError)
-            return ProjectRead.model_validate(project)
-        except Exception:
-            self._log_error_and_raise(f"プロジェクトの取得に失敗しました (ID: {project_id})", ProjectServiceGetError)
+        project = self.project_repo.get_by_id(project_id)
+        logger.debug(f"プロジェクトを取得しました: {project.id}")
+        return project
 
-    def get_all_projects(self) -> list[ProjectRead]:
+    @handle_service_errors(SERVICE_NAME, "取得", ProjectServiceError)
+    @convert_read_model(ProjectRead, is_list=True)
+    def get_all(self) -> list[Project]:
         """全てのプロジェクトを取得する
 
         Returns:
             list[ProjectRead]: 全てのプロジェクトのリスト
 
         Raises:
-            ProjectServiceGetError: プロジェクト一覧の取得に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            NotFoundError: エンティティが存在しない場合
+            ProjectServiceError: 全プロジェクトの取得に失敗した場合
         """
-        try:
-            projects = self.project_repo.get_all()
-            return [ProjectRead.model_validate(project) for project in projects]
-        except Exception:
-            self._log_error_and_raise("プロジェクト一覧の取得に失敗しました", ProjectServiceGetError)
+        projects = self.project_repo.get_all()
+        logger.debug(f"全てのプロジェクトを取得しました: {len(projects)} 件")
+        return projects
 
-    def get_projects_by_status(self, status: ProjectStatus) -> list[ProjectRead]:
+    @handle_service_errors(SERVICE_NAME, "取得", ProjectServiceError)
+    @convert_read_model(ProjectRead, is_list=True)
+    def list_by_status(self, status: ProjectStatus) -> list[Project]:
         """指定されたステータスのプロジェクトを取得する
 
         Args:
@@ -249,152 +195,24 @@ class ProjectService(ServiceBase[ProjectServiceError]):
             list[ProjectRead]: 指定されたステータスのプロジェクトのリスト
 
         Raises:
-            ProjectServiceGetError: ステータス別プロジェクトの取得に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            NotFoundError: エンティティが存在しない場合
+            ProjectServiceError: プロジェクトの取得に失敗した場合
         """
-        try:
-            projects = self.project_repo.get_by_status(status)
-            return [ProjectRead.model_validate(project) for project in projects]
-        except Exception:
-            self._log_error_and_raise(f"ステータス '{status}' のプロジェクト取得に失敗しました", ProjectServiceGetError)
+        projects = self.project_repo.list_by_status(status)
+        logger.debug(f"ステータス '{status}' のプロジェクトを {len(projects)} 件取得しました。")
+        return projects
 
-    def get_active_projects(self) -> list[ProjectRead]:
-        """アクティブなプロジェクトを取得する
-
-        Returns:
-            list[ProjectRead]: アクティブなプロジェクトのリスト
-
-        Raises:
-            ProjectServiceGetError: アクティブプロジェクトの取得に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
-        """
-        try:
-            projects = self.project_repo.get_active_projects()
-            return [ProjectRead.model_validate(project) for project in projects]
-        except Exception:
-            self._log_error_and_raise("アクティブプロジェクトの取得に失敗しました", ProjectServiceGetError)
-
-    def get_completed_projects(self) -> list[ProjectRead]:
-        """完了済みプロジェクトを取得する
-
-        Returns:
-            list[ProjectRead]: 完了済みプロジェクトのリスト
-
-        Raises:
-            ProjectServiceGetError: 完了済みプロジェクトの取得に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
-        """
-        try:
-            projects = self.project_repo.get_completed_projects()
-            return [ProjectRead.model_validate(project) for project in projects]
-        except Exception:
-            self._log_error_and_raise("完了済みプロジェクトの取得に失敗しました", ProjectServiceGetError)
-
-    def search_projects(self, query: str) -> list[ProjectRead]:
-        """プロジェクトをタイトルで検索する
+    @handle_service_errors(SERVICE_NAME, "検索", ProjectServiceError)
+    @convert_read_model(ProjectRead, is_list=True)
+    def search_projects(self, query: str) -> list[Project]:
+        """タイトルでプロジェクトを検索する
 
         Args:
             query: 検索クエリ
 
         Returns:
-            list[ProjectRead]: 検索条件に一致するプロジェクトのリスト
-
-        Raises:
-            ProjectServiceGetError: プロジェクトの検索に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
+            list[ProjectRead]: 検索結果のプロジェクト一覧
         """
-        try:
-            projects = self.project_repo.search_by_title(query)
-            return [ProjectRead.model_validate(project) for project in projects]
-        except Exception:
-            self._log_error_and_raise("プロジェクトの検索に失敗しました", ProjectServiceGetError)
-
-    def get_project_tasks(self, project_id: uuid.UUID) -> list[TaskRead]:
-        """プロジェクトに関連するタスクを取得する
-
-        Args:
-            project_id: プロジェクトID
-
-        Returns:
-            list[TaskRead]: プロジェクトに関連するタスクのリスト
-
-        Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceGetError: タスク取得に失敗した場合
-        """
-        # プロジェクトの存在を確認
-        self._check_project_exists(project_id)
-
-        try:
-            tasks = self.task_repo.get_by_project_id(project_id)
-            return [TaskRead.model_validate(task) for task in tasks]
-        except Exception:
-            self._log_error_and_raise("タスク取得に失敗しました", ProjectServiceGetError)
-
-    def complete_project(self, project_id: uuid.UUID) -> ProjectRead:
-        """プロジェクトを完了する
-
-        Args:
-            project_id: プロジェクトID
-
-        Returns:
-            ProjectRead: 更新されたプロジェクト
-
-        Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceUpdateError: プロジェクト更新に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
-        """
-        project_data = ProjectUpdate(status=ProjectStatus.COMPLETED)
-        return self.update_project(project_id, project_data)
-
-    def activate_project(self, project_id: uuid.UUID) -> ProjectRead:
-        """プロジェクトをアクティブにする
-
-        Args:
-            project_id: プロジェクトID
-
-        Returns:
-            ProjectRead: 更新されたプロジェクト
-
-        Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceUpdateError: プロジェクト更新に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
-        """
-        project_data = ProjectUpdate(status=ProjectStatus.ACTIVE)
-        return self.update_project(project_id, project_data)
-
-    def put_project_on_hold(self, project_id: uuid.UUID) -> ProjectRead:
-        """プロジェクトを保留にする
-
-        Args:
-            project_id: プロジェクトID
-
-        Returns:
-            ProjectRead: 更新されたプロジェクト
-
-        Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceUpdateError: プロジェクト更新に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
-        """
-        project_data = ProjectUpdate(status=ProjectStatus.ON_HOLD)
-        return self.update_project(project_id, project_data)
-
-    def cancel_project(self, project_id: uuid.UUID) -> ProjectRead:
-        """プロジェクトをキャンセルする
-
-        Args:
-            project_id: プロジェクトID
-
-        Returns:
-            ProjectRead: 更新されたプロジェクト
-
-        Raises:
-            ProjectServiceCheckError: プロジェクトが存在しない場合
-            ProjectServiceUpdateError: プロジェクト更新に失敗した場合
-            ValidationError: プロジェクトデータの検証に失敗した場合
-        """
-        project_data = ProjectUpdate(status=ProjectStatus.CANCELLED)
-        return self.update_project(project_id, project_data)
+        projects = self.project_repo.search_by_title(query)
+        logger.debug(f"クエリ '{query}' に一致するプロジェクトを {len(projects)} 件取得しました。")
+        return projects

@@ -137,10 +137,11 @@ class TaskApplicationService:
             task_service = service_factory.create_task_service()
             return task_service.create_task(command.to_create_model())
 
-# views/task/view.py - UI表示
+# views/tasks/view.py - UI表示
 class TaskView(BaseView):
-    def __init__(self):
-        self.task_app_service = get_application_service_container().get_task_application_service()
+    def __init__(self, page: ft.Page, app_services: ApplicationServices):
+        super().__init__(page, app_services)
+        self.task_app_service = app_services.task
 
     def on_add_task(self, e):
         """UIからアプリケーションサービスを呼び出すだけ"""
@@ -536,38 +537,62 @@ class TaskQuery:
 ### 3. 依存性注入とファクトリパターン
 
 ```python
-# logic/container.py - DI コンテナの実装
-class ServiceContainer:
-    """サービスコンテナ（Dependency Injection）"""
+# logic/application/apps.py - Application Services DIコンテナ
+class ApplicationServices:
+    """Application ServiceのDIコンテナ（遅延生成・スレッドセーフ）
+    
+    - Viewや呼び出し側は各プロパティまたはget_service()でサービスを取得できます
+    - 各サービスはステートレスなため、本コンテナで遅延生成・キャッシュして再利用します
+    """
+    
+    @classmethod
+    def create(
+        cls,
+        *,
+        unit_of_work_factory: type[UnitOfWork] = SqlModelUnitOfWork,
+    ) -> ApplicationServices:
+        """Application Servicesコンテナのファクトリメソッド"""
+        return cls(
+            _unit_of_work_factory=unit_of_work_factory,
+            _services={},
+            _lock=Lock(),
+        )
+    
+    def get_service(self, service_type: type[_S]) -> _S:
+        """サービスを取得（遅延生成・キャッシュ）"""
+        # キャッシュから取得または新規生成
+        if service_type not in self._services:
+            with self._lock:
+                instance = self._build_service_instance(service_type)
+                self._services[service_type] = instance
+        return self._services[service_type]
+    
+    # 便利なプロパティアクセス
+    @property
+    def task(self) -> TaskApplicationService:
+        """Taskサービスを取得"""
+        return self.get_service(TaskApplicationService)
+    
+    @property
+    def memo(self) -> MemoApplicationService:
+        """Memoサービスを取得"""
+        return self.get_service(MemoApplicationService)
 
-    def __init__(self) -> None:
-        self._task_app_service: TaskApplicationService | None = None
-        self._project_app_service: ProjectApplicationService | None = None
-        self._tag_app_service: TagApplicationService | None = None
-
-    def get_task_application_service(self) -> TaskApplicationService:
-        """タスクApplication Serviceを取得（シングルトン）"""
-        if self._task_app_service is None:
-            self._task_app_service = TaskApplicationService()
-        return self._task_app_service
-
-# logic/factory.py - ファクトリパターン
+# logic/factory.py - ファクトリパターン（Service層用）
 class ServiceFactory:
     """サービスファクトリ（Session注入）"""
 
     def __init__(self, repository_factory: RepositoryFactory):
         self.repository_factory = repository_factory
 
-    def create_task_service(self) -> TaskService:
-        """TaskServiceを生成"""
-        task_repo = self.repository_factory.create_task_repository()
-        project_repo = self.repository_factory.create_project_repository()
-        return TaskService(task_repo, project_repo)
+    def get_service(self, service_type: type[ServiceType]) -> ServiceType:
+        """サービスインスタンスを取得する"""
+        return self._register_service(service_type)
 
 # 使用例
-def get_application_service_container() -> ServiceContainer:
+def get_application_services() -> ApplicationServices:
     """View層で使用するDIコンテナ取得"""
-    return service_container  # グローバルシングルトン
+    return ApplicationServices.create()
 ```
 
 ### 4. Unit of Work パターンによるトランザクション管理
@@ -691,7 +716,7 @@ class WeeklyReviewWorkflow:
 
     def _collect_completed_tasks(self, state: WeeklyReviewState) -> dict:
         """今週完了したタスクを収集"""
-        task_service = self.service_container.get_task_application_service()
+        task_service = self.app_services.task
         completed_tasks = task_service.get_completed_tasks_this_week()
 
         return {
@@ -712,7 +737,8 @@ class TaskServiceTool(BaseTool):
 
     def _run(self, action: str, **kwargs) -> str:
         """エージェントからサービス層を呼び出し"""
-        task_app_service = get_application_service_container().get_task_application_service()
+        app_services = ApplicationServices.create()
+        task_app_service = app_services.task
 
         match action:
             case "create_task":
@@ -758,9 +784,9 @@ Views層は、Fletを使用してクロスプラットフォーム対応のモ�
 class BaseView(ABC):
     """全ビューの基底クラス"""
 
-    def __init__(self, page: ft.Page, service_container: ServiceContainer):
+    def __init__(self, page: ft.Page, app_services: ApplicationServices):
         self.page = page
-        self.service_container = service_container
+        self.app_services = app_services
         self._content: ft.Control | None = None
 
     @abstractmethod
@@ -784,11 +810,11 @@ class BaseView(ABC):
 class MainView(BaseView):
     """アプリケーションのメインビュー"""
 
-    def __init__(self, page: ft.Page, service_container: ServiceContainer):
-        super().__init__(page, service_container)
-        self.task_list_view = TaskListView(page, service_container)
-        self.inbox_view = InboxView(page, service_container)
-        self.project_view = ProjectView(page, service_container)
+    def __init__(self, page: ft.Page, app_services: ApplicationServices):
+        super().__init__(page, app_services)
+        self.task_list_view = TaskListView(page, app_services)
+        self.inbox_view = InboxView(page, app_services)
+        self.project_view = ProjectView(page, app_services)
 
     def build(self) -> ft.Control:
         """メインレイアウトを構築"""
@@ -798,7 +824,7 @@ class MainView(BaseView):
                 ft.Container(
                     content=self._build_sidebar(),
                     width=200,
-                    bgcolor=ft.colors.SURFACE_VARIANT
+                    bgcolor=ft.Colors.SURFACE_VARIANT
                 ),
                 # メインコンテンツエリア
                 ft.Container(
@@ -861,7 +887,7 @@ class TaskComponent(ft.UserControl):
                         ft.Text(
                             self.task.description,
                             size=12,
-                            color=ft.colors.ON_SURFACE_VARIANT
+                            color=ft.Colors.ON_SURFACE_VARIANT
                         ),
                     self._build_metadata_row()
                 ]),
@@ -873,14 +899,14 @@ class TaskComponent(ft.UserControl):
     def _get_status_color(self, status: TaskStatus) -> str:
         """GTDステータスに応じた色を取得"""
         color_map = {
-            TaskStatus.INBOX: ft.colors.ORANGE,
-            TaskStatus.NEXT_ACTION: ft.colors.GREEN,
-            TaskStatus.WAITING: ft.colors.YELLOW,
-            TaskStatus.SCHEDULED: ft.colors.BLUE,
-            TaskStatus.SOMEDAY_MAYBE: ft.colors.PURPLE,
-            TaskStatus.DONE: ft.colors.GREY,
+            TaskStatus.INBOX: ft.Colors.ORANGE,
+            TaskStatus.NEXT_ACTION: ft.Colors.GREEN,
+            TaskStatus.WAITING: ft.Colors.YELLOW,
+            TaskStatus.SCHEDULED: ft.Colors.BLUE,
+            TaskStatus.SOMEDAY_MAYBE: ft.Colors.PURPLE,
+            TaskStatus.DONE: ft.Colors.GREY,
         }
-        return color_map.get(status, ft.colors.SURFACE)
+        return color_map.get(status, ft.Colors.SURFACE)
 
 # views/components/quick_capture.py - クイックキャプチャー
 class QuickCaptureComponent(ft.UserControl):
@@ -930,7 +956,7 @@ class QuickCaptureComponent(ft.UserControl):
             self.page.show_snack_bar(
                 ft.SnackBar(
                     content=ft.Text(f"エラー: {str(e)}"),
-                    bgcolor=ft.colors.ERROR
+                    bgcolor=ft.Colors.ERROR
                 )
             )
 ```
@@ -942,9 +968,9 @@ class QuickCaptureComponent(ft.UserControl):
 class ViewRouter:
     """ビュー間のナビゲーション管理"""
 
-    def __init__(self, page: ft.Page, service_container: ServiceContainer):
+    def __init__(self, page: ft.Page, app_services: ApplicationServices):
         self.page = page
-        self.service_container = service_container
+        self.app_services = app_services
         self.views: dict[str, BaseView] = {}
         self.current_view: str = "main"
 
@@ -962,10 +988,10 @@ class ViewRouter:
     def _create_view(self, view_name: str) -> BaseView:
         """ビューのファクトリメソッド"""
         view_factories = {
-            "main": lambda: MainView(self.page, self.service_container),
-            "inbox": lambda: InboxView(self.page, self.service_container),
-            "projects": lambda: ProjectView(self.page, self.service_container),
-            "contexts": lambda: ContextView(self.page, self.service_container),
+            "main": lambda: MainView(self.page, self.app_services),
+            "inbox": lambda: InboxView(self.page, self.app_services),
+            "projects": lambda: ProjectView(self.page, self.app_services),
+            "contexts": lambda: ContextView(self.page, self.app_services),
         }
 
         factory = view_factories.get(view_name)
@@ -1022,13 +1048,15 @@ class TestGTDWorkflow:
     """GTDワークフロー全体のテスト"""
 
     @pytest.fixture
-    def service_container(self):
-        """テスト用サービスコンテナ"""
-        return create_test_service_container()
+    def app_services(self):
+        """テスト用Application Servicesを作成"""
+        return ApplicationServices.create(
+            unit_of_work_factory=TestUnitOfWork
+        )
 
-    def test_inbox_to_next_action_workflow(self, service_container):
+    def test_inbox_to_next_action_workflow(self, app_services):
         """Inbox → Next Action の完全なワークフロー"""
-        task_app_service = service_container.get_task_application_service()
+        task_app_service = app_services.task
 
         # 1. Inboxアイテム作成
         command = CreateTaskCommand(
@@ -1064,8 +1092,8 @@ class TestGTDWorkflow:
 def main(page: ft.Page):
     """Fletアプリケーションのメイン関数"""
     # 依存関係の組み立て
-    service_container = create_service_container()
-    router = ViewRouter(page, service_container)
+    app_services = ApplicationServices.create()
+    router = ViewRouter(page, app_services)
 
     # GTD特化のページ設定
     page.title = "Kage - GTD Task Manager"
@@ -1098,7 +1126,7 @@ def on_add_task(self, e):
             status=TaskStatus.INBOX
         )
 
-        task_app_service = self.service_container.get_task_application_service()
+        task_app_service = self.app_services.task
         new_task = task_app_service.create_task(command)
 
         # UI更新

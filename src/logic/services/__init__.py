@@ -5,24 +5,20 @@
 複数のリポジトリを組み合わせて複雑な操作を提供します。
 """
 
+from logic.services.base import ServiceBase
 from logic.services.memo_service import MemoService
 from logic.services.project_service import ProjectService
-from logic.services.quick_action_mapping_service import QuickActionMappingService
+from logic.services.settings_service import SettingsService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
-from logic.services.task_status_display_service import (
-    TaskStatusDisplay,
-    TaskStatusDisplayService,
-)
-from logic.services.task_tag_service import TaskTagService
+from logic.services.terminology_service import TerminologyService
 
 __all__ = [
+    "ServiceBase",
     "MemoService",
     "ProjectService",
-    "QuickActionMappingService",
+    "SettingsService",
     "TagService",
     "TaskService",
-    "TaskStatusDisplay",
-    "TaskStatusDisplayService",
-    "TaskTagService",
+    "TerminologyService",
 ]

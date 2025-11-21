@@ -1,10 +1,10 @@
-# Kageプロジェクト AI開発ガイドライン
+# Kage プロジェクト AI 開発ガイドライン
 
 ## 1. 基本方針 (Core Directives)
 
 ### 1.1. 役割 (Role)
 
-PythonによるWindowsデスクトップアプリ開発のエキスパートとして、モダンなUIと保守性の高いコードを生成すること。
+Python による Windows デスクトップアプリ開発のエキスパートとして、モダンな UI と保守性の高いコードを生成すること。
 
 ### 1.2. 原則 (Principles)
 
@@ -18,10 +18,10 @@ PythonによるWindowsデスクトップアプリ開発のエキスパートと�
 ## 2. プロジェクト概要 (Project Overview)
 
 - アプリケーション名: Kage
-- 目的: LLMを活用したタスク管理アプリケーション
+- 目的: LLM を活用したタスク管理アプリケーション
 - 技術スタック:
   - 言語: Python 3.12+
-  - UIフレームワーク: Flet
+  - UI フレームワーク: Flet
   - プロジェクト管理: uv
   - タスクランナー: poethepoet
 - 依存ライブラリ: pyproject.toml を正として参照すること。
@@ -30,7 +30,7 @@ PythonによるWindowsデスクトップアプリ開発のエキスパートと�
 
 ### 3.1. コード品質 (Code Quality)
 
-全てのPythonコードには、型ヒントと戻り値の型を必ず含めること。
+全ての Python コードには、型ヒントと戻り値の型を必ず含めること。
 変数名や関数名は、その役割がひと目で理解できる、自己説明的な名称を使用すること。
 
 ❌ Bad:
@@ -59,13 +59,13 @@ def filter_unknown_users(users: list[str], known_users: set[str]) -> list[str]:
 スタイル要件:
 
 - 説明的でわかりやすい変数名を使用する。短すぎる識別子や難解な識別子は避ける。
-- 複雑な関数（20行以上）を、意味のある小さな焦点を絞った関数に分割する。
+- 複雑な関数（20 行以上）を、意味のある小さな焦点を絞った関数に分割する。
 - 不必要な抽象化や時期尚早の最適化を避ける。
 - 変更するコードベースの既存のパターンに従う。
 
 ### 3.2. ドキュメンテーション (Documentation)
 
-全ての公開関数には、Googleスタイルのdocstringを記述すること。
+全ての公開関数には、Google スタイルの docstring を記述すること。
 引数（Args）、戻り値（Returns）、発生しうる例外（Raises）を明記する。
 
 ❌ Bad:
@@ -101,7 +101,7 @@ def send_notification(to_address: str, message: str) -> bool:
 - すべてのパラメータ、戻り値、例外を文書化する。
 - 説明は簡潔かつ明確に。
 
-📌ヒント:説明は簡潔かつ明確にしましょう。戻り値は、明らかでない場合にのみ記述してください。
+📌 ヒント:説明は簡潔かつ明確にしましょう。戻り値は、明らかでない場合にのみ記述してください。
 
 ### 3.3. テスト (Testing)
 
@@ -143,35 +143,34 @@ def test_filter_unknown_users():
 セキュリティチェックリスト:
 
 - ユーザー入力を伴う eval(), exec(), pickle は使用しない。
-- logやエラー処理は `loguru` を使用し、適切にログを記録する。
+- log やエラー処理は `loguru` を使用し、適切にログを記録する。
 - ファイルハンドルやネットワーク接続などのリソースは、確実にクローズする。
 
-## 4. UI/UX と Flet設計ガイドライン (UI/UX & Flet Design)
+## 4. UI/UX と Flet 設計ガイドライン (UI/UX & Flet Design)
 
 ### 4.1. 基本方針
 
 モダンで直感的なデザインを基本とする。
 
-Fletのコントロールを効果的に使用し、クリーンで応答性の高いUIを構築する。
+Flet のコントロールを効果的に使用し、クリーンで応答性の高い UI を構築する。
 
-### 4.2. Flet固有ガイドライン
+### 4.2. Flet 固有ガイドライン
 
-コンポーネント化: 複数の要素からなる複雑なUI部品は、ft.UserControlを継承したカスタムクラスとして定義し、再利用性を高めること。
+コンポーネント化: 複数の要素からなる複雑な UI 部品は、ft.UserControl を継承したカスタムクラスとして定義し、再利用性を高めること。
 
-状態管理(State Management): ページの表示に関わる状態（データ）は、UIコントロールから分離された専用のデータクラスで管理すること。UIの更新は、そのデータクラスの変更を起点にpage.update()を呼び出す設計を基本とする。
+状態管理(State Management): ページの表示に関わる状態（データ）は、UI コントロールから分離された専用のデータクラスで管理すること。UI の更新は、そのデータクラスの変更を起点に page.update()を呼び出す設計を基本とする。
 
-テーマとスタイル: アプリケーション全体の色、フォント、間隔などのスタイルは、一元管理された theme.py のようなファイルで定義し、UIの一貫性を保つこと。
+テーマとスタイル: アプリケーション全体の色、フォント、間隔などのスタイルは、一元管理された theme.py のようなファイルで定義し、UI の一貫性を保つこと。
 
 ## 5. アーキテクチャガイドライン (Architectural Guidelines)
 
-### 5.1. LLM連携ガイドライン
+### 5.1. LLM 連携ガイドライン
 
-- APIキー管理: APIキーや認証情報をコード内にハードコーディングしない。環境変数 (os.getenv) または、python-dotenvライブラリ等を使用すること。
-- プロンプト管理: LLMへのプロンプトは、Pythonコードから分離し、prompts/ ディレクトリなどにテキストファイルやYAMLファイルとして管理する。
-- エラーハンドリング: LLM API呼び出し時のタイムアウト、接続エラー、APIからのエラーレスポンスを想定した、堅牢な例外処理とリトライ機構を実装すること。
+- API キー管理: API キーや認証情報をコード内にハードコーディングしない。環境変数 (os.getenv) または、python-dotenv ライブラリ等を使用すること。
+- プロンプト管理: LLM へのプロンプトは、Python コードから分離し、prompts/ ディレクトリなどにテキストファイルや YAML ファイルとして管理する。
+- エラーハンドリング: LLM API 呼び出し時のタイムアウト、接続エラー、API からのエラーレスポンスを想定した、堅牢な例外処理とリトライ機構を実装すること。
 
 ### 5.2. プロジェクト構造
-
 
 予測可能で保守性の高い開発のため、以下の現状のディレクトリ構造例を参照してください。
 
@@ -180,63 +179,62 @@ Kage/
 ├── pyproject.toml
 ├── README.md
 ├── uv.lock
-├── docs/                 # ドキュメント
-│   ├── app/
-│   ├── dev/
-│   └── ...
-├── scripts/              # 開発用スクリプト
-│   ├── __init__.py
-│   └── ...
-├── src/                  # アプリケーション本体
-│   ├── config.py         # 設定管理
-│   ├── logging_conf.py   # ログ設定
-│   ├── main.py           # エントリーポイント
-│   ├── router.py         # ルーティング
-│   ├── agents/           # エージェント関連
-│   ├── assets/           # 画像・フォント等
-│   ├── cli/              # CLI関連
-│   ├── logic/            # ドメインロジック
-│   ├── models/           # データモデル
-│   ├── settings/         # 設定管理
-│   └── views/            # Flet画面(View)
-├── tests/                # テストコード
-│   ├── agents/
-│   ├── logic/
-│   ├── migrations/
-│   ├── settings/
-│   └── ...
-└── migrations/           # DBマイグレーション
+├── docs/ # ドキュメント
+│ ├── app/
+│ ├── dev/
+│ └── ...
+├── scripts/ # 開発用スクリプト
+│ ├── **init**.py
+│ └── ...
+├── src/ # アプリケーション本体
+│ ├── config.py # 設定管理
+│ ├── logging_conf.py # ログ設定
+│ ├── main.py # エントリーポイント
+│ ├── router.py # ルーティング
+│ ├── agents/ # エージェント関連
+│ ├── assets/ # 画像・フォント等
+│ ├── cli/ # CLI 関連
+│ ├── logic/ # ドメインロジック
+│ ├── models/ # データモデル
+│ ├── settings/ # 設定管理
+│ └── views/ # Flet 画面(View)
+├── tests/ # テストコード
+│ ├── agents/
+│ ├── logic/
+│ ├── migrations/
+│ ├── settings/
+│ └── ...
+└── migrations/ # DB マイグレーション
 
 ※主要なサブディレクトリの役割：
+
 - src/：アプリケーションのコア実装（エージェント、ロジック、モデル、ビュー等を含む）
-- tests/：pytestによるユニット・統合テスト
+- tests/：pytest によるユニット・統合テスト
 - docs/：開発・設計・利用ドキュメント
 - scripts/：補助スクリプト
-- migrations/：DBマイグレーション関連
+- migrations/：DB マイグレーション関連
 
 src/配下の構成：
 src/
-├── agents/      # LLMエージェント等
-├── assets/      # 画像・フォント等
-├── cli/         # CLIコマンド
-├── logic/       # ビジネスロジック層
-│   ├── application/   # Application Service層（View層とService層の橋渡し、トランザクション管理、CQRSパターン）
-│   ├── commands/      # コマンド（データ変更操作、DTO/バリデーション）
-│   ├── queries/       # クエリ（データ取得操作、検索条件の明確化）
-│   ├── services/      # サービス（ビジネスルール実装、Repository連携）
-│   ├── repositories/  # リポジトリ（データアクセス抽象化、SQLModelベース）
-│   ├── container.py   # 依存性注入コンテナ
-│   ├── factory.py     # ファクトリ
-│   └── unit_of_work.py # Unit of Workパターン
-├── models/      # データモデル
-├── settings/    # 設定管理
-└── views/       # Fletビュー層
-    ├── layout.py      # 全体レイアウト生成
-    ├── shared/        # 共通部品（BaseView, AppBar, エラーハンドリングMixin等）
-    ├── home/          # ホーム画面（view.py, components.py）
-    ├── task/          # タスク管理画面（view.py, components/）
-    │   └── components/    # タスクボード、クイックアクション、ダイアログ等
-    └── __init__.py    # 主要Viewのエクスポート
+├── agents/ # LLM エージェント等
+├── assets/ # 画像・フォント等
+├── cli/ # CLI コマンド
+├── logic/ # ビジネスロジック層
+│ ├── application/ # Application Service 層（View 層と Service 層の橋渡し、トランザクション管理、バリデーションなど）
+│ ├── services/ # サービス（ビジネスルール実装、Repository 連携）
+│ ├── repositories/ # リポジトリ（データアクセス抽象化、SQLModel ベース）
+│ ├── container.py # 依存性注入コンテナ
+│ ├── factory.py # ファクトリ
+│ └── unit_of_work.py # Unit of Work パターン
+├── models/ # データモデル
+├── settings/ # 設定管理
+└── views/ # Flet ビュー層
+├── layout.py # 全体レイアウト生成
+├── shared/ # 共通部品（BaseView, AppBar, エラーハンドリング Mixin 等）
+├── home/ # ホーム画面（view.py, components.py）
+├── task/ # タスク管理画面（view.py, components/）
+│ └── components/ # タスクボード、クイックアクション、ダイアログ等
+└── **init**.py # 主要 View のエクスポート
 
 ### 5.3. アーキテクチャの改善
 
@@ -254,7 +252,7 @@ def process_data(data, db_conn, email_client, logger):
     return result
 ```
 
-✅より良いデザイン:
+✅ より良いデザイン:
 
 ```python
 @dataclass
@@ -288,7 +286,7 @@ class DataProcessor:
 
 設計改善領域:
 
-より __クリーン__ で、より __スケーラブル__ で、より __シンプル__ なデザインがある場合は、それを強調し、次のような改善を提案してください。
+より **クリーン** で、より **スケーラブル** で、より **シンプル** なデザインがある場合は、それを強調し、次のような改善を提案してください。
 
 - 共有ユーティリティによるコードの重複の削減
 - ユニットテストを簡単にする
@@ -318,7 +316,7 @@ class DataProcessor:
 
 Conventional Commits フォーマットに従うこと。
 
-- タイトル (日本語): 変更内容が明確にわかるように記述する。 (feat(ui): 新しいUIコンポーネントを追加 など)
+- タイトル (日本語): 変更内容が明確にわかるように記述する。 (feat(ui): 新しい UI コンポーネントを追加 など)
 - 説明 (日本語): 本文には以下のセクションを含める。
 - 概要: 変更の目的を簡潔に記述。
 - 変更点: 具体的な変更内容をリスト形式で記述。
@@ -330,7 +328,7 @@ Conventional Commits フォーマットに従うこと。
 - パッケージ管理: uv
 - タスクランナー: poethepoet
 - コードフォーマッタ: ruff
-- lintツール: ruff
+- lint ツール: ruff
 - 型チェッカー: pyright
 - テストフレームワーク: pytest
 
@@ -363,9 +361,9 @@ uv run poe cli # cli app (testing logic)
 
 コードの変更を送信する前に:
 
-[ ] コード品質: `poe fix` および `poe test` がパスしたか。
+[ ] コード品質: `uv run poe fix` および `uv run poe test` がパスしたか。
 [ ] 型ヒント: 全ての関数に型ヒントと戻り値の型が追加されているか。
-[ ] ドキュメンテーション: 公開関数にGoogleスタイルのdocstringが記述されているか。
+[ ] ドキュメンテーション: 公開関数に Google スタイルの docstring が記述されているか。
 [ ] テスト: 新機能・修正に対するテストが追加され、全てパスしているか。
 [ ] セキュリティ: 危険なコードパターンが含まれていないか。
-[ ] コミットメッセージ: Conventional Commitsフォーマットに従っているか。
+[ ] コミットメッセージ: Conventional Commits フォーマットに従っているか。

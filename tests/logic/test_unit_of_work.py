@@ -1,6 +1,22 @@
-"""Unit of Work テストモジュール
+"""Unit of Work テスト項目（現行仕様）
 
-UnitOfWork と SqlModelUnitOfWork のトランザクション管理をテストします。
+UnitOfWork/SqlModelUnitOfWork のトランザクション管理とファクトリ連携を検証する。
+
+テスト項目（実装前の項目定義）:
+- コンテキスト管理:
+    - withブロックで Session/RepositoryFactory/ServiceFactory が生成される
+    - 例外発生時に rollback が実行され、終了時にセッションがクローズされる
+- 初期化前アクセス:
+    - session/repository_factory/service_factory へのアクセスは RuntimeError
+- トランザクション:
+    - commit が永続化し、rollback は破棄する
+    - 同一トランザクション内で複数操作が可能
+- ファクトリ整合性:
+    - repository_factory.create(...) で作られたリポジトリと
+        service_factory.get_service(...) で作られたサービスは同じセッションを共有
+    - get_service_factory() のコンテキストマネージャが ServiceFactory を提供
+- 統合シナリオ:
+    - TaskService を取得してタスクを保存後、get_by_id で取得できる
 """
 
 import uuid
@@ -79,7 +95,7 @@ class TestSqlModelUnitOfWork:
                 id=task_id,
                 title="テストタスク",
                 description="テスト用",
-                status=TaskStatus.INBOX,
+                status=TaskStatus.TODO,
             )
 
             uow = SqlModelUnitOfWork()
@@ -101,7 +117,7 @@ class TestSqlModelUnitOfWork:
                 id=task_id,
                 title="テストタスク",
                 description="テスト用",
-                status=TaskStatus.INBOX,
+                status=TaskStatus.TODO,
             )
 
             uow = SqlModelUnitOfWork()
@@ -122,7 +138,7 @@ class TestSqlModelUnitOfWork:
                 id=task_id,
                 title="テストタスク",
                 description="テスト用",
-                status=TaskStatus.INBOX,
+                status=TaskStatus.TODO,
             )
 
             uow = SqlModelUnitOfWork()
@@ -141,6 +157,21 @@ class TestSqlModelUnitOfWork:
             with Session(clean_engine) as verify_session:
                 saved_task = verify_session.get(Task, task_id)
                 assert saved_task is None
+
+    def test_exit_calls_rollback_on_exception(self, clean_engine: Engine) -> None:
+        """例外発生時に rollback が呼び出されることを直接確認する"""
+        with patch("logic.unit_of_work.engine", clean_engine):
+            uow = SqlModelUnitOfWork()
+            error_message = "boom"
+
+            with (
+                patch.object(uow, "rollback", wraps=uow.rollback) as mock_rollback,
+                pytest.raises(RuntimeError, match=error_message),
+                uow,
+            ):
+                raise RuntimeError(error_message)
+
+            mock_rollback.assert_called_once()
 
     def test_session_closes_after_context_exit(self, clean_engine: Engine) -> None:
         """コンテキスト終了後にセッションがクローズされることをテスト"""
@@ -170,7 +201,7 @@ class TestSqlModelUnitOfWork:
 
             with uow:
                 # [AI GENERATED] ファクトリから作成されたリポジトリが同じセッションを使用することを確認
-                task_repo = uow.repository_factory.create_repository(TaskRepository)
+                task_repo = uow.repository_factory.create(TaskRepository)
                 task_service = uow.service_factory.get_service(TaskService)
 
                 assert task_repo.session is uow.session
@@ -250,7 +281,7 @@ class TestUnitOfWorkIntegration:
 
                 # [AI GENERATED] 作成されたタスクを取得
                 assert task_data.id is not None
-                saved_task = task_service.get_task_by_id(task_data.id)
+                saved_task = task_service.get_by_id(task_data.id)
                 assert saved_task is not None
                 assert saved_task.title == "統合テストタスク"
 
@@ -266,7 +297,7 @@ class TestUnitOfWorkIntegration:
                     id=task_id,
                     title="元のタスク",
                     description="元の説明",
-                    status=TaskStatus.INBOX,
+                    status=TaskStatus.TODO,
                 )
                 uow1.session.add(task)
                 uow1.commit()
@@ -285,3 +316,21 @@ class TestUnitOfWorkIntegration:
                 final_task = uow3.session.get(Task, task_id)
                 assert final_task is not None
                 assert final_task.title == "元のタスク"  # [AI GENERATED] 元のタイトルのまま
+
+    def test_get_service_requires_initialization(self) -> None:
+        """初期化前に get_service を呼ぶと RuntimeError"""
+        uow = SqlModelUnitOfWork()
+
+        with pytest.raises(RuntimeError, match="Unit of Work not initialized"):
+            uow.get_service(TaskService)
+
+    def test_get_service_delegates_to_factory(self, test_engine: Engine) -> None:
+        """get_service は service_factory へ委譲する"""
+        with patch("logic.unit_of_work.engine", test_engine):
+            uow = SqlModelUnitOfWork()
+
+            with uow:
+                service = uow.get_service(TaskService)
+
+            assert isinstance(service, TaskService)
+            assert service.task_repo.session is uow.session

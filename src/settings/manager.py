@@ -178,6 +178,16 @@ def get_config_manager() -> ConfigManager[AppSettings]:
     return _global_manager  # type: ignore[return-value]
 
 
+def invalidate_config_manager() -> None:
+    """グローバル設定マネージャーを無効化する。
+
+    次回 `get_config_manager()` 呼び出し時に再初期化され、
+    設定ファイル更新後の内容や環境変数の再評価を反映できる。
+    OpenSpec Option C の再構築フロー用最小実装。
+    """
+    globals()["_global_manager"] = None
+
+
 def apply_page_settings(page: ft.Page) -> None:
     mgr = get_config_manager()
     theme = mgr.theme

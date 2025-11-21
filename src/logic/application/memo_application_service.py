@@ -5,23 +5,43 @@ View層からSession管理を分離し、ビジネスロジックを調整する
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, override
+from uuid import uuid4
 
 from loguru import logger
 
+from agents.agent_conf import LLMProvider
+from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
+from logic.application.memo_ai_job_queue import (
+    MemoAiJobSnapshot,
+    MemoAiJobStatus,
+    get_memo_ai_job_queue,
+)
+from logic.application.settings_application_service import SettingsApplicationService
 from logic.services.memo_service import MemoService
+from logic.services.tag_service import TagService
 from logic.unit_of_work import SqlModelUnitOfWork
+from models import AiSuggestionStatus, MemoCreate, MemoRead, MemoStatus, MemoUpdate
 
 if TYPE_CHECKING:
-    from logic.commands.memo_commands import CreateMemoCommand, DeleteMemoCommand, UpdateMemoCommand
-    from logic.queries.memo_queries import (
-        GetAllMemosQuery,
-        GetMemoByIdQuery,
-        GetMemosByTaskIdQuery,
-        SearchMemosQuery,
-    )
-    from models import MemoRead
+    import uuid
+
+    from agents.base import AgentError
+    from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
+    from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
+    from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
+
+logger_msg = "{msg} - (ID={memo_id})"
+
+
+class MemoApplicationError(ApplicationError):
+    """メモ管理のApplication Serviceで発生するエラー"""
+
+
+class ContentValidationError(ValidationError, MemoApplicationError):
+    """メモ内容のバリデーションエラー"""
 
 
 class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
@@ -30,77 +50,96 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     View層からSession管理を分離し、ビジネスロジックを調整する層
     """
 
-    def __init__(self, unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork) -> None:
+    def __init__(
+        self,
+        unit_of_work_factory: type[SqlModelUnitOfWork] = SqlModelUnitOfWork,
+        *,
+        memo_to_task_agent: MemoToTaskAgent | None = None,
+    ) -> None:
         """MemoApplicationServiceの初期化
 
         Args:
             unit_of_work_factory: Unit of Workファクトリー
+            memo_to_task_agent: 既存のMemoToTaskエージェントを注入する場合に指定。
         """
         super().__init__(unit_of_work_factory)
 
-    def create_memo(self, command: CreateMemoCommand) -> MemoRead:
-        """メモ作成
+        # 設定値は SettingsApplicationService 経由で初期化時に読み取りキャッシュ。
+        # invalidate_all() によりサービス再構築時に最新値へ更新される。
+        from typing import cast
+
+        settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+        settings = settings_app.get_agents_settings()
+        self._provider: LLMProvider = settings.provider
+        self._memo_to_task_agent: MemoToTaskAgent | None = memo_to_task_agent
+
+    @classmethod
+    @override
+    def get_instance(cls, *args: Any, **kwargs: Any) -> MemoApplicationService:
+        from typing import cast
+
+        instance = super().get_instance(*args, **kwargs)
+        return cast("MemoApplicationService", instance)
+
+    def create(
+        self,
+        title: str,
+        content: str,
+        *,
+        status: MemoStatus = MemoStatus.INBOX,
+    ) -> MemoRead:
+        """メモを作成する
 
         Args:
-            command: メモ作成コマンド
+            title: メモタイトル
+            content: メモ内容
+            status: 初期ステータス（省略時は INBOX）
 
         Returns:
             MemoRead: 作成されたメモ
 
         Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 作成エラー
+            ContentValidationError: タイトルまたは内容が空の場合
         """
-        logger.info(f"メモ作成開始: タスクID {command.task_id}")
+        if not title.strip():
+            msg = "メモタイトルを入力してください"
+            raise ContentValidationError(msg)
 
-        # [AI GENERATED] バリデーション
-        if not command.content.strip():
+        if not content.strip():
             msg = "メモ内容を入力してください"
-            raise ValueError(msg)
+            raise ContentValidationError(msg)
 
-        # [AI GENERATED] Unit of Workでトランザクション管理
+        memo = MemoCreate(title=title, content=content, status=status)
+
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            created_memo = memo_service.create_memo(command.to_memo_create())
-            uow.commit()
+            memo_service = uow.get_service(MemoService)
+            created_memo = memo_service.create(memo)
 
-            logger.info(f"メモ作成完了: ID {created_memo.id}, タスクID {created_memo.task_id}")
-            return created_memo
+        logger.info(logger_msg.format(msg="メモ作成完了", memo_id=created_memo.id))
+        return created_memo
 
-    def update_memo(self, command: UpdateMemoCommand) -> MemoRead:
-        """メモ更新
+    def update(self, memo_id: uuid.UUID, update_data: MemoUpdate) -> MemoRead:
+        """メモを更新する
 
         Args:
-            command: メモ更新コマンド
+            memo_id: 更新するメモのID
+            update_data: メモ更新データ
 
         Returns:
             MemoRead: 更新されたメモ
-
-        Raises:
-            ValueError: バリデーションエラー
-            RuntimeError: 更新エラー
         """
-        logger.info(f"メモ更新開始: ID {command.memo_id}")
-
-        # [AI GENERATED] バリデーション
-        if not command.content.strip():
-            msg = "メモ内容を入力してください"
-            raise ValueError(msg)
-
-        # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            updated_memo = memo_service.update_memo(command.memo_id, command.to_memo_update())
-            uow.commit()
+            memo_service = uow.get_service(MemoService)
+            updated_memo = memo_service.update(memo_id, update_data)
 
-            logger.info(f"メモ更新完了: ID {updated_memo.id}")
-            return updated_memo
+        logger.info(logger_msg.format(msg="メモ更新完了", memo_id=updated_memo.id))
+        return updated_memo
 
-    def delete_memo(self, command: DeleteMemoCommand) -> bool:
+    def delete(self, memo_id: uuid.UUID) -> bool:
         """メモ削除
 
         Args:
-            command: メモ削除コマンド
+            memo_id: 削除するメモのID
 
         Returns:
             bool: 削除成功フラグ
@@ -108,77 +147,243 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         Raises:
             RuntimeError: 削除エラー
         """
-        logger.info(f"メモ削除開始: ID {command.memo_id}")
-
-        # [AI GENERATED] Unit of Workでトランザクション管理
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            success = memo_service.delete_memo(command.memo_id)
-            uow.commit()
+            memo_service = uow.get_service(MemoService)
+            success = memo_service.delete(memo_id)
 
-            logger.info(f"メモ削除完了: ID {command.memo_id}, 結果: {success}")
+            logger.info(f"メモ削除完了: ID {memo_id}, 結果: {success}")
             return success
 
-    def get_memo_by_id(self, query: GetMemoByIdQuery) -> MemoRead | None:
+    def get_by_id(self, memo_id: uuid.UUID, *, with_details: bool = False) -> MemoRead:
         """IDでメモ取得
 
         Args:
-            query: メモ取得クエリ
+            memo_id: メモのID
+            with_details: 関連エンティティも取得するかどうか
 
         Returns:
-            MemoRead | None: 取得されたメモ、存在しない場合はNone
+            MemoRead: 指定されたIDのメモ
         """
-        logger.debug(f"メモ取得: ID {query.memo_id}")
-
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.get_memo_by_id(query.memo_id)
+            memo_service = uow.get_service(MemoService)
+            return memo_service.get_by_id(memo_id, with_details=with_details)
 
-    def get_all_memos(self, query: GetAllMemosQuery) -> list[MemoRead]:  # noqa: ARG002
+    def get_all_memos(self, *, with_details: bool = False) -> list[MemoRead]:
         """全メモ取得
 
         Args:
-            query: 全メモ取得クエリ
+            with_details: 関連エンティティも取得するかどうか
 
         Returns:
             list[MemoRead]: 全メモのリスト
         """
-        logger.debug("全メモ取得")
-
         with self._unit_of_work_factory() as uow:
             memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.get_all_memos()
+            return memo_service.get_all(with_details=with_details)
 
-    def get_memos_by_task_id(self, query: GetMemosByTaskIdQuery) -> list[MemoRead]:
-        """タスクIDでメモ取得
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[MemoRead]:
+        """タグIDでメモ一覧を取得する。
 
         Args:
-            query: タスクID指定メモ取得クエリ
+            tag_id: タグID
+            with_details: 関連エンティティを含めるかどうか
 
         Returns:
-            list[MemoRead]: 指定されたタスクのメモリスト
+            list[MemoRead]: タグに紐づくメモ一覧
         """
-        logger.debug(f"タスクメモ取得: タスクID {query.task_id}")
-
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.get_memos_by_task_id(query.task_id)
+            memo_service = uow.get_service(MemoService)
+            return memo_service.list_by_tag(tag_id, with_details=with_details)
 
-    def search_memos(self, query: SearchMemosQuery) -> list[MemoRead]:
+    def clarify_memo(self, memo: MemoRead) -> MemoToTaskAgentOutput:
+        """自由記述メモを解析し、タスク候補とメモ状態の提案を返す。
+
+        Args:
+            memo: 解析対象のメモ情報
+
+        Returns:
+            MemoToTaskAgentOutput: 推定タスクとメモ状態の提案
+
+        Raises:
+            MemoApplicationError: エージェントの応答がエラーまたは不正な場合
+        """
+        from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput as OutputModel
+
+        memo_content = getattr(memo, "content", "")
+        if not str(memo_content).strip():
+            return OutputModel(tasks=[], suggested_memo_status="clarify")
+
+        if self._provider == LLMProvider.FAKE:
+            agent = self._get_memo_to_task_agent()
+            logger.debug(f"MemoToTask: using FAKE provider, memo_id={memo.id}")
+            fake_output = agent.next_fake_response()
+            if fake_output is not None:
+                logger.debug(f"MemoToTask: returning fake output with {len(fake_output.tasks)} tasks")
+                return fake_output
+
+        existing_tags = self._collect_existing_tag_names()
+        state: MemoToTaskState = {
+            "memo": memo,
+            "existing_tags": existing_tags,
+            "current_datetime_iso": self._current_datetime_iso(),
+        }
+
+        response = self._invoke_memo_to_task_agent(state)
+        if response is None:
+            msg = "memo_to_taskエージェントから応答を取得できませんでした"
+            raise MemoApplicationError(msg)
+        # 新契約: dataclass 結果 or AgentError
+        from agents.base import AgentError
+        from agents.task_agents.memo_to_task.state import MemoToTaskResult
+
+        if isinstance(response, AgentError):
+            msg = f"memo_to_taskエージェントがエラーを返しました: {response}"
+            raise MemoApplicationError(msg)
+        if isinstance(response, MemoToTaskResult):
+            return OutputModel(tasks=response.tasks, suggested_memo_status=response.suggested_memo_status)
+        # 互換: テストが直接 OutputModel を返すようにモンキーパッチする場合を許容
+        if isinstance(response, OutputModel):
+            return response
+        msg = "memo_to_taskエージェントの応答形式が不正です"
+        raise MemoApplicationError(msg)
+
+    def generate_tasks_from_memo(self, memo: MemoRead) -> list[TaskDraft]:
+        """メモ本文からタスク案だけを抽出する。
+
+        Args:
+            memo: 解析対象のメモ情報
+
+        Returns:
+            list[TaskDraft]: 抽出されたタスク案のリスト
+        """
+        result = self.clarify_memo(memo)
+        return list(result.tasks)
+
+    # --- AIタスク生成 -------------------------------------------------
+
+    def enqueue_ai_generation(self, memo_id: uuid.UUID) -> MemoAiJobSnapshot:
+        """メモをAIタスク生成キューに登録する。"""
+        memo = self.get_by_id(memo_id, with_details=True)
+        updated = self._mark_ai_status(
+            memo_id,
+            ai_status=AiSuggestionStatus.PENDING,
+            memo_status=MemoStatus.ACTIVE if memo.status == MemoStatus.INBOX else None,
+        )
+        queue = get_memo_ai_job_queue()
+        return queue.enqueue(updated, callback=self._handle_ai_job_callback)
+
+    def get_ai_job_snapshot(self, job_id: uuid.UUID) -> MemoAiJobSnapshot:
+        """ジョブ状態を取得する。"""
+        queue = get_memo_ai_job_queue()
+        snapshot = queue.get_snapshot(job_id)
+        if snapshot is None:
+            msg = f"AIジョブが見つかりません: job_id={job_id}"
+            raise MemoApplicationError(msg)
+        return snapshot
+
+    def _handle_ai_job_callback(self, snapshot: MemoAiJobSnapshot) -> None:
+        if snapshot.status == MemoAiJobStatus.SUCCEEDED:
+            self._mark_ai_status(snapshot.memo_id, ai_status=AiSuggestionStatus.AVAILABLE)
+        elif snapshot.status == MemoAiJobStatus.FAILED:
+            self._mark_ai_status(snapshot.memo_id, ai_status=AiSuggestionStatus.FAILED)
+
+    def _collect_existing_tag_names(self) -> list[str]:
+        """既存タグの名称一覧を取得する。"""
+        names: list[str] = []
+        with self._unit_of_work_factory() as uow:
+            tag_service = uow.get_service(TagService)
+            tags = tag_service.get_all()
+
+        for tag in tags:
+            name = getattr(tag, "name", "").strip()
+            if not name or name in names:
+                continue
+            names.append(name)
+        return names
+
+    def _get_memo_to_task_agent(self) -> MemoToTaskAgent:
+        """MemoToTaskエージェントを遅延初期化して取得する。"""
+        if self._memo_to_task_agent is None:
+            from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
+
+            self._memo_to_task_agent = MemoToTaskAgent(provider=self._provider)
+        return self._memo_to_task_agent
+
+    def _invoke_memo_to_task_agent(
+        self,
+        state: MemoToTaskState,
+    ) -> MemoToTaskResult | AgentError | None:
+        """エージェントを実行し応答を取得する。"""
+        agent = self._get_memo_to_task_agent()
+        thread_id = str(uuid4())
+        return agent.invoke(state, thread_id)
+
+    def _current_datetime_iso(self) -> str:
+        """現在日時のISO8601文字列を返す。"""
+        return datetime.now(UTC).isoformat()
+
+    def _mark_ai_status(
+        self,
+        memo_id: uuid.UUID,
+        *,
+        ai_status: AiSuggestionStatus,
+        memo_status: MemoStatus | None = None,
+    ) -> MemoRead:
+        """メモのAIステータスを更新する。"""
+        if memo_status is not None:
+            payload = MemoUpdate(ai_suggestion_status=ai_status, status=memo_status)
+        else:
+            payload = MemoUpdate(ai_suggestion_status=ai_status)
+        return self.update(memo_id, payload)
+
+    def search(
+        self,
+        query: str,
+        *,
+        with_details: bool = False,
+        status: MemoStatus | None = None,
+        tags: list[uuid.UUID] | None = None,
+    ) -> list[MemoRead]:
         """メモ検索
 
+        タイトル・本文を横断検索し、必要に応じてステータスやタグで絞り込む。
+
         Args:
-            query: メモ検索クエリ
+            query: 検索クエリ（空文字・空白のみなら空配列）
+            with_details: 関連情報を含めるかどうか
+            status: ステータスでの追加フィルタ
+            tags: タグIDのリスト（OR条件）
 
         Returns:
-            list[MemoRead]: 検索条件に一致するメモのリスト
+            list[MemoRead]: 検索結果
         """
-        logger.debug(f"メモ検索: クエリ '{query.query}'")
-
-        # [AI GENERATED] 空の検索クエリは全件返却しない
-        if not query.query.strip():
+        if not query or not query.strip():
             return []
 
         with self._unit_of_work_factory() as uow:
-            memo_service = uow.service_factory.get_service(MemoService)
-            return memo_service.search_memos(query.query)
+            memo_service = uow.get_service(MemoService)
+            results = memo_service.search_memos(query, with_details=with_details)
+
+            # ステータスフィルタ
+            if status is not None:
+                status_items = memo_service.list_by_status(status, with_details=with_details)
+                status_ids = {m.id for m in status_items}
+                results = [m for m in results if m.id in status_ids]
+
+            # タグフィルタ（リポジトリのJOIN利用、OR条件）
+            if tags:
+                from logic.repositories import MemoRepository as _MemoRepo
+
+                memo_repo = uow.repository_factory.create(_MemoRepo)
+                matched_ids: set[uuid.UUID] = set()
+                for tag_id in tags:
+                    try:
+                        for m in memo_repo.list_by_tag(tag_id, with_details=with_details):
+                            if m.id is not None:
+                                matched_ids.add(m.id)
+                    except Exception as exc:
+                        logger.debug(f"メモのタグフィルタ処理中に例外: {exc}")
+                        continue
+                results = [m for m in results if m.id in matched_ids]
+
+            return results

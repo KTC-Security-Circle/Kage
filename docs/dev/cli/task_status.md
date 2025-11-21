@@ -12,8 +12,8 @@
 ## 例
 
 ```bash
-poe cli task-status displays
-poe cli task-status board
+uv run poe cli task-status displays
+uv run poe cli task-status board
 ```
 
 ### `displays` 出力

@@ -12,6 +12,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from agents.agent_conf import LLM_MODEL_DIR, SQLITE_DB_PATH, HuggingFaceModel, LLMProvider
+from errors import ValidationError
 
 agents_logger = logger.bind(agents=True)
 
@@ -181,7 +182,7 @@ def get_model(
         if not isinstance(model_name, HuggingFaceModel):
             err_msg = f"Invalid model name for OPENVINO provider: {model_name}. Must be a HuggingFaceModel enum."
             agents_logger.error(err_msg)
-            raise ValueError(err_msg)
+            raise ValidationError(err_msg)
 
         # モデルのロード
         model_path = load_model(

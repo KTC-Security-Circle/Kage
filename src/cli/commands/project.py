@@ -5,7 +5,6 @@ GUI層の代替として Application Service を呼び出す Typer サブコマ�
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING
 
 import questionary
@@ -15,86 +14,84 @@ from rich.console import Console
 from rich.table import Table
 
 from cli.utils import elapsed_time, handle_cli_errors, with_spinner
+from logic.application.apps import ApplicationServices
 from models import ProjectStatus
 
 if TYPE_CHECKING:
+    import uuid
+
     from logic.application.project_application_service import ProjectApplicationService
-    from logic.commands.project_commands import CreateProjectCommand, DeleteProjectCommand, UpdateProjectCommand
-    from logic.queries.project_queries import GetAllProjectsQuery, GetProjectByIdQuery, SearchProjectsByTitleQuery
-    from models import ProjectRead
+    from models import ProjectRead, ProjectUpdate
 
 app = typer.Typer(help="プロジェクト CRUD / 検索 コマンド")
 console = Console()
 
 
 def _get_service() -> ProjectApplicationService:
-    from logic.application.project_application_service import ProjectApplicationService
-    from logic.container import service_container
-
-    return service_container.get_service(ProjectApplicationService)
+    apps = ApplicationServices.create()
+    return apps.project
 
 
 @elapsed_time()
 @with_spinner("Loading projects...")
-def _get_all_projects(query: GetAllProjectsQuery) -> list[ProjectRead]:  # [AI GENERATED]
+def _get_all_projects() -> list[ProjectRead]:
     service = _get_service()
-    return service.get_all_projects(query)
+    return service.get_all_projects()
 
 
 @elapsed_time()
 @with_spinner("Creating project...")
-def _create_project(cmd: CreateProjectCommand) -> ProjectRead:  # [AI GENERATED]
+def _create_project(title: str, description: str | None) -> ProjectRead:
     service = _get_service()
-    return service.create_project(cmd)
+    return service.create(title, description)
 
 
 @elapsed_time()
 @with_spinner("Fetching project...")
-def _get_project(query: GetProjectByIdQuery) -> ProjectRead:  # [AI GENERATED]
+def _get_project(project_id: uuid.UUID) -> ProjectRead:
     service = _get_service()
-    return service.get_project_by_id(query)
+    return service.get_by_id(project_id)
 
 
 @elapsed_time()
 @with_spinner("Searching projects...")
-def _search_projects(query: SearchProjectsByTitleQuery) -> list[ProjectRead]:  # [AI GENERATED]
+def _search_projects(query: str, status: ProjectStatus | None = None) -> list[ProjectRead]:
     service = _get_service()
-    return service.search_projects_by_title(query)
+    return service.search(query, status=status)
 
 
 @elapsed_time()
 @with_spinner("Updating project...")
-def _update_project(cmd: UpdateProjectCommand) -> ProjectRead:  # [AI GENERATED]
+def _update_project(project_id: uuid.UUID, update_data: ProjectUpdate) -> ProjectRead:
     service = _get_service()
-    return service.update_project(cmd)
+    return service.update(project_id, update_data)
 
 
 @elapsed_time()
 @with_spinner("Deleting project...")
-def _delete_project(cmd: DeleteProjectCommand) -> None:  # [AI GENERATED]
+def _delete_project(project_id: uuid.UUID) -> None:
     service = _get_service()
-    service.delete_project(cmd)
+    service.delete(project_id)
 
 
 @app.command("list", help="全プロジェクト一覧を表示")
 @handle_cli_errors()
 def list_projects() -> None:
-    """全プロジェクトを一覧表示するコマンド [AI GENERATED]
+    """全プロジェクトを一覧表示するコマンド
 
     ApplicationService から全件取得し Rich Table で出力します。
     """
-    from logic.queries.project_queries import GetAllProjectsQuery
-
-    projects = _get_all_projects(GetAllProjectsQuery())
+    result = _get_all_projects()
+    projects = result.result
     table = Table(
         title="Projects",
         box=box.SIMPLE_HEAVY,
-        caption=f"Total: {len(projects.result)} Elapsed: {projects.elapsed:.2f}s",
+        caption=f"Total: {len(projects)} Elapsed: {result.elapsed:.2f}s",
     )
     table.add_column("ID")
     table.add_column("Title")
     table.add_column("Status")
-    for p in projects.result:
+    for p in projects:
         table.add_row(str(p.id), p.title, p.status.value if hasattr(p.status, "value") else str(p.status))
     console.print(table)
 
@@ -104,80 +101,75 @@ def list_projects() -> None:
 def create_project(
     title: str | None = typer.Option(None, "--title", "-t", help="プロジェクトタイトル"),
     description: str | None = typer.Option(None, "--desc", "-d", help="説明"),
-    status: ProjectStatus = ProjectStatus.ACTIVE,
-) -> None:  # [AI GENERATED] CLI create project
-    """新しいプロジェクトを作成するコマンド [AI GENERATED]
+) -> None:
+    """新しいプロジェクトを作成するコマンド
 
     Args:
         title: プロジェクトタイトル (未指定なら対話入力)
         description: 説明 (未指定なら対話入力可)
         status: 初期ステータス
     """
-    from logic.commands.project_commands import CreateProjectCommand
-
     if title is None:
         title = questionary.text("Title?").ask()
     if description is None:
         description = questionary.text("Description? (optional)").ask()
 
     if title is None:
-        msg = "title が必要です"  # [AI GENERATED] validation message
+        msg = "title が必要です"
         raise typer.BadParameter(msg)
-    cmd = CreateProjectCommand(title=title, description=description or "", status=status)
-    project = _create_project(cmd)
-    console.print(
-        f"[green]Created:[/green] {project.result.title} ({project.result.id}) Elapsed: {project.elapsed:.2f}s"
-    )
+    result = _create_project(title, description)
+    project = result.result
+    console.print(f"[green]Created:[/green] {project.title} ({project.id}) Elapsed: {result.elapsed:.2f}s")
 
 
 @app.command("get", help="ID指定で取得")
 @handle_cli_errors()
 def get_project(project_id: str) -> None:
-    """ID を指定してプロジェクトの詳細を取得するコマンド [AI GENERATED]
+    """ID を指定してプロジェクトの詳細を取得するコマンド
 
     Args:
         project_id: 取得対象プロジェクト UUID 文字列
     """
-    from logic.queries.project_queries import GetProjectByIdQuery
+    import uuid as _uuid
 
-    pid = uuid.UUID(project_id)
-    project = _get_project(GetProjectByIdQuery(project_id=pid))
-    table = Table(title="Project Detail", box=box.MINIMAL_DOUBLE_HEAD, caption=f"Elapsed: {project.elapsed:.2f}s")
+    pid = _uuid.UUID(project_id)
+    result = _get_project(pid)
+    project = result.result
+    table = Table(title="Project Detail", box=box.MINIMAL_DOUBLE_HEAD, caption=f"Elapsed: {result.elapsed:.2f}s")
     table.add_column("Field")
     table.add_column("Value")
-    table.add_row("ID", str(project.result.id))
-    table.add_row("Title", project.result.title)
+    table.add_row("ID", str(project.id))
+    table.add_row("Title", project.title)
     table.add_row(
         "Status",
-        project.result.status.value if hasattr(project.result.status, "value") else str(project.result.status),
+        project.status.value if hasattr(project.status, "value") else str(project.status),
     )
-    table.add_row("Description", project.result.description or "")
+    table.add_row("Description", project.description or "")
     console.print(table)
 
 
 @app.command("search", help="タイトル部分一致検索")
 @handle_cli_errors()
 def search_projects(query: str) -> None:
-    """タイトルの部分一致でプロジェクトを検索するコマンド [AI GENERATED]
+    """タイトルの部分一致でプロジェクトを検索するコマンド
 
     Args:
         query: 検索語 (部分一致)
     """
-    from logic.queries.project_queries import SearchProjectsByTitleQuery
-
-    results = _search_projects(SearchProjectsByTitleQuery(title_query=query))
-    if not results.result:
+    result = _search_projects(query)
+    results = result.result
+    if not results:
         console.print("[yellow]No results[/yellow]")
         raise typer.Exit(code=0)
     table = Table(
         title=f"Search: {query}",
         box=box.SIMPLE,
-        caption=f"Hits: {len(results.result)} Elapsed: {results.elapsed:.2f}s",
+        caption=f"Hits: {len(results)} Elapsed: {result.elapsed:.2f}s",
     )
     table.add_column("ID")
     table.add_column("Title")
     table.add_column("Status")
-    for p in results.result:
+    for p in results:
         table.add_row(str(p.id), p.title, p.status.value if hasattr(p.status, "value") else str(p.status))
     console.print(table)
 
@@ -189,8 +181,8 @@ def update_project(
     title: str | None = typer.Option(None, "--title", "-t", help="新しいタイトル"),
     description: str | None = typer.Option(None, "--desc", "-d", help="説明"),
     status: ProjectStatus | None = None,
-) -> None:  # [AI GENERATED] CLI update project
-    """既存プロジェクトのタイトル/説明/ステータスを更新するコマンド [AI GENERATED]
+) -> None:
+    """既存プロジェクトのタイトル/説明/ステータスを更新するコマンド
 
     未指定の場合は対話入力モードに入ります。
 
@@ -200,9 +192,11 @@ def update_project(
         description: 新説明
         status: 新ステータス
     """
-    from logic.commands.project_commands import UpdateProjectCommand
+    import uuid as _uuid
 
-    pid = uuid.UUID(project_id)
+    from models import ProjectUpdate
+
+    pid = _uuid.UUID(project_id)
     if title is None and description is None and status is None:
         # interactive prompt if nothing provided
         title = questionary.text("New Title (blank=skip)").ask() or None
@@ -212,11 +206,10 @@ def update_project(
             if status_choice:
                 status = ProjectStatus(status_choice)
 
-    cmd = UpdateProjectCommand(project_id=pid, title=title, description=description, status=status)
-    updated = _update_project(cmd)
-    console.print(
-        f"[green]Updated:[/green] {updated.result.title} ({updated.result.id}) Elapsed: {updated.elapsed:.2f}s"
-    )
+    update_data = ProjectUpdate(title=title, description=description, status=status)
+    result = _update_project(pid, update_data)
+    updated = result.result
+    console.print(f"[green]Updated:[/green] {updated.title} ({updated.id}) Elapsed: {result.elapsed:.2f}s")
 
 
 @app.command("delete", help="プロジェクト削除")
@@ -229,7 +222,7 @@ def delete_project(
         rich_help_panel="Danger",
     ),
 ) -> None:
-    """プロジェクトを削除するコマンド [AI GENERATED]
+    """プロジェクトを削除するコマンド
 
     force 指定が無い場合は確認プロンプトを表示します。
 
@@ -237,11 +230,11 @@ def delete_project(
         project_id: 削除対象 UUID
         force: 確認無しで削除するか
     """
-    from logic.commands.project_commands import DeleteProjectCommand
+    import uuid as _uuid
 
-    pid = uuid.UUID(project_id)
+    pid = _uuid.UUID(project_id)
     if (not force) and (not questionary.confirm("Delete this project?").ask()):
         console.print("[yellow]Cancelled[/yellow]")
         raise typer.Exit(code=1)
-    deleted = _delete_project(DeleteProjectCommand(project_id=pid))
-    console.print(f"[red]Deleted:[/red] {pid} Elapsed: {deleted.elapsed:.2f}s")
+    _delete_project(pid)
+    console.print(f"[red]Deleted:[/red] {pid}")

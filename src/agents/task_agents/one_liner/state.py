@@ -1,6 +1,8 @@
+from dataclasses import dataclass
+
 from pydantic import BaseModel, Field
 
-from agents.base import BaseAgentState
+from agents.base import BaseAgentResponse, BaseAgentState
 
 
 class OneLinerState(BaseAgentState):
@@ -22,3 +24,10 @@ class OneLinerOutput(BaseModel):
     """OneLinerAgent の出力モデル"""
 
     response: str = Field(description="ホーム画面に表示する短い励まし/促しメッセージ")
+
+
+@dataclass
+class OneLinerResult(BaseAgentResponse[OneLinerState]):
+    """OneLinerAgent の最終応答モデル（dataclass）。"""
+
+    response: str

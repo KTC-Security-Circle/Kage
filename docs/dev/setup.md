@@ -476,14 +476,17 @@ Kage/
 ├── src/                 # アプリケーションソースコード
 │   ├── agents/         # AI/Agentモジュール
 │   ├── logic/          # ビジネスロジック
+│   │   ├── application/  # Application Service層
+│   │   ├── services/     # Domain Service層
+│   │   └── repositories/ # Repository層
 │   ├── models/         # データモデル
+│   │   └── migrations/   # Alembicマイグレーション
 │   ├── views/          # UI層
 │   └── main.py         # アプリケーションエントリーポイント
 ├── tests/              # テストコード
 ├── storage/            # データベース・ファイルストレージ
 ├── pyproject.toml      # プロジェクト設定・依存関係
-├── uv.lock            # 依存関係のロックファイル
-└── alembic.ini        # データベースマイグレーション設定
+└── uv.lock            # 依存関係のロックファイル
 ```
 
 ### 依存関係管理
@@ -580,7 +583,7 @@ uv run pre-commit run --all-files
 cp storage/data/kage.db storage/data/backup_$(date +%Y%m%d).db
 
 # 設定ファイルのバックアップ
-tar -czf config_backup.tar.gz .env pyproject.toml alembic.ini
+tar -czf config_backup.tar.gz .env pyproject.toml
 ```
 
 ---

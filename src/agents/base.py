@@ -6,11 +6,12 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from langgraph.graph import StateGraph
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing_extensions import TypedDict
 
 from agents.agent_conf import HuggingFaceModel, LLMProvider
 from agents.utils import agents_logger, get_memory, get_model
+from errors import KageError, ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -44,15 +45,22 @@ class AgentProperty:
 class BaseAgentState(TypedDict):
     """エージェントの状態を表す基本的な型定義"""
 
-    final_response: dict[str, Any] | str
-    """最終的な応答を表す文字列."""
+
+@dataclass
+class BaseAgentResponse[ProcessedDataType: BaseAgentState]:
+    """エージェントの標準応答の基底データクラス.
+
+    Notes:
+        - 具体エージェントはこのクラスを継承した dataclass を返すこと。
+        - processed_data には、生成処理の前提となる State 型を格納する（メタ情報）。
+    """
+
+    processed_data: type[ProcessedDataType]
+    """生成過程のデータ(State 型)"""
 
 
-class ErrorAgentOutput(BaseModel):
-    """エージェントのエラー出力を表すモデル"""
-
-    message: str = Field(description="エージェントのエラーメッセージ")
-    raw: str = Field(description="エージェントの生の応答テキスト")
+class AgentError(KageError):
+    """エージェントで発生するエラー。"""
 
 
 # 型変数を定義
@@ -60,7 +68,7 @@ ValidateType = TypeVar("ValidateType", bound=BaseModel)
 KwargsAny = Any
 
 
-class BaseAgent[StateType, ReturnType](ABC):
+class BaseAgent[StateType: BaseAgentState, ReturnType](ABC):
     """LangGraphエージェントのベースクラス.
 
     このクラスを継承して具体的なエージェントを実装します。
@@ -81,7 +89,7 @@ class BaseAgent[StateType, ReturnType](ABC):
     # 必須
     _name: str
     _description: str
-    _state: type[Any]
+    _state: type[StateType]
 
     # オプションまたはデフォルト値あり
     _status: AgentStatus = AgentStatus.IDLE
@@ -89,6 +97,7 @@ class BaseAgent[StateType, ReturnType](ABC):
     _model_name: HuggingFaceModel | str | None = None
     _fake_responses: list[BaseModel] | None = None
     _graph: CompiledStateGraph | None = None
+    # 旧仕様互換は撤去済み
 
     def __init__(
         self,
@@ -178,15 +187,31 @@ class BaseAgent[StateType, ReturnType](ABC):
     def get_config(self, thread_id: str) -> RunnableConfig:
         return {"configurable": {"thread_id": thread_id}}
 
-    def invoke(self, state: StateType, thread_id: str) -> ReturnType | ErrorAgentOutput | None:
-        """ユーザー入力を処理して応答を生成.
+    def _create_return_response(self, final_response: dict[str, Any] | Any) -> ReturnType | AgentError:  # noqa: ANN401
+        """レスポンスを ReturnType に変換するメソッド（デフォルト実装）。
+
+        具体エージェントで特別な変換が不要な場合、この実装により
+        最終ノードの結果をそのまま返す。AgentError は透過的に返却する。
+
+        Args:
+            final_response: グラフからの生のレスポンス
+
+        Returns:
+            ReturnType | AgentError: 変換されたレスポンス（またはエラー）
+        """
+        if isinstance(final_response, AgentError):
+            return final_response
+        return final_response  # type: ignore[return-value]
+
+    def invoke(self, state: StateType, thread_id: str) -> ReturnType | AgentError:
+        """ユーザー入力を処理して応答を生成し、常に型付き結果を返す。
 
         Args:
             state (StateType): エージェントの状態
             thread_id (str): スレッドID
 
         Returns:
-            ReturnType: モデルからの応答
+            ReturnType | AgentError: 正常系は dataclass、異常系は AgentError
         """
         # グラフの初期化がされているかを確認
         if not self._graph:
@@ -202,11 +227,21 @@ class BaseAgent[StateType, ReturnType](ABC):
         )
         if self._verbose:
             agents_logger.debug(f"Graph invoke response: {response}")
-        if isinstance(response, dict) and "final_response" in response:
-            return response["final_response"]
 
-        agents_logger.error("Invalid response format from graph invoke.")
-        return None
+        # 具体エージェント側で最終出力の抽出を行う（BaseAgentでは生レスポンスを渡す）
+        payload: Any = response
+
+        try:
+            converted = self._create_return_response(payload)
+        except AgentError as ae:
+            # 具体エージェントが明示的に投げたエラーはそのまま返す
+            agents_logger.error(f"AgentError: {ae}")
+            return ae
+        except Exception as e:
+            agents_logger.error(f"Failed to create return response: {e}, raw_response: {response}")
+            return AgentError("申し訳ありませんが、応答の生成中にエラーが発生しました。")
+        else:
+            return converted
 
     def stream(self, state: StateType, thread_id: str) -> Iterator[dict[str, Any] | Any]:
         """ユーザー入力をストリーミングして応答を生成.
@@ -232,7 +267,7 @@ class BaseAgent[StateType, ReturnType](ABC):
             stream_mode="messages",
         )
 
-    def validate_output(self, output: outputs, validate_model: type[ValidateType]) -> ValidateType | ErrorAgentOutput:
+    def validate_output(self, output: outputs, validate_model: type[ValidateType]) -> ValidateType | AgentError:
         """出力を指定されたPydanticモデルで検証.
 
         Args:
@@ -240,7 +275,7 @@ class BaseAgent[StateType, ReturnType](ABC):
             validate_model (Type[ValidateType]): 検証に使用するPydanticモデルの型
 
         Returns:
-            ValidateType | ErrorAgentOutput: 検証された出力またはエラー情報
+            ValidateType | AgentError: 検証された出力またはエラー
         """
         try:
             if self._verbose:
@@ -248,11 +283,9 @@ class BaseAgent[StateType, ReturnType](ABC):
             if self._error_response:
                 # 強制的にエラーを発生させてエラーハンドリングをテスト
                 err_msg = "Forced error for testing error handling."
-                raise ValueError(err_msg)  # noqa: TRY301
+                raise ValidationError(err_msg)  # noqa: TRY301
             output = validate_model.model_validate(output)
         except Exception as e:
             agents_logger.error(f"Output validation failed: {e}, raw_output: {output}")
-            output = ErrorAgentOutput(
-                message="申し訳ありませんが、応答の生成中にエラーが発生しました。", raw=str(output)
-            )
+            return AgentError("申し訳ありませんが、応答の生成中にエラーが発生しました。")
         return output

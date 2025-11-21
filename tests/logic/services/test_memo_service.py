@@ -1,520 +1,233 @@
-"""メモサービスのテスト"""
+from __future__ import annotations
 
 import uuid
-from unittest.mock import Mock
 
 import pytest
 
-from logic.repositories.memo import MemoRepository
-from logic.repositories.task import TaskRepository
-from logic.services.memo_service import (
-    MemoService,
-    MemoServiceCheckError,
-    MemoServiceCreateError,
-    MemoServiceDeleteError,
-    MemoServiceGetError,
-    MemoServiceUpdateError,
-)
-from models import Memo, MemoCreate, MemoRead, MemoUpdate, Task
-from tests.logic.helpers import create_test_task
-
-EXPECTED_MEMO_PAIR_COUNT = 2
-
-
-class TestMemoService:
-    """MemoServiceのテストクラス"""
-
-    @pytest.fixture
-    def mock_memo_repo(self) -> Mock:
-        """モックメモリポジトリ"""
-        return Mock(spec=MemoRepository)
-
-    @pytest.fixture
-    def mock_task_repo(self) -> Mock:
-        """モックタスクリポジトリ"""
-        return Mock(spec=TaskRepository)
-
-    @pytest.fixture
-    def memo_service(self, mock_memo_repo: Mock, mock_task_repo: Mock) -> MemoService:
-        """MemoServiceインスタンス"""
-        return MemoService(mock_memo_repo, mock_task_repo)
-
-    def test_create_memo_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ作成のテスト（正常系）"""
-        # Arrange
-        task = create_test_task()
-        if task.id is None:
-            pytest.fail("Task ID should not be None after creation")
-        memo_data = MemoCreate(content="テスト用メモ", task_id=task.id)
-
-        created_memo = Memo(
-            id=uuid.uuid4(),
-            content="テスト用メモ",
-            task_id=task.id,
-        )
-
-        mock_task_repo.get_by_id.return_value = task
-        mock_memo_repo.create.return_value = created_memo
-
-        # Act
-        result = memo_service.create_memo(memo_data)
-
-        # Assert
-        assert isinstance(result, MemoRead)
-        assert result.content == "テスト用メモ"
-        assert result.task_id == task.id
-        mock_task_repo.get_by_id.assert_called_once_with(task.id)
-        mock_memo_repo.create.assert_called_once_with(memo_data)
-
-    def test_create_memo_task_not_found(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ作成のテスト（タスクが見つからない場合）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        memo_data = MemoCreate(content="テスト用メモ", task_id=task_id)
-
-        mock_task_repo.get_by_id.return_value = None
-
-        # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match=r"タスクID .* が見つかりません"):
-            memo_service.create_memo(memo_data)
-
-        mock_task_repo.get_by_id.assert_called_once_with(task_id)
-        mock_memo_repo.create.assert_not_called()
-
-    def test_create_memo_creation_failed(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ作成のテスト（作成に失敗した場合）"""
-        # Arrange
-        task = create_test_task()
-        if task.id is None:
-            pytest.fail("Task ID should not be None after creation")
-        memo_data = MemoCreate(content="テスト用メモ", task_id=task.id)
-
-        mock_task_repo.get_by_id.return_value = task
-        mock_memo_repo.create.return_value = None
-
-        # Act & Assert
-        with pytest.raises(MemoServiceCreateError, match="メモの作成に失敗しました"):
-            memo_service.create_memo(memo_data)
-
-    def test_update_memo_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ更新のテスト（正常系）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-
-        existing_memo = Memo(
-            id=memo_id,
-            content="更新前メモ",
-            task_id=task_id,
-        )
-
-        updated_memo = Memo(
-            id=memo_id,
-            content="更新後メモ",
-            task_id=task_id,
-        )
-
-        memo_data = MemoUpdate(content="更新後メモ")
-
-        mock_memo_repo.get_by_id.return_value = existing_memo
-        mock_memo_repo.update.return_value = updated_memo
-
-        # Act
-        result = memo_service.update_memo(memo_id, memo_data)
-
-        # Assert
-        assert isinstance(result, MemoRead)
-        assert result.content == "更新後メモ"
-        mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
-        mock_memo_repo.update.assert_called_once_with(memo_id, memo_data)
-
-    def test_update_memo_not_found(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ更新のテスト（メモが見つからない場合）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        memo_data = MemoUpdate(content="更新後メモ")
-
-        mock_memo_repo.get_by_id.return_value = None
-
-        # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match=r"メモID .* が見つかりません"):
-            memo_service.update_memo(memo_id, memo_data)
-
-        mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
-        mock_memo_repo.update.assert_not_called()
-
-    def test_delete_memo_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ削除のテスト（正常系）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-
-        existing_memo = Memo(
-            id=memo_id,
-            content="削除対象メモ",
-            task_id=task_id,
-        )
-
-        mock_memo_repo.get_by_id.return_value = existing_memo
-        mock_memo_repo.delete.return_value = True
-
-        # Act
-        result = memo_service.delete_memo(memo_id)
-
-        # Assert
-        assert result is True
-        mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
-        mock_memo_repo.delete.assert_called_once_with(memo_id)
-
-    def test_delete_memo_not_found(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ削除のテスト（メモが見つからない場合）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-
-        mock_memo_repo.get_by_id.return_value = None
-
-        # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match=r"メモID .* が見つかりません"):
-            memo_service.delete_memo(memo_id)
-
-        mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
-        mock_memo_repo.delete.assert_not_called()
-
-    def test_get_memo_by_id_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """IDでメモ取得のテスト（正常系）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-
-        memo = Memo(
-            id=memo_id,
-            content="取得テスト用メモ",
-            task_id=task_id,
-        )
-
-        mock_memo_repo.get_by_id.return_value = memo
-
-        # Act
-        result = memo_service.get_memo_by_id(memo_id)
-
-        # Assert
-        assert isinstance(result, MemoRead)
-        assert result.id == memo_id
-        assert result.content == "取得テスト用メモ"
-        mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
-
-    def test_get_memo_by_id_not_found(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """IDでメモ取得のテスト（見つからない場合）"""
-        # Arrange
-        memo_id = uuid.uuid4()
-
-        mock_memo_repo.get_by_id.return_value = None
-
-        # Act
-        result = memo_service.get_memo_by_id(memo_id)
-
-        # Assert
-        assert result is None
-        mock_memo_repo.get_by_id.assert_called_once_with(memo_id)
-
-    def test_get_all_memos_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """全メモ取得のテスト（正常系）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        memos = [
-            Memo(id=uuid.uuid4(), content="メモ1", task_id=task_id),
-            Memo(id=uuid.uuid4(), content="メモ2", task_id=task_id),
-        ]
-
-        mock_memo_repo.get_all.return_value = memos
-
-        # Act
-        result = memo_service.get_all_memos()
-
-        # Assert
-        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
-        assert all(isinstance(memo, MemoRead) for memo in result)
-        contents = [memo.content for memo in result]
-        assert "メモ1" in contents
-        assert "メモ2" in contents
-        mock_memo_repo.get_all.assert_called_once()
-
-    def test_get_memos_by_task_id_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """タスクIDでメモ取得のテスト（正常系）"""
-        # Arrange
-        task_id = uuid.uuid4()
-        task = Task(id=task_id, title="テストタスク")
-        memos = [
-            Memo(id=uuid.uuid4(), content="タスクメモ1", task_id=task_id),
-            Memo(id=uuid.uuid4(), content="タスクメモ2", task_id=task_id),
-        ]
-
-        mock_task_repo.get_by_id.return_value = task
-        mock_memo_repo.get_by_task_id.return_value = memos
-
-        # Act
-        result = memo_service.get_memos_by_task_id(task_id)
-
-        # Assert
-        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
-        assert all(isinstance(memo, MemoRead) for memo in result)
-        contents = [memo.content for memo in result]
-        assert "タスクメモ1" in contents
-        assert "タスクメモ2" in contents
-        mock_task_repo.get_by_id.assert_called_once_with(task_id)
-        mock_memo_repo.get_by_task_id.assert_called_once_with(task_id)
-
-    def test_get_memos_by_task_id_task_not_found(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """タスクIDでメモ取得のテスト（タスクが見つからない場合）"""
-        # Arrange
-        task_id = uuid.uuid4()
-
-        mock_task_repo.get_by_id.return_value = None
-
-        # Act & Assert
-        with pytest.raises(MemoServiceCheckError, match=r"タスクID .* が見つかりません"):
-            memo_service.get_memos_by_task_id(task_id)
-
-        mock_task_repo.get_by_id.assert_called_once_with(task_id)
-        mock_memo_repo.get_by_task_id.assert_not_called()
-
-    def test_search_memos_success(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ検索のテスト（正常系）"""
-        # Arrange
-        search_query = "Python"
-        task_id = uuid.uuid4()
-        matching_memos = [
-            Memo(id=uuid.uuid4(), content="Pythonプログラミング", task_id=task_id),
-            Memo(id=uuid.uuid4(), content="Python学習メモ", task_id=task_id),
-        ]
-
-        mock_memo_repo.search_by_content.return_value = matching_memos
-
-        # Act
-        result = memo_service.search_memos(search_query)
-
-        # Assert
-        assert len(result) == EXPECTED_MEMO_PAIR_COUNT
-        assert all(isinstance(memo, MemoRead) for memo in result)
-        contents = [memo.content for memo in result]
-        assert "Pythonプログラミング" in contents
-        assert "Python学習メモ" in contents
-        mock_memo_repo.search_by_content.assert_called_once_with(search_query)
-
-    def test_search_memos_no_results(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ検索のテスト（結果なし）"""
-        # Arrange
-        search_query = "存在しないキーワード"
-
-        mock_memo_repo.search_by_content.return_value = []
-
-        # Act
-        result = memo_service.search_memos(search_query)
-
-        # Assert
-        assert len(result) == 0
-        mock_memo_repo.search_by_content.assert_called_once_with(search_query)
-
-    def test_create_memo_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ作成時の例外処理テスト"""
-        # Arrange
-        task = create_test_task()
-        if task.id is None:
-            pytest.fail("Task ID should not be None after creation")
-        memo_data = MemoCreate(content="テスト用メモ", task_id=task.id)
-
-        mock_task_repo.get_by_id.return_value = task
-        mock_memo_repo.create.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceCreateError, match="メモの作成に失敗しました"):
-            memo_service.create_memo(memo_data)
-
-    def test_update_memo_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ更新時の例外処理テスト"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-
-        existing_memo = Memo(
-            id=memo_id,
-            content="更新前メモ",
-            task_id=task_id,
-        )
-
-        memo_data = MemoUpdate(content="更新後メモ")
-
-        mock_memo_repo.get_by_id.return_value = existing_memo
-        mock_memo_repo.update.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceUpdateError, match="メモの更新に失敗しました"):
-            memo_service.update_memo(memo_id, memo_data)
-
-    def test_delete_memo_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ削除時の例外処理テスト"""
-        # Arrange
-        memo_id = uuid.uuid4()
-        task_id = uuid.uuid4()
-
-        existing_memo = Memo(
-            id=memo_id,
-            content="削除対象メモ",
-            task_id=task_id,
-        )
-
-        mock_memo_repo.get_by_id.return_value = existing_memo
-        mock_memo_repo.delete.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceDeleteError, match="メモの削除に失敗しました"):
-            memo_service.delete_memo(memo_id)
-
-    def test_get_memo_by_id_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ取得時の例外処理テスト"""
-        # Arrange
-        memo_id = uuid.uuid4()
-
-        mock_memo_repo.get_by_id.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceGetError, match="メモの取得に失敗しました"):
-            memo_service.get_memo_by_id(memo_id)
-
-    def test_get_all_memos_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """全メモ取得時の例外処理テスト"""
-        # Arrange
-        mock_memo_repo.get_all.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceGetError, match="メモ一覧の取得に失敗しました"):
-            memo_service.get_all_memos()
-
-    def test_get_memos_by_task_id_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """タスクIDでメモ取得時の例外処理テスト"""
-        # Arrange
-        task_id = uuid.uuid4()
-        task = Task(id=task_id, title="テストタスク")
-
-        mock_task_repo.get_by_id.return_value = task
-        mock_memo_repo.get_by_task_id.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceGetError, match="タスク別メモの取得に失敗しました"):
-            memo_service.get_memos_by_task_id(task_id)
-
-    def test_search_memos_exception_handling(
-        self,
-        memo_service: MemoService,
-        mock_memo_repo: Mock,
-        mock_task_repo: Mock,
-    ) -> None:
-        """メモ検索時の例外処理テスト"""
-        # Arrange
-        search_query = "Python"
-
-        mock_memo_repo.search_by_content.side_effect = Exception("データベースエラー")
-
-        # Act & Assert
-        with pytest.raises(MemoServiceGetError, match="メモの検索に失敗しました"):
-            memo_service.search_memos(search_query)
+from errors import NotFoundError, RepositoryError
+from logic.services.base import MyBaseError
+from logic.services.memo_service import MemoService, MemoServiceError
+from models import Memo, MemoCreate, MemoRead, MemoStatus
+
+
+class DummyMemoRepo:
+    def __init__(self) -> None:
+        self.storage: dict[uuid.UUID, Memo] = {}
+        self.tag_links: dict[uuid.UUID, set[uuid.UUID]] = {}
+
+    def create(self, create_data: MemoCreate) -> Memo:
+        m = Memo(id=uuid.uuid4(), title=create_data.title, content=create_data.content)
+        assert m.id is not None
+        self.storage[m.id] = m
+        return m
+
+    def link_tag(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> None:
+        self.tag_links.setdefault(tag_id, set()).add(memo_id)
+
+    def get_by_id(self, memo_id: uuid.UUID, *, with_details: bool = False) -> Memo:
+        m = self.storage.get(memo_id)
+        if m is None:
+            msg = "memo not found"
+            raise NotFoundError(msg)
+        return m
+
+    def get_all(self, *, with_details: bool = False) -> list[Memo]:
+        if not self.storage:
+            msg = "no memos"
+            raise NotFoundError(msg)
+        return list(self.storage.values())
+
+    def delete(self, memo_id: uuid.UUID) -> bool:
+        return bool(self.storage.pop(memo_id, None))
+
+    def list_by_status(self, status: MemoStatus, *, with_details: bool = False) -> list[Memo]:
+        """指定ステータスのメモ一覧を返すダミー実装。
+
+        Dummy では単純フィルタのみ。該当がなければ NotFoundError を送出する。
+        """
+        matched = [m for m in self.storage.values() if m.status == status]
+        if not matched:
+            msg = "no memos with status"
+            raise NotFoundError(msg)
+        return matched
+
+    def add_tag(self, memo_id: uuid.UUID, tag_id: uuid.UUID) -> Memo:
+        return self.get_by_id(memo_id)
+
+    def add_task(self, memo_id: uuid.UUID, task_id: uuid.UUID) -> Memo:
+        return self.get_by_id(memo_id)
+
+    def search_by_title(self, query: str, *, with_details: bool = False) -> list[Memo]:
+        return [memo for memo in self.storage.values() if query in memo.title]
+
+    def search_by_content(self, query: str, *, with_details: bool = False) -> list[Memo]:
+        return [memo for memo in self.storage.values() if query in memo.content]
+
+    def list_by_tag(self, tag_id: uuid.UUID, *, with_details: bool = False) -> list[Memo]:
+        memo_ids = self.tag_links.get(tag_id)
+        if not memo_ids:
+            msg = "no memos with tag"
+            raise NotFoundError(msg)
+        return [self.storage[m_id] for m_id in memo_ids if m_id in self.storage]
+
+
+class RepoRaiser(DummyMemoRepo):
+    def create(self, create_data: MemoCreate) -> Memo:
+        msg = "db down"
+        raise RepositoryError(msg)
+
+
+class RepoUnexpected(DummyMemoRepo):
+    def create(self, create_data: MemoCreate) -> Memo:
+        msg = "boom"
+        raise RuntimeError(msg)
+
+
+class RepoDeleteFailure(DummyMemoRepo):
+    def delete(self, memo_id: uuid.UUID) -> bool:  # type: ignore[override]
+        super().get_by_id(memo_id)
+        return False
+
+
+@pytest.fixture
+def memo_service() -> MemoService:
+    return MemoService(memo_repo=DummyMemoRepo())  # type: ignore[arg-type]
+
+
+def test_create_happy_path(memo_service: MemoService) -> None:
+    data = MemoCreate(title="t", content="c")
+    res = memo_service.create(data)
+    # MemoService returns a MemoRead model instance
+    assert isinstance(res, MemoRead)
+    assert res.title == "t"
+
+
+def test_get_by_id_not_found(memo_service: MemoService) -> None:
+    with pytest.raises(NotFoundError):
+        memo_service.get_by_id(uuid.uuid4())
+
+
+def test_get_all_not_found(memo_service: MemoService) -> None:
+    with pytest.raises(NotFoundError):
+        memo_service.get_all()
+
+
+def test_delete_happy_path() -> None:
+    repo = DummyMemoRepo()
+    svc = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+    created = repo.create(MemoCreate(title="a", content="b"))
+    assert created.id is not None
+    assert svc.delete(created.id) is True
+
+
+def test_delete_failure_returns_false() -> None:
+    repo = RepoDeleteFailure()
+    svc = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+    created = repo.create(MemoCreate(title="a", content="b"))
+    assert created.id is not None
+
+    assert svc.delete(created.id) is False
+
+
+def test_create_repo_error_wrapped() -> None:
+    svc = MemoService(memo_repo=RepoRaiser())  # type: ignore[arg-type]
+
+    with pytest.raises(MemoServiceError) as exc:
+        svc.create(MemoCreate(title="x", content="y"))
+
+    err = exc.value
+    assert isinstance(err, MyBaseError)
+    assert err.operation == "作成"
+    assert isinstance(err.__cause__, RepositoryError)
+
+
+def test_create_unexpected_exception_is_wrapped() -> None:
+    svc = MemoService(memo_repo=RepoUnexpected())  # type: ignore[arg-type]
+
+    with pytest.raises(MemoServiceError) as exc:
+        svc.create(MemoCreate(title="x", content="y"))
+
+    err = exc.value
+    assert isinstance(err.__cause__, RuntimeError)
+
+
+def test_get_all_with_details_happy(memo_service: MemoService) -> None:
+    # 準備
+    created = memo_service.create(MemoCreate(title="a", content="b"))
+    assert isinstance(created, MemoRead)
+    # 実行: with_details=True 経路でも取得できる
+    res = memo_service.get_all(with_details=True)
+    assert isinstance(res, list)
+    assert any(m.id == created.id for m in res)
+
+
+def test_list_by_status_with_details(memo_service: MemoService) -> None:
+    memo = memo_service.create(MemoCreate(title="x", content="y"))
+    assert isinstance(memo, MemoRead)
+
+    repo = memo_service.memo_repo
+    if isinstance(repo, DummyMemoRepo):
+        stored = repo.storage[memo.id]
+        stored.status = MemoStatus.INBOX
+
+    res = memo_service.list_by_status(MemoStatus.INBOX, with_details=True)
+    assert any(item.id == memo.id for item in res)
+
+
+def test_list_by_tag_returns_entries_when_exists() -> None:
+    repo = DummyMemoRepo()
+    service = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+    created = service.create(MemoCreate(title="tagged", content="memo"))
+    assert isinstance(created, MemoRead)
+    assert created.id is not None
+    tag_id = uuid.uuid4()
+    repo.link_tag(created.id, tag_id)
+
+    result = service.list_by_tag(tag_id)
+
+    assert len(result) == 1
+    assert result[0].id == created.id
+
+
+def test_list_by_tag_returns_empty_when_repo_raises_not_found() -> None:
+    repo = DummyMemoRepo()
+    service = MemoService(memo_repo=repo)  # type: ignore[arg-type]
+
+    result = service.list_by_tag(uuid.uuid4())
+
+    assert result == []
+
+
+def test_list_by_status_not_found(memo_service: MemoService) -> None:
+    from models import MemoStatus
+
+    with pytest.raises(NotFoundError):
+        memo_service.list_by_status(MemoStatus.ARCHIVE)
+
+
+def test_search_memos_deduplicates_and_returns(memo_service: MemoService) -> None:
+    first = memo_service.create(MemoCreate(title="alpha", content="shared content"))
+    second = memo_service.create(MemoCreate(title="beta", content="alpha shared content"))
+
+    assert isinstance(first, MemoRead)
+    assert isinstance(second, MemoRead)
+
+    res = memo_service.search_memos("alpha", with_details=True)
+    ids = {item.id for item in res}
+    assert ids == {first.id, second.id}
+
+
+def test_add_tag_returns_read_model(memo_service: MemoService) -> None:
+    memo = memo_service.create(MemoCreate(title="x", content="y"))
+    assert isinstance(memo, MemoRead)
+
+    result = memo_service.add_tag(memo.id, uuid.uuid4())
+    assert isinstance(result, MemoRead)
+
+
+def test_add_task_returns_read_model(memo_service: MemoService) -> None:
+    memo = memo_service.create(MemoCreate(title="x", content="y"))
+    assert isinstance(memo, MemoRead)
+
+    result = memo_service.add_task(memo.id, uuid.uuid4())
+    assert isinstance(result, MemoRead)

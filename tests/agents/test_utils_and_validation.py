@@ -3,7 +3,8 @@ from typing import cast
 from pydantic import BaseModel, Field
 
 from agents.agent_conf import LLMProvider
-from agents.base import BaseAgent, ErrorAgentOutput
+from agents.base import AgentError
+from agents.task_agents.one_liner.agent import OneLinerAgent
 from agents.utils import get_model
 
 
@@ -24,29 +25,29 @@ def test_get_model_fake_custom_responses() -> None:
     assert isinstance(out, RespModel)
 
 
-def test_validate_output_success(simple_chat_agent: BaseAgent) -> None:
+def test_validate_output_success() -> None:
     class Dummy(BaseModel):
         response: str
 
-    result = simple_chat_agent.validate_output({"response": "ok"}, Dummy)
+    agent = OneLinerAgent(LLMProvider.FAKE)
+    result = agent.validate_output({"response": "ok"}, Dummy)
     assert isinstance(result, Dummy)
 
 
-def test_validate_output_forced_error(thread_id: str) -> None:
-    from agents.task_agents.simple_chat.agent import SimpleChatAgent
-
-    agent = SimpleChatAgent(LLMProvider.FAKE, error_response=True)
+def test_validate_output_forced_error() -> None:
+    agent = OneLinerAgent(LLMProvider.FAKE, error_response=True)
 
     class Dummy(BaseModel):
         response: str
 
     result = agent.validate_output({"response": "ng"}, Dummy)
-    assert isinstance(result, ErrorAgentOutput)
+    assert isinstance(result, AgentError)
 
 
-def test_validate_output_schema_error(simple_chat_agent: BaseAgent) -> None:
+def test_validate_output_schema_error() -> None:
     class Dummy(BaseModel):
         response: int
 
-    result = simple_chat_agent.validate_output({"response": "string"}, Dummy)
-    assert isinstance(result, ErrorAgentOutput)
+    agent = OneLinerAgent(LLMProvider.FAKE)
+    result = agent.validate_output({"response": "string"}, Dummy)
+    assert isinstance(result, AgentError)

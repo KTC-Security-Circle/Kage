@@ -14,7 +14,7 @@ dependencies = [
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",
     "langchain-huggingface>=0.3.1",
-    "langchain-openvino-genai@git+https://github.com/KTC-Security-Circle/langchain-openvino-genai.git#tag=v0.0.3 ; platform_system == 'Windows'",
+    "langchain-openvino-genai @ git+https://github.com/KTC-Security-Circle/langchain-openvino-genai.git#tag=0.0.4 ; platform_system == 'Windows'",
     "langgraph>=0.4.8",
     "langgraph-checkpoint-sqlite>=2.0.10",
     "langsmith>=0.3.45",
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-openvino = ["langchain-openvino-genai@git+https://github.com/KTC-Security-Circle/langchain-openvino-genai.git#tag=v0.0.3"]
+openvino = ["langchain-openvino-genai @ git+https://github.com/KTC-Security-Circle/langchain-openvino-genai.git#tag=0.0.4"]
 
 [tool.flet]
 # org name in reverse domain name notation, e.g. "com.mycompany".

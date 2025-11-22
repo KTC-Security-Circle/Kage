@@ -11,7 +11,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from loguru import logger
 from pydantic import BaseModel
 
-from agents.agent_conf import LLM_MODEL_DIR, SQLITE_DB_PATH, HuggingFaceModel, LLMProvider
+from agents.agent_conf import LLM_MODEL_DIR, SQLITE_DB_PATH, HuggingFaceModel, LLMProvider, OpenVINODevice
 from errors import ValidationError
 
 agents_logger = logger.bind(agents=True)
@@ -133,6 +133,8 @@ def get_model(
     provider: LLMProvider,
     model_name: HuggingFaceModel | str | None = None,
     fake_responses: list[BaseModel] | None = None,
+    *,
+    device: str | None = None,
 ) -> BaseChatModel:
     """指定されたプロバイダに基づいてLLMを取得する関数。
 
@@ -140,6 +142,7 @@ def get_model(
         provider (LLMProvider): 使用するLLMプロバイダ。
         model_name (str | None): 使用するモデルの名前。デフォルトはNone。
         fake_responses (list[BaseModel] | None): FAKEプロバイダ用のダミー応答リスト。デフォルトはNone。
+        device (str | None): OPENVINO モデルで使用する実行デバイス (CPU/GPU)。
 
     Raises:
         NotImplementedError: 指定されたプロバイダがサポートされていない場合に発生します。
@@ -161,7 +164,7 @@ def get_model(
         )
     elif provider == LLMProvider.OPENVINO:
         try:
-            from langchain_openvino_genai import (  # type: ignore[reportMissingImports]
+            from langchain_openvino_genai import (
                 ChatOpenVINO,
                 OpenVINOLLM,
                 load_model,
@@ -189,9 +192,17 @@ def get_model(
             model_name.value,
             download_path=LLM_MODEL_DIR,
         )
+        requested_device = (device or OpenVINODevice.CPU.value).upper()
+        try:
+            resolved_device = OpenVINODevice(requested_device).value
+        except ValueError as exc:
+            err_msg = f"Invalid OpenVINO device specified: {device}"
+            agents_logger.error(err_msg)  # noqa: TRY400
+            raise ValidationError(err_msg) from exc
+
         ov_llm = OpenVINOLLM.from_model_path(
             model_path=model_path,
-            device="CPU",
+            device=resolved_device,
         )
         llm = ChatOpenVINO(llm=ov_llm)
     elif provider == LLMProvider.FAKE:

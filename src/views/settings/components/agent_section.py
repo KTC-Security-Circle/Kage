@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import LLMProvider, OpenVINODevice
 from views.theme import SPACING
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ class AgentSection(ft.Column):
             label="LLMプロバイダ",
             options=provider_options,
             value=LLMProvider.FAKE.value,
-            on_change=self._handle_change,
+            on_change=self._handle_provider_change,
             expand=True,
         )
 
@@ -54,6 +54,27 @@ class AgentSection(ft.Column):
             on_change=self._handle_change,
         )
 
+        self.device_dropdown = ft.Dropdown(
+            label="実行デバイス (OpenVINO)",
+            options=[
+                # ft.dropdown.Option(key="CPU", text="CPU"),
+                # ft.dropdown.Option(key="GPU", text="GPU"),
+                ft.dropdown.Option(key=device.value, text=device.name)
+                for device in OpenVINODevice
+            ],
+            value="CPU",
+            on_change=self._handle_change,
+            expand=True,
+        )
+        self.device_container = ft.Column(
+            controls=[
+                ft.Text("OpenVINO デバイス", size=14, weight=ft.FontWeight.BOLD),
+                self.device_dropdown,
+            ],
+            spacing=4,
+            visible=False,
+        )
+
         self.controls = [
             ft.Text("LLM 設定", size=16, weight=ft.FontWeight.BOLD),
             self.provider_dropdown,
@@ -61,6 +82,7 @@ class AgentSection(ft.Column):
             self.model_field,
             ft.Text("温度", size=14, weight=ft.FontWeight.BOLD),
             self.temperature_slider,
+            self.device_container,
             self.debug_switch,
         ]
         self.spacing = SPACING.md
@@ -72,13 +94,30 @@ class AgentSection(ft.Column):
         model: str | None,
         temperature: float,
         debug_mode: bool,
+        device: str,
     ) -> None:
         self.provider_dropdown.value = provider
+        self._update_device_visibility(provider)
         self.model_field.value = model or ""
         self.temperature_slider.value = float(max(0.0, min(1.0, temperature)))
         self.debug_switch.value = debug_mode
+        self.device_dropdown.value = device or "CPU"
         if self.page:
             self.update()
 
+    @property
+    def device_value(self) -> str:
+        return self.device_dropdown.value or "CPU"
+
     def _handle_change(self, _: ft.ControlEvent) -> None:
         self.on_change()
+
+    def _handle_provider_change(self, _: ft.ControlEvent) -> None:
+        self._update_device_visibility(self.provider_dropdown.value)
+        self.on_change()
+
+    def _update_device_visibility(self, provider_value: str | None) -> None:
+        is_openvino = provider_value == LLMProvider.OPENVINO.value
+        self.device_container.visible = is_openvino
+        if self.page:
+            self.update()

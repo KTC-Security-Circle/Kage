@@ -4,9 +4,6 @@
   "service": "vscode",
   "runServices": ["vscode"],
   "workspaceFolder": "/workspace",
-  "mounts": [
-    "source=${localEnv:SSH_AUTH_SOCK},target=${localEnv:SSH_AUTH_SOCK},type=bind"
-  ],
   "features": {
     "ghcr.io/dhoeric/features/hadolint:1": {}
   },
@@ -33,9 +30,6 @@
   "containerEnv": {
     "DISPLAY": "dummy",
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
-  },
-  "remoteEnv": {
-    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
   },
   "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
   "remoteUser": "vscode"

@@ -92,7 +92,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-# langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git", tag = "v0.0.3" }
+# langchain-openvino-genai = { git = "https://github.com/KTC-Security-Circle/langchain-openvino-genai.git", tag = "0.0.4" }
 # langchain-openvino-genai = { path = "../langchain-openvino-genai", editable = true }
 
 # Poe the Poet

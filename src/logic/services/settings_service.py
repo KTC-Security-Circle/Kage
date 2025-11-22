@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import LLMProvider, OpenVINODevice
 from errors import ValidationError
 from logic.services.base import ServiceBase
 from settings.manager import ConfigManager, get_config_manager
@@ -276,6 +276,7 @@ class SettingsService(ServiceBase):
                 "model": settings.agents.runtime.model,
                 "temperature": settings.agents.runtime.temperature,
                 "debug_mode": settings.agents.runtime.debug_mode,
+                "device": settings.agents.runtime.device.value,
             },
         }
 
@@ -327,8 +328,16 @@ class SettingsService(ServiceBase):
                 msg = "温度は数値で入力してください"
                 raise ValidationError(msg) from exc
 
+            device_value = str(agent.get("device", editable.agents.runtime.device.value)).upper()
+            try:
+                device = OpenVINODevice(device_value)
+            except ValueError as exc:
+                msg = "OpenVINOデバイスはCPUまたはGPUから選択してください"
+                raise ValidationError(msg) from exc
+
             editable.agents.runtime = EditableAgentRuntimeSettings(
                 model=agent.get("model"),
                 temperature=temperature,
                 debug_mode=bool(agent.get("debug_mode", editable.agents.runtime.debug_mode)),
+                device=device,
             )

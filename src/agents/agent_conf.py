@@ -41,5 +41,14 @@ class HuggingFaceModel(Enum):
     MISTRAL_7B_INS_V03_INT4 = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
 
 
+class OpenVINODevice(Enum):
+    """OpenVINO モデルの実行先デバイス。"""
+
+    AUTO = "AUTO"
+    CPU = "CPU"
+    GPU = "GPU"
+    NPU = "NPU"
+
+
 SQLITE_DB_PATH = f"{STORAGE_DIR}/agents.db"
 LLM_MODEL_DIR = f"{STORAGE_DIR}/llms"

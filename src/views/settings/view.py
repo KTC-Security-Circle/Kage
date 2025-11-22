@@ -301,6 +301,10 @@ class SettingsView(BaseView):
         if debug_value != snapshot.agent.debug_mode:
             self.controller.update_agent_debug_mode(debug_mode=debug_value)
 
+        device_value = self.agent_section.device_value
+        if device_value != snapshot.agent.device.value:
+            self.controller.update_agent_device(device_value)
+
     def _on_save_settings(self, _: ft.ControlEvent) -> None:
         """設定保存ボタンがクリックされた時の処理。"""
 
@@ -376,6 +380,7 @@ class SettingsView(BaseView):
                 model=snapshot.agent.model,
                 temperature=snapshot.agent.temperature,
                 debug_mode=snapshot.agent.debug_mode,
+                device=snapshot.agent.device.value,
             )
 
             # UIを更新

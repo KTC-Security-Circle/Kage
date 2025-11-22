@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from loguru import logger
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import LLMProvider, OpenVINODevice
 from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
 from logic.application.memo_ai_job_queue import (
@@ -71,6 +71,12 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
         settings = settings_app.get_agents_settings()
         self._provider: LLMProvider = settings.provider
+        runtime_cfg = getattr(settings, "runtime", None)
+        raw_device = getattr(runtime_cfg, "device", None)
+        if isinstance(raw_device, OpenVINODevice):
+            self._device = raw_device.value
+        else:
+            self._device = str(raw_device or OpenVINODevice.CPU.value).upper()
         self._memo_to_task_agent: MemoToTaskAgent | None = memo_to_task_agent
 
     @classmethod
@@ -306,7 +312,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         if self._memo_to_task_agent is None:
             from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
 
-            self._memo_to_task_agent = MemoToTaskAgent(provider=self._provider)
+            self._memo_to_task_agent = MemoToTaskAgent(provider=self._provider, device=self._device)
         return self._memo_to_task_agent
 
     def _invoke_memo_to_task_agent(

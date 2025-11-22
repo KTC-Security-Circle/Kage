@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from loguru import logger
 
-from agents.agent_conf import HuggingFaceModel, LLMProvider
+from agents.agent_conf import HuggingFaceModel, LLMProvider, OpenVINODevice
 from agents.task_agents.one_liner.agent import OneLinerAgent
 from agents.task_agents.one_liner.state import OneLinerState
 from errors import ApplicationError
@@ -53,6 +53,12 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
         agents_cfg = settings_app.get_agents_settings()
         self._provider = agents_cfg.provider
         self._use_llm = True  # 常時 LLM 経路
+        runtime_cfg = getattr(agents_cfg, "runtime", None)
+        raw_device = getattr(runtime_cfg, "device", None)
+        if isinstance(raw_device, OpenVINODevice):
+            self._device = raw_device.value
+        else:
+            self._device = str(raw_device or OpenVINODevice.CPU.value).upper()
 
         raw_model = None
         try:  # 設定から one_liner 用モデル名を取得
@@ -79,7 +85,7 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             resolved_model = None
 
         self._model_name = resolved_model
-        self._agent = OneLinerAgent(provider=self._provider, model_name=self._model_name)
+        self._agent = OneLinerAgent(provider=self._provider, model_name=self._model_name, device=self._device)
         logger.debug(
             "OneLinerApplicationService initialized (provider=%s, model=%s)",
             self._provider.name,

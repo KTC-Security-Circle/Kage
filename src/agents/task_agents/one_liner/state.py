@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import NotRequired
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,7 @@ class OneLinerState(BaseAgentState):
     completed_task_count: int
     progress_summary: str
     user_name: str
+    response: NotRequired[str]
 
 
 class OneLinerOutput(BaseModel):

@@ -108,6 +108,7 @@ def show_create_task_dialog(
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
         visible=False,
+        expand=True,
     )
 
     def on_recurring_change(e: ft.ControlEvent) -> None:

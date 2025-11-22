@@ -80,6 +80,7 @@ def show_create_task_dialog(
         border_color=ft.Colors.BLUE_400,
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        expand=True,
     )
 
     project_id_field = ft.TextField(

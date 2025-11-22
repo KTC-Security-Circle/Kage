@@ -102,8 +102,8 @@ class HuggingFaceAgentModels(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    one_liner: HuggingFaceModel | None = Field(
-        default=None,
+    one_liner: HuggingFaceModel = Field(
+        default=HuggingFaceModel.QWEN_3_8B_INT4,
         description="one_liner エージェント用 HuggingFaceModel Enum。None ならデフォルト内部値。",
     )
 

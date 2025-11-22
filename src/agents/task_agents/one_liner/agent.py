@@ -107,7 +107,11 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     setup_logger()
 
     agent = OneLinerAgent(
-        LLMProvider.OPENVINO, model_name=HuggingFaceModel.QWEN_3_8B_INT4, verbose=True, error_response=False
+        LLMProvider.OPENVINO,
+        model_name=HuggingFaceModel.QWEN_3_8B_INT4,
+        verbose=True,
+        error_response=False,
+        device="AUTO",
     )
     thread_id = str(uuid4())
 

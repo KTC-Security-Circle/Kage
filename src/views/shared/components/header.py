@@ -18,7 +18,7 @@
 
 【使用例】
 ```python
-from views.shared.components.action_bar import Header, HeaderData, HeaderButtonData
+from views.shared.components.header import Header, HeaderData, HeaderButtonData
 
 data = HeaderData(
     title="メモ",

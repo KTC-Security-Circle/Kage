@@ -95,7 +95,7 @@ class TagsView(BaseView):
             title="タグ",
             subtitle=subtitle,
             search_placeholder="タグを検索...",
-            on_search=self._on_search,
+            on_search=self._handle_search,
             action_buttons=[
                 HeaderButtonData(
                     label="新規タグ",
@@ -250,10 +250,13 @@ class TagsView(BaseView):
 
         show_tag_create_dialog(self.page, on_submit)
 
-    def _on_search(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """検索ハンドラ"""
-        value = getattr(e.control, "value", "")  # type: ignore[attr-defined]
-        self.controller.update_search(SearchQuery(raw=value))
+    def _handle_search(self, query: str) -> None:
+        """検索ハンドラ
+
+        Args:
+            query: 検索クエリ
+        """
+        self.controller.update_search(SearchQuery(raw=query))
         self._refresh_ui()
 
     def _on_refresh(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]

@@ -190,14 +190,6 @@ class TasksView(BaseView):
         keyword = query.strip()
         self._debounce_keyword_apply(keyword)
 
-    def _on_search_change(self, e: ft.ControlEvent) -> None:  # type: ignore[override]
-        """検索フィールド変更時にデバウンスしてキーワード更新。
-
-        毎キー入力で即フィルタをかけると再描画頻度が高くなるため 300ms デバウンス。
-        """
-        keyword = (e.control.value or "").strip()
-        self._debounce_keyword_apply(keyword)
-
     def _debounce_keyword_apply(self, keyword: str) -> None:
         # 既存タスクがあればキャンセル
         if self._search_debounce_task and not self._search_debounce_task.done():

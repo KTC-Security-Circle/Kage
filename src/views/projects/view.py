@@ -489,29 +489,12 @@ class ProjectsView(BaseView):
 
     # イベントハンドラー
     def _handle_search(self, query: str) -> None:
-        """Header検索フィールドからの検索処理。
+        """検索ハンドラ。
 
         Args:
             query: 検索クエリ
         """
-        self._on_search_change_impl(query)
-
-    def _on_search_change(self, e: ft.ControlEvent) -> None:
-        """検索変更イベント。
-
-        Args:
-            e: イベント引数
-        """
-        keyword = e.control.value if e.control.value else ""
-        self._on_search_change_impl(keyword)
-
-    def _on_search_change_impl(self, keyword: str) -> None:
-        """検索処理の実装。
-
-        Args:
-            keyword: 検索キーワード
-        """
-        self._controller.set_keyword(keyword)
+        self._controller.set_keyword(query)
 
     def _on_tabs_change(self, e: ft.ControlEvent) -> None:
         """タブ変更時のイベントハンドラー。

@@ -98,7 +98,7 @@ class TermsView(BaseView):
             title=self.title,
             subtitle=f"{self.description} ({total_count}件)",
             search_placeholder="用語、キー、同義語で検索...",
-            on_search=self._handle_search_query,
+            on_search=self._handle_search,
             action_buttons=[
                 HeaderButtonData(
                     label="新しい用語",
@@ -171,22 +171,12 @@ class TermsView(BaseView):
             expand=True,
         )
 
-    def _handle_search_query(self, query: str) -> None:
-        """Header検索フィールドからの検索処理。
+    def _handle_search(self, query: str) -> None:
+        """検索ハンドラ。
 
         Args:
             query: 検索クエリ
         """
-        if self.page:
-            self.page.run_task(self._async_search, query)
-
-    def _handle_search(self, e: ft.ControlEvent) -> None:
-        """検索クエリの変更をハンドリングする。
-
-        Args:
-            e: コントロールイベント
-        """
-        query = getattr(e.control, "value", "") or ""
         if self.page:
             self.page.run_task(self._async_search, query)
 

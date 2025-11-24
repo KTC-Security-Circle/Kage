@@ -122,35 +122,15 @@ class WeeklyReviewView(BaseView):
             expand=True,
         )
 
-    def _build_header(self) -> ft.Container:
+    def _build_header(self) -> ft.Control:
         """ヘッダーを構築
 
         Returns:
-            ヘッダーコンテナ
+            ヘッダーコントロール
         """
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Column(
-                        controls=[
-                            ft.Text(
-                                "週次レビュー",
-                                size=32,
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                            ft.Text(
-                                "GTDの週次レビュー - システム全体を見直して整理する時間",
-                                size=16,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
-                            ),
-                        ],
-                        spacing=8,
-                    ),
-                ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            padding=ft.padding.all(24),
+        return self.create_header(
+            title="週次レビュー",
+            subtitle="GTDの週次レビュー - システム全体を見直して整理する時間",
         )
 
     def _build_stats_row(self) -> ft.ResponsiveRow:

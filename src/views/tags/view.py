@@ -31,6 +31,7 @@ from logic.application.memo_application_service import MemoApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
+from views.shared.components import HeaderButtonData
 
 from .components import (
     EmptyTagsState,
@@ -38,11 +39,9 @@ from .components import (
     TagDetailPanel,
     TagFormData,
     TagListItem,
-    TagsActionBar,
     show_tag_create_dialog,
     show_tag_edit_dialog,
 )
-from .components.page_header import create_page_header
 from .controller import TagsController
 from .presenter import TagsPresenter
 from .query import SearchQuery
@@ -69,7 +68,6 @@ class TagsView(BaseView):
         self.presenter = TagsPresenter()
 
         # UIルート要素
-        self._action_bar: TagsActionBar | None = None
         self._list_column: ft.Column | None = None  # type: ignore[name-defined]
         self._detail_panel: TagDetailPanel | None = None
         self._header: ft.Control | None = None  # type: ignore[name-defined]
@@ -88,17 +86,27 @@ class TagsView(BaseView):
                 if self.page:
                     self.show_error_snackbar(self.page, f"タグの読み込みに失敗しました: {exc}")
 
-        # ヘッダー
-        self._header = create_page_header(self.tags_state.filtered_count)
+        # Headerコンポーネント (検索と新規作成ボタン)
+        total_count = len(self.tags_state.items)
+        filtered_count = self.tags_state.filtered_count
+        subtitle = f"メモやタスクを整理 ({filtered_count}/{total_count}件)"
 
-        # アクションバー
-        action_bar_props = self.presenter.build_action_bar_props(
-            self.tags_state,
-            on_create=self._on_create,
-            on_search=self._on_search,
-            on_refresh=self._on_refresh,
+        self._header = self.create_header(
+            title="タグ",
+            subtitle=subtitle,
+            search_placeholder="タグを検索...",
+            on_search=self._handle_search,
+            action_buttons=[
+                HeaderButtonData(
+                    label="新規タグ",
+                    icon=ft.Icons.ADD,
+                    on_click=self._handle_create,
+                    is_primary=True,
+                )
+            ],
         )
-        self._action_bar = TagsActionBar(action_bar_props)
+
+        # アクションバーは削除（Headerに統合）
 
         # タグリスト（左カラム）
         list_controls = self._build_list_controls()
@@ -125,7 +133,7 @@ class TagsView(BaseView):
             content=ft.Column(
                 controls=[
                     self._header,
-                    self._action_bar,
+                    ft.Divider(),
                     ft.Row(
                         controls=[
                             ft.Container(
@@ -192,17 +200,14 @@ class TagsView(BaseView):
     # ------------------------------------------------------------------
     # Event Handlers
     # ------------------------------------------------------------------
+    def _handle_create(self) -> None:
+        """Header作成ボタンのクリック処理。"""
+        self._on_create()
+
     def _refresh_ui(self) -> None:
         """State変更後にUIを更新する（差分更新）"""
-        import flet as ft
-
-        # ヘッダー件数更新（set_props的な更新が望ましいが、ヘッダーは単純なのでTextを直接更新）
-        if self._header and hasattr(self._header, "parent"):
-            parent_col = self._header.parent  # type: ignore[attr-defined]
-            if parent_col and isinstance(parent_col, ft.Column):
-                idx = parent_col.controls.index(self._header)  # type: ignore[arg-type]
-                parent_col.controls[idx] = create_page_header(self.tags_state.filtered_count)  # type: ignore[index]
-                self._header = parent_col.controls[idx]
+        # ヘッダー件数更新はHeader再構築が必要なため、現状はスキップ
+        # TODO: Headerコンポーネントにset_propsメソッドを追加して動的更新を可能にする
 
         # リスト差分更新（全再構築より、個別アイテムのset_propsを呼ぶべきだが、
         # フィルタ変更時は件数が変わるため、シンプルに全再構築）
@@ -228,7 +233,7 @@ class TagsView(BaseView):
 
         self.safe_update()
 
-    def _on_create(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+    def _on_create(self, _e: ft.ControlEvent | None = None) -> None:  # type: ignore[name-defined]
         """新規作成ハンドラ"""
         if not self.page:
             return
@@ -245,10 +250,13 @@ class TagsView(BaseView):
 
         show_tag_create_dialog(self.page, on_submit)
 
-    def _on_search(self, e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
-        """検索ハンドラ"""
-        value = getattr(e.control, "value", "")  # type: ignore[attr-defined]
-        self.controller.update_search(SearchQuery(raw=value))
+    def _handle_search(self, query: str) -> None:
+        """検索ハンドラ
+
+        Args:
+            query: 検索クエリ
+        """
+        self.controller.update_search(SearchQuery(raw=query))
         self._refresh_ui()
 
     def _on_refresh(self, _e: ft.ControlEvent) -> None:  # type: ignore[name-defined]

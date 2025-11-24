@@ -3,8 +3,10 @@
 views_new/shared/components/ で使用される再利用可能なUIコンポーネントを提供する。
 """
 
-from .page_header import create_page_header
+from .header import Header, HeaderButtonData, HeaderData
 
 __all__ = [
-    "create_page_header",
+    "Header",
+    "HeaderData",
+    "HeaderButtonData",
 ]

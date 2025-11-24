@@ -28,7 +28,7 @@ from loguru import logger
 
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.shared.components import create_page_header
+from views.shared.components import HeaderButtonData
 
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
 from .components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
@@ -68,10 +68,6 @@ class TasksView(BaseView):
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
         )
 
-        self._status_dropdown: ft.Dropdown | None = None
-        self._sort_dropdown: ft.Dropdown | None = None
-        self._desc_switch: ft.Switch | None = None
-        self._search_field: ft.TextField | None = None
         self._tabs: ft.Tabs | None = None
         self._current_vm: list[TaskCardVM] = []
         # Components
@@ -95,60 +91,19 @@ class TasksView(BaseView):
             # InMemoryQuery 以外の実装に差し替えた場合でも安全に表示
             total_count = len(self._current_vm)
 
-        header = create_page_header(
+        header = self.create_header(
             title="タスク",
             subtitle=f"GTDベースのタスク管理 ({total_count}件)",
-        )
-
-        # 新規タスク作成ボタン
-        create_button = ft.ElevatedButton(
-            "新規タスク作成",
-            icon=ft.icons.ADD,
-            on_click=lambda _: self._open_create_dialog(),
-            style=ft.ButtonStyle(
-                color=ft.Colors.WHITE,
-                bgcolor=ft.Colors.BLUE_600,
-            ),
-        )
-
-        self._search_field = ft.TextField(
-            label="検索",
-            hint_text="タイトルでフィルタ...",
-            on_change=self._on_search_change,  # デバウンス対応
-            expand=True,
-        )
-
-        status_options = [ft.dropdown.Option(key="", text="すべて")] + [
-            ft.dropdown.Option(key=value, text=TASK_STATUS_LABELS[value]) for value in TASK_STATUS_LABELS
-        ]
-        self._status_dropdown = ft.Dropdown(
-            label="状態",
-            options=status_options,
-            value="",
-            on_change=lambda e: self._on_status_dd_change(e),  # type: ignore[arg-type]
-            width=160,
-        )
-
-        self._sort_dropdown = ft.Dropdown(
-            label="並び替え",
-            options=[
-                ft.dropdown.Option("updated_at"),
-                ft.dropdown.Option("created_at"),
-                ft.dropdown.Option("due_date"),
+            search_placeholder="タイトルでフィルタ...",
+            on_search=self._handle_search,
+            action_buttons=[
+                HeaderButtonData(
+                    label="新規タスク作成",
+                    icon=ft.Icons.ADD,
+                    on_click=lambda: self._open_create_dialog(),
+                    is_primary=True,
+                )
             ],
-            value=self._controller.state.sort_key,
-            on_change=lambda e: self._controller.set_sort(
-                key=e.control.value, descending=self._controller.state.sort_desc
-            ),  # type: ignore[arg-type]
-            width=160,
-        )
-
-        self._desc_switch = ft.Switch(
-            label="降順",
-            value=self._controller.state.sort_desc,
-            on_change=lambda e: self._controller.set_sort(
-                key=self._controller.state.sort_key, descending=e.control.value
-            ),  # type: ignore[arg-type]
         )
 
         # タブ (React テンプレート準拠) - 各ステータス件数をバッジ表示
@@ -193,20 +148,6 @@ class TasksView(BaseView):
         controls = ft.Column(
             controls=[
                 header,
-                ft.Row(
-                    controls=[create_button],
-                    alignment=ft.MainAxisAlignment.END,
-                ),
-                ft.Row(
-                    controls=[
-                        self._search_field,
-                        self._status_dropdown,
-                        self._sort_dropdown,
-                        self._desc_switch,
-                    ],
-                    spacing=12,
-                ),
-                ft.Divider(),
                 tabs_list,
                 ft.Divider(),
                 grid,
@@ -244,12 +185,9 @@ class TasksView(BaseView):
     _SEARCH_DEBOUNCE_MS: int = 300
     _search_debounce_task: asyncio.Task | None = None
 
-    def _on_search_change(self, e: ft.ControlEvent) -> None:  # type: ignore[override]
-        """検索フィールド変更時にデバウンスしてキーワード更新。
-
-        毎キー入力で即フィルタをかけると再描画頻度が高くなるため 300ms デバウンス。
-        """
-        keyword = (e.control.value or "").strip()
+    def _handle_search(self, query: str) -> None:
+        """Header検索フィールドからの検索処理。"""
+        keyword = query.strip()
         self._debounce_keyword_apply(keyword)
 
     def _debounce_keyword_apply(self, keyword: str) -> None:
@@ -329,18 +267,6 @@ class TasksView(BaseView):
         except Exception:
             return 0
 
-    def _on_tabs_change(self, e: ft.ControlEvent) -> None:
-        idx = getattr(e.control, "selected_index", 0) or 0
-        # 0番目は「すべて」= None、それ以外は STATUS_ORDER[idx-1]
-        new_status: str | None = None if idx == 0 else STATUS_ORDER[idx - 1]
-        self._controller.set_status(new_status)
-        if self._status_dropdown is not None:
-            self._status_dropdown.value = new_status or ""
-            with contextlib.suppress(AssertionError):
-                self._status_dropdown.update()
-        # タブ操作後の一覧反映
-        self.safe_update()
-
     def _refresh_tabs_badges(self) -> None:
         if not self._tabs:
             return
@@ -361,19 +287,15 @@ class TasksView(BaseView):
             self._tabs.update()
         # TODO: 大量件数時は counts を Controller 側の集計キャッシュから取得し、頻度を制御 (レート制限)。
 
-    def _on_status_dd_change(self, e: ft.ControlEvent) -> None:
-        # Dropdown→state 更新 + Tabs の選択も同期
-        new_status = e.control.value or None
+    def _on_tabs_change(self, e: ft.ControlEvent) -> None:
+        """タブ選択変更時のハンドラー。"""
+        idx = e.control.selected_index
+        if idx < 0 or idx >= len(self._tab_keys):
+            return
+        new_status = self._tab_keys[idx]
         self._controller.set_status(new_status)
-        if self._tabs is not None:
-            idx = 0 if not new_status else 1 + STATUS_ORDER.index(str(new_status))
-            self._tabs.selected_index = idx
-            with contextlib.suppress(AssertionError):
-                self._tabs.update()
-        # ドロップダウン操作後の一覧反映
         self.safe_update()
 
-    # --- 外部 API (将来統合用) ---
     def get_state_snapshot(self) -> TasksState:
         """現在の状態スナップショットを返す。テスト/デバッグ用。"""
         return self._controller.state

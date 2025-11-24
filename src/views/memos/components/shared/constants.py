@@ -40,3 +40,9 @@ DEFAULT_DATE_TEXT: Final[str] = "—"
 
 DEFAULT_EMPTY_MESSAGE: Final[str] = "メモがありません"
 """リストが空の場合のデフォルトメッセージ"""
+
+DEFAULT_SEARCH_PLACEHOLDER: Final[str] = "メモを検索..."
+"""検索フィールドのデフォルトプレースホルダー（複数のコンポーネントで共有）"""
+
+MIN_SEARCH_LENGTH: Final[int] = 2
+"""検索クエリの最小文字数（複数のコンポーネントで共有）"""

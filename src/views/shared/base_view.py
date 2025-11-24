@@ -9,6 +9,7 @@ OpenSpec `organize-view-layer` の `base-view-contract` 仕様に準拠した
     - ローディング状態管理 (state.loading + with_loading)
     - ライフサイクルフック (did_mount / will_unmount)
     - クリーンアップ (非同期タスクキャンセル)
+    - Header生成ヘルパー（統一されたヘッダー作成）
 
 今後の拡張ポイント:
     - グローバルメッセージ購読
@@ -24,6 +25,8 @@ from typing import TYPE_CHECKING, Any
 
 import flet as ft
 from loguru import logger
+
+from views.shared.components import Header, HeaderButtonData, HeaderData
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -306,6 +309,45 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         if self.state.error_message:
             self.state = replace(self.state, error_message=None)
             self.safe_update()
+
+    # ---------------------------------------------------------------------
+    # Header生成ヘルパー
+    # ---------------------------------------------------------------------
+    def create_header(  # noqa: PLR0913
+        self,
+        *,
+        title: str,
+        subtitle: str,
+        search_placeholder: str = "検索...",
+        on_search: Callable[[str], None] | None = None,
+        action_buttons: list[HeaderButtonData] | None = None,
+        leading_buttons: list[HeaderButtonData] | None = None,
+        show_search: bool = True,
+    ) -> Header:
+        """汎用Headerを生成する。
+
+        Args:
+            title: メインタイトル
+            subtitle: サブタイトル
+            search_placeholder: 検索フィールドのプレースホルダー
+            on_search: 検索入力のコールバック
+            action_buttons: 右側のアクションボタンのリスト
+            leading_buttons: 左側のボタンのリスト（戻るボタン等）
+            show_search: 検索フィールドを表示するか
+
+        Returns:
+            構築されたHeader
+        """
+        header_data = HeaderData(
+            title=title,
+            subtitle=subtitle,
+            search_placeholder=search_placeholder,
+            on_search=on_search,
+            action_buttons=action_buttons,
+            leading_buttons=leading_buttons,
+            show_search=show_search,
+        )
+        return Header(header_data)
 
 
 class LoadingMixin:

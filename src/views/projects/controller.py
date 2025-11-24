@@ -212,6 +212,35 @@ class ProjectController:
         self._update_list()
         self._update_detail()
 
+    def get_counts(self) -> dict[ProjectStatus, int]:
+        """各ステータスの件数を取得する。
+
+        Returns:
+            ステータスごとの件数辞書
+        """
+        try:
+            all_projects = self._service.get_all_projects()
+            counts: dict[ProjectStatus, int] = {
+                ProjectStatus.ACTIVE: 0,
+                ProjectStatus.ON_HOLD: 0,
+                ProjectStatus.COMPLETED: 0,
+                ProjectStatus.CANCELLED: 0,
+            }
+            for project in all_projects:
+                status = getattr(project, "status", None)
+                if isinstance(status, ProjectStatus):
+                    counts[status] = counts.get(status, 0) + 1
+        except Exception as e:
+            logger.warning(f"ステータス件数取得エラー: {e}")
+            return {
+                ProjectStatus.ACTIVE: 0,
+                ProjectStatus.ON_HOLD: 0,
+                ProjectStatus.COMPLETED: 0,
+                ProjectStatus.CANCELLED: 0,
+            }
+        else:
+            return counts
+
     def create_project(self, project: dict[str, str], *, select: bool = True) -> None:
         """新規プロジェクトを ApplicationService 経由で作成する。
 

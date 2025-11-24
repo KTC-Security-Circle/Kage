@@ -26,7 +26,7 @@ from loguru import logger
 
 from models import TermStatus
 from views.shared.base_view import BaseView, BaseViewProps
-from views.shared.components import create_page_header
+from views.shared.components import HeaderButtonData
 
 from .components.status_tabs import StatusTabsProps, TermStatusTabs
 from .components.term_detail import DetailPanelProps, TermDetailPanel
@@ -63,7 +63,6 @@ class TermsView(BaseView):
         )
 
         # Components
-        self.search_field: ft.TextField | None = None
         self.status_tabs: TermStatusTabs | None = None
         self.term_list: TermList | None = None
         self.detail_panel: TermDetailPanel | None = None
@@ -93,33 +92,21 @@ class TermsView(BaseView):
 
     def build_content(self) -> ft.Control:
         """Build the main content area."""
-        # ヘッダー
+        # Headerコンポーネント (検索と新規作成ボタン)
         total_count = len(self.term_state.all_terms)
-        header = create_page_header(
+        header = self.create_header(
             title=self.title,
             subtitle=f"{self.description} ({total_count}件)",
-        )
-
-        # 検索バー + 作成ボタン
-        self.search_field = ft.TextField(
-            hint_text="用語、キー、同義語で検索...",
-            prefix_icon=ft.Icons.SEARCH,
-            on_change=self._handle_search,
-            expand=True,
-        )
-
-        create_button = ft.ElevatedButton(
-            text="新しい用語",
-            icon=ft.Icons.ADD,
-            on_click=lambda _: self._handle_create_term(),
-        )
-
-        search_row = ft.Row(
-            controls=[
-                self.search_field,
-                create_button,
+            search_placeholder="用語、キー、同義語で検索...",
+            on_search=self._handle_search,
+            action_buttons=[
+                HeaderButtonData(
+                    label="新しい用語",
+                    icon=ft.Icons.ADD,
+                    on_click=self._handle_create_term,
+                    is_primary=True,
+                )
             ],
-            spacing=16,
         )
 
         # ステータスタブ
@@ -177,10 +164,6 @@ class TermsView(BaseView):
         return ft.Column(
             controls=[
                 header,
-                ft.Container(
-                    content=search_row,
-                    padding=ft.padding.symmetric(horizontal=0),
-                ),
                 ft.Divider(),
                 grid,
             ],
@@ -188,13 +171,12 @@ class TermsView(BaseView):
             expand=True,
         )
 
-    def _handle_search(self, e: ft.ControlEvent) -> None:
-        """検索クエリの変更をハンドリングする。
+    def _handle_search(self, query: str) -> None:
+        """検索ハンドラ。
 
         Args:
-            e: コントロールイベント
+            query: 検索クエリ
         """
-        query = getattr(e.control, "value", "") or ""
         if self.page:
             self.page.run_task(self._async_search, query)
 

@@ -57,8 +57,6 @@ class AgentSection(ft.Column):
         self.device_dropdown = ft.Dropdown(
             label="実行デバイス (OpenVINO)",
             options=[
-                # ft.dropdown.Option(key="CPU", text="CPU"),
-                # ft.dropdown.Option(key="GPU", text="GPU"),
                 ft.dropdown.Option(key=device.value, text=device.name)
                 for device in OpenVINODevice
             ],

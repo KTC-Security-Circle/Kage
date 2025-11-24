@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from logic.application.task_application_service import TaskApplicationService, TaskContentValidationError
-from models import TaskRead, TaskStatus, TaskUpdate
+from models import TaskCreate, TaskRead, TaskStatus, TaskUpdate
 
 
 class TestTaskApplicationService:
@@ -74,6 +74,39 @@ class TestTaskApplicationService:
         assert isinstance(result, TaskRead)
         assert result.title == sample_task_read.title
         mock_task_service.create.assert_called_once()
+
+    def test_create_with_relations_and_schedule(
+        self,
+        task_application_service: TaskApplicationService,
+        mock_unit_of_work: Mock,
+        sample_task_read: TaskRead,
+    ) -> None:
+        """project_id / memo_id / 期日等が TaskCreate に反映される"""
+        mock_task_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_task_service.create.return_value = sample_task_read
+
+        project_id = uuid.uuid4()
+        memo_id = uuid.uuid4()
+        due_date = datetime.now(tz=UTC).date()
+        completed_at = datetime.now(tz=UTC)
+
+        task_application_service.create(
+            title="詳細付き",
+            project_id=project_id,
+            memo_id=memo_id,
+            due_date=due_date,
+            completed_at=completed_at,
+            is_recurring=True,
+            recurrence_rule="FREQ=DAILY",
+        )
+
+        called_create: TaskCreate = mock_task_service.create.call_args.args[0]
+        assert called_create.project_id == project_id
+        assert called_create.memo_id == memo_id
+        assert called_create.due_date == due_date
+        assert called_create.completed_at == completed_at
+        assert called_create.is_recurring is True
+        assert called_create.recurrence_rule == "FREQ=DAILY"
 
     def test_create_validation_error(self, task_application_service: TaskApplicationService) -> None:
         """異常系: タスク作成時のバリデーションエラー"""

@@ -49,6 +49,7 @@ class ProjectCardVM:
     progress_value: float
     task_count: int
     completed_count: int
+    task_id: list[str]
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,7 @@ class ProjectDetailVM:
         progress_value: 進捗値（0.0-1.0）
         task_count: タスク総数
         completed_count: 完了タスク数
+        task_id: 関連タスクIDリスト
     """
 
     id: str
@@ -84,6 +86,7 @@ class ProjectDetailVM:
     progress_value: float
     task_count: int
     completed_count: int
+    task_id: list[str]
 
 
 def to_card_vm(items: Iterable[dict[str, str]]) -> list[ProjectCardVM]:
@@ -152,7 +155,13 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
     status = str(project.get("status", ""))
 
     # 進捗計算
-    task_count = int(project.get("tasks_count", project.get("task_count", "0")))
+    task_id_list = project.get("task_id", [])
+    if isinstance(task_id_list, str):
+        # 文字列で来た場合のフォールバック（本来はリストであるべき）
+        task_id_list = []
+
+    task_count = len(task_id_list)
+    # completed_count は現状辞書から取得するしかない（タスクの状態を知る術がないため）
     completed_count = int(project.get("completed_tasks", project.get("completed_count", "0")))
     progress_value = (completed_count / task_count) if task_count > 0 else 0.0
     progress_text = f"{completed_count}/{task_count} タスク完了"
@@ -181,6 +190,7 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
         progress_value=progress_value,
         task_count=task_count,
         completed_count=completed_count,
+        task_id=task_id_list,  # type: ignore[arg-type]
     )
 
 
@@ -200,7 +210,11 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     status = str(project.get("status", ""))
 
     # 進捗計算
-    task_count = int(project.get("tasks_count", project.get("task_count", "0")))
+    task_id_list = project.get("task_id", [])
+    if isinstance(task_id_list, str):
+        task_id_list = []
+
+    task_count = len(task_id_list)
     completed_count = int(project.get("completed_tasks", project.get("completed_count", "0")))
     progress_value = (completed_count / task_count) if task_count > 0 else 0.0
     progress_text = f"{progress_value:.0%} 完了 ({completed_count} / {task_count} タスク)"
@@ -231,6 +245,7 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
         progress_value=progress_value,
         task_count=task_count,
         completed_count=completed_count,
+        task_id=task_id_list,  # type: ignore[arg-type]
     )
 
 
@@ -249,10 +264,12 @@ def _project_read_to_card_vm(project: ProjectRead) -> ProjectCardVM:  # type: ig
     description = str(getattr(project, "description", ""))
     status_enum = getattr(project, "status", ProjectStatus.ACTIVE)
 
-    # 進捗計算（現状は未集計のため0）
-    task_count = 0
-    completed_count = 0
-    progress_value = 0.0
+    # 進捗計算
+    # ProjectRead に task_id があると仮定
+    task_id_list = getattr(project, "task_id", [])
+    task_count = len(task_id_list)
+    completed_count = 0  # 現状は未集計
+    progress_value = (completed_count / task_count) if task_count > 0 else 0.0
     progress_text = f"{completed_count}/{task_count} タスク完了"
 
     # 表示用の値
@@ -283,6 +300,7 @@ def _project_read_to_card_vm(project: ProjectRead) -> ProjectCardVM:  # type: ig
         progress_value=progress_value,
         task_count=task_count,
         completed_count=completed_count,
+        task_id=task_id_list,
     )
 
 
@@ -301,10 +319,11 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
     description = project.description if project.description is not None else ""
     status_enum = project.status
 
-    # 進捗計算（現状は未集計のため0）
-    task_count = 0
-    completed_count = 0
-    progress_value = 0.0
+    # 進捗計算
+    task_id_list = getattr(project, "task_id", [])
+    task_count = len(task_id_list)
+    completed_count = 0  # 現状は未集計
+    progress_value = (completed_count / task_count) if task_count > 0 else 0.0
     progress_text = f"{progress_value:.0%} 完了 ({completed_count} / {task_count} タスク)"
 
     # 日時フォーマット
@@ -334,4 +353,5 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
         progress_value=progress_value,
         task_count=task_count,
         completed_count=completed_count,
+        task_id=task_id_list,
     )

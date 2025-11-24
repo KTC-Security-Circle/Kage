@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,7 +19,7 @@ DATE_SLICE_LENGTH = 10  # YYYY-MM-DD 長さ
 
 def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     page: ft.Page,  # type: ignore[name-defined]
-    on_save: Callable[[dict[str, str]], None] | None = None,
+    on_save: Callable[[dict[str, Any]], None] | None = None,
 ) -> None:
     """新規プロジェクト作成ダイアログを表示する（入力/バリデーション統合）。
 
@@ -67,6 +67,48 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
             ft.dropdown.Option("On-Hold", "On-Hold"),
             ft.dropdown.Option("Completed", "Completed"),
         ],
+    )
+
+    # タスク選択用（複数選択UI）
+    selected_tasks: list[str] = []
+    tasks_wrap = ft.Row(wrap=True, spacing=5)
+
+    def add_task(_: ft.ControlEvent) -> None:
+        if not task_dropdown.value:
+            return
+        task_val = task_dropdown.value
+        if task_val not in selected_tasks:
+            selected_tasks.append(task_val)
+            # Chipを追加
+            tasks_wrap.controls.append(
+                ft.Chip(
+                    label=ft.Text(task_val),
+                    on_delete=lambda e: remove_task(task_val, e.control),
+                )
+            )
+            tasks_wrap.update()
+            task_dropdown.value = None
+            task_dropdown.update()
+
+    def remove_task(task_val: str, chip_control: ft.Control) -> None:
+        if task_val in selected_tasks:
+            selected_tasks.remove(task_val)
+            tasks_wrap.controls.remove(chip_control)
+            tasks_wrap.update()
+
+    # タスク選択用ドロップダウン（ロジック未実装のためダミー）
+    task_dropdown = ft.Dropdown(
+        label="関連タスク追加",
+        hint_text="タスクを選択してください",
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        options=[
+            ft.dropdown.Option("dummy-task-1", "サンプルタスク 1"),
+            ft.dropdown.Option("dummy-task-2", "サンプルタスク 2"),
+            ft.dropdown.Option("dummy-task-3", "サンプルタスク 3"),
+        ],
+        on_change=add_task,
     )
 
     # DatePicker を用いた期限入力
@@ -160,13 +202,17 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
             status_normalized = "active"  # デフォルト
 
         # プロジェクトデータを作成（DBスキーマ準拠）
+        now_iso = _dt.datetime.now(tz=tz).isoformat()
+
         project_data = {
             "id": str(__import__("uuid").uuid4()),
             "title": (name_field.value or "新しいプロジェクト").strip(),
             "description": (description_field.value or "").strip(),
             "status": status_normalized,
             "due_date": due_date_val,
-            "task_id": [],
+            "task_id": selected_tasks,
+            "created_at": now_iso,
+            "updated_at": now_iso,
         }
 
         if on_save:
@@ -245,6 +291,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         spacing=8,
                     ),
+                    ft.Column([task_dropdown, tasks_wrap], spacing=5),
                     # 注意書き
                     ft.Container(
                         content=ft.Row(
@@ -306,8 +353,8 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
 
 def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構築のため許容
     page: ft.Page,  # type: ignore[name-defined]
-    project: dict[str, str],
-    on_save: Callable[[dict[str, str]], None] | None = None,
+    project: dict[str, Any],
+    on_save: Callable[[dict[str, Any]], None] | None = None,
 ) -> None:
     """美しいプロジェクト編集ダイアログを表示する。
 
@@ -353,6 +400,59 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             ft.dropdown.Option("Completed", "Completed"),
             ft.dropdown.Option("Cancelled", "Cancelled"),
         ],
+    )
+
+    # タスク選択用（複数選択UI）
+    current_task_ids = project.get("task_id", [])
+    selected_tasks: list[str] = current_task_ids if isinstance(current_task_ids, list) else []
+    tasks_wrap = ft.Row(wrap=True, spacing=5)
+
+    def add_task(_: ft.ControlEvent) -> None:
+        if not task_dropdown.value:
+            return
+        task_val = task_dropdown.value
+        if task_val not in selected_tasks:
+            selected_tasks.append(task_val)
+            _add_chip(task_val)
+            task_dropdown.value = None
+            task_dropdown.update()
+
+    def remove_task(task_val: str, chip_control: ft.Control) -> None:
+        if task_val in selected_tasks:
+            selected_tasks.remove(task_val)
+            tasks_wrap.controls.remove(chip_control)
+            tasks_wrap.update()
+
+    def _add_chip(task_val: str) -> None:
+        tasks_wrap.controls.append(
+            ft.Chip(
+                label=ft.Text(task_val),
+                on_delete=lambda e: remove_task(task_val, e.control),
+            )
+        )
+        tasks_wrap.update()
+
+    # 初期タスクの表示
+    for task_id in selected_tasks:
+        tasks_wrap.controls.append(
+            ft.Chip(
+                label=ft.Text(task_id),
+                on_delete=lambda e, t=task_id: remove_task(t, e.control),
+            )
+        )
+
+    task_dropdown = ft.Dropdown(
+        label="関連タスク追加",
+        hint_text="タスクを選択してください",
+        border_color=ft.Colors.ORANGE_400,
+        focused_border_color=ft.Colors.ORANGE_600,
+        label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
+        options=[
+            ft.dropdown.Option("dummy-task-1", "サンプルタスク 1"),
+            ft.dropdown.Option("dummy-task-2", "サンプルタスク 2"),
+            ft.dropdown.Option("dummy-task-3", "サンプルタスク 3"),
+        ],
+        on_change=add_task,
     )
 
     # 期限フィールド（編集時は既存値を反映）
@@ -430,6 +530,8 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             "description": desc_val,
             "status": normalized_status,
             "due_date": due_raw,
+            "task_id": selected_tasks,
+            "updated_at": _dt.datetime.now(tz=tz).isoformat(),
         }
         try:
             # TODO: 本保存ロジックの実装
@@ -517,6 +619,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         spacing=8,
                     ),
+                    ft.Column([task_dropdown, tasks_wrap], spacing=5),
                     # 進捗情報表示
                     ft.Container(
                         content=ft.Row(

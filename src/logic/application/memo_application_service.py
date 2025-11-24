@@ -27,6 +27,7 @@ from models import AiSuggestionStatus, MemoCreate, MemoRead, MemoStatus, MemoUpd
 
 if TYPE_CHECKING:
     import uuid
+    from collections.abc import Sequence
 
     from agents.base import AgentError
     from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
@@ -93,6 +94,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         content: str,
         *,
         status: MemoStatus = MemoStatus.INBOX,
+        tag_ids: Sequence[uuid.UUID] | None = None,
     ) -> MemoRead:
         """メモを作成する
 
@@ -100,6 +102,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             title: メモタイトル
             content: メモ内容
             status: 初期ステータス（省略時は INBOX）
+            tag_ids: 付与するタグIDの一覧
 
         Returns:
             MemoRead: 作成されたメモ
@@ -120,6 +123,11 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         with self._unit_of_work_factory() as uow:
             memo_service = uow.get_service(MemoService)
             created_memo = memo_service.create(memo)
+            if tag_ids:
+                # dict.fromkeys で順序を維持したまま重複排除
+                unique_tag_ids = dict.fromkeys(tag_ids)
+                for tag_id in unique_tag_ids:
+                    created_memo = memo_service.add_tag(created_memo.id, tag_id)
 
         logger.info(logger_msg.format(msg="メモ作成完了", memo_id=created_memo.id))
         return created_memo

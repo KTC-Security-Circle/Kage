@@ -4,7 +4,7 @@ Unit of Work のモックを用い、MemoApplicationService の公開APIを検�
 """
 
 import uuid
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -52,7 +52,10 @@ class TestMemoApplicationService:
     @pytest.fixture
     def memo_app_service(self, mock_unit_of_work_factory: Mock) -> MemoApplicationService:
         """MemoApplicationServiceのインスタンスを作成"""
-        return MemoApplicationService(mock_unit_of_work_factory)  # type: ignore[arg-type]
+        service = MemoApplicationService(mock_unit_of_work_factory)  # type: ignore[arg-type]
+        # テストでは擬似応答のショートカットを避け、モックで制御できるようFAKE以外に切り替える
+        service._provider = LLMProvider.GOOGLE  # type: ignore[attr-defined]
+        return service
 
     @pytest.fixture
     def sample_memo_read(self) -> MemoRead:
@@ -79,6 +82,32 @@ class TestMemoApplicationService:
         assert isinstance(result, MemoRead)
         assert result.title == sample_memo_read.title
         mock_memo_service.create.assert_called_once()
+
+    def test_create_with_tags_adds_each_tag_once(
+        self,
+        memo_app_service: MemoApplicationService,
+        mock_unit_of_work: Mock,
+        sample_memo_read: MemoRead,
+    ) -> None:
+        """タグ指定時は add_tag を順序通り呼び出す"""
+        mock_memo_service = mock_unit_of_work.service_factory.get_service.return_value
+        mock_memo_service.create.return_value = sample_memo_read
+        mock_memo_service.add_tag.return_value = sample_memo_read
+
+        first_tag = uuid.uuid4()
+        second_tag = uuid.uuid4()
+
+        memo_app_service.create(
+            title="メモタイトル",
+            content="本文",
+            tag_ids=[first_tag, second_tag, first_tag],  # 重複を除去できることを確認
+        )
+
+        mock_memo_service.add_tag.assert_has_calls(
+            [call(sample_memo_read.id, first_tag), call(sample_memo_read.id, second_tag)],
+            any_order=False,
+        )
+        assert mock_memo_service.add_tag.call_count == EXPECTED_PAIR_COUNT
 
     @pytest.mark.parametrize(
         ("title", "content", "expected_msg"),

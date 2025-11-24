@@ -62,6 +62,63 @@ def show_create_task_dialog(
         focused_border_color=ft.Colors.BLUE_600,
         label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
         options=[ft.dropdown.Option(key=key, text=label) for key, label in TASK_STATUS_LABELS.items()],
+        expand=True,
+    )
+
+    due_date_field = ft.TextField(
+        label="期限日",
+        hint_text="YYYY-MM-DD",
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        expand=True,
+    )
+
+    completed_at_field = ft.TextField(
+        label="完了日時",
+        hint_text="YYYY-MM-DD HH:MM:SS",
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        expand=True,
+    )
+
+    project_id_field = ft.TextField(
+        label="プロジェクトID",
+        hint_text="UUID",
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        expand=True,
+    )
+
+    memo_id_field = ft.TextField(
+        label="メモID",
+        hint_text="UUID",
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        expand=True,
+    )
+
+    recurrence_rule_field = ft.TextField(
+        label="繰り返しルール",
+        hint_text="例: FREQ=DAILY",
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        visible=False,
+        expand=True,
+    )
+
+    def on_recurring_change(e: ft.ControlEvent) -> None:
+        recurrence_rule_field.visible = e.control.value
+        recurrence_rule_field.update()
+
+    is_recurring_checkbox = ft.Checkbox(
+        label="繰り返しタスク",
+        on_change=on_recurring_change,
+        fill_color=ft.Colors.BLUE_600,
     )
 
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
@@ -83,6 +140,12 @@ def show_create_task_dialog(
             "title": title_field.value.strip(),
             "description": (description_field.value or "").strip(),
             "status": status_dropdown.value or "todo",
+            "due_date": due_date_field.value.strip() if due_date_field.value else None,
+            "completed_at": completed_at_field.value.strip() if completed_at_field.value else None,
+            "project_id": project_id_field.value.strip() if project_id_field.value else None,
+            "memo_id": memo_id_field.value.strip() if memo_id_field.value else None,
+            "is_recurring": str(is_recurring_checkbox.value),
+            "recurrence_rule": recurrence_rule_field.value.strip() if recurrence_rule_field.value else None,
         }
 
         if on_save:
@@ -120,12 +183,17 @@ def show_create_task_dialog(
                     # フォームフィールド
                     title_field,
                     description_field,
-                    status_dropdown,
+                    ft.Row([status_dropdown, due_date_field], spacing=20),
+                    ft.Row([project_id_field, memo_id_field], spacing=20),
+                    completed_at_field,
+                    is_recurring_checkbox,
+                    recurrence_rule_field,
                 ],
                 spacing=16,
                 tight=True,
+                scroll=ft.ScrollMode.AUTO,
             ),
-            width=500,
+            width=600,
         ),
         actions=[
             ft.TextButton(

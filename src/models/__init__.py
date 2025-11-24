@@ -58,6 +58,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
 
+from pydantic import ConfigDict
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -414,7 +415,11 @@ class MemoRead(MemoBase):
         processed_at (datetime | None): メモが最後に処理された日時。デフォルトはNone。
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
+    tags: List["TagRead"] = Field(default_factory=list)
+    tasks: List["TaskRead"] = Field(default_factory=list)
 
 
 class MemoUpdate(SQLModel):
@@ -520,7 +525,10 @@ class ProjectRead(ProjectBase):
         updated_at: プロジェクトの最終更新日時。
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
+    tasks: List["TaskRead"] = Field(default_factory=list)
 
 
 class ProjectUpdate(SQLModel):
@@ -616,6 +624,8 @@ class TagRead(TagBase):
         created_at: タグの作成日時。
         updated_at: タグの最終更新日時
     """
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
 
@@ -751,7 +761,10 @@ class TaskRead(TaskBase):
         updated_at: タスクの最終更新日時。
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
+    tags: List["TagRead"] = Field(default_factory=list)
 
 
 class TaskUpdate(SQLModel):

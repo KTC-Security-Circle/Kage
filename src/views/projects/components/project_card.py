@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from views.theme import get_status_color
 
@@ -19,14 +19,14 @@ if TYPE_CHECKING:
 
 
 def create_project_card(
-    project: dict[str, str],
-    on_edit: Callable[[ft.ControlEvent, dict[str, str]], None],
-    on_delete: Callable[[ft.ControlEvent, dict[str, str]], None],
+    project: dict[str, Any],
+    on_edit: Callable[[ft.ControlEvent, dict[str, Any]], None],
+    on_delete: Callable[[ft.ControlEvent, dict[str, Any]], None],
 ) -> ft.Control:
     """プロジェクトカードを作成する。
 
     Args:
-        project: プロジェクトデータ（id, name, description, status, tasks_count, created_at）
+        project: プロジェクトデータ（id, name, description, status, task_id, created_at）
         on_edit: 編集ボタンクリック時のコールバック
         on_delete: 削除ボタンクリック時のコールバック
 
@@ -100,7 +100,7 @@ def create_project_card(
                                         color=ft.Colors.GREY_600,
                                     ),
                                     ft.Text(
-                                        f"{project['tasks_count']} タスク",
+                                        f"{len(project.get('task_id', []))} タスク",
                                         style=ft.TextThemeStyle.BODY_SMALL,
                                         color=ft.Colors.GREY_600,
                                     ),

@@ -8,7 +8,7 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import LLMProvider, OpenVINODevice
 from agents.base import AgentError
 from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
 from agents.task_agents.memo_to_task.state import MemoToTaskState
@@ -369,3 +369,40 @@ class TestMemoApplicationService:
 
         out = memo_app_service.search("x", tags=[uuid.uuid4()])
         assert out == [m1]
+
+    def test_memo_agent_uses_runtime_device(
+        self, monkeypatch: pytest.MonkeyPatch, mock_unit_of_work_factory: Mock
+    ) -> None:
+        """設定から取得したデバイスが MemoToTaskAgent へ伝播する。"""
+
+        class AgentsStub:
+            def __init__(self) -> None:
+                self.provider = LLMProvider.OPENVINO
+                self.runtime = type("RuntimeStub", (), {"device": OpenVINODevice.GPU})()
+
+        class SettingsStub:
+            def __init__(self) -> None:
+                self._agents = AgentsStub()
+
+            def get_agents_settings(self) -> AgentsStub:
+                return self._agents
+
+        monkeypatch.setattr(
+            "logic.application.memo_application_service.SettingsApplicationService.get_instance",
+            lambda: SettingsStub(),
+        )
+
+        captured: dict[str, object] = {}
+
+        class DummyAgent:
+            def __init__(self, provider: LLMProvider, *, device: str | None = None) -> None:
+                captured["provider"] = provider
+                captured["device"] = device
+
+        monkeypatch.setattr("agents.task_agents.memo_to_task.agent.MemoToTaskAgent", DummyAgent)
+
+        service = MemoApplicationService(mock_unit_of_work_factory)  # type: ignore[arg-type]
+        service._get_memo_to_task_agent()
+
+        assert captured["provider"] == LLMProvider.OPENVINO
+        assert captured["device"] == OpenVINODevice.GPU.value

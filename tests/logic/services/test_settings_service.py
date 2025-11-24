@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from agents.agent_conf import OpenVINODevice
 from errors import ValidationError
 from logic.services.settings_service import SettingsService
 from settings.manager import ConfigManager
@@ -189,3 +190,19 @@ def test_update_setting_by_invalid_path(settings_service: SettingsService) -> No
     """不正なパスでの設定更新のテスト"""
     with pytest.raises(ValidationError, match="設定パスは少なくとも2階層必要"):
         settings_service.update_setting_by_path("theme", "dark")
+
+
+def test_load_settings_snapshot_contains_device(settings_service: SettingsService) -> None:
+    snapshot = settings_service.load_settings_snapshot()
+
+    assert snapshot["agent"]["device"] in {dev.value for dev in OpenVINODevice}
+
+
+def test_save_settings_snapshot_updates_device(settings_service: SettingsService) -> None:
+    snapshot = settings_service.load_settings_snapshot()
+    snapshot["agent"]["device"] = OpenVINODevice.GPU.value
+
+    settings_service.save_settings_snapshot(snapshot)
+
+    updated = settings_service.load_settings_snapshot()
+    assert updated["agent"]["device"] == OpenVINODevice.GPU.value

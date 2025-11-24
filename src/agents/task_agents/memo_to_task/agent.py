@@ -1109,7 +1109,9 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
         )
     except Exception as exc:
         agents_logger.warning("Falling back to FAKE provider due to init error: {}", str(exc))
-        agent = MemoToTaskAgent(LLMProvider.FAKE, verbose=True, error_response=False, persist_on_finalize=True)
+        agent = MemoToTaskAgent(
+            LLMProvider.FAKE, verbose=True, error_response=False, persist_on_finalize=True, device="AUTO"
+        )
 
     current_datetime = "2025-10-25T10:00:00+09:00"
 

@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import LLMProvider, OpenVINODevice
 from errors import ValidationError
 from settings.models import EditableAgentRuntimeSettings, EditableUserSettings, EditableWindowSettings
 
@@ -90,6 +90,11 @@ class SettingsController:
                 provider_enum = LLMProvider(provider_value)
             except ValueError:
                 provider_enum = LLMProvider.FAKE
+            device_value = (agent_data.get("device") or OpenVINODevice.CPU.value).upper()
+            try:
+                device_enum = OpenVINODevice(device_value)
+            except ValueError:
+                device_enum = OpenVINODevice.CPU
             snapshot = SettingsSnapshot(
                 appearance=EditableUserSettings(
                     theme=data["appearance"]["theme"],
@@ -106,6 +111,7 @@ class SettingsController:
                     model=agent_data.get("model"),
                     temperature=float(agent_data.get("temperature", 0.2)),
                     debug_mode=bool(agent_data.get("debug_mode", False)),
+                    device=device_enum,
                 ),
             )
 
@@ -155,6 +161,7 @@ class SettingsController:
                     "model": self.state.current.agent.model,
                     "temperature": self.state.current.agent.temperature,
                     "debug_mode": self.state.current.agent.debug_mode,
+                    "device": self.state.current.agent.device.value,
                 },
             }
 
@@ -293,6 +300,20 @@ class SettingsController:
             return
 
         new_agent = self.state.current.agent.model_copy(update={"debug_mode": bool(debug_mode)})
+        self._update_snapshot(agent=new_agent)
+
+    def update_agent_device(self, device_value: str) -> None:
+        """OpenVINO デバイス設定を更新する。"""
+        if self.state.current is None:
+            return
+
+        try:
+            device = OpenVINODevice(device_value.upper())
+        except ValueError:
+            self.state.set_error("OpenVINOデバイスの値が不正です")
+            return
+
+        new_agent = self.state.current.agent.model_copy(update={"device": device})
         self._update_snapshot(agent=new_agent)
 
     def apply_runtime_effects(self, page: Page) -> None:

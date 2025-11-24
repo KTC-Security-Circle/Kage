@@ -17,7 +17,7 @@ from uuid import uuid4
 
 from loguru import logger
 
-from agents.agent_conf import LLMProvider
+from agents.agent_conf import LLMProvider, OpenVINODevice
 from agents.base import AgentError
 from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
 from errors import ApplicationError
@@ -114,7 +114,7 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         if self._agent is None:
             from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
 
-            self._agent = MemoToTaskAgent(provider=self._get_provider())
+            self._agent = MemoToTaskAgent(provider=self._get_provider(), device=self._get_device())
         return self._agent
 
     def _invoke_agent(self, state: MemoToTaskState) -> MemoToTaskResult | AgentError:
@@ -129,6 +129,17 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
 
         settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
         return settings_app.get_agents_settings().provider
+
+    def _get_device(self) -> str:
+        """OPENVINO 用の実行デバイスを設定から取得する。"""
+        from typing import cast
+
+        settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+        runtime_cfg = settings_app.get_agents_settings().runtime
+        raw_device = getattr(runtime_cfg, "device", None)
+        if isinstance(raw_device, OpenVINODevice):
+            return raw_device.value
+        return str(raw_device or OpenVINODevice.CPU.value).upper()
 
     def _collect_existing_tag_names(self) -> list[str]:
         """既存タグの名称一覧を取得する。"""

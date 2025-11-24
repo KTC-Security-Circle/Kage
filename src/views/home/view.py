@@ -38,7 +38,7 @@ from logic.application.one_liner_application_service import OneLinerApplicationS
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.theme import SPACING, get_light_color
+from views.theme import SPACING
 
 from .controller import HomeController
 from .presenter import build_daily_review_card, build_inbox_memo_item, build_stat_card
@@ -154,34 +154,9 @@ class HomeView(BaseView):
         Returns:
             ヘッダーコントロール
         """
-        return ft.Row(
-            [
-                ft.Column(
-                    [
-                        ft.Text(
-                            "ホーム",
-                            size=32,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        ft.Text(
-                            "今日のタスクとプロジェクトの概要",
-                            size=16,
-                            color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
-                        ),
-                    ],
-                    spacing=SPACING.xs,
-                ),
-                ft.ElevatedButton(
-                    text="新しいメモ",
-                    icon=ft.Icons.ADD,
-                    on_click=lambda _: self._handle_action_click("/memos"),
-                    style=ft.ButtonStyle(
-                        bgcolor=get_light_color("primary"),
-                        color=ft.Colors.WHITE,
-                    ),
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        return self.create_header(
+            title="ホーム",
+            subtitle="今日のタスクとプロジェクトの概要",
         )
 
     def _build_daily_review_section(self) -> ft.Control:

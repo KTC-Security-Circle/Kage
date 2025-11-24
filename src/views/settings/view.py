@@ -141,27 +141,15 @@ class SettingsView(BaseView):
             expand=True,
         )
 
-    def _create_page_header(self) -> ft.Container:
+    def _create_page_header(self) -> ft.Control:
         """ページヘッダーを作成する。
 
         Returns:
-            ページヘッダーコンテナ
+            ページヘッダーコントロール
         """
-        return ft.Container(
-            content=ft.Row(
-                [
-                    ft.Icon(ft.Icons.SETTINGS, size=32),
-                    ft.Text(
-                        "設定",
-                        size=28,
-                        weight=ft.FontWeight.BOLD,
-                    ),
-                ],
-                alignment=ft.MainAxisAlignment.START,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=SPACING.md,
-            ),
-            margin=ft.margin.only(bottom=SPACING.md),
+        return self.create_header(
+            title="設定",
+            subtitle="アプリケーションの設定を管理",
         )
 
     def _create_section_card(

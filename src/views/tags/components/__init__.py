@@ -6,7 +6,6 @@
 from .action_bar import TagsActionBar, TagsActionBarProps, create_action_bar
 from .color_palette import create_color_palette
 from .empty_state import EmptyTagsState, EmptyTagsStateProps, create_empty_state
-from .page_header import create_page_header
 from .tag_detail_panel import (
     RelatedItem,
     TagDetailData,
@@ -29,7 +28,6 @@ __all__ = [
     "EmptyTagsState",
     "EmptyTagsStateProps",
     "create_empty_state",
-    "create_page_header",
     "RelatedItem",
     "TagDetailData",
     "TagDetailPanel",

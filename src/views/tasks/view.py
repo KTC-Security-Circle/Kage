@@ -267,18 +267,6 @@ class TasksView(BaseView):
         except Exception:
             return 0
 
-    def _on_tabs_change(self, e: ft.ControlEvent) -> None:
-        idx = getattr(e.control, "selected_index", 0) or 0
-        # 0番目は「すべて」= None、それ以外は STATUS_ORDER[idx-1]
-        new_status: str | None = None if idx == 0 else STATUS_ORDER[idx - 1]
-        self._controller.set_status(new_status)
-        if self._status_dropdown is not None:
-            self._status_dropdown.value = new_status or ""
-            with contextlib.suppress(AssertionError):
-                self._status_dropdown.update()
-        # タブ操作後の一覧反映
-        self.safe_update()
-
     def _refresh_tabs_badges(self) -> None:
         if not self._tabs:
             return

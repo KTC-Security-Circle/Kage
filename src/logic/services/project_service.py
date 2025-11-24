@@ -119,9 +119,25 @@ class ProjectService(ServiceBase):
         logger.info(f"プロジェクト '{existing_project.title}' を削除しました (ID: {project_id})")
         return success
 
+    @handle_service_errors(SERVICE_NAME, "タスク追加", ProjectServiceError)
+    @convert_read_model(ProjectRead)
+    def add_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:
+        """プロジェクトへタスクを関連付ける。
+
+        Args:
+            project_id: プロジェクトID
+            task_id: 追加するタスクID
+
+        Returns:
+            ProjectRead: 更新後プロジェクト
+        """
+        updated_project = self.project_repo.add_task(project_id, task_id)
+        logger.debug(f"プロジェクト({project_id})にタスク({task_id})を関連付けました。")
+        return updated_project
+
     @handle_service_errors(SERVICE_NAME, "タスク削除", ProjectServiceError)
     @convert_read_model(ProjectRead)
-    def remove_task(self, project_id: uuid.UUID, task_id: str) -> Project:
+    def remove_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:
         """プロジェクトからタスクを削除する
 
         Args:
@@ -150,11 +166,12 @@ class ProjectService(ServiceBase):
 
     @handle_service_errors(SERVICE_NAME, "取得", ProjectServiceError)
     @convert_read_model(ProjectRead)
-    def get_by_id(self, project_id: uuid.UUID) -> Project:
+    def get_by_id(self, project_id: uuid.UUID, *, with_details: bool = False) -> Project:
         """IDでプロジェクトを取得する
 
         Args:
             project_id: プロジェクトのID
+            with_details: 関連情報を含めるか
 
         Returns:
             ProjectRead: 見つかったプロジェクト、存在しない場合はNone
@@ -163,7 +180,7 @@ class ProjectService(ServiceBase):
             NotFoundError: プロジェクトが存在しない場合
             ProjectServiceError: プロジェクトの取得に失敗した場合
         """
-        project = self.project_repo.get_by_id(project_id)
+        project = self.project_repo.get_by_id(project_id, with_details=with_details)
         logger.debug(f"プロジェクトを取得しました: {project.id}")
         return project
 

@@ -158,15 +158,7 @@ class ProjectsView(BaseView):
 
     def _handle_create_click(self) -> None:
         """Header作成ボタンのクリック処理。"""
-
-        # ダミーのControlEventを作成して既存メソッドを呼び出す
-        class DummyControl:
-            pass
-
-        class DummyEvent:
-            control = DummyControl()
-
-        self._on_create_click(DummyEvent())  # type: ignore[arg-type]
+        self._create_project()
 
     def _render_list(self, projects: list[ProjectCardVM]) -> None:
         """プロジェクトリストを描画する。
@@ -581,11 +573,15 @@ class ProjectsView(BaseView):
             self._tabs.update()
 
     def _on_create_click(self, _: ft.ControlEvent) -> None:
-        """新規作成クリックイベント。
+        """UIイベントハンドラ: プロジェクト作成ボタンのクリック時に呼ばれる。
 
         Args:
             _: イベント引数（未使用）
         """
+        self._create_project()
+
+    def _create_project(self) -> None:
+        """プロジェクト作成のビジネスロジックを実行する。"""
         logger.debug("新規プロジェクトダイアログを開きます")
 
         # 既存の美しいダイアログ実装を利用

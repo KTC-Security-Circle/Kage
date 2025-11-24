@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 import pytest
 
 import logic.application.one_liner_application_service as one_liner_module
-from agents.agent_conf import HuggingFaceModel, LLMProvider
+from agents.agent_conf import HuggingFaceModel, LLMProvider, OpenVINODevice
 from logic.application.one_liner_application_service import (
     OneLinerApplicationService,
     OneLinerServiceError,
@@ -24,12 +24,18 @@ def stub_agent(monkeypatch: pytest.MonkeyPatch) -> type:
     class DummyAgent:
         """テスト専用の簡易エージェント。"""
 
-        last_init: ClassVar[tuple[LLMProvider, HuggingFaceModel | str | None] | None] = None
+        last_init: ClassVar[tuple[LLMProvider, HuggingFaceModel | str | None, str | None] | None] = None
         invoke_result: ClassVar[object] = SimpleNamespace(response="ok")
         invocations: ClassVar[list[tuple[OneLinerState, str]]] = []
 
-        def __init__(self, provider: LLMProvider, *, model_name: HuggingFaceModel | str | None = None) -> None:
-            type(self).last_init = (provider, model_name)
+        def __init__(
+            self,
+            provider: LLMProvider,
+            *,
+            model_name: HuggingFaceModel | str | None = None,
+            device: str | None = None,
+        ) -> None:
+            type(self).last_init = (provider, model_name, device)
 
         def invoke(self, state: OneLinerState, thread_id: str) -> object:
             type(self).invocations.append((state, thread_id))
@@ -48,13 +54,20 @@ def _stub_config(
     provider: LLMProvider,
     model: HuggingFaceModel | str | None,
     user_name: str = "Tester",
+    device: OpenVINODevice = OpenVINODevice.CPU,
 ) -> None:
     """SettingsApplicationService を差し替えて、テスト用設定を返す。"""
 
     class AgentsStub:
-        def __init__(self, provider_value: LLMProvider, model_value: HuggingFaceModel | str | None) -> None:
+        def __init__(
+            self,
+            provider_value: LLMProvider,
+            model_value: HuggingFaceModel | str | None,
+            runtime_device: OpenVINODevice,
+        ) -> None:
             self.provider = provider_value
             self._model_value = model_value
+            self.runtime = SimpleNamespace(device=runtime_device)
 
         def get_model_name(self, _: str) -> HuggingFaceModel | str | None:
             return self._model_value
@@ -65,7 +78,7 @@ def _stub_config(
 
     class SettingsAppStub:
         def __init__(self) -> None:
-            self._agents = AgentsStub(provider, model)
+            self._agents = AgentsStub(provider, model, device)
             self._user = UserStub(user_name)
 
         def get_agents_settings(self) -> AgentsStub:
@@ -101,7 +114,7 @@ def test_openvino_enum_model_is_accepted(monkeypatch: pytest.MonkeyPatch, stub_a
 
     service = OneLinerApplicationService()
 
-    assert stub_agent.last_init == (LLMProvider.OPENVINO, HuggingFaceModel.QWEN_3_8B_INT4)
+    assert stub_agent.last_init == (LLMProvider.OPENVINO, HuggingFaceModel.QWEN_3_8B_INT4, OpenVINODevice.CPU.value)
     assert service._get_default_message() == "今日も一日、お疲れさまです。"
 
 
@@ -124,7 +137,7 @@ def test_generate_one_liner_returns_agent_response(monkeypatch: pytest.MonkeyPat
     result = service.generate_one_liner(query)
 
     assert result == "こんにちは"
-    assert stub_agent.last_init == (LLMProvider.GOOGLE, "models/gemini-pro")
+    assert stub_agent.last_init == (LLMProvider.GOOGLE, "models/gemini-pro", OpenVINODevice.CPU.value)
     assert stub_agent.invocations[0][0]["user_name"] == "Bob"
 
 
@@ -170,3 +183,18 @@ def test_generate_one_liner_without_query_returns_default(monkeypatch: pytest.Mo
     assert generated_state["completed_task_count"] == expected_counts[TaskStatus.COMPLETED]
     assert generated_state["overdue_task_count"] == expected_counts[TaskStatus.OVERDUE]
     assert generated_state["user_name"] == "Tester"
+
+
+def test_agent_receives_gpu_device_setting(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
+    """設定で GPU を選択した場合にエージェントへ渡されることを検証する。"""
+
+    _stub_config(
+        monkeypatch,
+        provider=LLMProvider.FAKE,
+        model=None,
+        device=OpenVINODevice.GPU,
+    )
+
+    OneLinerApplicationService()
+
+    assert stub_agent.last_init == (LLMProvider.FAKE, None, OpenVINODevice.GPU.value)

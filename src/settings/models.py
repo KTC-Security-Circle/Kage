@@ -14,7 +14,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from agents.agent_conf import HuggingFaceModel, LLMProvider  # [AI GENERATED] Enum によるバリデーション
+from agents.agent_conf import HuggingFaceModel, LLMProvider, OpenVINODevice  # [AI GENERATED] Enum によるバリデーション
 
 # テーマ定数
 AVAILABLE_THEMES: Final[list[tuple[str, str]]] = [
@@ -102,8 +102,8 @@ class HuggingFaceAgentModels(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    one_liner: HuggingFaceModel | None = Field(
-        default=None,
+    one_liner: HuggingFaceModel = Field(
+        default=HuggingFaceModel.QWEN_3_8B_INT4,
         description="one_liner エージェント用 HuggingFaceModel Enum。None ならデフォルト内部値。",
     )
 
@@ -127,6 +127,10 @@ class AgentRuntimeSettings(BaseModel):
     model: str | None = Field(default=None, description="LLMモデル名。None の場合は内部既定を使用。")
     temperature: float = Field(default=0.2, ge=0.0, le=1.0, description="LLM温度 (0.0〜1.0)")
     debug_mode: bool = Field(default=False, description="詳細ログやデバッグモードを有効にする")
+    device: OpenVINODevice = Field(
+        default=OpenVINODevice.AUTO,
+        description="OpenVINO モデル実行時のターゲットデバイス",
+    )
 
 
 class AgentsSettings(BaseModel):
@@ -206,6 +210,7 @@ class EditableAgentRuntimeSettings(BaseModel):
     model: str | None = Field(default=None)
     temperature: float = Field(default=0.2, ge=0.0, le=1.0)
     debug_mode: bool = Field(default=False)
+    device: OpenVINODevice = Field(default=OpenVINODevice.AUTO)
 
 
 class EditableAgentsSettings(BaseModel):

@@ -106,6 +106,7 @@ class BaseAgent[StateType: BaseAgentState, ReturnType](ABC):
         model_name: str | None = None,
         verbose: bool = False,
         error_response: bool = False,
+        device: str | None = None,
     ) -> None:
         """初期化.
 
@@ -114,11 +115,13 @@ class BaseAgent[StateType: BaseAgentState, ReturnType](ABC):
             model_name (str | None): 使用するモデルの名前 (デフォルトはNone)
             verbose (bool): 詳細ログを有効にするかどうか (デフォルトはFalse)
             error_response (bool): 強制的にエラー応答を生成するかどうか (デフォルトはFalse)
+            device (str | None): OPENVINO モデル利用時の実行デバイス
         """
         self._model_name = model_name
         self._memory = get_memory()
         self._verbose = verbose
         self._error_response = error_response
+        self._device = device
 
         self.provider = provider
         self._graph = self._create_graph()
@@ -181,7 +184,7 @@ class BaseAgent[StateType: BaseAgentState, ReturnType](ABC):
             BaseChatModel: 使用するLLMモデル
         """
         if not self._model:
-            self._model = get_model(self.provider, self._model_name, self._fake_responses)
+            self._model = get_model(self.provider, self._model_name, self._fake_responses, device=self._device)
         return self._model
 
     def get_config(self, thread_id: str) -> RunnableConfig:

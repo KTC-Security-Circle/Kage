@@ -335,18 +335,18 @@ class TestProjectRepositoryRelations:
         assert other_task.id is not None
 
         # add_task: 追加 + 重複追加で二重に増えない
-        updated = project_repository.add_task(project.id, task.id)  # type: ignore[arg-type]
+        updated = project_repository.add_task(project.id, task.id)
         assert any(t.id == task.id for t in updated.tasks)
-        updated = project_repository.add_task(project.id, task.id)  # type: ignore[arg-type]
+        updated = project_repository.add_task(project.id, task.id)
         assert len([t for t in updated.tasks if t.id == task.id]) == 1
 
         # remove_task: 未関連の別タスクを指定しても例外にならない
-        updated = project_repository.remove_task(project.id, other_task.id)  # type: ignore[arg-type]
+        updated = project_repository.remove_task(project.id, other_task.id)
         assert all(t.id != other_task.id for t in updated.tasks)
 
         # remove_task: 存在しないタスクIDは NotFoundError
         with pytest.raises(NotFoundError):
-            project_repository.remove_task(project.id, uuid.uuid4())  # type: ignore[arg-type]
+            project_repository.remove_task(project.id, uuid.uuid4())
 
         # remove_all_tasks: タスクがある場合に全て消える
         updated = project_repository.remove_all_tasks(project.id)

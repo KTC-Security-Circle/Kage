@@ -26,7 +26,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
         self.model_class = Project
         super().__init__(session, load_options=[Project.tasks])
 
-    def _check_exists_task(self, task_id: str) -> Task:
+    def _check_exists_task(self, task_id: uuid.UUID) -> Task:
         """タスクが存在するか確認する
 
         Args:
@@ -45,7 +45,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
             raise NotFoundError(msg)
         return task
 
-    def add_task(self, project_id: uuid.UUID, task_id: str) -> Project:
+    def add_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:
         """プロジェクトにタスクを追加する
 
         Args:
@@ -71,7 +71,7 @@ class ProjectRepository(BaseRepository[Project, ProjectCreate, ProjectUpdate]):
 
         return project
 
-    def remove_task(self, project_id: uuid.UUID, task_id: str) -> Project:
+    def remove_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:
         """プロジェクトからタスクを削除する
 
         Args:

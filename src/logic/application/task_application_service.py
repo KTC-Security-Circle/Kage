@@ -17,6 +17,7 @@ from models import TaskCreate, TaskRead, TaskStatus, TaskUpdate
 
 if TYPE_CHECKING:
     import uuid
+    from datetime import date, datetime
 
 
 class TaskApplicationError(ApplicationError):
@@ -45,13 +46,31 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     @override
     def get_instance(cls, *args: Any, **kwargs: Any) -> TaskApplicationService: ...
 
-    def create(self, title: str, description: str | None = None, *, status: TaskStatus | None = None) -> TaskRead:
+    def create(  # noqa: PLR0913
+        self,
+        title: str,
+        description: str | None = None,
+        *,
+        status: TaskStatus | None = None,
+        project_id: uuid.UUID | None = None,
+        memo_id: uuid.UUID | None = None,
+        due_date: date | None = None,
+        completed_at: datetime | None = None,
+        is_recurring: bool | None = None,
+        recurrence_rule: str | None = None,
+    ) -> TaskRead:
         """タスクを作成する
 
         Args:
             title: タスクタイトル
             description: 詳細説明
             status: 初期ステータス（未指定時はモデル既定）
+            project_id: 紐づけるプロジェクトID
+            memo_id: 生成元メモのID
+            due_date: 期限日
+            completed_at: 完了日時
+            is_recurring: 繰り返しタスクかどうか
+            recurrence_rule: 繰り返しルール
 
         Returns:
             TaskRead: 作成されたタスク
@@ -63,7 +82,17 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             msg = "タスクタイトルを入力してください"
             raise TaskContentValidationError(msg)
 
-        create_model = TaskCreate(title=title, description=description, status=status or TaskStatus.TODO)
+        create_model = TaskCreate(
+            title=title,
+            description=description,
+            status=status or TaskStatus.TODO,
+            project_id=project_id,
+            memo_id=memo_id,
+            due_date=due_date,
+            completed_at=completed_at,
+            is_recurring=is_recurring if is_recurring is not None else False,
+            recurrence_rule=recurrence_rule,
+        )
 
         with self._unit_of_work_factory() as uow:
             task_service = uow.service_factory.get_service(TaskService)

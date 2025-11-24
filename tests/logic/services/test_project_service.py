@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import cast
 
 import pytest
 
@@ -49,10 +48,18 @@ class DummyProjectRepo:
         project = self.get_by_id(project_id)
         project.tasks = []
 
-    def remove_task(self, project_id: uuid.UUID, task_id: str | uuid.UUID) -> Project:
+    def add_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:
         project = self.get_by_id(project_id)
-        task_id_str = str(task_id)
-        project.tasks = [task for task in project.tasks if str(getattr(task, "id", None)) != task_id_str]
+        if not hasattr(project, "tasks") or project.tasks is None:
+            project.tasks = []
+        if any(getattr(task, "id", None) == task_id for task in project.tasks):
+            return project
+        project.tasks.append(Task(id=task_id, title="linked", status=ProjectStatus.ACTIVE))
+        return project
+
+    def remove_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:
+        project = self.get_by_id(project_id)
+        project.tasks = [task for task in project.tasks if getattr(task, "id", None) != task_id]
         return project
 
     def list_by_status(self, status: ProjectStatus) -> list[Project]:
@@ -165,7 +172,7 @@ def test_remove_task_not_found_when_not_attached(svc: ProjectService) -> None:
     assert proj.id is not None
 
     with pytest.raises(NotFoundError):
-        svc.remove_task(proj.id, "missing-task")  # type: ignore[arg-type]
+        svc.remove_task(proj.id, uuid.uuid4())
 
 
 def test_update_returns_read_model(svc: ProjectService) -> None:
@@ -186,9 +193,19 @@ def test_remove_task_success() -> None:
     task_uuid = uuid.uuid4()
     task = Task(id=task_uuid, title="t", project_id=project.id)
     project.tasks = [task]
-    task_id = cast("str", task_uuid)
 
-    result = service.remove_task(project.id, task_id)
+    result = service.remove_task(project.id, task_uuid)
+    assert isinstance(result, ProjectRead)
+
+
+def test_add_task_delegates_to_repository() -> None:
+    repo = DummyProjectRepo()
+    svc = ProjectService(project_repo=repo)  # type: ignore[arg-type]
+    project = repo.create(ProjectCreate(title="p"))
+    assert project.id is not None
+    task_uuid = uuid.uuid4()
+
+    result = svc.add_task(project.id, task_uuid)
     assert isinstance(result, ProjectRead)
 
 

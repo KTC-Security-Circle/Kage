@@ -46,9 +46,10 @@ from logic.application.memo_ai_job_queue import GeneratedTaskPayload, MemoAiJobS
 from logic.application.memo_application_service import MemoApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
+from views.shared.components import ActionBar
 
 from . import presenter
-from .components import MemoActionBar, MemoCardList, MemoFilters, MemoStatusTabs
+from .components import MemoCardList, MemoFilters, MemoStatusTabs
 from .controller import MemoApplicationPort, MemosController
 from .state import AiSuggestedTask, MemosViewState
 
@@ -82,7 +83,7 @@ class MemosView(BaseView):
         self.controller = MemosController(memo_app=memo_app, state=self.memos_state)
 
         # UIコンポーネント
-        self._action_bar: MemoActionBar | None = None
+        self._action_bar: ActionBar | None = None
         self._status_tabs: MemoStatusTabs | None = None
         self._memo_list: MemoCardList | None = None
         self._memo_filters: MemoFilters | None = None
@@ -104,7 +105,7 @@ class MemosView(BaseView):
             on_create_memo=self._handle_create_memo,
             on_search=self._handle_search,
         )
-        self._action_bar = MemoActionBar(action_bar_data)
+        self._action_bar = ActionBar(action_bar_data)
 
         # ステータスタブ
         self._status_tabs = MemoStatusTabs(

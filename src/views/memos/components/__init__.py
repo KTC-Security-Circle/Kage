@@ -6,12 +6,6 @@
 
 【コンポーネント一覧と責務】
 
-    MemoActionBar (action_bar.py)
-        - 検索フィールドと新規作成ボタンを含むアクションバー
-        - タイトル・サブタイトルの表示
-        - 検索クエリの入力受付とコールバック
-        - 新規作成イベントのトリガー
-
     MemoStatusTabs (status_tabs.py)
         - 4つのステータスタブ（Inbox/Active/Idea/Archive）の表示
         - タブごとの件数バッジ表示
@@ -52,21 +46,19 @@
             Controller
 
 【使用例】
-    # アクションバーの作成と配置
-    action_bar = MemoActionBar(
-        on_create_memo=self._handle_create,
-        on_search=self._handle_search,
-    )
-
     # ステータスタブの作成
     status_tabs = MemoStatusTabs(
         on_tab_change=self._handle_tab_change,
         active_status=MemoStatus.INBOX,
         tab_counts={MemoStatus.INBOX: 5, ...},
     )
+
+    # フィルタの作成
+    filters = MemoFilters(
+        on_filter_change=self._handle_filter_change,
+    )
 """
 
-from .action_bar import MemoActionBar
 from .create_form import CreateForm, FormCallbacks
 from .create_header import CreateHeader
 from .filters import MemoFilters
@@ -77,7 +69,6 @@ from .status_tabs import MemoStatusTabs
 __all__ = [
     "MemoCard",
     "MemoCardList",
-    "MemoActionBar",
     "CreateHeader",
     "CreateForm",
     "FormCallbacks",

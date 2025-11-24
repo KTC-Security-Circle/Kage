@@ -37,7 +37,7 @@
 【提供する関数カテゴリ】
     1. データクラス生成
         - create_memo_card_data(): MemoCardData生成
-        - create_action_bar_data(): ActionBarData生成
+        - create_action_bar_data(): ActionBarData生成（汎用views.shared.components.ActionBarData）
         - create_status_tabs_data(): StatusTabsData生成
         - create_filter_data(): FilterData生成
         - create_memo_list_data(): MemoListData生成
@@ -74,11 +74,11 @@ import flet as ft
 from loguru import logger
 
 from models import AiSuggestionStatus, MemoStatus
+from views.shared.components import ActionBarData, ActionButtonData
 
-from .components.action_bar import DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH, ActionBarData
 from .components.filters import FilterConfig, FilterData
 from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
-from .components.shared.constants import DEFAULT_DATE_TEXT
+from .components.shared.constants import DEFAULT_DATE_TEXT, DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH
 from .components.status_tabs import StatusTabsData, TabData
 from .components.types import MemoListData
 
@@ -147,7 +147,7 @@ def create_action_bar_data(
     on_create_memo: Callable[[], None] | None = None,
     on_search: Callable[[str], None] | None = None,
 ) -> ActionBarData:
-    """ActionBarDataを生成する。
+    """ActionBarDataを生成する（汎用ActionBarData対応）。
 
     Args:
         title: タイトル
@@ -159,12 +159,24 @@ def create_action_bar_data(
     Returns:
         ActionBarData
     """
+    action_buttons = []
+    if on_create_memo:
+        action_buttons.append(
+            ActionButtonData(
+                label="新しいメモ",
+                icon=ft.Icons.ADD,
+                on_click=on_create_memo,
+                is_primary=True,
+            )
+        )
+
     return ActionBarData(
         title=title,
         subtitle=subtitle,
         search_placeholder=search_placeholder,
-        on_create_memo=on_create_memo,
         on_search=on_search,
+        action_buttons=action_buttons if action_buttons else None,
+        show_search=on_search is not None,
     )
 
 

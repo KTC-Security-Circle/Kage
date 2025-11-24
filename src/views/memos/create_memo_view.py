@@ -23,9 +23,9 @@ from loguru import logger
 from logic.application.memo_application_service import MemoApplicationService
 from models import MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
+from views.shared.components import ActionBar, ActionBarData, ActionButtonData
 
 from .components.create_form import CreateForm, FormCallbacks
-from .components.create_header import CreateHeader
 
 # TODO: [Logic] メモ永続化の統合（ロジック担当）
 # - ApplicationService 統合: MemoApplicationService.create(...) を用意し DI 経由で取得
@@ -69,7 +69,7 @@ class CreateMemoView(BaseView):
         self.state_local = CreateMemoState()
 
         # UI controls (late init)
-        self._header: CreateHeader | None = None
+        self._action_bar: ActionBar | None = None
         self._form: CreateForm | None = None
 
         self.did_mount()
@@ -83,13 +83,39 @@ class CreateMemoView(BaseView):
 
     def _build_header(self) -> ft.Control:
         """固定ヘッダー（戻る/タイトル/キャンセル/保存）。"""
-        self._header = CreateHeader(
-            on_back=self._handle_back,
-            on_cancel=self._handle_cancel,
-            on_save=self._handle_save,
-            can_save=self._can_save(),
+        action_bar_data = ActionBarData(
+            title="新しいメモを作成",
+            subtitle="マークダウン形式で記述できます",
+            show_search=False,
+            leading_buttons=[
+                ActionButtonData(
+                    label="戻る",
+                    icon=ft.Icons.ARROW_BACK,
+                    on_click=self._handle_back,
+                    is_outlined=True,
+                    is_primary=False,
+                ),
+            ],
+            action_buttons=[
+                ActionButtonData(
+                    label="キャンセル",
+                    icon=None,
+                    on_click=self._handle_cancel,
+                    is_outlined=True,
+                    is_primary=False,
+                ),
+                ActionButtonData(
+                    label="保存",
+                    icon=ft.Icons.SAVE,
+                    on_click=self._handle_save,
+                    is_primary=True,
+                    button_id="save_button",
+                    disabled=not self._can_save(),
+                ),
+            ],
         )
-        return self._header
+        self._action_bar = ActionBar(action_bar_data)
+        return self._action_bar
 
     def _build_body(self) -> ft.Control:
         """メイン2カラムの本体部分を構築する。"""
@@ -198,11 +224,11 @@ class CreateMemoView(BaseView):
 
     def _update_save_button(self) -> None:
         # ヘッダーの保存ボタンの状態を直接更新
-        if self._header is not None:
+        if self._action_bar is not None:
             if self._can_save():
-                self._header.enable_save()
+                self._action_bar.enable_button("save_button")
             else:
-                self._header.disable_save()
+                self._action_bar.disable_button("save_button")
 
     def _handle_back(self) -> None:
         self.page.go("/memos")
@@ -220,13 +246,13 @@ class CreateMemoView(BaseView):
         status = self.state_local.status
 
         def _save() -> None:
-            if self._header is not None:
-                self._header.disable_save()
+            if self._action_bar is not None:
+                self._action_bar.disable_button("save_button")
             try:
                 created = self._memo_app.create(title=title, content=content, status=status)
             except Exception:
-                if self._header is not None:
-                    self._header.enable_save()
+                if self._action_bar is not None:
+                    self._action_bar.enable_button("save_button")
                 raise
 
             logger.info("Memo created via CreateMemoView: id=%s, status=%s", created.id, created.status)

@@ -141,12 +141,23 @@ class ProjectApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]
 
         project_repo = uow.repository_factory.create(_ProjectRepository)
         project = project_repo.get_by_id(project_id, with_details=True)
+        if not hasattr(project, "tasks"):
+            msg = f"プロジェクトID {project_id} のタスク情報が取得できません。"
+            raise ProjectApplicationError(msg)
 
         current_ids = {task.id for task in getattr(project, "tasks", []) if getattr(task, "id", None) is not None}
-        desired_ids = {task_id for task_id in task_ids if task_id is not None}
 
-        for task_id in desired_ids - current_ids:
-            proj_service.add_task(project_id, task_id)
+        desired_ids_ordered: list[uuid.UUID] = []
+        desired_ids_set: set[uuid.UUID] = set()
+        for task_id in task_ids:
+            if task_id is None or task_id in desired_ids_set:
+                continue
+            desired_ids_set.add(task_id)
+            desired_ids_ordered.append(task_id)
 
-        for task_id in current_ids - desired_ids:
+        for task_id in desired_ids_ordered:
+            if task_id not in current_ids:
+                proj_service.add_task(project_id, task_id)
+
+        for task_id in current_ids - desired_ids_set:
             proj_service.remove_task(project_id, task_id)

@@ -6,7 +6,7 @@ import pytest
 
 from errors import NotFoundError, RepositoryError
 from logic.services.project_service import ProjectService, ProjectServiceError
-from models import Project, ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate, Task
+from models import Project, ProjectCreate, ProjectRead, ProjectStatus, ProjectUpdate, Task, TaskStatus
 
 
 class DummyProjectRepo:
@@ -54,7 +54,7 @@ class DummyProjectRepo:
             project.tasks = []
         if any(getattr(task, "id", None) == task_id for task in project.tasks):
             return project
-        project.tasks.append(Task(id=task_id, title="linked", status=ProjectStatus.ACTIVE))
+        project.tasks.append(Task(id=task_id, title="linked", status=TaskStatus.TODO))
         return project
 
     def remove_task(self, project_id: uuid.UUID, task_id: uuid.UUID) -> Project:

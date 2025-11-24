@@ -1,7 +1,7 @@
 """汎用アクションバーコンポーネント
 
 【責務】
-- 整形済みデータ（ActionBarData）を受け取り、UIを構築する
+- 整形済みデータ（HeaderData）を受け取り、UIを構築する
 - アクションバーのレイアウト、スタイリング
 - 検索入力、アクションボタンのイベント委譲
 
@@ -11,22 +11,22 @@
 - 状態管理（各ビューのStateで管理）
 
 【設計上の特徴】
-- ActionBarDataを受け取る汎用設計
+- HeaderDataを受け取る汎用設計
 - 複数のアクションボタンをサポート
 - 検索フィールドの参照を保持（外部から操作可能）
 - Memos/Tags/Tasks/Projectsなど様々なビューで再利用可能
 
 【使用例】
 ```python
-from views.shared.components.action_bar import ActionBar, ActionBarData, ActionButtonData
+from views.shared.components.action_bar import Header, HeaderData, HeaderButtonData
 
-data = ActionBarData(
+data = HeaderData(
     title="メモ",
     subtitle="思考とアイデアを記録",
     search_placeholder="メモを検索...",
     on_search=search_handler,
     action_buttons=[
-        ActionButtonData(
+        HeaderButtonData(
             label="新しいメモ",
             icon=ft.Icons.ADD,
             on_click=create_handler,
@@ -34,7 +34,7 @@ data = ActionBarData(
         ),
     ],
 )
-action_bar = ActionBar(data=data)
+action_bar = Header(data=data)
 ```
 """
 
@@ -50,26 +50,26 @@ if TYPE_CHECKING:
 
 
 # ========================================
-# ActionBar専用定数
+# Header専用定数
 # ========================================
 
 MIN_SEARCH_LENGTH: Final[int] = 2
-"""検索クエリの最小文字数（汎用ActionBar専用）"""
+"""検索クエリの最小文字数（汎用Header専用）"""
 
 DEFAULT_SEARCH_PLACEHOLDER: Final[str] = "検索..."
-"""検索フィールドのデフォルトプレースホルダー（汎用ActionBar専用）"""
+"""検索フィールドのデフォルトプレースホルダー（汎用Header専用）"""
 
-ACTION_BAR_PADDING: Final[int] = 20
-"""アクションバーのパディング（汎用ActionBar専用）"""
+HEADER_PADDING: Final[int] = 20
+"""アクションバーのパディング（汎用Header専用）"""
 
 
 # ========================================
-# ActionBar専用データクラス
+# Header専用データクラス
 # ========================================
 
 
 @dataclass(frozen=True, slots=True)
-class ActionButtonData:
+class HeaderButtonData:
     """アクションボタン表示用データ
 
     Attributes:
@@ -94,7 +94,7 @@ class ActionButtonData:
 
 
 @dataclass(frozen=True, slots=True)
-class ActionBarData:
+class HeaderData:
     """アクションバー表示用データ（汎用）
 
     Attributes:
@@ -111,8 +111,8 @@ class ActionBarData:
     subtitle: str
     search_placeholder: str = DEFAULT_SEARCH_PLACEHOLDER
     on_search: Callable[[str], None] | None = None
-    action_buttons: list[ActionButtonData] | None = None
-    leading_buttons: list[ActionButtonData] | None = None
+    action_buttons: list[HeaderButtonData] | None = None
+    leading_buttons: list[HeaderButtonData] | None = None
     show_search: bool = True
 
 
@@ -121,14 +121,14 @@ class ActionBarData:
 # ========================================
 
 
-class ActionBar(ft.Container):
+class Header(ft.Container):
     """汎用アクションバー
 
-    整形済みのActionBarDataを受け取り、視覚的なバーUIを構築する。
+    整形済みのHeaderDataを受け取り、視覚的なバーUIを構築する。
     様々なビュー（Memos/Tags/Tasks/Projects等）で再利用可能。
     """
 
-    def __init__(self, data: ActionBarData) -> None:
+    def __init__(self, data: HeaderData) -> None:
         """汎用アクションバーを初期化。
 
         Args:
@@ -140,7 +140,7 @@ class ActionBar(ft.Container):
 
         super().__init__(
             content=self._build_action_bar(),
-            padding=ft.padding.all(ACTION_BAR_PADDING),
+            padding=ft.padding.all(HEADER_PADDING),
             bgcolor=ft.Colors.SURFACE,
             border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
         )
@@ -220,7 +220,7 @@ class ActionBar(ft.Container):
 
         return ft.Row(controls=controls, spacing=12)
 
-    def _create_action_button(self, button_data: ActionButtonData) -> ft.Control:
+    def _create_action_button(self, button_data: HeaderButtonData) -> ft.Control:
         """アクションボタンを作成。
 
         Args:

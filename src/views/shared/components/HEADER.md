@@ -4,23 +4,23 @@ views/sharedディレクトリには、複数のビュー間で再利用可能�
 
 ## コンポーネント一覧
 
-### ActionBar
+### Header
 
 汎用的なアクションバーコンポーネント。タイトル、サブタイトル、検索フィールド、アクションボタンを含みます。
 
 **使用例:**
 
 ```python
-from views.shared.components import ActionBar, ActionBarData, ActionButtonData
+from views.shared.components import Header, HeaderData, HeaderButtonData
 
 # データを作成
-action_bar_data = ActionBarData(
+header_data = HeaderData(
     title="メモ",
     subtitle="思考とアイデアを記録し、AIでタスクに変換",
     search_placeholder="メモを検索...",
     on_search=handle_search,
     action_buttons=[
-        ActionButtonData(
+        HeaderButtonData(
             label="新しいメモ",
             icon=ft.Icons.ADD,
             on_click=handle_create,
@@ -31,7 +31,7 @@ action_bar_data = ActionBarData(
 )
 
 # コンポーネントを作成
-action_bar = ActionBar(action_bar_data)
+header = Header(header_data)
 ```
 
 **主な機能:**
@@ -57,7 +57,7 @@ action_bar = ActionBar(action_bar_data)
 
 ## データクラス
 
-### ActionBarData
+### HeaderData
 
 アクションバーの表示データ。
 
@@ -67,11 +67,11 @@ action_bar = ActionBar(action_bar_data)
 - `subtitle: str` - サブタイトル
 - `search_placeholder: str` - 検索フィールドのプレースホルダー（デフォルト: "検索..."）
 - `on_search: Callable[[str], None] | None` - 検索入力のコールバック
-- `action_buttons: list[ActionButtonData] | None` - 右側のアクションボタンのリスト
-- `leading_buttons: list[ActionButtonData] | None` - 左側のボタンのリスト（戻るボタン等）
+- `action_buttons: list[HeaderButtonData] | None` - 右側のアクションボタンのリスト
+- `leading_buttons: list[HeaderButtonData] | None` - 左側のボタンのリスト（戻るボタン等）
 - `show_search: bool` - 検索フィールドを表示するか（デフォルト: True）
 
-### ActionButtonData
+### HeaderButtonData
 
 アクションボタンの表示データ。
 
@@ -96,24 +96,24 @@ action_bar = ActionBar(action_bar_data)
 
 ## Presenter層との連携
 
-各ビューのPresenter層で、ビュー固有のデータからActionBarDataを生成します。
+各ビューのPresenter層で、ビュー固有のデータからHeaderDataを生成します。
 
 **例（memos/presenter.py）:**
 
 ```python
-def create_action_bar_data(
+def create_header_data(
     *,
     title: str = "メモ",
     subtitle: str = "思考とアイデアを記録し、AIでタスクに変換",
     search_placeholder: str = "メモを検索...",
     on_create_memo: Callable[[], None] | None = None,
     on_search: Callable[[str], None] | None = None,
-) -> ActionBarData:
-    """ActionBarDataを生成する（汎用ActionBarData対応）。"""
+) -> HeaderData:
+    """HeaderDataを生成する（汎用HeaderData対応）。"""
     action_buttons = []
     if on_create_memo:
         action_buttons.append(
-            ActionButtonData(
+            HeaderButtonData(
                 label="新しいメモ",
                 icon=ft.Icons.ADD,
                 on_click=on_create_memo,
@@ -121,7 +121,7 @@ def create_action_bar_data(
             )
         )
 
-    return ActionBarData(
+    return HeaderData(
         title=title,
         subtitle=subtitle,
         search_placeholder=search_placeholder,
@@ -137,12 +137,12 @@ def create_action_bar_data(
 
 ```python
 # ヘッダーを作成
-action_bar_data = ActionBarData(
+header_data = HeaderData(
     title="新しいメモを作成",
     subtitle="マークダウン形式で記述できます",
     show_search=False,
     leading_buttons=[
-        ActionButtonData(
+        HeaderButtonData(
             label="戻る",
             icon=ft.Icons.ARROW_BACK,
             on_click=handle_back,
@@ -151,13 +151,13 @@ action_bar_data = ActionBarData(
         ),
     ],
     action_buttons=[
-        ActionButtonData(
+        HeaderButtonData(
             label="キャンセル",
             on_click=handle_cancel,
             is_outlined=True,
             is_primary=False,
         ),
-        ActionButtonData(
+        HeaderButtonData(
             label="保存",
             icon=ft.Icons.SAVE,
             on_click=handle_save,
@@ -167,19 +167,19 @@ action_bar_data = ActionBarData(
         ),
     ],
 )
-action_bar = ActionBar(action_bar_data)
+header = Header(header_data)
 
 # 後で動的に有効化
-action_bar.enable_button("save_button")
+header.enable_button("save_button")
 
 # 保存中は無効化
-action_bar.disable_button("save_button")
+header.disable_button("save_button")
 ```
 
 ## 今後の拡張
 
-- Tags用のActionBar設定例の追加
-- Tasks用のActionBar設定例の追加
-- Projects用のActionBar設定例の追加
+- Tags用のHeader設定例の追加
+- Tasks用のHeader設定例の追加
+- Projects用のHeader設定例の追加
 - フィルタボタンの統合
 - エクスポートボタンの統合

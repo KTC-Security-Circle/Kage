@@ -37,7 +37,7 @@
 【提供する関数カテゴリ】
     1. データクラス生成
         - create_memo_card_data(): MemoCardData生成
-        - create_action_bar_data(): ActionBarData生成（汎用views.shared.components.ActionBarData）
+        - create_action_bar_data(): HeaderData生成（汎用views.shared.components.HeaderData）
         - create_status_tabs_data(): StatusTabsData生成
         - create_filter_data(): FilterData生成
         - create_memo_list_data(): MemoListData生成
@@ -74,7 +74,7 @@ import flet as ft
 from loguru import logger
 
 from models import AiSuggestionStatus, MemoStatus
-from views.shared.components import ActionBarData, ActionButtonData
+from views.shared.components import HeaderButtonData, HeaderData
 
 from .components.filters import FilterConfig, FilterData
 from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
@@ -146,8 +146,8 @@ def create_action_bar_data(
     search_placeholder: str = DEFAULT_SEARCH_PLACEHOLDER,
     on_create_memo: Callable[[], None] | None = None,
     on_search: Callable[[str], None] | None = None,
-) -> ActionBarData:
-    """ActionBarDataを生成する（汎用ActionBarData対応）。
+) -> HeaderData:
+    """HeaderDataを生成する（汎用HeaderData対応）。
 
     Args:
         title: タイトル
@@ -157,12 +157,12 @@ def create_action_bar_data(
         on_search: 検索コールバック
 
     Returns:
-        ActionBarData
+        HeaderData
     """
     action_buttons = []
     if on_create_memo:
         action_buttons.append(
-            ActionButtonData(
+            HeaderButtonData(
                 label="新しいメモ",
                 icon=ft.Icons.ADD,
                 on_click=on_create_memo,
@@ -170,7 +170,7 @@ def create_action_bar_data(
             )
         )
 
-    return ActionBarData(
+    return HeaderData(
         title=title,
         subtitle=subtitle,
         search_placeholder=search_placeholder,

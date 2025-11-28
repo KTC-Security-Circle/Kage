@@ -354,7 +354,7 @@ class ApplicationHomeQuery(HomeQuery):
                 {
                     "icon": "lightbulb",
                     "color": "purple",
-                    "message": f"{len(inbox_memos)}件のInboxメモがあります。AIにタスクを生成させて整理しましょう。",
+                    "message": f"{len(inbox_memos)}件のメモがあります。AIにタスクを生成させて整理しましょう。",
                     "action_text": "メモを整理する",
                     "action_route": "/memos",
                     "priority": "medium",

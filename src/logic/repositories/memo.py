@@ -1,6 +1,9 @@
 """メモリポジトリの実装"""
 
 import uuid
+from collections.abc import Iterable
+from datetime import datetime
+from typing import Any, cast
 
 from loguru import logger
 from sqlmodel import Session, func, select
@@ -245,4 +248,32 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
         stmt = select(Memo).where(func.lower(Memo.content).contains(func.lower(content_query)))
         if with_details:
             stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)
+
+    def list_unprocessed_memos(
+        self,
+        created_after: datetime,
+        *,
+        statuses: Iterable[MemoStatus] | None = None,
+        limit: int = 20,
+        with_details: bool = True,
+    ) -> list[Memo]:
+        """タスク化されていない未処理メモを抽出する。"""
+        status_values = list(statuses or (MemoStatus.INBOX, MemoStatus.IDEA))
+        created_col = cast("Any", Memo.created_at)
+        status_col = cast("Any", Memo.status)
+        tasks_rel = cast("Any", Memo.tasks)
+
+        stmt = (
+            select(Memo)
+            .where(created_col >= created_after)
+            .where(status_col.in_(status_values))
+            .where(~tasks_rel.any())
+            .order_by(created_col.desc())
+            .limit(limit)
+        )
+
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+
         return self._gets_by_statement(stmt)

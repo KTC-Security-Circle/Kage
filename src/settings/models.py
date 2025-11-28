@@ -22,6 +22,12 @@ AVAILABLE_THEMES: Final[list[tuple[str, str]]] = [
     ("dark", "ダーク"),
 ]
 
+REVIEW_DEFAULT_RANGE_DAYS: Final[int] = 7
+REVIEW_DEFAULT_ZOMBIE_THRESHOLD_DAYS: Final[int] = 14
+REVIEW_DEFAULT_MAX_COMPLETED: Final[int] = 30
+REVIEW_DEFAULT_MAX_ZOMBIE: Final[int] = 20
+REVIEW_DEFAULT_MAX_MEMOS: Final[int] = 20
+
 
 class WindowSettings(BaseModel):
     """ウィンドウ表示に関する設定。
@@ -95,6 +101,55 @@ class EditableUserSettings(BaseModel):
         default="",
         description="アプリ内で表示/プロンプトに利用する利用者の表示名。",
     )
+
+
+class ReviewSettings(BaseModel):
+    """週次レビュー機能に関する設定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    default_range_days: int = Field(
+        default=REVIEW_DEFAULT_RANGE_DAYS,
+        ge=1,
+        le=31,
+        description="週次レビュー期間のデフォルト（日数）。",
+    )
+    default_zombie_threshold_days: int = Field(
+        default=REVIEW_DEFAULT_ZOMBIE_THRESHOLD_DAYS,
+        ge=1,
+        le=60,
+        description="ゾンビタスク判定に用いる経過日数。",
+    )
+    max_completed_tasks: int = Field(
+        default=REVIEW_DEFAULT_MAX_COMPLETED,
+        ge=1,
+        le=200,
+        description="成果サマリーに含める完了タスクの最大件数。",
+    )
+    max_stale_tasks: int = Field(
+        default=REVIEW_DEFAULT_MAX_ZOMBIE,
+        ge=1,
+        le=200,
+        description="ゾンビ候補に含めるタスクの最大件数。",
+    )
+    max_unprocessed_memos: int = Field(
+        default=REVIEW_DEFAULT_MAX_MEMOS,
+        ge=1,
+        le=200,
+        description="棚卸し対象に含める未処理メモの最大件数。",
+    )
+
+
+class EditableReviewSettings(BaseModel):
+    """編集可能な週次レビュー設定。"""
+
+    model_config = ConfigDict(frozen=False)
+
+    default_range_days: int = Field(default=REVIEW_DEFAULT_RANGE_DAYS, ge=1, le=31)
+    default_zombie_threshold_days: int = Field(default=REVIEW_DEFAULT_ZOMBIE_THRESHOLD_DAYS, ge=1, le=60)
+    max_completed_tasks: int = Field(default=REVIEW_DEFAULT_MAX_COMPLETED, ge=1, le=200)
+    max_stale_tasks: int = Field(default=REVIEW_DEFAULT_MAX_ZOMBIE, ge=1, le=200)
+    max_unprocessed_memos: int = Field(default=REVIEW_DEFAULT_MAX_MEMOS, ge=1, le=200)
 
 
 class HuggingFaceAgentModels(BaseModel):
@@ -299,6 +354,7 @@ class AppSettings(BaseModel):
     user: UserSettings = Field(default_factory=UserSettings, description="ユーザー関連設定。")
     database: DatabaseSettings = Field(default_factory=DatabaseSettings, description="データベース設定。")
     agents: AgentsSettings = Field(default_factory=AgentsSettings, description="エージェント関連設定。")
+    review: ReviewSettings = Field(default_factory=ReviewSettings, description="週次レビュー支援の既定値。")
 
     # one_liner_provider は agents.one_liner_provider をそのまま利用 (Enum 化後は単純委譲不要)
 
@@ -314,6 +370,7 @@ class EditableAppSettings(BaseModel):
         default_factory=EditableDatabaseSettings, description="データベース設定。"
     )
     agents: EditableAgentsSettings = Field(default_factory=EditableAgentsSettings, description="エージェント関連設定。")
+    review: EditableReviewSettings = Field(default_factory=EditableReviewSettings, description="週次レビュー設定。")
 
     # Editable も単純参照で十分 (直接 editable.agents.one_liner_provider を編集)
 

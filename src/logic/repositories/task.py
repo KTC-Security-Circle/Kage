@@ -1,6 +1,9 @@
 """タスクリポジトリの実装"""
 
 import uuid
+from collections.abc import Iterable
+from datetime import datetime
+from typing import Any, cast
 
 from loguru import logger
 from sqlmodel import Session, func, select
@@ -221,4 +224,67 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
         stmt = select(Task).join(TaskTagLink).join(Tag).where(Tag.id == tag_id)
         if with_details:
             stmt = self._apply_eager_loading(stmt)
+        return self._gets_by_statement(stmt)
+
+    def list_completed_between(
+        self,
+        start: datetime,
+        end: datetime,
+        *,
+        project_ids: list[uuid.UUID] | None = None,
+        limit: int = 50,
+        with_details: bool = True,
+    ) -> list[Task]:
+        """期間内に完了したタスクを取得する。"""
+        completed_col = cast("Any", Task.completed_at)
+        project_col = cast("Any", Task.project_id)
+        stmt = (
+            select(Task)
+            .where(Task.status == TaskStatus.COMPLETED)
+            .where(completed_col.is_not(None))
+            .where(completed_col >= start)
+            .where(completed_col <= end)
+            .order_by(completed_col.desc())
+            .limit(limit)
+        )
+
+        if project_ids:
+            stmt = stmt.where(project_col.in_(project_ids))
+
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+
+        return self._gets_by_statement(stmt)
+
+    def list_stale_tasks(
+        self,
+        created_before: datetime,
+        *,
+        project_ids: list[uuid.UUID] | None = None,
+        status_filter: Iterable[TaskStatus] | None = None,
+        limit: int = 20,
+        with_details: bool = True,
+    ) -> list[Task]:
+        """指定日時以前に作成され、未完了のタスクを取得する。"""
+        statuses = list(status_filter or (TaskStatus.TODO, TaskStatus.PROGRESS, TaskStatus.WAITING))
+
+        created_col = cast("Any", Task.created_at)
+        completed_col = cast("Any", Task.completed_at)
+        status_col = cast("Any", Task.status)
+        project_col = cast("Any", Task.project_id)
+        stmt = (
+            select(Task)
+            .where(created_col <= created_before)
+            .where(completed_col.is_(None))
+            .where(status_col.in_(statuses))
+            .order_by(created_col.asc())
+            .limit(limit)
+        )
+
+        if project_ids:
+            stmt = stmt.where(project_col.in_(project_ids))
+
+        if with_details:
+            stmt = self._apply_eager_loading(stmt)
+
         return self._gets_by_statement(stmt)

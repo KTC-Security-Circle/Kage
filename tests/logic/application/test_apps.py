@@ -9,6 +9,7 @@ from logic.application.apps import ApplicationServices, ApplicationServicesError
 from logic.application.memo_application_service import MemoApplicationService
 from logic.application.one_liner_application_service import OneLinerApplicationService
 from logic.application.project_application_service import ProjectApplicationService
+from logic.application.review_application_service import WeeklyReviewApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork, UnitOfWork
@@ -247,6 +248,7 @@ def test_convenience_properties_return_preconfigured_services() -> None:
     tag_service = TagApplicationService()
     task_service = TaskApplicationService()
     one_liner_service = StubOneLinerApplicationService()
+    review_service = WeeklyReviewApplicationService(unit_of_work_factory=SqlModelUnitOfWork)
 
     apps = ApplicationServices.create(
         memo=memo_service,
@@ -254,6 +256,7 @@ def test_convenience_properties_return_preconfigured_services() -> None:
         tag=tag_service,
         task=task_service,
         one_liner=one_liner_service,
+        review=review_service,
         unit_of_work_factory=SqlModelUnitOfWork,
     )
 
@@ -262,3 +265,4 @@ def test_convenience_properties_return_preconfigured_services() -> None:
     assert apps.tag is tag_service
     assert apps.task is task_service
     assert apps.one_liner is one_liner_service
+    assert apps.review is review_service

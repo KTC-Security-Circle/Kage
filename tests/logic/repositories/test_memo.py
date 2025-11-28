@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
@@ -208,6 +209,46 @@ class TestMemoRepository:
         assert lowercase_search[0].content == "Python Programming Tutorial"
         assert uppercase_search[0].content == "Python Programming Tutorial"
         assert mixed_case_search[0].content == "Python Programming Tutorial"
+
+    def test_list_unprocessed_memos(self, test_session: Session) -> None:
+        """棚卸し対象のみが選ばれることを確認する。"""
+
+        memo_repo = MemoRepository(test_session)
+        base_time = datetime.now() - timedelta(days=1)
+
+        inbox_memo = Memo(
+            id=uuid.uuid4(),
+            title="Inbox",
+            content="整理対象",
+            status=MemoStatus.INBOX,
+        )
+        inbox_memo.created_at = base_time
+
+        idea_memo = Memo(
+            id=uuid.uuid4(),
+            title="Idea",
+            content="Someday 候補",
+            status=MemoStatus.IDEA,
+        )
+        idea_memo.created_at = base_time
+
+        memo_with_task = Memo(
+            id=uuid.uuid4(),
+            title="Linked",
+            content="すでにタスク化",
+            status=MemoStatus.INBOX,
+        )
+        memo_with_task.created_at = base_time
+        linked_task = create_test_task()
+        memo_with_task.tasks.append(linked_task)
+
+        test_session.add_all([inbox_memo, idea_memo, memo_with_task, linked_task])
+        test_session.commit()
+
+        results = memo_repo.list_unprocessed_memos(created_after=base_time - timedelta(days=1))
+        titles = {memo.title for memo in results}
+
+        assert titles == {"Inbox", "Idea"}
 
     def test_list_by_status_with_details_and_empty(self, test_session: Session) -> None:
         """list_by_status の with_details 分岐と空結果の NotFound を検証する"""

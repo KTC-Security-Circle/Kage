@@ -12,7 +12,7 @@
 """
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import pytest
 from sqlmodel import Session
@@ -229,6 +229,53 @@ class TestTaskRepository:
         # 存在しないタスクIDへの追加は NotFoundError
         with pytest.raises(NotFoundError):
             task_repository.add_tag(uuid.uuid4(), tag_id)
+
+    def test_list_completed_between(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """期間指定の完了タスク抽出を検証する。"""
+
+        base_time = datetime.now()
+        task1 = create_test_task(title="完了1", status=TaskStatus.COMPLETED)
+        task1.completed_at = base_time - timedelta(days=2)
+        task2 = create_test_task(title="完了2", status=TaskStatus.COMPLETED)
+        task2.completed_at = base_time - timedelta(days=1)
+        task3 = create_test_task(title="範囲外", status=TaskStatus.COMPLETED)
+        task3.completed_at = base_time - timedelta(days=10)
+
+        test_session.add_all([task1, task2, task3])
+        test_session.commit()
+
+        results = task_repository.list_completed_between(base_time - timedelta(days=3), base_time)
+        titles = [task.title for task in results]
+
+        assert titles == ["完了2", "完了1"]
+
+        filtered = task_repository.list_completed_between(
+            base_time - timedelta(days=3),
+            base_time,
+            project_ids=[],
+            limit=1,
+        )
+        assert len(filtered) == 1
+
+    def test_list_stale_tasks(self, task_repository: TaskRepository, test_session: Session) -> None:
+        """ゾンビ候補抽出の条件を検証する。"""
+
+        base_time = datetime.now()
+        stale_task = create_test_task(title="停滞中", status=TaskStatus.PROGRESS)
+        stale_task.created_at = base_time - timedelta(days=20)
+        fresh_task = create_test_task(title="新規", status=TaskStatus.TODO)
+        fresh_task.created_at = base_time - timedelta(days=3)
+        done_task = create_test_task(title="完了済み", status=TaskStatus.COMPLETED)
+        done_task.created_at = base_time - timedelta(days=30)
+        done_task.completed_at = base_time - timedelta(days=1)
+
+        test_session.add_all([stale_task, fresh_task, done_task])
+        test_session.commit()
+
+        results = task_repository.list_stale_tasks(base_time - timedelta(days=10))
+
+        assert len(results) == 1
+        assert results[0].title == "停滞中"
 
     def test_search_by_description(self, task_repository: TaskRepository, test_session: Session) -> None:
         """説明による検索（部分一致・大文字小文字無視）"""

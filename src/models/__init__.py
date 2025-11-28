@@ -984,3 +984,26 @@ class SynonymUpdate(SQLModel):
 
     text: str | None = Field(default=None, max_length=200)
     term_id: uuid.UUID | None = None
+
+
+# ==============================================================================
+# Review DTO modules
+# ==============================================================================
+
+# ruff: noqa: I001
+from .review import (  # noqa: E402  # pylint: disable=wrong-import-position
+    CompletedTaskDigest as CompletedTaskDigest,
+    MemoAuditDigest as MemoAuditDigest,
+    MemoAuditInsight as MemoAuditInsight,
+    ReviewPeriod as ReviewPeriod,
+    WeeklyReviewHighlightsItem as WeeklyReviewHighlightsItem,
+    WeeklyReviewHighlightsPayload as WeeklyReviewHighlightsPayload,
+    WeeklyReviewInsights as WeeklyReviewInsights,
+    WeeklyReviewInsightsQuery as WeeklyReviewInsightsQuery,
+    WeeklyReviewMemoAuditPayload as WeeklyReviewMemoAuditPayload,
+    WeeklyReviewMetadata as WeeklyReviewMetadata,
+    WeeklyReviewZombiePayload as WeeklyReviewZombiePayload,
+    ZombieTaskDigest as ZombieTaskDigest,
+    ZombieTaskInsight as ZombieTaskInsight,
+    ZombieTaskSuggestion as ZombieTaskSuggestion,
+)

@@ -108,6 +108,14 @@ class HomeQuery(Protocol):
         """
         ...
 
+    def get_one_liner_message(self) -> str | None:
+        """AI一言メッセージのみを生成する。
+
+        Returns:
+            生成されたメッセージ（失敗時はNone）
+        """
+        ...
+
 
 class InMemoryHomeQuery:
     """軽量なデフォルト実装。テスト・プロトタイピング用。"""
@@ -153,6 +161,14 @@ class InMemoryHomeQuery:
         """
         return self._stats
 
+    def get_one_liner_message(self) -> str | None:
+        """AI一言メッセージのみを生成する（InMemory実装では常にNone）。
+
+        Returns:
+            None（テスト用実装のため）
+        """
+        return None
+
 
 @dataclass(slots=True)
 class ApplicationHomeQuery(HomeQuery):
@@ -180,8 +196,16 @@ class ApplicationHomeQuery(HomeQuery):
     _project_cache: list[ProjectRead] | None = field(default=None, init=False, repr=False)
 
     def get_daily_review(self) -> dict[str, Any]:
-        """タスクとメモの状況を基にデイリーレビューを生成する。"""
+        """タスクとメモの状況を基にデイリーレビューを生成する（AI一言なし）。"""
         return self._build_daily_review(self._get_tasks(), self._get_memos())
+
+    def get_one_liner_message(self) -> str | None:
+        """AI一言メッセージのみを生成する。
+
+        Returns:
+            生成されたメッセージ（失敗時はNone）
+        """
+        return self._generate_one_liner_message()
 
     def get_inbox_memos(self) -> list[dict[str, Any]]:
         """Inboxステータスのメモを最新順で返す。"""
@@ -383,16 +407,13 @@ class ApplicationHomeQuery(HomeQuery):
             selected = {
                 "icon": "wb_sunny",
                 "color": "primary",
-                "message": "今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか？",
+                "message": "今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか?",
                 "action_text": "メモを作成する",
                 "action_route": "/memos",
                 "priority": "low",
             }
 
-        one_liner_message = self._generate_one_liner_message()
-        if one_liner_message:
-            selected["message"] = one_liner_message
-
+        # AI一言は非同期で生成されるため、ここでは含めない
         return selected
 
     def _generate_one_liner_message(self) -> str | None:

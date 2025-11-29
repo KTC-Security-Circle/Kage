@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import cast
 
 import flet as ft
@@ -70,9 +71,14 @@ class HomeView(BaseView):
 
         self.controller = HomeController(state=self.home_state, query=query)
 
-        # 初期データ読み込み
+        # デイリーレビューカードへの参照（更新用）
+        self._daily_review_card: ft.Container | None = None
+
+        # 初期データ読み込み(AI一言生成は除く)
         try:
+            logger.info("[HomeView] 初期データ読み込み開始")
             self.controller.load_initial_data()
+            logger.info("[HomeView] 初期データ読み込み完了")
         except ApplicationServicesError as e:
             # サービスが未登録 (テスト/軽量環境) の場合は Home を空の状態で表示する。
             # これは異常ではなく、INFOレベルで記録する。
@@ -83,6 +89,11 @@ class HomeView(BaseView):
         except Exception:
             # 予期せぬエラーは従来通り再送出してUIに表示されるようにする
             raise
+
+        # AI一言生成をバックグラウンドで開始(起動をブロックしない)
+        logger.info("[HomeView] AI一言生成をバックグラウンドで開始")
+        self._start_one_liner_generation_async()
+        logger.info("[HomeView] __init__完了（UI操作可能）")
 
     def _create_application_query(self) -> ApplicationHomeQuery:
         """ApplicationServicesを利用したHomeQueryを生成する。"""
@@ -165,7 +176,12 @@ class HomeView(BaseView):
         Returns:
             デイリーレビューコントロール
         """
-        return build_daily_review_card(self.home_state.daily_review, self._handle_action_click)
+        self._daily_review_card = build_daily_review_card(
+            self.home_state.daily_review,
+            self._handle_action_click,
+            is_loading_one_liner=self.home_state.is_loading_one_liner,
+        )
+        return self._daily_review_card
 
     def _build_inbox_memos_section(self) -> ft.Control:
         """Inboxメモセクションを構築する。
@@ -265,6 +281,67 @@ class HomeView(BaseView):
 
         logger.info(f"Memo clicked: {memo_id}")
         self._handle_action_click("/memos")
+
+    def _start_one_liner_generation_async(self) -> None:
+        """AI一言生成をバックグラウンドで開始する。
+
+        別スレッドで実行し、完了時にUI更新を行う。
+        """
+        logger.info("[非同期] AI一言生成ローディング状態に設定")
+        self.controller.start_loading_one_liner()
+
+        def generate_and_update() -> None:
+            import time
+
+            start_time = time.time()
+            logger.info("[非同期スレッド] AI一言生成開始")
+            try:
+                message = self.controller.generate_one_liner_sync()
+                elapsed = time.time() - start_time
+                msg_preview = message[:50] if message else "None"
+                logger.info(f"[非同期スレッド] AI一言生成完了（{elapsed:.2f}秒）: {msg_preview}...")
+                self.controller.set_one_liner_message(message)
+                # UI更新を直接実行(Flet のpage.update()はスレッドセーフ)
+                logger.info("[非同期スレッド] UI更新開始")
+                self._update_one_liner_display()
+                logger.info("[非同期スレッド] UI更新完了")
+            except Exception as e:
+                elapsed = time.time() - start_time
+                logger.error(f"[非同期スレッド] AI一言生成失敗（{elapsed:.2f}秒）: {e}")
+                self.controller.set_one_liner_message(None)
+
+        thread = threading.Thread(target=generate_and_update, daemon=True)
+        thread.start()
+        logger.info(f"[非同期] バックグラウンドスレッド起動完了（Thread ID: {thread.ident}）")
+
+    def _update_one_liner_display(self) -> None:
+        """AI一言生成完了時にデイリーレビューカードを更新する。
+
+        State から最新の状態を取得し、既存のCardを差分更新する。
+        """
+        try:
+            if not self._daily_review_card:
+                logger.warning("Daily review card reference not found, skipping update")
+                return
+
+            # 既存カードを新しい内容で置き換え
+            new_card = build_daily_review_card(
+                self.home_state.daily_review,
+                self._handle_action_click,
+                is_loading_one_liner=self.home_state.is_loading_one_liner,
+            )
+
+            # カードの内容を入れ替え（参照を維持しながら中身を更新）
+            self._daily_review_card.content = new_card.content
+            self._daily_review_card.bgcolor = new_card.bgcolor
+            self._daily_review_card.border = new_card.border
+            self._daily_review_card.border_radius = new_card.border_radius
+
+            # カードのみを更新
+            if self.page:
+                self._daily_review_card.update()
+        except Exception as e:
+            logger.error(f"Failed to update one-liner display: {e}")
 
     def _handle_action_click(self, route: str) -> None:
         """アクションクリック時の処理。

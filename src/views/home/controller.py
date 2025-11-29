@@ -120,7 +120,11 @@ class HomeController:
             logger.debug("[Controller] AI一言生成開始（同期処理）")
             # HomeQueryにget_one_liner_message()がある場合はそれを使用
             if hasattr(self.query, "get_one_liner_message"):
+                # テストのため
+                import time
+
                 logger.debug("[Controller] Query.get_one_liner_message()を呼び出し")
+                time.sleep(10)
                 result = self.query.get_one_liner_message()  # type: ignore[attr-defined]
                 logger.debug(f"[Controller] AI一言生成結果: {result[:50] if result else 'None'}...")
                 return result

@@ -320,8 +320,9 @@ class HomeView(BaseView):
         State から最新の状態を取得し、既存のCardを差分更新する。
         """
         try:
+            logger.info(f"[UI更新] デイリーレビューカード更新開始（loading={self.home_state.is_loading_one_liner}）")
             if not self._daily_review_card:
-                logger.warning("Daily review card reference not found, skipping update")
+                logger.warning("[UI更新] Daily review card reference not found, skipping update")
                 return
 
             # 既存カードを新しい内容で置き換え
@@ -336,12 +337,27 @@ class HomeView(BaseView):
             self._daily_review_card.bgcolor = new_card.bgcolor
             self._daily_review_card.border = new_card.border
             self._daily_review_card.border_radius = new_card.border_radius
+            logger.debug("[UI更新] カードプロパティ更新完了")
 
-            # カードのみを更新
-            if self.page:
-                self._daily_review_card.update()
+            # Control が既に page に追加されていれば個別更新を試みる。
+            # 追加されていない場合は page.update() にフォールバックして安全に反映する。
+            try:
+                if getattr(self._daily_review_card, "page", None) is not None:
+                    self._daily_review_card.update()
+                    logger.info("[UI更新] デイリーレビューカード更新完了 (control.update)")
+                elif self.page is not None:
+                    # ページ全体を更新して差分を反映
+                    self.page.update()
+                    logger.info("[UI更新] デイリーレビューカード更新完了 (page.update fallback)")
+                else:
+                    logger.warning("[UI更新] page が見つからないため更新をスキップ")
+            except Exception as ex:
+                logger.error(f"[UI更新] 個別更新に失敗したため page.update にフォールバックします: {ex}")
+                if self.page is not None:
+                    self.page.update()
+                    logger.info("[UI更新] page.update による再描画完了")
         except Exception as e:
-            logger.error(f"Failed to update one-liner display: {e}")
+            logger.error(f"[UI更新] Failed to update one-liner display: {e}")
 
     def _handle_action_click(self, route: str) -> None:
         """アクションクリック時の処理。

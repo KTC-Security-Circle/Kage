@@ -253,10 +253,18 @@ class MemoService(ServiceBase):
             NotFoundError: エンティティが存在しない場合
             MemoServiceError: メモの取得に失敗した場合
         """
-        memos = self.memo_repo.search_by_title(query, with_details=with_details)
-        memos += self.memo_repo.search_by_content(query, with_details=with_details)
-        # 重複を排除
-        memos = list({memo.id: memo for memo in memos}.values())
-        logger.debug(f"クエリ '{query}' に一致するメモを {len(memos)} 件取得しました。")
-
-        return memos
+        try:
+            by_title = self.memo_repo.search_by_title(query, with_details=with_details)
+        except NotFoundError:
+            by_title = []
+        try:
+            by_content = self.memo_repo.search_by_content(query, with_details=with_details)
+        except NotFoundError:
+            by_content = []
+        merged: dict[uuid.UUID, Memo] = {}
+        for m in by_title + by_content:
+            if m.id is not None:
+                merged[m.id] = m
+        results = list(merged.values())
+        logger.debug(f"クエリ '{query}' に一致するメモを {len(results)} 件取得しました。")
+        return results

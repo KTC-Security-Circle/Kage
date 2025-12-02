@@ -34,7 +34,7 @@ def _parse_datetime(value: str | None, param_name: str) -> datetime | None:
         return None
     try:
         return datetime.fromisoformat(value)
-    except ValueError as exc:  # pragma: no cover - typer handles in CLI context
+    except ValueError as exc:  # pragma: no cover
         message = f"{param_name} は ISO8601 形式で指定してください"
         raise typer.BadParameter(message) from exc
 

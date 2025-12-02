@@ -29,7 +29,7 @@ POSITIVITY_PREFIX = "お疲れさまです！"
 MEMO_LINE_THRESHOLD = 3
 MemoRoute = Literal["task", "reference", "someday", "discard"]
 
-if TYPE_CHECKING:  # pragma: no cover - 型専用
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
 
     from agents.task_agents.review_copilot.highlights_agent import HighlightsState

@@ -44,59 +44,60 @@ class ColorTokens:
 
 @dataclass
 class TagColors:
-    """タグ用のカラーパレット定義。"""
+    """タグ用のカラーパレット定義（Material Design 500 シェード）。"""
 
-    red: str = "#f44336"
-    pink: str = "#e91e63"
-    purple: str = "#9c27b0"
-    indigo: str = "#3f51b5"
-    blue: str = "#2196f3"
-    cyan: str = "#00bcd4"
-    green: str = "#4caf50"
-    orange: str = "#ff9800"
-    brown: str = "#795548"
-    grey: str = "#607d8b"
+    red: str = "#F44336"  # Red 500
+    pink: str = "#E91E63"  # Pink 500
+    purple: str = "#9C27B0"  # Purple 500
+    indigo: str = "#3F51B5"  # Indigo 500
+    blue: str = "#2196F3"  # Blue 500
+    cyan: str = "#00BCD4"  # Cyan 500
+    green: str = "#4CAF50"  # Green 500
+    orange: str = "#FF9800"  # Orange 500
+    brown: str = "#795548"  # Brown 500
+    grey: str = "#607D8B"  # Blue Grey 500
 
 
 @dataclass
 class StatusColors:
-    """プロジェクト・タスクのステータス色定義。"""
+    """プロジェクト・タスクのステータス色定義（Material Design 準拠）。"""
 
-    in_progress: str = "#2196f3"  # ブルー - 進行中
-    planned: str = "#ff9800"  # オレンジ - 計画中
-    completed: str = "#4caf50"  # グリーン - 完了
-    on_hold: str = "#9e9e9e"  # グレー - 保留
-    cancelled: str = "#f44336"  # レッド - 中止
-    todays: str = "#2196f3"  # ブルー - 今日のタスク
+    in_progress: str = "#2196F3"  # Blue 500 - 進行中
+    planned: str = "#FF9800"  # Orange 500 - 計画中
+    completed: str = "#4CAF50"  # Green 500 - 完了
+    on_hold: str = "#9E9E9E"  # Grey 500 - 保留
+    cancelled: str = "#F44336"  # Red 500 - 中止
+    todays: str = "#2196F3"  # Blue 500 - 今日のタスク
 
 
 @dataclass
 class UIColors:
-    """UI全般で使用する汎用色定義。"""
+    """UI全般で使用する汎用色定義（Material Design Grey パレット）。"""
 
-    # グレースケール
-    grey_50: str = "#fafafa"
-    grey_100: str = "#f5f5f5"
-    grey_200: str = "#eeeeee"
-    grey_300: str = "#e0e0e0"
-    grey_400: str = "#bdbdbd"
-    grey_500: str = "#9e9e9e"
+    # グレースケール (Material Design Grey)
+    grey_50: str = "#FAFAFA"
+    grey_100: str = "#F5F5F5"
+    grey_200: str = "#EEEEEE"
+    grey_300: str = "#E0E0E0"
+    grey_400: str = "#BDBDBD"
+    grey_500: str = "#9E9E9E"
     grey_600: str = "#757575"
     grey_700: str = "#616161"
     grey_800: str = "#424242"
     grey_900: str = "#212121"
 
-    # 機能的な色
-    primary: str = "#2196f3"
-    primary_light: str = "#64b5f6"
-    primary_dark: str = "#1976d2"
+    # 機能的な色（Material Design Blue パレット）
+    primary: str = "#2196F3"  # Blue 500
+    primary_light: str = "#64B5F6"  # Blue 300
+    primary_dark: str = "#1976D2"  # Blue 700
 
-    error: str = "#f44336"
-    error_light: str = "#ef5350"
+    # セマンティックカラー（Material Design）
+    error: str = "#F44336"  # Red 500
+    error_light: str = "#EF5350"  # Red 400
 
-    success: str = "#4caf50"
-    warning: str = "#ff9800"
-    info: str = "#2196f3"
+    success: str = "#4CAF50"  # Green 500
+    warning: str = "#FF9800"  # Orange 500
+    info: str = "#2196F3"  # Blue 500
 
     # タグ関連の透明度付き色
     tag_icon_bg_opacity: float = 0.1
@@ -174,42 +175,42 @@ class FontTokens:
     size_xxl: int = 24
 
 
-# Light theme color tokens
+# Light theme color tokens (Material Design 3)
 LIGHT_COLORS = ColorTokens(
-    primary="#6750A4",
-    primary_variant="#958DA5",
+    primary="#2196F3",  # Blue - アプリ全体の統一プライマリカラー
+    primary_variant="#1976D2",
     on_primary="#FFFFFF",
     secondary="#625B71",
     secondary_variant="#958DA5",
     on_secondary="#FFFFFF",
-    background="#FFFBFE",
+    background="#FAFAFA",  # Neutral grey background
     on_background="#1C1B1F",
-    surface="#FFFBFE",
+    surface="#FFFFFF",  # Pure white for cards/panels
     on_surface="#1C1B1F",
-    error="#BA1A1A",
+    error="#D32F2F",  # Material Red 700
     on_error="#FFFFFF",
-    success="#2E7D32",
-    warning="#F57C00",
-    info="#1976D2",
+    success="#388E3C",  # Material Green 700
+    warning="#F57C00",  # Material Orange 700
+    info="#1976D2",  # Material Blue 700
 )
 
-# Dark theme color tokens
+# Dark theme color tokens (Material Design 3)
 DARK_COLORS = ColorTokens(
-    primary="#D0BCFF",
-    primary_variant="#625B71",
-    on_primary="#381E72",
+    primary="#64B5F6",  # Light Blue - ダークモード用の明るいブルー
+    primary_variant="#42A5F5",
+    on_primary="#0D47A1",
     secondary="#CCC2DC",
     secondary_variant="#4A4458",
     on_secondary="#332D41",
-    background="#141218",
-    on_background="#E6E0E9",
-    surface="#141218",
-    on_surface="#E6E0E9",
-    error="#F2B8B5",
-    on_error="#601410",
-    success="#81C784",
-    warning="#FFB74D",
-    info="#64B5F6",
+    background="#121212",  # True dark background
+    on_background="#E0E0E0",
+    surface="#1E1E1E",  # Elevated surface
+    on_surface="#E0E0E0",
+    error="#EF5350",  # Light Red for dark mode
+    on_error="#B71C1C",
+    success="#66BB6A",  # Light Green for dark mode
+    warning="#FFA726",  # Light Orange for dark mode
+    info="#42A5F5",  # Light Blue for dark mode
 )
 
 # Common tokens

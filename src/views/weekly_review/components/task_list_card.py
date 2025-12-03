@@ -42,10 +42,14 @@ class TaskListCard(ft.Container):
         """
         super().__init__()
         self.props = props
-        self._build_card()
+        self.content = self._build_content()
 
-    def _build_card(self) -> None:
-        """カードを構築"""
+    def _build_content(self) -> ft.Card:
+        """カードコンテンツを構築
+
+        Returns:
+            構築されたカード
+        """
         # ヘッダー
         header = ft.Row(
             controls=[
@@ -167,8 +171,7 @@ class TaskListCard(ft.Container):
             padding=20,
         )
 
-        # コンテナの設定
-        self.content = ft.Card(
+        return ft.Card(
             content=card_content,
             elevation=2,
         )
@@ -180,6 +183,6 @@ class TaskListCard(ft.Container):
             new_props: 新しいプロパティ
         """
         self.props = new_props
-        self._build_card()
+        self.content = self._build_content()
         with suppress(Exception):
             self.update()

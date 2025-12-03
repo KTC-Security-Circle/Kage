@@ -35,10 +35,14 @@ class AlertCard(ft.Container):
         """
         super().__init__()
         self.props = props
-        self._build_card()
+        self.content = self._build_content()
 
-    def _build_card(self) -> None:
-        """カードを構築"""
+    def _build_content(self) -> ft.Card:
+        """カードコンテンツを構築
+
+        Returns:
+            構築されたカード
+        """
         card_content = ft.Container(
             content=ft.Column(
                 controls=[
@@ -78,12 +82,11 @@ class AlertCard(ft.Container):
             padding=20,
         )
 
-        # コンテナの設定
-        self.content = ft.Card(
+        self.bgcolor = ft.Colors.ORANGE_50
+        return ft.Card(
             content=card_content,
             elevation=2,
         )
-        self.bgcolor = ft.Colors.ORANGE_50
 
     def set_props(self, new_props: AlertCardProps) -> None:
         """プロパティを更新してカードを再構築
@@ -92,6 +95,6 @@ class AlertCard(ft.Container):
             new_props: 新しいプロパティ
         """
         self.props = new_props
-        self._build_card()
+        self.content = self._build_content()
         with suppress(Exception):
             self.update()

@@ -28,7 +28,6 @@ from .components import (
     MemoAction,
     RecommendationCard,
     RecommendationCardProps,
-    RecommendationData,
     StepIndicator,
     StepIndicatorProps,
     UnprocessedMemoCard,
@@ -258,7 +257,10 @@ class WeeklyReviewView(BaseView):
                 CompletedTaskItemData(
                     task_id=str(task.id),
                     title=task.title,
-                    project_title=None,  # TODO: プロジェクト情報を取得
+                    # TODO: TaskReadモデルにprojectリレーション(project_id, project_title)を追加し、
+                    # task.project.titleで取得。または、TaskApplicationService.get_task_with_project()
+                    # メソッドを実装してプロジェクト情報を含めて取得
+                    project_title=None,
                 )
                 for task in self.review_state.completed_tasks_this_week
             ]

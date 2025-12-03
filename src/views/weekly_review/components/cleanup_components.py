@@ -58,9 +58,17 @@ class ZombieTaskCard(ft.Card):
         """
         super().__init__()
         self.props = props
+        self.content = self._build_content()
+        self.elevation = 2
+        self.color = ft.Colors.YELLOW_50
 
-        # ヘッダー
-        header = ft.Container(
+    def _build_header(self) -> ft.Container:
+        """ヘッダーを構築
+
+        Returns:
+            ヘッダーコンテナ
+        """
+        return ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Text(
@@ -91,18 +99,22 @@ class ZombieTaskCard(ft.Card):
             padding=ft.padding.only(left=16, right=16, top=16, bottom=8),
         )
 
-        # アクションボタン
+    def _build_content(self) -> ft.Container:
+        """カードコンテンツを構築
+
+        Returns:
+            コンテンツコンテナ
+        """
+        header = self._build_header()
         action_buttons = self._build_action_buttons()
 
-        self.content = ft.Container(
+        return ft.Container(
             content=ft.Column(
                 controls=[header, action_buttons],
                 spacing=12,
             ),
             padding=ft.padding.only(left=16, right=16, bottom=16),
         )
-        self.elevation = 2
-        self.color = ft.Colors.YELLOW_50
 
     def _build_action_buttons(self) -> ft.Container:
         """アクションボタンを構築
@@ -201,48 +213,7 @@ class ZombieTaskCard(ft.Card):
 
     def _rebuild(self) -> None:
         """コンポーネントを再構築"""
-        # ヘッダー
-        header = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        self.props.task_data.title,
-                        size=16,
-                        weight=ft.FontWeight.W_600,
-                    ),
-                    ft.Container(height=8),
-                    ft.Row(
-                        controls=[
-                            ft.Icon(
-                                name=ft.Icons.AUTO_AWESOME,
-                                size=16,
-                                color=ft.Colors.YELLOW_700,
-                            ),
-                            ft.Text(
-                                f"AIの分析: {self.props.task_data.reason}",
-                                size=14,
-                                color=ft.Colors.GREY_700,
-                                expand=True,
-                            ),
-                        ],
-                        spacing=8,
-                    ),
-                ],
-                spacing=0,
-            ),
-            padding=ft.padding.only(left=16, right=16, top=16, bottom=8),
-        )
-
-        # アクションボタン
-        action_buttons = self._build_action_buttons()
-
-        self.content = ft.Container(
-            content=ft.Column(
-                controls=[header, action_buttons],
-                spacing=12,
-            ),
-            padding=ft.padding.only(left=16, right=16, bottom=16),
-        )
+        self.content = self._build_content()
 
         try:
             self.update()
@@ -296,9 +267,17 @@ class UnprocessedMemoCard(ft.Card):
         """
         super().__init__()
         self.props = props
+        self.content = self._build_content()
+        self.elevation = 2
+        self.color = ft.Colors.BLUE_50
 
-        # ヘッダー
-        header = ft.Container(
+    def _build_header(self) -> ft.Container:
+        """ヘッダーを構築
+
+        Returns:
+            ヘッダーコンテナ
+        """
+        return ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Text(
@@ -329,8 +308,13 @@ class UnprocessedMemoCard(ft.Card):
             padding=ft.padding.only(left=16, right=16, top=16, bottom=8),
         )
 
-        # メモ内容プレビュー
-        content_preview = ft.Container(
+    def _build_content_preview(self) -> ft.Container:
+        """メモ内容プレビューを構築
+
+        Returns:
+            内容プレビューコンテナ
+        """
+        return ft.Container(
             content=ft.Text(
                 self.props.memo_data.content,
                 size=14,
@@ -341,18 +325,23 @@ class UnprocessedMemoCard(ft.Card):
             padding=ft.padding.symmetric(horizontal=16, vertical=8),
         )
 
-        # アクションボタン
+    def _build_content(self) -> ft.Container:
+        """カードコンテンツを構築
+
+        Returns:
+            コンテンツコンテナ
+        """
+        header = self._build_header()
+        content_preview = self._build_content_preview()
         action_buttons = self._build_action_buttons()
 
-        self.content = ft.Container(
+        return ft.Container(
             content=ft.Column(
                 controls=[header, content_preview, action_buttons],
                 spacing=12,
             ),
             padding=ft.padding.only(left=16, right=16, bottom=16),
         )
-        self.elevation = 2
-        self.color = ft.Colors.BLUE_50
 
     def _build_action_buttons(self) -> ft.Container:
         """アクションボタンを構築
@@ -439,60 +428,7 @@ class UnprocessedMemoCard(ft.Card):
 
     def _rebuild(self) -> None:
         """コンポーネントを再構築"""
-        # ヘッダー
-        header = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        self.props.memo_data.title,
-                        size=16,
-                        weight=ft.FontWeight.W_600,
-                    ),
-                    ft.Container(height=8),
-                    ft.Row(
-                        controls=[
-                            ft.Icon(
-                                name=ft.Icons.LIGHTBULB_OUTLINE,
-                                size=16,
-                                color=ft.Colors.BLUE_700,
-                            ),
-                            ft.Text(
-                                f"AIの提案: {self.props.memo_data.suggestion}",
-                                size=14,
-                                color=ft.Colors.GREY_700,
-                                expand=True,
-                            ),
-                        ],
-                        spacing=8,
-                    ),
-                ],
-                spacing=0,
-            ),
-            padding=ft.padding.only(left=16, right=16, top=16, bottom=8),
-        )
-
-        # メモ内容プレビュー
-        content_preview = ft.Container(
-            content=ft.Text(
-                self.props.memo_data.content,
-                size=14,
-                color=ft.Colors.GREY_600,
-                max_lines=2,
-                overflow=ft.TextOverflow.ELLIPSIS,
-            ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=8),
-        )
-
-        # アクションボタン
-        action_buttons = self._build_action_buttons()
-
-        self.content = ft.Container(
-            content=ft.Column(
-                controls=[header, content_preview, action_buttons],
-                spacing=12,
-            ),
-            padding=ft.padding.only(left=16, right=16, bottom=16),
-        )
+        self.content = self._build_content()
 
         try:
             self.update()

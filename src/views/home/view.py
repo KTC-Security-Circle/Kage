@@ -200,7 +200,7 @@ class HomeView(BaseView):
                                 [
                                     ft.Icon(ft.Icons.AUTO_AWESOME, size=20, color=ft.Colors.BLUE_GREY_900),
                                     ft.Text(
-                                        "Inboxメモ",
+                                        "メモ",
                                         size=18,
                                         weight=ft.FontWeight.W_600,
                                     ),

@@ -12,6 +12,7 @@ from logic.application.memo_to_task_application_service import (
 )
 from logic.application.one_liner_application_service import OneLinerApplicationService
 from logic.application.project_application_service import ProjectApplicationService
+from logic.application.review_application_service import WeeklyReviewApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from logic.application.terminology_application_service import TerminologyApplicationService
@@ -40,6 +41,7 @@ class TestApplicationManager:
     task: TaskApplicationService | None
     one_liner: OneLinerApplicationService | None
     memo_to_task: MemoToTaskApplicationService | None
+    review: WeeklyReviewApplicationService | None = None
 
     def register_cache(self, cache: dict[type[Any], Any]) -> None:
         """キャッシュ辞書に登録する。"""
@@ -55,6 +57,8 @@ class TestApplicationManager:
             cache[OneLinerApplicationService] = self.one_liner
         if self.memo_to_task is not None:
             cache[MemoToTaskApplicationService] = self.memo_to_task
+        if self.review is not None:
+            cache[WeeklyReviewApplicationService] = self.review
 
 
 @dataclass
@@ -90,6 +94,7 @@ class ApplicationServices:
         tag: TagApplicationService | None = None,
         task: TaskApplicationService | None = None,
         one_liner: OneLinerApplicationService | None = None,
+        review: WeeklyReviewApplicationService | None = None,
     ) -> ApplicationServices:
         """Application Servicesコンテナのファクトリメソッド。
 
@@ -101,6 +106,7 @@ class ApplicationServices:
             tag: 直接注入するTagApplicationService（テスト用オプション）
             task: 直接注入するTaskApplicationService（テスト用オプション）
             one_liner: 直接注入するOneLinerApplicationService（テスト用オプション）
+            review: 直接注入するWeeklyReviewApplicationService（テスト用オプション）
 
         Returns:
             ApplicationServices: 構築済みコンテナ
@@ -121,6 +127,8 @@ class ApplicationServices:
             cache[TaskApplicationService] = task
         if one_liner is not None:
             cache[OneLinerApplicationService] = one_liner
+        if review is not None:
+            cache[WeeklyReviewApplicationService] = review
 
         return cls(
             _unit_of_work_factory=unit_of_work_factory,
@@ -295,3 +303,8 @@ class ApplicationServices:
     def terminology(self) -> TerminologyApplicationService:
         """TerminologyApplicationService を取得。"""
         return self.get_service(TerminologyApplicationService)
+
+    @property
+    def review(self) -> WeeklyReviewApplicationService:
+        """WeeklyReviewApplicationService を取得。"""
+        return self.get_service(WeeklyReviewApplicationService)

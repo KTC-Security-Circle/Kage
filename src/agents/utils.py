@@ -164,7 +164,7 @@ def get_model(
         )
     elif provider == LLMProvider.OPENVINO:
         try:
-            from langchain_openvino_genai import (
+            from langchain_openvino_genai import (  # pyright: ignore[reportMissingImports]
                 ChatOpenVINO,
                 OpenVINOLLM,
                 load_model,

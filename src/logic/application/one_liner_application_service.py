@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import Any, NoReturn, cast, override
 from uuid import uuid4
 
@@ -59,6 +60,9 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             self._device = raw_device.value
         else:
             self._device = str(raw_device or OpenVINODevice.CPU.value).upper()
+        self._cached_message: str | None = None
+        self._cached_at: datetime.datetime | None = None
+        self._cache_ttl = datetime.timedelta(hours=1)
 
         raw_model = None
         try:  # 設定から one_liner 用モデル名を取得
@@ -100,13 +104,25 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     def generate_one_liner(self, query: OneLinerState | None = None) -> str:
         """一言コメント生成 (空のクエリで自動集計)."""
         if query is not None:
-            return self._generate_with_agent(query)
+            message, _ = self._generate_with_agent(query)
+            return message
+
+        cached_message = self._get_cached_message()
+        if cached_message is not None:
+            return cached_message
+
         try:
             ctx = self._build_context_auto()
-            return self._generate_with_agent(ctx)
+            message, should_cache = self._generate_with_agent(ctx)
+            if should_cache:
+                self._update_cache(message)
+            else:
+                self._clear_cache()
         except Exception as e:  # pragma: no cover - LLM 実行例外など
             logger.exception(f"一言コメント生成中にエラー: {e}")
+            self._clear_cache()
             return self._get_default_message()
+        return message
 
     # Internal helpers --------------------------------------------------
     def _build_context_auto(self) -> OneLinerState:
@@ -133,15 +149,15 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     def _generate_with_agent(
         self,
         state: OneLinerState,
-    ) -> str:
+    ) -> tuple[str, bool]:
         thread_id = str(uuid4())
         result = self._agent.invoke(cast("OneLinerState", state), thread_id)
         from agents.base import AgentError
 
         if isinstance(result, AgentError) or not getattr(result, "response", ""):
             logger.warning("OneLinerAgent が期待する応答を返しませんでした。デフォルトに置換します。")
-            return self._get_default_message()
-        return cast("str", result.response)  # type: ignore[attr-defined]
+            return self._get_default_message(), False
+        return result.response, True
 
     def _get_default_message(self) -> str:
         return "今日も一日、お疲れさまです。"
@@ -149,6 +165,25 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     def _log_error_and_raise(self, msg: str) -> NoReturn:
         logger.error(msg)
         raise OneLinerServiceError(msg)
+
+    def _get_cached_message(self) -> str | None:
+        if self._cached_message is None or self._cached_at is None:
+            return None
+        if self._cached_at + self._cache_ttl <= self._now():
+            self._clear_cache()
+            return None
+        return self._cached_message
+
+    def _update_cache(self, message: str) -> None:
+        self._cached_message = message
+        self._cached_at = self._now()
+
+    def _clear_cache(self) -> None:
+        self._cached_message = None
+        self._cached_at = None
+
+    def _now(self) -> datetime.datetime:
+        return datetime.datetime.now(datetime.UTC)
 
 
 __all__ = [

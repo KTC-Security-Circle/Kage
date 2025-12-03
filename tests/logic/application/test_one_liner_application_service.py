@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, ClassVar
 
@@ -88,6 +89,16 @@ def _stub_config(
             return self._user
 
     monkeypatch.setattr(one_liner_module.SettingsApplicationService, "get_instance", lambda: SettingsAppStub())
+
+
+def _sample_state(user_name: str = "Tester") -> OneLinerState:
+    return {
+        "today_task_count": 0,
+        "completed_task_count": 0,
+        "overdue_task_count": 0,
+        "progress_summary": "",
+        "user_name": user_name,
+    }
 
 
 def test_openvino_string_model_raises_service_error(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
@@ -198,3 +209,158 @@ def test_agent_receives_gpu_device_setting(monkeypatch: pytest.MonkeyPatch, stub
     OneLinerApplicationService()
 
     assert stub_agent.last_init == (LLMProvider.FAKE, None, OpenVINODevice.GPU.value)
+
+
+def test_generate_one_liner_returns_cached_value_within_ttl(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
+    """TTL 内の連続呼び出しではキャッシュを返し、エージェント再実行を避ける。"""
+
+    _stub_config(
+        monkeypatch,
+        provider=LLMProvider.FAKE,
+        model=None,
+    )
+
+    call_count = {"value": 0}
+
+    def fake_build_context(self: OneLinerApplicationService) -> OneLinerState:
+        call_count["value"] += 1
+        return _sample_state()
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_build_context_auto", fake_build_context)
+
+    current_time = datetime(2024, 1, 1, tzinfo=UTC)
+
+    def fake_now(self: OneLinerApplicationService) -> datetime:
+        return current_time
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_now", fake_now)
+
+    stub_agent.invoke_result = SimpleNamespace(response="first")
+    service = OneLinerApplicationService()
+
+    first = service.generate_one_liner()
+    assert first == "first"
+    assert call_count["value"] == 1
+    assert len(stub_agent.invocations) == 1
+
+    current_time = current_time + timedelta(minutes=30)
+    stub_agent.invoke_result = SimpleNamespace(response="second")
+
+    second = service.generate_one_liner()
+    assert second == "first"
+    assert call_count["value"] == 1
+    assert len(stub_agent.invocations) == 1
+
+
+def test_generate_one_liner_refreshes_after_ttl(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
+    """TTL 経過後は新たにエージェントを実行する。"""
+
+    _stub_config(
+        monkeypatch,
+        provider=LLMProvider.FAKE,
+        model=None,
+    )
+
+    call_count = {"value": 0}
+
+    def fake_build_context(self: OneLinerApplicationService) -> OneLinerState:
+        call_count["value"] += 1
+        return _sample_state(user_name=f"User{call_count['value']}")
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_build_context_auto", fake_build_context)
+
+    base_time = datetime(2024, 1, 1, tzinfo=UTC)
+    current_time = base_time
+
+    def fake_now(self: OneLinerApplicationService) -> datetime:
+        return current_time
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_now", fake_now)
+
+    stub_agent.invoke_result = SimpleNamespace(response="first")
+    service = OneLinerApplicationService()
+    first = service.generate_one_liner()
+
+    assert first == "first"
+    assert call_count["value"] == 1
+    assert len(stub_agent.invocations) == 1
+
+    current_time = base_time + timedelta(minutes=61)
+    stub_agent.invoke_result = SimpleNamespace(response="second")
+
+    second = service.generate_one_liner()
+
+    expected_refresh_invocations = 2
+    assert second == "second"
+    assert call_count["value"] == expected_refresh_invocations
+    assert len(stub_agent.invocations) == expected_refresh_invocations
+
+
+def test_explicit_query_bypasses_cache(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
+    """明示的なクエリはキャッシュの有無に関係なくエージェントを呼び出す。"""
+
+    _stub_config(
+        monkeypatch,
+        provider=LLMProvider.FAKE,
+        model=None,
+    )
+
+    def fake_build_context(self: OneLinerApplicationService) -> OneLinerState:
+        return _sample_state()
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_build_context_auto", fake_build_context)
+
+    service = OneLinerApplicationService()
+    stub_agent.invoke_result = SimpleNamespace(response="cached")
+    cached = service.generate_one_liner()
+    assert cached == "cached"
+    assert len(stub_agent.invocations) == 1
+
+    def fail_build(self: OneLinerApplicationService) -> OneLinerState:  # pragma: no cover
+        message = "explicit query should bypass context build"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_build_context_auto", fail_build)
+
+    stub_agent.invoke_result = SimpleNamespace(response="fresh")
+    query: OneLinerState = _sample_state(user_name="Bob")
+    result = service.generate_one_liner(query)
+
+    expected_calls_after_explicit = 2
+    assert result == "fresh"
+    assert len(stub_agent.invocations) == expected_calls_after_explicit
+
+
+def test_default_message_is_not_cached(monkeypatch: pytest.MonkeyPatch, stub_agent: type) -> None:
+    """デフォルトメッセージへフォールバックした場合はキャッシュされず直後も再試行される。"""
+
+    _stub_config(
+        monkeypatch,
+        provider=LLMProvider.FAKE,
+        model=None,
+    )
+
+    call_count = {"value": 0}
+
+    def fake_build_context(self: OneLinerApplicationService) -> OneLinerState:
+        call_count["value"] += 1
+        return _sample_state()
+
+    monkeypatch.setattr(one_liner_module.OneLinerApplicationService, "_build_context_auto", fake_build_context)
+
+    service = OneLinerApplicationService()
+    stub_agent.invoke_result = SimpleNamespace(response="")
+
+    first = service.generate_one_liner()
+    assert first == service._get_default_message()
+    assert call_count["value"] == 1
+    assert len(stub_agent.invocations) == 1
+
+    stub_agent.invoke_result = SimpleNamespace(response="recovered")
+
+    second = service.generate_one_liner()
+
+    expected_call_count_after_recovery = 2
+    assert second == "recovered"
+    assert call_count["value"] == expected_call_count_after_recovery
+    assert len(stub_agent.invocations) == expected_call_count_after_recovery

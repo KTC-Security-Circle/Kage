@@ -118,15 +118,9 @@ class HomeController:
         """
         try:
             logger.debug("[Controller] AI一言生成開始（同期処理）")
-            # HomeQueryにget_one_liner_message()がある場合はそれを使用
-            if hasattr(self.query, "get_one_liner_message"):
-                logger.debug("[Controller] Query.get_one_liner_message()を呼び出し")
-                result = self.query.get_one_liner_message()  # type: ignore[attr-defined]
-                logger.debug(f"[Controller] AI一言生成結果: {result[:50] if result else 'None'}...")
-                return result
-            # フォールバック: 従来のdaily_reviewから取得
-            logger.debug("[Controller] フォールバック: Query.get_daily_review()から取得")
-            return self.query.get_daily_review().get("message")
+            result = self.query.get_one_liner_message()
+            logger.debug(f"[Controller] AI一言生成結果: {result[:50] if result else 'None'}...")
+            return result
         except Exception as e:
             logger.error(f"[Controller] AI一言メッセージの生成に失敗しました: {e}")
             return None

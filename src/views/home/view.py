@@ -322,7 +322,7 @@ class HomeView(BaseView):
         try:
             logger.info(f"[UI更新] デイリーレビューカード更新開始（loading={self.home_state.is_loading_one_liner}）")
             if not self._daily_review_card:
-                logger.warning("[UI更新] Daily review card reference not found, skipping update")
+                logger.warning("[UI更新] デイリーレビューカード参照が見つかりません。更新をスキップします")
                 return
 
             # 既存カードを新しい内容で置き換え

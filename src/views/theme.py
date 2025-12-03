@@ -12,6 +12,93 @@ from dataclasses import dataclass
 import flet as ft
 
 
+class Palette:
+    """基本カラーパレット定義（Material Design Colors）。
+
+    DRY原則に基づき、色コードの定義を一箇所に集約します。
+    """
+
+    # Red
+    RED_400 = "#EF5350"
+    RED_500 = "#F44336"
+    RED_700 = "#D32F2F"
+    RED_900 = "#B71C1C"
+
+    # Pink
+    PINK_500 = "#E91E63"
+
+    # Purple
+    PURPLE_500 = "#9C27B0"
+
+    # Indigo
+    INDIGO_500 = "#3F51B5"
+
+    # Blue
+    BLUE_300 = "#64B5F6"
+    BLUE_400 = "#42A5F5"
+    BLUE_500 = "#2196F3"
+    BLUE_700 = "#1976D2"
+    BLUE_900 = "#0D47A1"
+
+    # Cyan
+    CYAN_500 = "#00BCD4"
+
+    # Green
+    GREEN_500 = "#4CAF50"
+    GREEN_600 = "#43A047"  # Dark Green for light mode success? No, usually 700 or 500.
+    GREEN_700 = "#388E3C"
+    GREEN_400 = "#66BB6A"
+
+    # Orange
+    ORANGE_400 = "#FFA726"
+    ORANGE_500 = "#FF9800"
+    ORANGE_700 = "#F57C00"
+
+    # Amber
+    AMBER_500 = "#FFC107"
+
+    # Brown
+    BROWN_500 = "#795548"
+
+    # Blue Grey
+    BLUE_GREY_500 = "#607D8B"
+
+    # Grey
+    GREY_50 = "#FAFAFA"
+    GREY_100 = "#F5F5F5"
+    GREY_200 = "#EEEEEE"
+    GREY_300 = "#E0E0E0"
+    GREY_400 = "#BDBDBD"
+    GREY_500 = "#9E9E9E"
+    GREY_600 = "#757575"
+    GREY_700 = "#616161"
+    GREY_800 = "#424242"
+    GREY_900 = "#212121"
+
+    # Common
+    WHITE = "#FFFFFF"
+    BLACK = "#000000"
+    TRANSPARENT = "transparent"
+
+    # Dark Theme Specifics
+    DARK_BG = "#121212"
+    DARK_SURFACE = "#1E1E1E"
+    DARK_ON_SURFACE = "#E0E0E0"
+    DARK_ON_PRIMARY = "#0D47A1"  # Blue 900
+    DARK_ON_ERROR = "#B71C1C"  # Red 900
+
+    # Secondary Colors
+    SECONDARY_LIGHT = "#625B71"
+    SECONDARY_VARIANT_LIGHT = "#958DA5"
+    SECONDARY_DARK = "#CCC2DC"
+    SECONDARY_VARIANT_DARK = "#4A4458"
+    ON_SECONDARY_DARK = "#332D41"
+
+    # Text Colors
+    TEXT_PRIMARY_LIGHT = "#1C1B1F"
+    TEXT_PRIMARY_DARK = "#E0E0E0"
+
+
 @dataclass
 class ColorTokens:
     """色定義のデータクラス。"""
@@ -46,61 +133,28 @@ class ColorTokens:
 class TagColors:
     """タグ用のカラーパレット定義（Material Design 500 シェード）。"""
 
-    red: str = "#F44336"  # Red 500
-    pink: str = "#E91E63"  # Pink 500
-    purple: str = "#9C27B0"  # Purple 500
-    indigo: str = "#3F51B5"  # Indigo 500
-    blue: str = "#2196F3"  # Blue 500
-    cyan: str = "#00BCD4"  # Cyan 500
-    green: str = "#4CAF50"  # Green 500
-    orange: str = "#FF9800"  # Orange 500
-    brown: str = "#795548"  # Brown 500
-    grey: str = "#607D8B"  # Blue Grey 500
+    red: str = Palette.RED_500
+    pink: str = Palette.PINK_500
+    purple: str = Palette.PURPLE_500
+    indigo: str = Palette.INDIGO_500
+    blue: str = Palette.BLUE_500
+    cyan: str = Palette.CYAN_500
+    green: str = Palette.GREEN_500
+    orange: str = Palette.ORANGE_500
+    brown: str = Palette.BROWN_500
+    grey: str = Palette.BLUE_GREY_500
 
 
 @dataclass
 class StatusColors:
     """プロジェクト・タスクのステータス色定義（Material Design 準拠）。"""
 
-    in_progress: str = "#2196F3"  # Blue 500 - 進行中
-    planned: str = "#FF9800"  # Orange 500 - 計画中
-    completed: str = "#4CAF50"  # Green 500 - 完了
-    on_hold: str = "#9E9E9E"  # Grey 500 - 保留
-    cancelled: str = "#F44336"  # Red 500 - 中止
-    todays: str = "#2196F3"  # Blue 500 - 今日のタスク
-
-
-@dataclass
-class UIColors:
-    """UI全般で使用する汎用色定義（Material Design Grey パレット）。"""
-
-    # グレースケール (Material Design Grey)
-    grey_50: str = "#FAFAFA"
-    grey_100: str = "#F5F5F5"
-    grey_200: str = "#EEEEEE"
-    grey_300: str = "#E0E0E0"
-    grey_400: str = "#BDBDBD"
-    grey_500: str = "#9E9E9E"
-    grey_600: str = "#757575"
-    grey_700: str = "#616161"
-    grey_800: str = "#424242"
-    grey_900: str = "#212121"
-
-    # 機能的な色（Material Design Blue パレット）
-    primary: str = "#2196F3"  # Blue 500
-    primary_light: str = "#64B5F6"  # Blue 300
-    primary_dark: str = "#1976D2"  # Blue 700
-
-    # セマンティックカラー（Material Design）
-    error: str = "#F44336"  # Red 500
-    error_light: str = "#EF5350"  # Red 400
-
-    success: str = "#4CAF50"  # Green 500
-    warning: str = "#FF9800"  # Orange 500
-    info: str = "#2196F3"  # Blue 500
-
-    # タグ関連の透明度付き色
-    tag_icon_bg_opacity: float = 0.1
+    in_progress: str = Palette.BLUE_500  # Blue 500 - 進行中
+    planned: str = Palette.ORANGE_500  # Orange 500 - 計画中
+    completed: str = Palette.GREEN_500  # Green 500 - 完了
+    on_hold: str = Palette.GREY_500  # Grey 500 - 保留
+    cancelled: str = Palette.RED_500  # Red 500 - 中止
+    todays: str = Palette.BLUE_500  # Blue 500 - 今日のタスク
 
 
 @dataclass
@@ -177,40 +231,40 @@ class FontTokens:
 
 # Light theme color tokens (Material Design 3)
 LIGHT_COLORS = ColorTokens(
-    primary="#2196F3",  # Blue - アプリ全体の統一プライマリカラー
-    primary_variant="#1976D2",
-    on_primary="#FFFFFF",
-    secondary="#625B71",
-    secondary_variant="#958DA5",
-    on_secondary="#FFFFFF",
-    background="#FAFAFA",  # Neutral grey background
-    on_background="#1C1B1F",
-    surface="#FFFFFF",  # Pure white for cards/panels
-    on_surface="#1C1B1F",
-    error="#D32F2F",  # Material Red 700
-    on_error="#FFFFFF",
-    success="#388E3C",  # Material Green 700
-    warning="#F57C00",  # Material Orange 700
-    info="#1976D2",  # Material Blue 700
+    primary=Palette.BLUE_500,  # Blue - アプリ全体の統一プライマリカラー
+    primary_variant=Palette.BLUE_700,
+    on_primary=Palette.WHITE,
+    secondary=Palette.SECONDARY_LIGHT,
+    secondary_variant=Palette.SECONDARY_VARIANT_LIGHT,
+    on_secondary=Palette.WHITE,
+    background=Palette.GREY_50,  # Neutral grey background
+    on_background=Palette.TEXT_PRIMARY_LIGHT,
+    surface=Palette.WHITE,  # Pure white for cards/panels
+    on_surface=Palette.TEXT_PRIMARY_LIGHT,
+    error=Palette.RED_700,  # Material Red 700
+    on_error=Palette.WHITE,
+    success=Palette.GREEN_700,  # Material Green 700
+    warning=Palette.ORANGE_700,  # Material Orange 700
+    info=Palette.BLUE_700,  # Material Blue 700
 )
 
 # Dark theme color tokens (Material Design 3)
 DARK_COLORS = ColorTokens(
-    primary="#64B5F6",  # Light Blue - ダークモード用の明るいブルー
-    primary_variant="#42A5F5",
-    on_primary="#0D47A1",
-    secondary="#CCC2DC",
-    secondary_variant="#4A4458",
-    on_secondary="#332D41",
-    background="#121212",  # True dark background
-    on_background="#E0E0E0",
-    surface="#1E1E1E",  # Elevated surface
-    on_surface="#E0E0E0",
-    error="#EF5350",  # Light Red for dark mode
-    on_error="#B71C1C",
-    success="#66BB6A",  # Light Green for dark mode
-    warning="#FFA726",  # Light Orange for dark mode
-    info="#42A5F5",  # Light Blue for dark mode
+    primary=Palette.BLUE_300,  # Light Blue - ダークモード用の明るいブルー
+    primary_variant=Palette.BLUE_400,
+    on_primary=Palette.DARK_ON_PRIMARY,
+    secondary=Palette.SECONDARY_DARK,
+    secondary_variant=Palette.SECONDARY_VARIANT_DARK,
+    on_secondary=Palette.ON_SECONDARY_DARK,
+    background=Palette.DARK_BG,  # True dark background
+    on_background=Palette.TEXT_PRIMARY_DARK,
+    surface=Palette.DARK_SURFACE,  # Elevated surface
+    on_surface=Palette.TEXT_PRIMARY_DARK,
+    error=Palette.RED_400,  # Light Red for dark mode
+    on_error=Palette.DARK_ON_ERROR,
+    success=Palette.GREEN_400,  # Light Green for dark mode
+    warning=Palette.ORANGE_400,  # Light Orange for dark mode
+    info=Palette.BLUE_400,  # Light Blue for dark mode
 )
 
 # Common tokens
@@ -224,7 +278,8 @@ SHADOW = ShadowTokens()
 # Color palette instances
 TAG_COLORS = TagColors()
 STATUS_COLORS = StatusColors()
-UI_COLORS = UIColors()
+# UI_COLORS は廃止し、Palette を直接参照するか、必要なヘルパー関数経由でアクセスする
+# UI_COLORS = UIColors()
 
 # Tag color palette for UI components
 TAG_COLOR_PALETTE = [
@@ -260,6 +315,18 @@ STATUS_COLOR_MAP = {
     "on_hold": STATUS_COLORS.on_hold,
     "cancelled": STATUS_COLORS.cancelled,
     "todays": STATUS_COLORS.todays,
+}
+
+
+STATUS_LABEL_MAP = {
+    # Task statuses
+    "completed": "完了",
+    "todays": "今日",
+    "active": "進行中",
+    # Project statuses
+    "planned": "計画中",
+    "on_hold": "保留",
+    "cancelled": "中止",
 }
 
 
@@ -385,18 +452,18 @@ def get_grey_color(shade: int = 600) -> str:
         色コード（HEX形式）
     """
     shade_map = {
-        50: UI_COLORS.grey_50,
-        100: UI_COLORS.grey_100,
-        200: UI_COLORS.grey_200,
-        300: UI_COLORS.grey_300,
-        400: UI_COLORS.grey_400,
-        500: UI_COLORS.grey_500,
-        600: UI_COLORS.grey_600,
-        700: UI_COLORS.grey_700,
-        800: UI_COLORS.grey_800,
-        900: UI_COLORS.grey_900,
+        50: Palette.GREY_50,
+        100: Palette.GREY_100,
+        200: Palette.GREY_200,
+        300: Palette.GREY_300,
+        400: Palette.GREY_400,
+        500: Palette.GREY_500,
+        600: Palette.GREY_600,
+        700: Palette.GREY_700,
+        800: Palette.GREY_800,
+        900: Palette.GREY_900,
     }
-    return shade_map.get(shade, UI_COLORS.grey_600)
+    return shade_map.get(shade, Palette.GREY_600)
 
 
 def get_primary_color(variant: str = "base") -> str:
@@ -408,11 +475,15 @@ def get_primary_color(variant: str = "base") -> str:
     Returns:
         色コード（HEX形式）
     """
-    if variant == "light":
-        return UI_COLORS.primary_light
+    colors = _get_current_theme_colors()
     if variant == "dark":
-        return UI_COLORS.primary_dark
-    return UI_COLORS.primary
+        # primary_variant を dark として扱う
+        return colors.primary_variant
+    if variant == "light":
+        # TODO: ColorTokensにlight variantを追加するか、Tonal Paletteを導入する
+        # 現状はprimaryと同じか、ハードコードで対応
+        return Palette.BLUE_300  # Blue 300
+    return colors.primary
 
 
 def get_tag_icon_bg_opacity() -> float:
@@ -424,7 +495,7 @@ def get_tag_icon_bg_opacity() -> float:
     Note:
         Fletでの使用例: ft.Colors.with_opacity(get_tag_icon_bg_opacity(), color)
     """
-    return UI_COLORS.tag_icon_bg_opacity
+    return OPACITY.light
 
 
 def get_status_label(status: str | None) -> str | None:
@@ -443,22 +514,23 @@ def get_status_label(status: str | None) -> str | None:
     if not status:
         return None
 
-    status_label_map = {
-        # Task statuses
-        "completed": "完了",
-        "todays": "今日",
-        "active": "進行中",
-        # Project statuses
-        "planned": "計画中",
-        "on_hold": "保留",
-        "cancelled": "中止",
-    }
     normalized = status.strip().lower()
-    return status_label_map.get(normalized, status)
+    return STATUS_LABEL_MAP.get(normalized, status)
 
 
 # Material Design 3 セマンティックカラー取得関数
 # NOTE: 現在はライトテーマのみ対応。将来的にはsettingsからテーマモードを取得して切り替える
+
+
+def _get_current_theme_colors() -> ColorTokens:
+    """現在のテーマ設定に基づいたカラートークンを取得する。
+
+    Note:
+        現在はLIGHT_COLORS固定だが、将来的には設定に基づいて
+        LIGHT_COLORS / DARK_COLORS を切り替える分岐点となる。
+    """
+    # TODO: settingsからテーマモードを取得して分岐
+    return LIGHT_COLORS
 
 
 def get_on_primary_color() -> str:
@@ -471,8 +543,7 @@ def get_on_primary_color() -> str:
         ボタンやチップなどのプライマリカラー背景上で使用するテキスト色。
         ライト/ダークテーマで自動的に適切なコントラスト比を保証。
     """
-    # TODO: テーマモード取得後、DARK_COLORS.on_primary にも対応
-    return LIGHT_COLORS.on_primary
+    return _get_current_theme_colors().on_primary
 
 
 def get_on_surface_color() -> str:
@@ -484,7 +555,7 @@ def get_on_surface_color() -> str:
     Note:
         カードやパネル背景上で使用する基本テキスト色。
     """
-    return LIGHT_COLORS.on_surface
+    return _get_current_theme_colors().on_surface
 
 
 def get_surface_color() -> str:
@@ -493,7 +564,7 @@ def get_surface_color() -> str:
     Returns:
         色コード（HEX形式）
     """
-    return LIGHT_COLORS.surface
+    return _get_current_theme_colors().surface
 
 
 def get_background_color() -> str:
@@ -502,7 +573,7 @@ def get_background_color() -> str:
     Returns:
         色コード（HEX形式）
     """
-    return LIGHT_COLORS.background
+    return _get_current_theme_colors().background
 
 
 def get_error_color() -> str:
@@ -514,7 +585,7 @@ def get_error_color() -> str:
     Note:
         エラーメッセージ、バリデーションエラー表示などに使用。
     """
-    return LIGHT_COLORS.error
+    return _get_current_theme_colors().error
 
 
 def get_success_color() -> str:
@@ -526,7 +597,31 @@ def get_success_color() -> str:
     Note:
         成功メッセージ、完了ステータス表示などに使用。
     """
-    return LIGHT_COLORS.success
+    return _get_current_theme_colors().success
+
+
+def get_warning_color() -> str:
+    """警告色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        警告メッセージ、注意喚起表示などに使用。
+    """
+    return _get_current_theme_colors().warning
+
+
+def get_info_color() -> str:
+    """情報色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        情報メッセージ、インフォメーション表示などに使用。
+    """
+    return _get_current_theme_colors().info
 
 
 def get_on_error_color() -> str:
@@ -535,7 +630,7 @@ def get_on_error_color() -> str:
     Returns:
         色コード（HEX形式）
     """
-    return LIGHT_COLORS.on_error
+    return _get_current_theme_colors().on_error
 
 
 # 役割ベースのカラーヘルパー（MD3ガイドライン準拠）
@@ -624,14 +719,15 @@ def get_accent_background_color(color_name: str = "primary") -> str:
         デイリーレビューカードなどのアクセント背景に使用。
         色名に応じた適切な背景色を返す。
     """
+    colors = _get_current_theme_colors()
     accent_map = {
-        "amber": LIGHT_COLORS.warning,
-        "blue": LIGHT_COLORS.primary,
-        "green": LIGHT_COLORS.success,
-        "primary": LIGHT_COLORS.primary,
+        "amber": colors.warning,
+        "blue": colors.primary,
+        "green": colors.success,
+        "primary": colors.primary,
         "purple": TAG_COLORS.purple,
     }
-    return accent_map.get(color_name, LIGHT_COLORS.primary)
+    return accent_map.get(color_name, colors.primary)
 
 
 def get_accent_border_color(color_name: str = "primary") -> str:
@@ -645,7 +741,7 @@ def get_accent_border_color(color_name: str = "primary") -> str:
     """
     # amber は特別扱い（より明るいボーダー）
     if color_name == "amber":
-        return "#FFC107"  # AMBER_400 相当
+        return Palette.AMBER_500  # AMBER_500
 
     # その他は get_outline_color() をベースにする
     return get_outline_color()

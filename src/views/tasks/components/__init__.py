@@ -361,11 +361,11 @@ def _get_priority_color(priority: str) -> str:
     Note:
         将来的には theme.py に priority 色定義を追加することを推奨
     """
-    from views.theme import UI_COLORS
+    from views.theme import get_error_color, get_grey_color, get_success_color, get_warning_color
 
     color_map = {
-        "high": UI_COLORS.error,
-        "medium": UI_COLORS.warning,
-        "low": UI_COLORS.success,
+        "high": get_error_color(),
+        "medium": get_warning_color(),
+        "low": get_success_color(),
     }
     return color_map.get(priority.lower(), get_grey_color(500))

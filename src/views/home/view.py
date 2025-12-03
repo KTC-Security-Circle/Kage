@@ -203,7 +203,6 @@ class HomeView(BaseView):
         self._daily_review_card.bgcolor = new_card.bgcolor
         self._daily_review_card.border = new_card.border
         self._daily_review_card.border_radius = new_card.border_radius
-        logger.debug("[UI更新] デイリーレビューカード再構築完了")
 
     def _build_inbox_memos_section(self) -> ft.Control:
         """Inboxメモセクションを構築する。

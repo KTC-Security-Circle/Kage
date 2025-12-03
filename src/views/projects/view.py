@@ -31,7 +31,14 @@ from views.projects.components.project_dialogs import (
 from views.projects.controller import ProjectController
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import get_grey_color, get_on_primary_color
+from views.theme import (
+    get_error_color,
+    get_grey_color,
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_surface_variant_color,
+)
 
 
 class ProjectsView(BaseView):
@@ -317,8 +324,8 @@ class ProjectsView(BaseView):
                                             controls=[
                                                 ft.ProgressBar(
                                                     value=project.progress_value,
-                                                    color=ft.Colors.BLUE,
-                                                    bgcolor=ft.Colors.GREY_300,
+                                                    color=get_primary_color(),
+                                                    bgcolor=get_surface_variant_color(),
                                                     height=12,
                                                 ),
                                                 ft.Text(
@@ -357,7 +364,7 @@ class ProjectsView(BaseView):
                         ft.Icon(
                             ft.Icons.FOLDER_OPEN,
                             size=48,
-                            color=ft.Colors.GREY_400,
+                            color=get_outline_color(),
                         ),
                         ft.Text(
                             "プロジェクトを選択して詳細を表示",
@@ -387,7 +394,7 @@ class ProjectsView(BaseView):
                     ft.Icon(
                         ft.Icons.FOLDER_OPEN_OUTLINED,
                         size=64,
-                        color=ft.Colors.GREY_400,
+                        color=get_outline_color(),
                     ),
                     ft.Text(
                         "プロジェクトがありません",
@@ -405,7 +412,7 @@ class ProjectsView(BaseView):
                         text="最初のプロジェクトを作成",
                         icon=ft.Icons.ADD,
                         on_click=self._on_create_click,
-                        bgcolor=ft.Colors.BLUE,
+                        bgcolor=get_primary_color(),
                         color=get_on_primary_color(),
                     ),
                 ],
@@ -470,7 +477,7 @@ class ProjectsView(BaseView):
                 ft.ElevatedButton(
                     "削除",
                     icon=ft.Icons.DELETE,
-                    bgcolor=ft.Colors.RED,
+                    bgcolor=get_error_color(),
                     color=get_on_primary_color(),
                     on_click=_delete,
                 ),

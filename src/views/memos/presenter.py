@@ -299,12 +299,12 @@ def _create_status_badge_data(status: MemoStatus) -> StatusBadgeData:
         StatusBadgeData
     """
     badge_map = {
-        MemoStatus.INBOX: StatusBadgeData(text="新規", color=ft.Colors.BLUE_100, icon=ft.Icons.FIBER_NEW),
-        MemoStatus.ACTIVE: StatusBadgeData(text="進行中", color=ft.Colors.GREEN_100, icon=ft.Icons.PLAY_ARROW),
-        MemoStatus.IDEA: StatusBadgeData(text="アイデア", color=ft.Colors.YELLOW_100, icon=ft.Icons.LIGHTBULB),
-        MemoStatus.ARCHIVE: StatusBadgeData(text="保管", color=ft.Colors.GREY_300, icon=ft.Icons.ARCHIVE),
+        MemoStatus.INBOX: StatusBadgeData(text="新規", color=get_primary_color(), icon=ft.Icons.FIBER_NEW),
+        MemoStatus.ACTIVE: StatusBadgeData(text="進行中", color=get_status_color("進行中"), icon=ft.Icons.PLAY_ARROW),
+        MemoStatus.IDEA: StatusBadgeData(text="アイデア", color=get_warning_color(), icon=ft.Icons.LIGHTBULB),
+        MemoStatus.ARCHIVE: StatusBadgeData(text="保管", color=get_outline_color(), icon=ft.Icons.ARCHIVE),
     }
-    return badge_map.get(status, StatusBadgeData(text="メモ", color=ft.Colors.GREY_100))
+    return badge_map.get(status, StatusBadgeData(text="メモ", color=get_outline_color()))
 
 
 # ========================================

@@ -8,6 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from views.theme import (
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_text_secondary_color,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -35,10 +42,10 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     name_field = ft.TextField(
         label="タイトル",
         hint_text="例: ウェブサイトリニューアル",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        hint_style=ft.TextStyle(color=ft.Colors.GREY_500),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        hint_style=ft.TextStyle(color=get_text_secondary_color()),
         max_length=80,
         counter_text="",
     )
@@ -46,10 +53,10 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     description_field = ft.TextField(
         label="説明",
         hint_text="プロジェクトの詳細を入力してください",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        hint_style=ft.TextStyle(color=ft.Colors.GREY_500),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        hint_style=ft.TextStyle(color=get_text_secondary_color()),
         multiline=True,
         max_lines=3,
         max_length=500,
@@ -59,9 +66,9 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     status_dropdown = ft.Dropdown(
         label="ステータス",
         value="Active",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         options=[
             ft.dropdown.Option("Active", "Active"),
             ft.dropdown.Option("On-Hold", "On-Hold"),
@@ -100,9 +107,9 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     task_dropdown = ft.Dropdown(
         label="関連タスク追加",
         hint_text="タスクを選択してください",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         options=[
             ft.dropdown.Option("dummy-task-1", "サンプルタスク 1"),
             ft.dropdown.Option("dummy-task-2", "サンプルタスク 2"),
@@ -116,9 +123,9 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
         label="期限",
         hint_text="YYYY-MM-DD",
         read_only=True,
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         width=200,
     )
 
@@ -225,11 +232,11 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
         modal=True,
         title=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.ADD_CIRCLE, color=ft.Colors.BLUE_600, size=28),
+                ft.Icon(ft.Icons.ADD_CIRCLE, color=get_primary_color(), size=28),
                 ft.Text(
                     "新しいプロジェクト",
                     theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                    color=ft.Colors.BLUE_700,
+                    color=get_primary_color(),
                     weight=ft.FontWeight.BOLD,
                 ),
             ],
@@ -243,7 +250,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                         content=ft.Text(
                             "新しいプロジェクトの詳細を入力してください",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.Colors.GREY_600,
+                            color=get_text_secondary_color(),
                         ),
                         margin=ft.margin.only(bottom=20),
                     ),
@@ -259,7 +266,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                                     controls=[
                                         ft.Row(
                                             controls=[
-                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.BLUE_600),
+                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=get_primary_color()),
                                                 due_date_text,
                                             ],
                                             spacing=6,
@@ -296,11 +303,11 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.INFO, color=ft.Colors.BLUE_400, size=16),
+                                ft.Icon(ft.Icons.INFO, color=get_outline_color(), size=16),
                                 ft.Text(
                                     "タイトルは必須項目です",
                                     theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=ft.Colors.BLUE_600,
+                                    color=get_primary_color(),
                                 ),
                             ],
                             spacing=8,
@@ -321,14 +328,14 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                         text="キャンセル",
                         icon=ft.Icons.CLOSE,
                         on_click=close_dialog,
-                        style=ft.ButtonStyle(color=ft.Colors.GREY_600),
+                        style=ft.ButtonStyle(color=get_text_secondary_color()),
                     ),
                     ft.ElevatedButton(
                         text="作成",
                         icon=ft.Icons.ADD,
                         on_click=save_project,
-                        bgcolor=ft.Colors.BLUE_600,
-                        color=ft.Colors.WHITE,
+                        bgcolor=get_primary_color(),
+                        color=get_on_primary_color(),
                         style=ft.ButtonStyle(
                             elevation=2,
                             shape=ft.RoundedRectangleBorder(radius=8),
@@ -369,9 +376,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     name_field = ft.TextField(
         label="タイトル",
         value=project.get("title", project.get("name", "")),
-        border_color=ft.Colors.ORANGE_400,
-        focused_border_color=ft.Colors.ORANGE_600,
-        label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         max_length=80,
         counter_text="",
     )
@@ -379,9 +386,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     description_field = ft.TextField(
         label="説明",
         value=project.get("description", ""),
-        border_color=ft.Colors.ORANGE_400,
-        focused_border_color=ft.Colors.ORANGE_600,
-        label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         multiline=True,
         max_lines=3,
         max_length=500,
@@ -391,9 +398,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     status_dropdown = ft.Dropdown(
         label="ステータス",
         value=(project.get("status") or "Active").title().replace("_", "-"),
-        border_color=ft.Colors.ORANGE_400,
-        focused_border_color=ft.Colors.ORANGE_600,
-        label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         options=[
             ft.dropdown.Option("Active", "Active"),
             ft.dropdown.Option("On-Hold", "On-Hold"),
@@ -444,9 +451,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     task_dropdown = ft.Dropdown(
         label="関連タスク追加",
         hint_text="タスクを選択してください",
-        border_color=ft.Colors.ORANGE_400,
-        focused_border_color=ft.Colors.ORANGE_600,
-        label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         options=[
             ft.dropdown.Option("dummy-task-1", "サンプルタスク 1"),
             ft.dropdown.Option("dummy-task-2", "サンプルタスク 2"),
@@ -461,9 +468,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         hint_text="YYYY-MM-DD",
         read_only=True,
         value=str(project.get("due_date", "")) if project.get("due_date") else "",
-        border_color=ft.Colors.ORANGE_400,
-        focused_border_color=ft.Colors.ORANGE_600,
-        label_style=ft.TextStyle(color=ft.Colors.ORANGE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         width=200,
     )
     import datetime as _dt
@@ -544,7 +551,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             close_dialog(_)
         except Exception as e:
             # Fallback snackbar (Pageに既存snackbar APIがない場合はDialogで代替)
-            error_bar = ft.SnackBar(ft.Text(f"保存に失敗しました: {e}"), bgcolor=ft.Colors.RED_400)
+            from views.theme import get_error_color
+
+            error_bar = ft.SnackBar(ft.Text(f"保存に失敗しました: {e}"), bgcolor=get_error_color())
             page.overlay.append(error_bar)
             error_bar.open = True
             page.update()
@@ -554,11 +563,11 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         modal=True,
         title=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.EDIT, color=ft.Colors.ORANGE_600, size=28),
+                ft.Icon(ft.Icons.EDIT, color=get_primary_color(), size=28),
                 ft.Text(
                     "プロジェクトを編集",
                     theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                    color=ft.Colors.ORANGE_700,
+                    color=get_primary_color(),
                     weight=ft.FontWeight.BOLD,
                 ),
             ],
@@ -572,7 +581,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                         content=ft.Text(
                             f"「{project.get('name', '未名')}」の詳細を編集してください",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.Colors.GREY_600,
+                            color=get_text_secondary_color(),
                         ),
                         margin=ft.margin.only(bottom=20),
                     ),
@@ -588,7 +597,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                                     controls=[
                                         ft.Row(
                                             controls=[
-                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.ORANGE_600),
+                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=get_primary_color()),
                                                 due_date_text,
                                             ],
                                             spacing=6,
@@ -626,14 +635,14 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                             controls=[
                                 ft.Icon(
                                     ft.Icons.TRENDING_UP,
-                                    color=ft.Colors.ORANGE_400,
+                                    color=get_outline_color(),
                                     size=16,
                                 ),
                                 ft.Text(
                                     f"進捗: {project.get('completed_tasks', '0')}/"
                                     f"{project.get('tasks_count', '0')} タスク完了",
                                     theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=ft.Colors.ORANGE_600,
+                                    color=get_primary_color(),
                                 ),
                             ],
                             spacing=8,
@@ -654,14 +663,14 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                         text="キャンセル",
                         icon=ft.Icons.CLOSE,
                         on_click=close_dialog,
-                        style=ft.ButtonStyle(color=ft.Colors.GREY_600),
+                        style=ft.ButtonStyle(color=get_text_secondary_color()),
                     ),
                     ft.ElevatedButton(
                         text="保存",
                         icon=ft.Icons.SAVE,
                         on_click=save_project,
-                        bgcolor=ft.Colors.ORANGE_600,
-                        color=ft.Colors.WHITE,
+                        bgcolor=get_primary_color(),
+                        color=get_on_primary_color(),
                         style=ft.ButtonStyle(
                             elevation=2,
                             shape=ft.RoundedRectangleBorder(radius=8),

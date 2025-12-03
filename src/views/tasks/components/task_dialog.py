@@ -183,7 +183,7 @@ def show_create_task_dialog(
                         content=ft.Text(
                             "新しいタスクの詳細を入力してください",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.Colors.GREY_600,
+                            color=get_text_secondary_color(),
                         ),
                         margin=ft.margin.only(bottom=20),
                     ),
@@ -307,11 +307,11 @@ def show_edit_task_dialog(
         modal=True,
         title=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.EDIT, color=ft.Colors.BLUE_600, size=28),
+                ft.Icon(ft.Icons.EDIT, color=get_primary_color(), size=28),
                 ft.Text(
                     "タスクを編集",
                     theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                    color=ft.Colors.BLUE_700,
+                    color=get_primary_color(),
                     weight=ft.FontWeight.BOLD,
                 ),
             ],
@@ -325,7 +325,7 @@ def show_edit_task_dialog(
                         content=ft.Text(
                             "タスクの詳細を編集してください",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.Colors.GREY_600,
+                            color=get_text_secondary_color(),
                         ),
                         margin=ft.margin.only(bottom=20),
                     ),
@@ -347,8 +347,8 @@ def show_edit_task_dialog(
             ft.ElevatedButton(
                 "保存",
                 on_click=save_task,
-                bgcolor=ft.Colors.BLUE_600,
-                color=ft.Colors.WHITE,
+                bgcolor=get_primary_color(),
+                color=get_on_primary_color(),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,

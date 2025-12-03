@@ -221,7 +221,7 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None])
                 color=ft.Colors.with_opacity(OPACITY.high, get_text_secondary_color()),
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
-            bgcolor=ft.Colors.with_opacity(OPACITY.light, ft.Colors.BLUE_GREY_100),
+            bgcolor=ft.Colors.with_opacity(OPACITY.light, get_surface_variant_color()),
             border_radius=BORDER_RADIUS.sm,
             border=ft.border.all(
                 BORDER_WIDTH.thin,

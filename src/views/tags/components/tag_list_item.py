@@ -12,7 +12,14 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from views.theme import get_grey_color, get_primary_color
+from views.theme import (
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_surface_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,12 +48,12 @@ class TagListItem(ft.Container):
         self._build_content(props)
 
     def _build_content(self, props: TagListItemProps) -> None:
-        """コンテンツを構築する"""
+        """コンテンツを構築する（プロジェクトカードパターン準拠）"""
         # カラー円形インジケータ
         color_dot = ft.Container(
             width=16,
             height=16,
-            border_radius=ft.border_radius.all(8),
+            border_radius=8,
             bgcolor=props.color,
         )
 
@@ -54,36 +61,67 @@ class TagListItem(ft.Container):
         count_badge = ft.Container(
             content=ft.Text(
                 str(props.total_count),
-                size=12,
+                theme_style=ft.TextThemeStyle.LABEL_SMALL,
                 weight=ft.FontWeight.W_500,
-                color=get_grey_color(700),
+                color=get_on_primary_color(),
             ),
-            bgcolor=get_grey_color(200),
+            bgcolor=get_primary_color(),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            border_radius=ft.border_radius.all(12),
+            border_radius=12,
         )
 
-        # メモ・タスクカウント
-        detail_counts = ft.Row(
+        # ヘッダー行（タグ名 + カウントバッジ）
+        header = ft.Row(
             controls=[
                 ft.Row(
                     controls=[
-                        ft.Icon(ft.Icons.FILE_PRESENT, size=14, color=get_grey_color(600)),
+                        color_dot,
+                        ft.Text(
+                            props.name,
+                            theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                            weight=ft.FontWeight.W_500,
+                        ),
+                    ],
+                    spacing=8,
+                    expand=True,
+                ),
+                count_badge,
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+
+        # Divider
+        divider = ft.Divider(height=1, color=get_outline_color())
+
+        # フッター（メモ・タスクカウント）
+        footer = ft.Row(
+            controls=[
+                ft.Row(
+                    controls=[
+                        ft.Icon(
+                            ft.Icons.DESCRIPTION_OUTLINED,
+                            size=16,
+                            color=get_text_secondary_color(),
+                        ),
                         ft.Text(
                             f"{props.memo_count} メモ",
-                            size=11,
-                            color=get_grey_color(600),
+                            theme_style=ft.TextThemeStyle.BODY_SMALL,
+                            color=get_text_secondary_color(),
                         ),
                     ],
                     spacing=4,
                 ),
                 ft.Row(
                     controls=[
-                        ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=14, color=get_grey_color(600)),
+                        ft.Icon(
+                            ft.Icons.TASK_ALT,
+                            size=16,
+                            color=get_text_secondary_color(),
+                        ),
                         ft.Text(
                             f"{props.task_count} タスク",
-                            size=11,
-                            color=get_grey_color(600),
+                            theme_style=ft.TextThemeStyle.BODY_SMALL,
+                            color=get_text_secondary_color(),
                         ),
                     ],
                     spacing=4,
@@ -92,46 +130,21 @@ class TagListItem(ft.Container):
             spacing=16,
         )
 
-        # カードコンテンツ
-        card_content = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Row(
-                                controls=[
-                                    color_dot,
-                                    ft.Text(
-                                        props.name,
-                                        theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                ],
-                                spacing=8,
-                                expand=True,
-                            ),
-                            count_badge,
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                    detail_counts,
-                ],
-                spacing=12,
-            ),
-            padding=16,
-        )
-
-        # 選択状態に応じたスタイル（MD3準拠: 選択時はelevation 1→2）
-        border_color = get_primary_color() if props.selected else get_grey_color(300)
-        border_width = 2 if props.selected else 1
-        elevation = 2 if props.selected else 1
-
+        # Card本体（プロジェクトカードパターン）
         self.content = ft.Card(
-            content=card_content,
-            elevation=elevation,
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[header, divider, footer],
+                    spacing=16,
+                ),
+                padding=20,
+            ),
+            elevation=1 if not props.selected else 3,
+            color=get_surface_color() if not props.selected else get_surface_variant_color(),
+            surface_tint_color=get_primary_color() if props.selected else None,
         )
-        self.border = ft.border.all(border_width, border_color)
-        self.border_radius = ft.border_radius.all(8)
+        self.margin = ft.margin.symmetric(vertical=4, horizontal=8)
+        self.border_radius = 8
         self.on_click = lambda e: props.on_click(e, props.tag_id)
         self.ink = True
 

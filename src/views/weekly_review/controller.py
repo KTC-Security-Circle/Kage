@@ -5,7 +5,7 @@
 
 from loguru import logger
 
-from logic.application.review_application_service import WeeklyReviewApplicationService
+from logic.application.task_application_service import TaskApplicationService
 from views.weekly_review.components import MemoAction, ZombieTaskAction
 
 from .state import WeeklyReviewState, WeeklyStats
@@ -19,57 +19,53 @@ class WeeklyReviewController:
 
     def __init__(
         self,
-        review_app_service: WeeklyReviewApplicationService,
+        task_app_service: TaskApplicationService,
         state: WeeklyReviewState,
     ) -> None:
         """コントローラーを初期化
 
         Args:
-            review_app_service: 週次レビューのApplicationService
+            task_app_service: タスク管理のApplicationService
             state: レビュー状態
         """
-        self.review_app_service = review_app_service
+        self.task_app_service = task_app_service
         self.state = state
 
     def load_initial_data(self) -> None:
         """初期データを読み込み
 
-        WeeklyReviewApplicationService を使用して週次レビューデータを取得する。
+        タスク統計を取得して状態を更新する。
+
+        Note:
+            現在は TaskApplicationService からのデータ取得が未実装のため、
+            すべての統計値を 0 で初期化している。
+            実装時は task_app_service を使用してタスクデータを取得する。
         """
-        logger.info("週次レビューデータを読み込み中")
+        logger.info("週次レビューの統計データを読み込み中")
 
         try:
-            # WeeklyReviewInsights を取得
-            insights = self.review_app_service.fetch_insights()
+            # TODO: TaskApplicationService を使用してタスクデータを取得
+            # 実装例:
+            # all_tasks = self.task_app_service.get_all_tasks()
+            # tasks_by_status = self._group_tasks_by_status(all_tasks)
+            # completed_this_week = self._filter_completed_this_week(all_tasks)
 
-            # State にデータを格納
-            self.state.completed_tasks_this_week = []  # TODO: insights から変換
-            self.state.achievement_highlights = [item.description for item in insights.highlights.items]
-            self.state.zombie_tasks = []  # TODO: insights.zombie_tasks.tasks から変換
-            self.state.unprocessed_memos = []  # TODO: insights.memo_audits.audits から変換
-            self.state.recommendations = []  # TODO: 推奨事項を生成
-
-            # 統計データを設定（暫定）
+            # 暫定: 空の統計データで初期化
             self.state.stats = WeeklyStats(
-                completed_tasks=len(insights.highlights.items),
+                completed_tasks=0,
                 focus_hours=0.0,
                 inbox_count=0,
-                waiting_count=len(insights.zombie_tasks.tasks),
+                waiting_count=0,
                 someday_count=0,
                 active_projects=0,
                 completed_last_week=0,
             )
 
-            logger.info(
-                f"週次レビューデータ読み込み完了: "
-                f"highlights={len(insights.highlights.items)}, "
-                f"zombies={len(insights.zombie_tasks.tasks)}, "
-                f"memos={len(insights.memo_audits.audits)}"
-            )
+            logger.info(f"統計データ読み込み完了（暫定値）: {self.state.stats}")
 
         except Exception as e:
-            logger.exception("週次レビューデータの読み込みに失敗")
-            error_msg = f"週次レビューデータの初期化に失敗しました: {e}"
+            logger.exception("統計データの読み込みに失敗")
+            error_msg = f"統計データの初期化に失敗しました: {e}"
             raise RuntimeError(error_msg) from e
 
     def toggle_checklist_item(self, item_id: str) -> None:

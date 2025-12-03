@@ -46,7 +46,7 @@ from .presenter import WeeklyReviewPresenter
 from .state import WeeklyReviewState
 
 if TYPE_CHECKING:
-    from logic.application.review_application_service import WeeklyReviewApplicationService
+    from logic.application.task_application_service import TaskApplicationService
 
 # View step constants
 STEP_ACHIEVEMENT = 1
@@ -69,12 +69,12 @@ class WeeklyReviewView(BaseView):
         super().__init__(props)
 
         # 依存性注入
-        self.review_app_service: WeeklyReviewApplicationService = props.apps.review
+        self.task_app_service: TaskApplicationService = props.apps.task
 
         # 状態・コントローラー・プレゼンター初期化
         self.review_state = WeeklyReviewState()
         self.controller = WeeklyReviewController(
-            review_app_service=self.review_app_service,
+            task_app_service=self.task_app_service,
             state=self.review_state,
         )
         self.presenter = WeeklyReviewPresenter(state=self.review_state)
@@ -168,6 +168,58 @@ class WeeklyReviewView(BaseView):
             return self._render_step3_planning()
         return ft.Container()
 
+    def _build_step_header(
+        self,
+        title: str,
+        subtitle: str,
+        icon_name: str,
+        icon_color: str,
+    ) -> ft.Container:
+        """ステップヘッダーを構築
+
+        Args:
+            title: ヘッダータイトル
+            subtitle: サブタイトル
+            icon_name: アイコン名
+            icon_color: アイコンカラー
+
+        Returns:
+            構築されたヘッダーコンテナ
+        """
+        return ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Icon(
+                            name=icon_name,
+                            size=48,
+                            color=icon_color,
+                        ),
+                        padding=ft.padding.all(16),
+                        bgcolor=f"{icon_color}1A",
+                        border_radius=50,
+                    ),
+                    ft.Container(height=16),
+                    ft.Text(
+                        title,
+                        size=28,
+                        weight=ft.FontWeight.BOLD,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Container(height=8),
+                    ft.Text(
+                        subtitle,
+                        size=16,
+                        color=ft.Colors.GREY_700,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=0,
+            ),
+            padding=ft.padding.symmetric(vertical=24),
+        )
+
     def _render_step1_achievement(self) -> ft.Control:
         """Step1: 成果の振り返りをレンダリング
 
@@ -233,38 +285,11 @@ class WeeklyReviewView(BaseView):
             Step2コンテンツ
         """
         # ヘッダー
-        header_container = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Container(
-                        content=ft.Icon(
-                            name=ft.Icons.AUTO_AWESOME,
-                            size=48,
-                            color=ft.Colors.YELLOW_700,
-                        ),
-                        padding=ft.padding.all(16),
-                        bgcolor=f"{ft.Colors.YELLOW_700}1A",
-                        border_radius=50,
-                    ),
-                    ft.Container(height=16),
-                    ft.Text(
-                        "システムの整理",
-                        size=28,
-                        weight=ft.FontWeight.BOLD,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "AIが気になる項目をピックアップしました。それぞれについて判断をお願いします。",
-                        size=16,
-                        color=ft.Colors.GREY_700,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0,
-            ),
-            padding=ft.padding.symmetric(vertical=24),
+        header_container = self._build_step_header(
+            title="システムの整理",
+            subtitle="AIが気になる項目をピックアップしました。それぞれについて判断をお願いします。",
+            icon_name=ft.Icons.AUTO_AWESOME,
+            icon_color=ft.Colors.YELLOW_700,
         )
 
         controls: list[ft.Control] = [header_container, ft.Container(height=24)]
@@ -371,38 +396,11 @@ class WeeklyReviewView(BaseView):
             Step3コンテンツ
         """
         # ヘッダー
-        header_container = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Container(
-                        content=ft.Icon(
-                            name=ft.Icons.CALENDAR_TODAY,
-                            size=48,
-                            color=ft.Colors.GREEN_700,
-                        ),
-                        padding=ft.padding.all(16),
-                        bgcolor=f"{ft.Colors.GREEN_700}1A",
-                        border_radius=50,
-                    ),
-                    ft.Container(height=16),
-                    ft.Text(
-                        "次週のプランニング",
-                        size=28,
-                        weight=ft.FontWeight.BOLD,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "AIが来週注力すべき項目を提案します。承認または調整してください。",
-                        size=16,
-                        color=ft.Colors.GREY_700,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0,
-            ),
-            padding=ft.padding.symmetric(vertical=24),
+        header_container = self._build_step_header(
+            title="次週のプランニング",
+            subtitle="AIが来週注力すべき項目を提案します。承認または調整してください。",
+            icon_name=ft.Icons.CALENDAR_TODAY,
+            icon_color=ft.Colors.GREEN_700,
         )
 
         controls: list[ft.Control] = [header_container, ft.Container(height=24)]

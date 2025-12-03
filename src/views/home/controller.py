@@ -105,7 +105,7 @@ class HomeController:
 
         # daily_reviewのmessageフィールドを更新(生成された場合のみ)
         if message:
-            self.state.daily_review["message"] = message
+            self.state.update_daily_review_message(message)
             logger.debug("[Controller] daily_reviewにメッセージを反映")
 
     def _generate_one_liner(self) -> str | None:

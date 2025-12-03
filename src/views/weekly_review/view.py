@@ -118,7 +118,7 @@ class WeeklyReviewView(BaseView):
             )
         )
 
-        return ft.Column(
+        content = ft.Column(
             controls=[
                 header,
                 ft.Container(height=16),
@@ -135,6 +135,11 @@ class WeeklyReviewView(BaseView):
             expand=True,
         )
 
+        # 初期データロード
+        self.did_mount()
+
+        return content
+
     def _build_header(self) -> ft.Control:
         """ヘッダーを構築
 
@@ -144,6 +149,7 @@ class WeeklyReviewView(BaseView):
         return self.create_header(
             title="週次レビュー",
             subtitle="AIがサポートする週次レビュー - 事務作業はAI、意思決定は人間",
+            show_search=False,
         )
 
     def _render_current_step(self) -> ft.Control:
@@ -503,7 +509,7 @@ class WeeklyReviewView(BaseView):
     def _handle_complete_review(self) -> None:
         """レビュー完了処理"""
         self.show_info_snackbar("レビューを完了しました！")
-        self.page.go("/home")
+        self.page.go("/")
 
     def _refresh_wizard(self) -> None:
         """ウィザード全体をリフレッシュ"""
@@ -540,9 +546,11 @@ class WeeklyReviewView(BaseView):
         """マウント時の初期化"""
         super().did_mount()
         try:
+            logger.info("週次レビューの初期データをロード中...")
             self.controller.load_initial_data()
+            logger.info("週次レビューの初期データロード完了")
             # TODO: 実データ取得実装後にリフレッシュ
             # self._refresh_wizard()
         except Exception as e:
-            logger.exception("初期データ読み込みに失敗")
-            self.notify_error(f"データの読み込みに失敗しました: {type(e).__name__}")
+            logger.exception("週次レビューの初期データ読み込みに失敗")
+            self.notify_error("週次レビューデータの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")

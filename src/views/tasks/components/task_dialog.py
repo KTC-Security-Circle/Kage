@@ -8,6 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from views.theme import (
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_text_secondary_color,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -32,10 +39,10 @@ def show_create_task_dialog(
     title_field = ft.TextField(
         label="タスクタイトル",
         hint_text="例: 要件定義書の作成",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        hint_style=ft.TextStyle(color=ft.Colors.GREY_500),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        hint_style=ft.TextStyle(color=get_text_secondary_color()),
         max_length=100,
         counter_text="",
         autofocus=True,
@@ -44,10 +51,10 @@ def show_create_task_dialog(
     description_field = ft.TextField(
         label="説明",
         hint_text="タスクの詳細を入力してください",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        hint_style=ft.TextStyle(color=ft.Colors.GREY_500),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        hint_style=ft.TextStyle(color=get_text_secondary_color()),
         multiline=True,
         min_lines=3,
         max_lines=5,
@@ -58,9 +65,9 @@ def show_create_task_dialog(
     status_dropdown = ft.Dropdown(
         label="ステータス",
         value="todo",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         options=[ft.dropdown.Option(key=key, text=label) for key, label in TASK_STATUS_LABELS.items()],
         expand=True,
     )
@@ -68,45 +75,45 @@ def show_create_task_dialog(
     due_date_field = ft.TextField(
         label="期限日",
         hint_text="YYYY-MM-DD",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         expand=True,
     )
 
     completed_at_field = ft.TextField(
         label="完了日時",
         hint_text="YYYY-MM-DD HH:MM:SS",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         expand=True,
     )
 
     project_id_field = ft.TextField(
         label="プロジェクトID",
         hint_text="UUID",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         expand=True,
     )
 
     memo_id_field = ft.TextField(
         label="メモID",
         hint_text="UUID",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         expand=True,
     )
 
     recurrence_rule_field = ft.TextField(
         label="繰り返しルール",
         hint_text="例: FREQ=DAILY",
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         visible=False,
         expand=True,
     )
@@ -118,7 +125,7 @@ def show_create_task_dialog(
     is_recurring_checkbox = ft.Checkbox(
         label="繰り返しタスク",
         on_change=on_recurring_change,
-        fill_color=ft.Colors.BLUE_600,
+        fill_color=get_primary_color(),
     )
 
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
@@ -158,11 +165,11 @@ def show_create_task_dialog(
         modal=True,
         title=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.ADD_TASK, color=ft.Colors.BLUE_600, size=28),
+                ft.Icon(ft.Icons.ADD_TASK, color=get_primary_color(), size=28),
                 ft.Text(
                     "新しいタスク",
                     theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                    color=ft.Colors.BLUE_700,
+                    color=get_primary_color(),
                     weight=ft.FontWeight.BOLD,
                 ),
             ],
@@ -203,8 +210,8 @@ def show_create_task_dialog(
             ft.ElevatedButton(
                 "作成",
                 on_click=save_task,
-                bgcolor=ft.Colors.BLUE_600,
-                color=ft.Colors.WHITE,
+                bgcolor=get_primary_color(),
+                color=get_on_primary_color(),
             ),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
@@ -235,10 +242,10 @@ def show_edit_task_dialog(
         label="タスクタイトル",
         hint_text="例: 要件定義書の作成",
         value=task_data.get("title", ""),
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        hint_style=ft.TextStyle(color=ft.Colors.GREY_500),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        hint_style=ft.TextStyle(color=get_text_secondary_color()),
         max_length=100,
         counter_text="",
         autofocus=True,
@@ -248,10 +255,10 @@ def show_edit_task_dialog(
         label="説明",
         hint_text="タスクの詳細を入力してください",
         value=task_data.get("description", ""),
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
-        hint_style=ft.TextStyle(color=ft.Colors.GREY_500),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        hint_style=ft.TextStyle(color=get_text_secondary_color()),
         multiline=True,
         min_lines=3,
         max_lines=5,
@@ -262,9 +269,9 @@ def show_edit_task_dialog(
     status_dropdown = ft.Dropdown(
         label="ステータス",
         value=task_data.get("status", "todo"),
-        border_color=ft.Colors.BLUE_400,
-        focused_border_color=ft.Colors.BLUE_600,
-        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
         options=[ft.dropdown.Option(key=key, text=label) for key, label in TASK_STATUS_LABELS.items()],
     )
 

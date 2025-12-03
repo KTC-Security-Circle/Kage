@@ -38,7 +38,13 @@ from logic.application.one_liner_application_service import OneLinerApplicationS
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.theme import SPACING, get_grey_color
+from views.theme import (
+    SPACING,
+    get_on_surface_color,
+    get_outline_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
 
 from .controller import HomeController
 from .presenter import build_daily_review_card, build_inbox_memo_item, build_stat_card
@@ -182,7 +188,7 @@ class HomeView(BaseView):
                         [
                             ft.Row(
                                 [
-                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=20, color=get_grey_color(900)),
+                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=20, color=get_on_surface_color()),
                                     ft.Text(
                                         "メモ",
                                         size=18,
@@ -194,8 +200,8 @@ class HomeView(BaseView):
                             ft.TextButton(
                                 text="すべて見る",
                                 icon=ft.Icons.ARROW_FORWARD,
-                                icon_color=get_grey_color(900),
-                                style=ft.ButtonStyle(color=get_grey_color(900)),
+                                icon_color=get_on_surface_color(),
+                                style=ft.ButtonStyle(color=get_on_surface_color()),
                                 on_click=lambda _: self._handle_action_click("/memos"),
                             ),
                         ],
@@ -204,7 +210,7 @@ class HomeView(BaseView):
                     ft.Text(
                         "整理が必要なメモがあります。AIにタスクを生成させましょう。",
                         size=14,
-                        color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
+                        color=get_text_secondary_color(),
                     ),
                     ft.Column(
                         memo_items,
@@ -214,9 +220,9 @@ class HomeView(BaseView):
                 spacing=SPACING.sm,
             ),
             padding=ft.padding.all(24),
-            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.BLUE_GREY_800),
+            bgcolor=get_surface_variant_color(),
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.BLUE_GREY_300)),
+            border=ft.border.all(1, get_outline_color()),
         )
 
     def _build_stats_section(self) -> ft.Control:

@@ -196,8 +196,22 @@ class ApplicationHomeQuery(HomeQuery):
     _project_cache: list[ProjectRead] | None = field(default=None, init=False, repr=False)
 
     def get_daily_review(self) -> dict[str, Any]:
-        """タスクとメモの状況を基にデイリーレビューを生成する（AI一言なし）。"""
-        return self._build_daily_review(self._get_tasks(), self._get_memos())
+        """タスクとメモの状況を基にデイリーレビューを生成する。
+
+        AI一言メッセージが生成可能な場合は、シナリオのメッセージを置き換える。
+        アイコンや優先度などの他のフィールドはシナリオから取得する。
+
+        Returns:
+            デイリーレビュー情報を含む辞書
+        """
+        review = self._build_daily_review(self._get_tasks(), self._get_memos())
+
+        # AI一言が利用可能ならメッセージを置き換える
+        one_liner = self._generate_one_liner_message()
+        if one_liner:
+            review["message"] = one_liner
+
+        return review
 
     def get_one_liner_message(self) -> str | None:
         """AI一言メッセージのみを生成する。
@@ -271,6 +285,17 @@ class ApplicationHomeQuery(HomeQuery):
         return created_at.timestamp()
 
     def _build_daily_review(self, tasks: list[TaskRead], memos: list[MemoRead]) -> dict[str, Any]:
+        """タスクとメモの状況からシナリオベースのレビューを構築する。
+
+        AI一言メッセージは含まれない（呼び出し側で付与する）。
+
+        Args:
+            tasks: 全タスクのリスト
+            memos: 全メモのリスト
+
+        Returns:
+            シナリオベースのレビュー情報（icon, color, message, action_text, action_route, priority）
+        """
         # タスクリストを複数回走査するのではなく、単一パスで分類する。
         # 理由: 大きなタスクリストでの効率化（O(n)）と可読性向上のため。
         todays_tasks: list[TaskRead] = []
@@ -413,7 +438,7 @@ class ApplicationHomeQuery(HomeQuery):
                 "priority": "low",
             }
 
-        # AI一言は非同期で生成されるため、ここでは含めない
+        # AI一言メッセージはget_daily_review()で付与される
         return selected
 
     def _generate_one_liner_message(self) -> str | None:

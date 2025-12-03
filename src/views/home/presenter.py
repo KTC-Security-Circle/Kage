@@ -90,7 +90,9 @@ from views.theme import (
     get_accent_border_color,
     get_on_surface_color,
     get_outline_color,
+    get_primary_color,
     get_surface_color,
+    get_surface_variant_color,
     get_text_secondary_color,
 )
 
@@ -207,9 +209,9 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None])
                 color=UI_COLORS.primary_dark,
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
-            bgcolor=ft.Colors.BLUE_50,
+            bgcolor=get_surface_variant_color(),
             border_radius=BORDER_RADIUS.sm,
-            border=ft.border.all(BORDER_WIDTH.thin, ft.Colors.BLUE_300),
+            border=ft.border.all(BORDER_WIDTH.thin, get_primary_color()),
         )
     elif ai_status == "pending":
         status_badge = ft.Container(
@@ -236,7 +238,7 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None])
                 color=ft.Colors.with_opacity(OPACITY.medium, get_text_secondary_color()),
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
-            bgcolor=ft.Colors.TRANSPARENT,
+            bgcolor="transparent",
             border_radius=BORDER_RADIUS.sm,
             border=ft.border.all(
                 BORDER_WIDTH.thin,

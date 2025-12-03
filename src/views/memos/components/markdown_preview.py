@@ -11,6 +11,8 @@ import re
 
 import flet as ft
 
+from views.theme import get_text_secondary_color
+
 
 def render_markdown_preview(markdown: str) -> list[ft.Control]:
     """最小限のMarkdownプレビューを生成する。
@@ -25,7 +27,7 @@ def render_markdown_preview(markdown: str) -> list[ft.Control]:
         生成されたコントロール群
     """
     if not markdown.strip():
-        return [ft.Text("プレビューはこちらに表示されます", color=ft.Colors.ON_SURFACE_VARIANT, italic=True)]
+        return [ft.Text("プレビューはこちらに表示されます", color=get_text_secondary_color(), italic=True)]
 
     lines = markdown.splitlines()
     controls: list[ft.Control] = []

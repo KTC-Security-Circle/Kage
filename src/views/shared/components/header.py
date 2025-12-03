@@ -45,7 +45,13 @@ from typing import TYPE_CHECKING, Final
 
 import flet as ft
 
-from views.theme import get_outline_color, get_surface_color, get_text_secondary_color
+from views.theme import (
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_surface_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -241,8 +247,8 @@ class Header(ft.Container):
         style = None
         if button_data.is_primary:
             style = ft.ButtonStyle(
-                bgcolor=ft.Colors.PRIMARY,
-                color=ft.Colors.ON_PRIMARY,
+                bgcolor=get_primary_color(),
+                color=get_on_primary_color(),
             )
 
         # ボタンタイプを選択

@@ -38,7 +38,7 @@ from logic.application.one_liner_application_service import OneLinerApplicationS
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.theme import SPACING
+from views.theme import SPACING, get_grey_color
 
 from .controller import HomeController
 from .presenter import build_daily_review_card, build_inbox_memo_item, build_stat_card
@@ -182,7 +182,7 @@ class HomeView(BaseView):
                         [
                             ft.Row(
                                 [
-                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=20, color=ft.Colors.BLUE_GREY_900),
+                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=20, color=get_grey_color(900)),
                                     ft.Text(
                                         "メモ",
                                         size=18,
@@ -194,8 +194,8 @@ class HomeView(BaseView):
                             ft.TextButton(
                                 text="すべて見る",
                                 icon=ft.Icons.ARROW_FORWARD,
-                                icon_color=ft.Colors.BLUE_GREY_900,
-                                style=ft.ButtonStyle(color=ft.Colors.BLUE_GREY_900),
+                                icon_color=get_grey_color(900),
+                                style=ft.ButtonStyle(color=get_grey_color(900)),
                                 on_click=lambda _: self._handle_action_click("/memos"),
                             ),
                         ],

@@ -228,9 +228,9 @@ def create_task_card(
                 content=ft.Text(
                     tag,
                     size=10,
-                    color=ft.Colors.BLUE_700,
+                    color=get_primary_color("dark"),
                 ),
-                bgcolor=ft.Colors.BLUE_50,
+                bgcolor=get_surface_variant_color(),
                 border_radius=ft.border_radius.all(4),
                 padding=ft.padding.symmetric(horizontal=6, vertical=2),
             )

@@ -192,12 +192,25 @@ def invalidate_config_manager() -> None:
 
 
 def apply_page_settings(page: ft.Page) -> None:
+    """ページにテーマと背景色を適用する。
+
+    Args:
+        page: Fletのページオブジェクト
+    """
     mgr = get_config_manager()
     theme = mgr.theme
     try:
         import flet as ft  # ローカルインポート
 
+        from views.theme import get_background_color  # theme.py から背景色を取得
+
+        # テーマモード設定
         page.theme_mode = ft.ThemeMode.DARK if theme == "dark" else ft.ThemeMode.LIGHT
+
+        # 背景色を theme.py から取得して適用
+        # TODO: ダークモード対応後は get_background_color() がテーマモードに応じた色を返す
+        page.bgcolor = get_background_color()
+
     except (ImportError, AttributeError) as exc:
         logger.warning(f"Flet ページへの設定適用に失敗しました: {exc}")
 

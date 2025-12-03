@@ -22,6 +22,16 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from models import TermStatus
+from views.theme import (
+    get_grey_color,
+    get_on_primary_color,
+    get_on_surface_color,
+    get_outline_color,
+    get_primary_color,
+    get_surface_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -109,12 +119,12 @@ class TermDetailPanel:
                     ft.Icon(
                         ft.Icons.ARTICLE_OUTLINED,
                         size=64,
-                        color=ft.Colors.OUTLINE,
+                        color=get_outline_color(),
                     ),
                     ft.Text(
                         "用語を選択して詳細を表示",
                         size=18,
-                        color=ft.Colors.OUTLINE,
+                        color=get_outline_color(),
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],
@@ -179,7 +189,7 @@ class TermDetailPanel:
                         ft.Icon(
                             ft.Icons.BOOK_ROUNDED,
                             size=32,
-                            color=ft.Colors.PRIMARY,
+                            color=get_primary_color(),
                         ),
                         ft.Column(
                             controls=[
@@ -192,11 +202,11 @@ class TermDetailPanel:
                                     content=ft.Text(
                                         data.key,
                                         size=13,
-                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                        color=get_text_secondary_color(),
                                         font_family="monospace",
                                     ),
                                     padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                                    bgcolor=ft.Colors.SURFACE,
+                                    bgcolor=get_surface_color(),
                                     border_radius=4,
                                 ),
                             ],
@@ -223,16 +233,16 @@ class TermDetailPanel:
         """
         status_config = {
             TermStatus.APPROVED: {
-                "bgcolor": ft.Colors.BLUE_600,
-                "color": ft.Colors.WHITE,
+                "bgcolor": get_primary_color(),
+                "color": get_on_primary_color(),
             },
             TermStatus.DRAFT: {
-                "bgcolor": ft.Colors.GREY_300,
-                "color": ft.Colors.ON_SURFACE,
+                "bgcolor": get_grey_color(300),
+                "color": get_on_surface_color(),
             },
             TermStatus.DEPRECATED: {
-                "bgcolor": ft.Colors.GREY_300,
-                "color": ft.Colors.ON_SURFACE,
+                "bgcolor": get_grey_color(300),
+                "color": get_on_surface_color(),
             },
         }
 
@@ -265,12 +275,12 @@ class TermDetailPanel:
                     "説明",
                     size=14,
                     weight=ft.FontWeight.W_500,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
                 ft.Text(
                     data.description,
                     size=15,
-                    color=ft.Colors.ON_SURFACE,
+                    color=get_on_surface_color(),
                 ),
             ],
             spacing=8,
@@ -293,10 +303,10 @@ class TermDetailPanel:
                 content=ft.Text(
                     synonym,
                     size=14,
-                    color=ft.Colors.ON_SECONDARY_CONTAINER,
+                    color=get_on_surface_color(),
                 ),
                 padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                bgcolor=get_surface_variant_color(),
                 border_radius=16,
             )
             for synonym in data.synonyms
@@ -308,7 +318,7 @@ class TermDetailPanel:
                     "同義語",
                     size=14,
                     weight=ft.FontWeight.W_500,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
                 ft.Row(
                     controls=synonym_chips,
@@ -338,19 +348,19 @@ class TermDetailPanel:
                         ft.Icon(
                             ft.Icons.TAG,
                             size=16,
-                            color=ft.Colors.PRIMARY,
+                            color=get_primary_color(),
                         ),
                         ft.Text(
                             tag_name,
                             size=14,
-                            color=ft.Colors.PRIMARY,
+                            color=get_primary_color(),
                         ),
                     ],
                     spacing=4,
                     tight=True,
                 ),
                 padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                border=ft.border.all(1, ft.Colors.PRIMARY),
+                border=ft.border.all(1, get_primary_color()),
                 border_radius=16,
                 ink=True,
                 on_click=lambda _e, tag=tag_name: self._props.on_tag_click(tag) if self._props.on_tag_click else None,
@@ -364,7 +374,7 @@ class TermDetailPanel:
                     "タグ",
                     size=14,
                     weight=ft.FontWeight.W_500,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
                 ft.Row(
                     controls=tag_chips,
@@ -393,7 +403,7 @@ class TermDetailPanel:
                     "出典",
                     size=14,
                     weight=ft.FontWeight.W_500,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
                 ft.ElevatedButton(
                     text="外部リンクを開く",
@@ -421,12 +431,12 @@ class TermDetailPanel:
                             ft.Text(
                                 "作成日",
                                 size=12,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
+                                color=get_text_secondary_color(),
                             ),
                             ft.Text(
                                 data.created_date,
                                 size=14,
-                                color=ft.Colors.ON_SURFACE,
+                                color=get_on_surface_color(),
                             ),
                         ],
                         spacing=4,
@@ -436,12 +446,12 @@ class TermDetailPanel:
                             ft.Text(
                                 "最終更新",
                                 size=12,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
+                                color=get_text_secondary_color(),
                             ),
                             ft.Text(
                                 data.updated_date,
                                 size=14,
-                                color=ft.Colors.ON_SURFACE,
+                                color=get_on_surface_color(),
                             ),
                         ],
                         spacing=4,
@@ -450,7 +460,7 @@ class TermDetailPanel:
                 spacing=32,
             ),
             padding=ft.padding.all(16),
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+            border=ft.border.all(1, get_outline_color()),
             border_radius=8,
         )
 
@@ -515,10 +525,10 @@ class TermDetailPanel:
                         content=ft.Text(
                             item.badge_text,
                             size=12,
-                            color=ft.Colors.ON_SECONDARY_CONTAINER,
+                            color=get_on_surface_color(),
                         ),
                         padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                        bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                        bgcolor=get_surface_variant_color(),
                         border_radius=12,
                     )
                 )
@@ -530,7 +540,7 @@ class TermDetailPanel:
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                     padding=ft.padding.all(12),
-                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                    border=ft.border.all(1, get_outline_color()),
                     border_radius=8,
                     ink=True,
                     on_click=lambda _e, item_id=item.item_id: self._props.on_item_click(item_type, item_id)
@@ -544,7 +554,7 @@ class TermDetailPanel:
                 ft.Text(
                     f"他 {len(items) - max_display} 件",
                     size=12,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 )
             )
 
@@ -554,7 +564,7 @@ class TermDetailPanel:
                     f"{title} ({len(items)})",
                     size=14,
                     weight=ft.FontWeight.W_500,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
                 ft.Column(
                     controls=item_controls,

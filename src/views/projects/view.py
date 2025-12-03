@@ -31,6 +31,7 @@ from views.projects.components.project_dialogs import (
 from views.projects.controller import ProjectController
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
+from views.theme import get_grey_color, get_on_primary_color
 
 
 class ProjectsView(BaseView):
@@ -254,7 +255,7 @@ class ProjectsView(BaseView):
                                                     #   View は整形済み文字列のみを表示する。
                                                     f"{project.created_at} 作成",
                                                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                                                    color=ft.Colors.GREY_600,
+                                                    color=get_grey_color(600),
                                                 ),
                                             ],
                                             spacing=4,
@@ -266,7 +267,7 @@ class ProjectsView(BaseView):
                                                     content=ft.Text(
                                                         project.status,
                                                         theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
-                                                        color=ft.Colors.WHITE,
+                                                        color=get_on_primary_color(),
                                                         weight=ft.FontWeight.W_500,
                                                     ),
                                                     bgcolor=project.status_color,
@@ -295,7 +296,7 @@ class ProjectsView(BaseView):
                                         ft.Text(
                                             "説明",
                                             theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                            color=ft.Colors.GREY_500,
+                                            color=get_grey_color(500),
                                         ),
                                         ft.Text(
                                             project.description,
@@ -310,7 +311,7 @@ class ProjectsView(BaseView):
                                         ft.Text(
                                             "進捗",
                                             theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                            color=ft.Colors.GREY_500,
+                                            color=get_grey_color(500),
                                         ),
                                         ft.Column(
                                             controls=[
@@ -323,7 +324,7 @@ class ProjectsView(BaseView):
                                                 ft.Text(
                                                     project.progress_text,
                                                     theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                                    color=ft.Colors.GREY_600,
+                                                    color=get_grey_color(600),
                                                 ),
                                             ],
                                             spacing=8,
@@ -361,7 +362,7 @@ class ProjectsView(BaseView):
                         ft.Text(
                             "プロジェクトを選択して詳細を表示",
                             theme_style=ft.TextThemeStyle.BODY_LARGE,
-                            color=ft.Colors.GREY_500,
+                            color=get_grey_color(500),
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ],
@@ -391,12 +392,12 @@ class ProjectsView(BaseView):
                     ft.Text(
                         "プロジェクトがありません",
                         theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                        color=ft.Colors.GREY_600,
+                        color=get_grey_color(600),
                     ),
                     ft.Text(
                         "新規プロジェクトを作成してタスクを整理しましょう",
                         theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                        color=ft.Colors.GREY_600,
+                        color=get_grey_color(600),
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=24),
@@ -405,7 +406,7 @@ class ProjectsView(BaseView):
                         icon=ft.Icons.ADD,
                         on_click=self._on_create_click,
                         bgcolor=ft.Colors.BLUE,
-                        color=ft.Colors.WHITE,
+                        color=get_on_primary_color(),
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -470,7 +471,7 @@ class ProjectsView(BaseView):
                     "削除",
                     icon=ft.Icons.DELETE,
                     bgcolor=ft.Colors.RED,
-                    color=ft.Colors.WHITE,
+                    color=get_on_primary_color(),
                     on_click=_delete,
                 ),
             ],

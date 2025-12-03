@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import SPACING, get_error_color, get_surface_variant_color
+from views.theme import SPACING, get_error_color, get_grey_color, get_surface_variant_color
 
 from .base import BaseDialog
 
@@ -212,7 +212,7 @@ class CriticalErrorDialog(ErrorDialog):
             if first_row.controls and len(first_row.controls) > 0:
                 first_row.controls[0] = ft.Icon(
                     ft.Icons.DANGEROUS,
-                    color=ft.Colors.RED,
+                    color=get_error_color(),
                     size=40,
                 )
 
@@ -269,7 +269,7 @@ class ValidationErrorDialog(ErrorDialog):
             if first_row.controls and len(first_row.controls) > 0:
                 first_row.controls[0] = ft.Icon(
                     ft.Icons.WARNING,
-                    color=ft.Colors.ORANGE,
+                    color=get_grey_color(600),
                     size=32,
                 )
 

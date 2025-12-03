@@ -263,14 +263,8 @@ STATUS_COLOR_MAP = {
 }
 
 
-def create_light_theme() -> ft.Theme:
-    """ライトテーマのFletテーマオブジェクトを作成する。
-
-    Returns:
-        ライト設定のFletテーマオブジェクト
-    """
-    colors = LIGHT_COLORS
-
+def _create_theme(colors: ColorTokens) -> ft.Theme:
+    """共通のテーマ作成ロジック。"""
     color_scheme = ft.ColorScheme(
         primary=colors.primary,
         on_primary=colors.on_primary,
@@ -283,8 +277,16 @@ def create_light_theme() -> ft.Theme:
         error=colors.error,
         on_error=colors.on_error,
     )
-
     return ft.Theme(color_scheme=color_scheme)
+
+
+def create_light_theme() -> ft.Theme:
+    """ライトテーマのFletテーマオブジェクトを作成する。
+
+    Returns:
+        ライト設定のFletテーマオブジェクト
+    """
+    return _create_theme(LIGHT_COLORS)
 
 
 def create_dark_theme() -> ft.Theme:
@@ -293,22 +295,15 @@ def create_dark_theme() -> ft.Theme:
     Returns:
         ダーク設定のFletテーマオブジェクト
     """
-    colors = DARK_COLORS
+    return _create_theme(DARK_COLORS)
 
-    color_scheme = ft.ColorScheme(
-        primary=colors.primary,
-        on_primary=colors.on_primary,
-        secondary=colors.secondary,
-        on_secondary=colors.on_secondary,
-        background=colors.background,
-        on_background=colors.on_background,
-        surface=colors.surface,
-        on_surface=colors.on_surface,
-        error=colors.error,
-        on_error=colors.on_error,
-    )
 
-    return ft.Theme(color_scheme=color_scheme)
+def _get_color_from_tokens(colors: ColorTokens, color_name: str) -> str:
+    """トークンから色名で色コードを取得する共通ロジック。"""
+    if not hasattr(colors, color_name):
+        msg = f"Color '{color_name}' not found"
+        raise AttributeError(msg)
+    return getattr(colors, color_name)
 
 
 def get_light_color(color_name: str) -> str:
@@ -323,13 +318,7 @@ def get_light_color(color_name: str) -> str:
     Raises:
         AttributeError: 指定された色名が存在しない場合
     """
-    colors = LIGHT_COLORS
-
-    if not hasattr(colors, color_name):
-        msg = f"Color '{color_name}' not found"
-        raise AttributeError(msg)
-
-    return getattr(colors, color_name)
+    return _get_color_from_tokens(LIGHT_COLORS, color_name)
 
 
 def get_dark_color(color_name: str) -> str:
@@ -344,13 +333,7 @@ def get_dark_color(color_name: str) -> str:
     Raises:
         AttributeError: 指定された色名が存在しない場合
     """
-    colors = DARK_COLORS
-
-    if not hasattr(colors, color_name):
-        msg = f"Color '{color_name}' not found"
-        raise AttributeError(msg)
-
-    return getattr(colors, color_name)
+    return _get_color_from_tokens(DARK_COLORS, color_name)
 
 
 def get_status_color(status: str) -> str:
@@ -642,9 +625,9 @@ def get_accent_background_color(color_name: str = "primary") -> str:
         色名に応じた適切な背景色を返す。
     """
     accent_map = {
-        "amber": UI_COLORS.warning,
-        "blue": UI_COLORS.primary,
-        "green": UI_COLORS.success,
+        "amber": LIGHT_COLORS.warning,
+        "blue": LIGHT_COLORS.primary,
+        "green": LIGHT_COLORS.success,
         "primary": LIGHT_COLORS.primary,
         "purple": TAG_COLORS.purple,
     }

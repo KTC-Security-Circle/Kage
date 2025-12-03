@@ -301,7 +301,9 @@ class HomeView(BaseView):
                 msg_preview = message[:50] if message else "None"
                 logger.info(f"[非同期スレッド] AI一言生成完了（{elapsed:.2f}秒）: {msg_preview}...")
                 self.controller.set_one_liner_message(message)
-                # UI更新を直接実行(Flet のpage.update()はスレッドセーフ)
+                # [AI GENERATED] Flet のUI更新はメインスレッドで行う必要があるため、
+                # バックグラウンドスレッドから直接UIを更新するのは推奨されません。
+                # Flet公式のasyncパターン（page.run_task等）の利用を推奨します。
                 logger.info("[非同期スレッド] UI更新開始")
                 self._update_one_liner_display()
                 logger.info("[非同期スレッド] UI更新完了")

@@ -46,7 +46,7 @@ from .presenter import WeeklyReviewPresenter
 from .state import WeeklyReviewState
 
 if TYPE_CHECKING:
-    from logic.application.task_application_service import TaskApplicationService
+    from logic.application.review_application_service import WeeklyReviewApplicationService
 
 # View step constants
 STEP_ACHIEVEMENT = 1
@@ -69,12 +69,12 @@ class WeeklyReviewView(BaseView):
         super().__init__(props)
 
         # 依存性注入
-        self.task_app_service: TaskApplicationService = props.apps.task
+        self.review_app_service: WeeklyReviewApplicationService = props.apps.review
 
         # 状態・コントローラー・プレゼンター初期化
         self.review_state = WeeklyReviewState()
         self.controller = WeeklyReviewController(
-            task_app_service=self.task_app_service,
+            review_app_service=self.review_app_service,
             state=self.review_state,
         )
         self.presenter = WeeklyReviewPresenter(state=self.review_state)

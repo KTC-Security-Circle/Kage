@@ -176,12 +176,34 @@ class HomeView(BaseView):
         Returns:
             デイリーレビューコントロール
         """
-        self._daily_review_card = build_daily_review_card(
+        # 初回はカード参照を作成し、以降は _rebuild_daily_review_card で更新
+        if self._daily_review_card is None:
+            self._daily_review_card = ft.Container()  # プレースホルダ
+        self._rebuild_daily_review_card()
+        return self._daily_review_card
+
+    def _rebuild_daily_review_card(self) -> None:
+        """デイリーレビューカードを最新の状態で再構築する。
+
+        State から最新のデータとローディング状態を取得し、カードを再生成する。
+        カード参照（self._daily_review_card）は維持したまま、内部プロパティを更新する。
+        """
+        if self._daily_review_card is None:
+            logger.warning("[UI更新] デイリーレビューカード参照が未初期化です")
+            return
+
+        new_card = build_daily_review_card(
             self.home_state.daily_review,
             self._handle_action_click,
             is_loading_one_liner=self.home_state.is_loading_one_liner,
         )
-        return self._daily_review_card
+
+        # 参照を維持しながらプロパティを更新
+        self._daily_review_card.content = new_card.content
+        self._daily_review_card.bgcolor = new_card.bgcolor
+        self._daily_review_card.border = new_card.border
+        self._daily_review_card.border_radius = new_card.border_radius
+        logger.debug("[UI更新] デイリーレビューカード再構築完了")
 
     def _build_inbox_memos_section(self) -> ft.Control:
         """Inboxメモセクションを構築する。
@@ -323,32 +345,20 @@ class HomeView(BaseView):
         """
         try:
             logger.info(f"[UI更新] デイリーレビューカード更新開始（loading={self.home_state.is_loading_one_liner}）")
-            if not self._daily_review_card:
-                logger.warning("[UI更新] デイリーレビューカード参照が見つかりません。更新をスキップします")
+
+            # カード再構築を共通メソッドに委譲
+            self._rebuild_daily_review_card()
+
+            # UI更新を実行
+            if self._daily_review_card is None:
+                logger.warning("[UI更新] カード参照が None のため更新をスキップ")
                 return
 
-            # 既存カードを新しい内容で置き換え
-            new_card = build_daily_review_card(
-                self.home_state.daily_review,
-                self._handle_action_click,
-                is_loading_one_liner=self.home_state.is_loading_one_liner,
-            )
-
-            # カードの内容を入れ替え（参照を維持しながら中身を更新）
-            self._daily_review_card.content = new_card.content
-            self._daily_review_card.bgcolor = new_card.bgcolor
-            self._daily_review_card.border = new_card.border
-            self._daily_review_card.border_radius = new_card.border_radius
-            logger.debug("[UI更新] カードプロパティ更新完了")
-
-            # Control が既に page に追加されていれば個別更新を試みる。
-            # 追加されていない場合は page.update() にフォールバックして安全に反映する。
             try:
                 if getattr(self._daily_review_card, "page", None) is not None:
                     self._daily_review_card.update()
                     logger.info("[UI更新] デイリーレビューカード更新完了 (control.update)")
                 elif self.page is not None:
-                    # ページ全体を更新して差分を反映
                     self.page.update()
                     logger.info("[UI更新] デイリーレビューカード更新完了 (page.update fallback)")
                 else:

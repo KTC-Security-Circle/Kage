@@ -88,6 +88,14 @@ class HomeViewState(BaseViewState):
         self.one_liner_message = message
         self.is_loading_one_liner = False
 
+    def update_daily_review_message(self, message: str) -> None:
+        """デイリーレビューのメッセージフィールドを更新する。
+
+        Args:
+            message: 更新するメッセージ
+        """
+        self.daily_review["message"] = message
+
     def has_inbox_memos(self) -> bool:
         """Inboxメモが存在するか判定する。
 

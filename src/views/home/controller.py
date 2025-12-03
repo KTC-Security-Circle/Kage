@@ -108,10 +108,10 @@ class HomeController:
             self.state.update_daily_review_message(message)
             logger.debug("[Controller] daily_reviewにメッセージを反映")
 
-    def _generate_one_liner(self) -> str | None:
-        """AI一言メッセージを生成する（ブロッキング・内部用）。
+    def generate_one_liner_sync(self) -> str | None:
+        """AI一言メッセージを同期的に生成する。
 
-        バックグラウンドスレッドから呼び出される。
+        バックグラウンドスレッドから呼び出される公開メソッド。
 
         Returns:
             生成されたメッセージ(失敗時はNone)

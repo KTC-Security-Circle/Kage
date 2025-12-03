@@ -33,4 +33,5 @@ def render_markdown_preview(markdown: str) -> ft.Control:
         selectable=True,
         extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
         on_tap_link=lambda _: None,  # リンククリックは無効化(必要に応じて page.launch_url(e.data) に変更可能)
+        fit_content=True,
     )

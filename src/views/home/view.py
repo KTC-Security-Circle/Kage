@@ -341,7 +341,7 @@ class HomeView(BaseView):
     def _update_one_liner_display(self) -> None:
         """AI一言生成完了時にデイリーレビューカードを更新する。
 
-        State から最新の状態を取得し、既存のCardを差分更新する。
+        Stateから最新の状態を取得し、既存のCardを再構築して内容を置き換える。
         """
         try:
             logger.info(f"[UI更新] デイリーレビューカード更新開始（loading={self.home_state.is_loading_one_liner}）")

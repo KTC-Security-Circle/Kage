@@ -128,5 +128,5 @@ class HomeController:
             logger.debug("[Controller] フォールバック: Query.get_daily_review()から取得")
             return self.query.get_daily_review().get("message")
         except Exception as e:
-            logger.error(f"[Controller] Failed to generate one-liner message: {e}")
+            logger.error(f"[Controller] AI一言メッセージの生成に失敗しました: {e}")
             return None

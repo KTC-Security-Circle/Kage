@@ -33,7 +33,7 @@ from views.shared.components import HeaderButtonData
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
 from .components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
 from .components.task_card import TaskCardData
-from .components.task_dialog import show_create_task_dialog
+from .components.task_dialog import show_create_task_dialog, show_edit_task_dialog
 from .components.task_list import TaskList, TaskListProps
 from .controller import TasksController
 from .presenter import to_detail_from_card
@@ -72,7 +72,9 @@ class TasksView(BaseView):
         self._current_vm: list[TaskCardVM] = []
         # Components
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
-        self._detail_comp = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
+        self._detail_comp = TaskDetailPanel(
+            DetailPanelProps(on_status_change=self._on_status_change, on_edit=self._on_edit_task)
+        )
         logger.info("TasksView initialized with ApplicationService")
         # 初期描画データ
         self._controller.refresh()
@@ -364,3 +366,70 @@ class TasksView(BaseView):
         except Exception as e:
             logger.exception(f"タスク作成中にエラー: {e}")
             self.show_error_snackbar(self.page, "タスクの作成に失敗しました。詳細はログを参照してください。")
+
+    def _on_edit_task(self, task_id: str) -> None:
+        """タスク編集ダイアログを開く。
+
+        Args:
+            task_id: 編集対象のタスクID
+        """
+        # 現在のVM一覧から該当タスクを検索
+        vm = None
+        for v in self._current_vm:
+            if str(v.id) == task_id:
+                vm = v
+                break
+
+        if not vm:
+            self.show_error_snackbar(self.page, "タスクが見つかりませんでした。")
+            return
+
+        # VMからダイアログ用データを作成
+        task_data = {
+            "id": str(vm.id),
+            "title": vm.title,
+            "description": getattr(vm, "description", ""),
+            "status": vm.status,
+            "due_date": str(getattr(vm, "due_date", "") or ""),
+        }
+
+        show_edit_task_dialog(
+            page=self.page,
+            task_data=task_data,
+            on_save=self._handle_edit_task,
+        )
+
+    def _handle_edit_task(self, task_data: dict[str, str]) -> None:
+        """タスク編集処理を実行する。
+
+        Args:
+            task_data: 更新後のタスクデータ
+        """
+        task_id = task_data.get("id", "").strip()
+        title = task_data.get("title", "").strip()
+        description = task_data.get("description", "").strip() or None
+        status = task_data.get("status", "").strip()
+        due_date = task_data.get("due_date", "").strip() or None
+
+        if not task_id or not title:
+            self.show_error_snackbar(self.page, "タスクIDとタイトルは必須です。")
+            return
+
+        # Controllerにタスク更新を委譲
+        def _update() -> None:
+            self._controller.update_task(
+                task_id=task_id,
+                title=title,
+                description=description,
+                status=status,
+                due_date=due_date,
+            )
+
+        try:
+            self.with_loading(_update)
+            self.show_success_snackbar(f"タスク「{title}」を更新しました。")
+            logger.info(f"タスク更新成功: {task_id}")
+            self.safe_update()
+        except Exception as e:
+            logger.exception(f"タスク更新中にエラー: {e}")
+            self.show_error_snackbar(self.page, "タスクの更新に失敗しました。詳細はログを参照してください。")

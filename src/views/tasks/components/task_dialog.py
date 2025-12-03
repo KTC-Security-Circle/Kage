@@ -322,7 +322,7 @@ def show_create_task_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     page.update()
 
 
-def show_edit_task_dialog(
+def show_edit_task_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     page: ft.Page,  # type: ignore[name-defined]
     task_data: dict[str, str],
     on_save: Callable[[dict[str, str]], None] | None = None,
@@ -374,6 +374,50 @@ def show_edit_task_dialog(
         options=[ft.dropdown.Option(key=key, text=label) for key, label in TASK_STATUS_LABELS.items()],
     )
 
+    # DatePicker を用いた期限入力
+    due_date_text = ft.TextField(
+        label="期限日",
+        hint_text="YYYY-MM-DD",
+        read_only=True,
+        value=task_data.get("due_date", ""),
+        border_color=ft.Colors.BLUE_400,
+        focused_border_color=ft.Colors.BLUE_600,
+        label_style=ft.TextStyle(color=ft.Colors.BLUE_700),
+        width=200,
+    )
+
+    import datetime as _dt
+
+    def _on_date_change(e: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        raw = e.data or ""
+        if raw:
+            iso_date = raw[:10]
+        elif e.control.value:
+            try:
+                iso_date = e.control.value.strftime("%Y-%m-%d")
+            except Exception:
+                txt = str(e.control.value)
+                iso_date = txt[:DATE_SLICE_LENGTH] if len(txt) >= DATE_SLICE_LENGTH else txt
+        else:
+            iso_date = ""
+        due_date_text.value = iso_date
+        due_date_text.update()
+
+    def _on_date_dismiss(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        pass
+
+    tz = _dt.UTC
+    today = _dt.datetime.now(tz=tz).date()
+    date_picker = ft.DatePicker(
+        first_date=_dt.datetime.combine(today - _dt.timedelta(days=365), _dt.time.min, tzinfo=tz),
+        last_date=_dt.datetime.combine(today + _dt.timedelta(days=730), _dt.time.min, tzinfo=tz),
+        on_change=_on_date_change,
+        on_dismiss=_on_date_dismiss,
+    )
+
+    def _open_date_picker(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
+        page.open(date_picker)
+
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """ダイアログを閉じる"""
         dialog.open = False
@@ -388,12 +432,27 @@ def show_edit_task_dialog(
             return
         title_field.error_text = None
 
+        # due_date 未設定時は None 表現 + 範囲バリデーション
+        due_date_val = due_date_text.value.strip() if due_date_text.value else None
+        if due_date_val:
+            from views.shared.forms.validators import ValidationRule
+
+            min_str = (_dt.datetime.now(tz=tz).date() - _dt.timedelta(days=365)).strftime("%Y-%m-%d")
+            max_str = (_dt.datetime.now(tz=tz).date() + _dt.timedelta(days=730)).strftime("%Y-%m-%d")
+            valid, error = ValidationRule.date_range(min_str, max_str)(due_date_val)
+            if not valid:
+                due_date_text.error_text = error
+                due_date_text.update()
+                return
+            due_date_text.error_text = None
+
         # タスクデータを作成（IDは保持）
         updated_data = {
             "id": task_data.get("id", ""),
             "title": title_field.value.strip(),
             "description": (description_field.value or "").strip(),
             "status": status_dropdown.value or "todo",
+            "due_date": due_date_val,
         }
 
         if on_save:
@@ -431,26 +490,81 @@ def show_edit_task_dialog(
                     # フォームフィールド
                     title_field,
                     description_field,
-                    status_dropdown,
+                    ft.Row(
+                        controls=[
+                            ft.Container(content=status_dropdown, expand=True),
+                            ft.Container(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.BLUE_600),
+                                                due_date_text,
+                                            ],
+                                            spacing=6,
+                                            alignment=ft.MainAxisAlignment.START,
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.EVENT_AVAILABLE,
+                                            tooltip="期限を選択",
+                                            on_click=_open_date_picker,
+                                            icon_size=26,
+                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.CLEAR,
+                                            tooltip="期限クリア",
+                                            on_click=lambda _: (
+                                                setattr(due_date_text, "value", ""),
+                                                due_date_text.update(),
+                                            ),
+                                            icon_size=22,
+                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
+                                        ),
+                                    ],
+                                    spacing=8,
+                                    alignment=ft.MainAxisAlignment.START,
+                                ),
+                            ),
+                        ],
+                        spacing=20,
+                    ),
                 ],
                 spacing=16,
                 tight=True,
+                scroll=ft.ScrollMode.AUTO,
             ),
-            width=500,
+            width=600,
         ),
         actions=[
-            ft.TextButton(
-                "キャンセル",
-                on_click=close_dialog,
-            ),
-            ft.ElevatedButton(
-                "保存",
-                on_click=save_task,
-                bgcolor=ft.Colors.BLUE_600,
-                color=ft.Colors.WHITE,
-            ),
+            ft.Row(
+                controls=[
+                    ft.TextButton(
+                        text="キャンセル",
+                        icon=ft.Icons.CLOSE,
+                        on_click=close_dialog,
+                        style=ft.ButtonStyle(color=ft.Colors.GREY_600),
+                    ),
+                    ft.ElevatedButton(
+                        text="保存",
+                        icon=ft.Icons.SAVE,
+                        on_click=save_task,
+                        bgcolor=ft.Colors.BLUE_600,
+                        color=ft.Colors.WHITE,
+                        style=ft.ButtonStyle(
+                            elevation=2,
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                        ),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.END,
+                spacing=12,
+            )
         ],
-        actions_alignment=ft.MainAxisAlignment.END,
+        actions_padding=ft.padding.all(20),
+        content_padding=ft.padding.all(20),
+        title_padding=ft.padding.all(20),
+        shape=ft.RoundedRectangleBorder(radius=12),
     )
 
     # ダイアログを表示

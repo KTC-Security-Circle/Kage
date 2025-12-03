@@ -337,3 +337,65 @@ class TasksController:
             "project_id": _s(task.project_id),
         }
         # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。
+
+    def update_task(
+        self,
+        task_id: str,
+        title: str,
+        description: str | None = None,
+        status: str | None = None,
+        due_date: str | None = None,
+    ) -> None:
+        """タスクを更新する。
+
+        Args:
+            task_id: タスクID
+            title: タスクタイトル
+            description: タスク説明
+            status: タスクステータス
+            due_date: 期限日（YYYY-MM-DD形式）
+
+        Raises:
+            ValueError: タスクIDが不正な場合
+        """
+        from uuid import UUID
+
+        from models import TaskStatus, TaskUpdate
+
+        try:
+            task_uuid = UUID(task_id)
+        except ValueError as e:
+            logger.error(f"Invalid task_id: {task_id}")
+            self._notify_error("タスクIDが不正です。")
+            msg = f"Invalid task_id: {task_id}"
+            raise ValueError(msg) from e
+
+        # TaskUpdate を構築
+        from datetime import date as date_type
+
+        due_date_parsed: date_type | None = None
+        if due_date:
+            try:
+                due_date_parsed = date_type.fromisoformat(due_date)
+            except ValueError:
+                logger.warning(f"Invalid due_date format: {due_date}")
+                self._notify_error("期限日の形式が不正です。")
+                return
+
+        update_data = TaskUpdate(
+            title=title,
+            description=description,
+            status=TaskStatus(status) if status else None,
+            due_date=due_date_parsed,
+        )
+
+        try:
+            # ApplicationServiceのupdateメソッドを使用
+            self._service.update(task_uuid, update_data)
+            logger.info(f"Task updated: {task_id}")
+            # 更新後に一覧を再取得
+            self.refresh()
+        except Exception as e:
+            logger.exception(f"タスク更新エラー: task_id={task_id}, error={e}")
+            self._notify_error("タスクの更新に失敗しました。")
+            raise

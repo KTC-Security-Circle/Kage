@@ -24,6 +24,7 @@ class DetailPanelProps:
     """初期プロパティ。"""
 
     on_status_change: Callable[[str, str], None]
+    on_edit: Callable[[str], None]  # タスクIDを受け取る編集コールバック
 
 
 class TaskDetailPanel:
@@ -69,13 +70,28 @@ class TaskDetailPanel:
             width=220,
         )
 
+        # 編集ボタン
+        edit_button = ft.ElevatedButton(
+            text="編集",
+            icon=ft.Icons.EDIT,
+            on_click=lambda _: self._handle_edit(),
+            bgcolor=ft.Colors.BLUE_600,
+            color=ft.Colors.WHITE,
+        )
+
         card = ft.Card(
             expand=True,
             content=ft.Container(
                 expand=True,
                 content=ft.Column(
                     [
-                        ft.Text("タスク詳細", weight=ft.FontWeight.BOLD, size=18),
+                        ft.Row(
+                            [
+                                ft.Text("タスク詳細", weight=ft.FontWeight.BOLD, size=18),
+                                edit_button,
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
                         ft.Text(vm.title, size=16),
                         ft.Text(getattr(vm, "description", "") or "説明なし", color=ft.Colors.GREY_700),
                         ft.Divider(),
@@ -126,3 +142,9 @@ class TaskDetailPanel:
             return
         # self._vm.id は VM 内部で文字列前提。安全のため明示的に str にしておく。
         self._props.on_status_change(str(self._vm.id), new_status)
+
+    def _handle_edit(self) -> None:
+        """編集ボタンクリック時の処理。"""
+        if not self._vm:
+            return
+        self._props.on_edit(str(self._vm.id))

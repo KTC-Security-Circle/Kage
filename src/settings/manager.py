@@ -19,9 +19,11 @@ from settings.models import (
     EditableAgentsSettings,
     EditableAppSettings,
     EditableDatabaseSettings,
+    EditableReviewSettings,
     EditableUserSettings,
     EditableWindowSettings,
     EnvSettings,
+    ReviewSettings,
     UserSettings,
     WindowSettings,
 )
@@ -37,6 +39,7 @@ _FROZEN_TO_EDITABLE: dict[type[BaseModel], type[BaseModel]] = {
     UserSettings: EditableUserSettings,
     DatabaseSettings: EditableDatabaseSettings,
     AgentsSettings: EditableAgentsSettings,
+    ReviewSettings: EditableReviewSettings,
     AppSettings: EditableAppSettings,
 }
 _EDITABLE_TO_FROZEN = {v: k for k, v in _FROZEN_TO_EDITABLE.items()}

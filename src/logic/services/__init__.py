@@ -12,6 +12,7 @@ from logic.services.settings_service import SettingsService
 from logic.services.tag_service import TagService
 from logic.services.task_service import TaskService
 from logic.services.terminology_service import TerminologyService
+from logic.services.weekly_review_service import WeeklyReviewInsightsService
 
 __all__ = [
     "ServiceBase",
@@ -21,4 +22,5 @@ __all__ = [
     "TagService",
     "TaskService",
     "TerminologyService",
+    "WeeklyReviewInsightsService",
 ]

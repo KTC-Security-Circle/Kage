@@ -1,6 +1,9 @@
-"""週次レビュービュー実装
+"""週次レビュービュー実装（ウィザード形式）
 
-GTD週次レビューの画面実装。
+GTD週次レビューの3ステップウィザード画面実装。
+Step1: 成果の振り返り
+Step2: システムの整理
+Step3: 来週の計画
 """
 
 from typing import TYPE_CHECKING
@@ -10,27 +13,49 @@ from loguru import logger
 
 from views.shared.base_view import BaseView, BaseViewProps
 
-if TYPE_CHECKING:
-    from logic.application.task_application_service import TaskApplicationService
-
-
 from .components import (
-    AlertCard,
-    AlertCardProps,
-    ReviewChecklist,
-    ReviewChecklistProps,
-    StatsCard,
-    StatsCardProps,
-    TaskListCard,
-    TaskListCardProps,
+    AchievementHeader,
+    AchievementHeaderProps,
+    CompletedTaskItemData,
+    CompletedTasksList,
+    CompletedTasksListProps,
+    CompletionCard,
+    CompletionCardProps,
+    EmptyStateCard,
+    EmptyStateCardProps,
+    HighlightsCard,
+    HighlightsCardProps,
+    MemoAction,
+    RecommendationCard,
+    RecommendationCardProps,
+    RecommendationData,
+    StepIndicator,
+    StepIndicatorProps,
+    UnprocessedMemoCard,
+    UnprocessedMemoCardProps,
+    UnprocessedMemoData,
+    WizardNavigation,
+    WizardNavigationProps,
+    ZombieTaskAction,
+    ZombieTaskCard,
+    ZombieTaskCardProps,
+    ZombieTaskData,
 )
 from .controller import WeeklyReviewController
 from .presenter import WeeklyReviewPresenter
 from .state import WeeklyReviewState
 
+if TYPE_CHECKING:
+    from logic.application.task_application_service import TaskApplicationService
+
+# View step constants
+STEP_ACHIEVEMENT = 1
+STEP_CLEANUP = 2
+STEP_PLANNING = 3
+
 
 class WeeklyReviewView(BaseView):
-    """週次レビューのメインビュー
+    """週次レビューのメインビュー（ウィザード形式）
 
     Controller/Presenter/State パターンで構築。
     """
@@ -55,12 +80,9 @@ class WeeklyReviewView(BaseView):
         self.presenter = WeeklyReviewPresenter(state=self.review_state)
 
         # UIコンポーネント
-        self.stats_cards: list[StatsCard] = []
-        self.checklist_component: ReviewChecklist | None = None
-        self.alert_card: AlertCard | None = None
-        self.next_tasks_card: TaskListCard | None = None
-        self.waiting_tasks_card: TaskListCard | None = None
-        self.someday_tasks_card: TaskListCard | None = None
+        self.step_indicator: StepIndicator | None = None
+        self.wizard_navigation: WizardNavigation | None = None
+        self.step_content_container: ft.Container | None = None
 
     def build_content(self) -> ft.Control:
         """メインコンテンツを構築
@@ -71,51 +93,42 @@ class WeeklyReviewView(BaseView):
         # ヘッダー
         header = self._build_header()
 
-        # 統計カード行
-        stats_row = self._build_stats_row()
+        # ステップインジケーター
+        self.step_indicator = StepIndicator(
+            props=StepIndicatorProps(
+                current_step=self.review_state.current_step,
+                total_steps=self.review_state.total_steps,
+                step_labels=self.presenter.get_step_labels(),
+            )
+        )
 
-        # メインコンテンツエリア（3カラム）
-        main_content = ft.Row(
-            controls=[
-                # 左カラム: チェックリストとアラート
-                ft.Column(
-                    controls=[
-                        self._build_checklist(),
-                        self._build_alert_if_needed(),
-                    ],
-                    spacing=16,
-                    expand=2,
-                ),
-                # 右カラム: タスクリスト
-                ft.Column(
-                    controls=[
-                        self._build_next_tasks_card(),
-                        self._build_waiting_tasks_card(),
-                        self._build_someday_tasks_card(),
-                    ],
-                    spacing=16,
-                    scroll=ft.ScrollMode.AUTO,
-                    expand=1,
-                ),
-            ],
-            spacing=16,
+        # ステップコンテンツ
+        self.step_content_container = ft.Container(
+            content=self._render_current_step(),
             expand=True,
         )
 
-        # アクションボタン
-        actions = self._build_actions()
+        # ウィザードナビゲーション
+        self.wizard_navigation = WizardNavigation(
+            props=WizardNavigationProps(
+                current_step=self.review_state.current_step,
+                total_steps=self.review_state.total_steps,
+                on_prev=self._handle_prev_step,
+                on_next=self._handle_next_step,
+            )
+        )
 
         return ft.Column(
             controls=[
                 header,
-                ft.Container(height=20),
-                stats_row,
-                ft.Container(height=20),
-                main_content,
-                ft.Container(height=20),
+                ft.Container(height=16),
+                self.step_indicator,
                 ft.Divider(),
-                ft.Container(height=10),
-                actions,
+                ft.Container(height=8),
+                self.step_content_container,
+                ft.Container(height=8),
+                ft.Divider(),
+                self.wizard_navigation,
             ],
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
@@ -130,185 +143,354 @@ class WeeklyReviewView(BaseView):
         """
         return self.create_header(
             title="週次レビュー",
-            subtitle="GTDの週次レビュー - システム全体を見直して整理する時間",
+            subtitle="AIがサポートする週次レビュー - 事務作業はAI、意思決定は人間",
         )
 
-    def _build_stats_row(self) -> ft.ResponsiveRow:
-        """統計カード行を構築
+    def _render_current_step(self) -> ft.Control:
+        """現在のステップコンテンツをレンダリング
 
         Returns:
-            統計カード行
+            ステップコンテンツ
         """
-        stats_data = self.presenter.create_stats_cards_data()
-        self.stats_cards = [
-            StatsCard(
-                props=StatsCardProps(
-                    title=data.title,
-                    value=data.value,
-                    subtitle=data.subtitle,
-                    icon_name=data.icon_name,
+        step = self.review_state.current_step
+
+        if step == STEP_ACHIEVEMENT:
+            return self._render_step1_achievement()
+        if step == STEP_CLEANUP:
+            return self._render_step2_cleanup()
+        if step == STEP_PLANNING:
+            return self._render_step3_planning()
+        return ft.Container()
+
+    def _render_step1_achievement(self) -> ft.Control:
+        """Step1: 成果の振り返りをレンダリング
+
+        Returns:
+            Step1コンテンツ
+        """
+        # ヘッダー
+        summary_message = self.presenter.generate_achievement_summary_message()
+        header = AchievementHeader(
+            props=AchievementHeaderProps(
+                message=summary_message,
+                icon_name=ft.Icons.CELEBRATION,
+                icon_color=ft.Colors.BLUE_600,
+            )
+        )
+
+        controls: list[ft.Control] = [header, ft.Container(height=24)]
+
+        # ハイライトカード (データがあれば)
+        if self.review_state.achievement_highlights:
+            highlights_card = HighlightsCard(
+                props=HighlightsCardProps(
+                    highlights=self.review_state.achievement_highlights,
+                    title="主な成果",
+                    icon_name=ft.Icons.TRENDING_UP,
+                    icon_color=ft.Colors.BLUE_600,
                 )
             )
-            for data in stats_data
-        ]
+            controls.append(highlights_card)
+            controls.append(ft.Container(height=16))
 
-        # ResponsiveRowで4カラムグリッドを実現
-        for card in self.stats_cards:
-            card.col = {"sm": 12, "md": 6, "lg": 3}
+        # 完了タスクリスト (データがあれば)
+        if self.review_state.completed_tasks_this_week:
+            # タスクデータをコンポーネント用に変換
+            completed_task_data = [
+                CompletedTaskItemData(
+                    task_id=str(task.id),
+                    title=task.title,
+                    project_title=None,  # TODO: プロジェクト情報を取得
+                )
+                for task in self.review_state.completed_tasks_this_week
+            ]
 
-        return ft.ResponsiveRow(
-            controls=self.stats_cards,
+            completed_list = CompletedTasksList(
+                props=CompletedTasksListProps(
+                    tasks=completed_task_data,
+                    on_task_click=self._handle_task_click,
+                    max_display=10,
+                )
+            )
+            controls.append(completed_list)
+
+        return ft.Column(
+            controls=controls,
             spacing=16,
+            scroll=ft.ScrollMode.AUTO,
         )
 
-    def _build_checklist(self) -> ft.Container:
-        """チェックリストを構築
+    def _render_step2_cleanup(self) -> ft.Control:
+        """Step2: システムの整理をレンダリング
 
         Returns:
-            チェックリストコンテナ
+            Step2コンテンツ
         """
-        checklist_data = self.presenter.create_checklist_data()
-        self.checklist_component = ReviewChecklist(
-            props=ReviewChecklistProps(
-                items=checklist_data,
-                on_toggle=self._handle_checklist_toggle,
-            )
-        )
-        return ft.Container(content=self.checklist_component, expand=True)
-
-    def _build_alert_if_needed(self) -> ft.Container:
-        """必要に応じてアラートカードを構築
-
-        Returns:
-            アラートカードコンテナ（不要な場合は空）
-        """
-        alert_message = self.presenter.get_inbox_alert_message()
-        if not alert_message:
-            return ft.Container()
-
-        self.alert_card = AlertCard(
-            props=AlertCardProps(
-                title="要整理",
-                message=alert_message,
-                action_label="タスクを整理する",
-                icon_name=ft.Icons.INBOX,
-                on_action=self._handle_goto_tasks,
-            )
-        )
-        return ft.Container(content=self.alert_card)
-
-    def _build_next_tasks_card(self) -> ft.Container:
-        """次のアクションタスクカードを構築
-
-        Returns:
-            タスクリストカードコンテナ
-        """
-        tasks = self.controller.get_tasks_by_status("next")
-        task_data = self.presenter.create_task_list_data(tasks)
-
-        self.next_tasks_card = TaskListCard(
-            props=TaskListCardProps(
-                title="次のアクション",
-                icon_name=ft.Icons.CHECK_CIRCLE,
-                tasks=task_data,
-                on_task_click=self._handle_task_click,
-                on_show_more=self._handle_goto_tasks,
-            )
-        )
-        return ft.Container(content=self.next_tasks_card)
-
-    def _build_waiting_tasks_card(self) -> ft.Container:
-        """待機中タスクカードを構築
-
-        Returns:
-            タスクリストカードコンテナ
-        """
-        tasks = self.controller.get_tasks_by_status("waiting")
-        task_data = self.presenter.create_task_list_data(tasks)
-
-        self.waiting_tasks_card = TaskListCard(
-            props=TaskListCardProps(
-                title="待機中",
-                icon_name=ft.Icons.SCHEDULE,
-                tasks=task_data,
-                on_task_click=self._handle_task_click,
-                on_show_more=self._handle_goto_tasks,
-            )
-        )
-        return ft.Container(content=self.waiting_tasks_card)
-
-    def _build_someday_tasks_card(self) -> ft.Container:
-        """いつか/多分タスクカードを構築
-
-        Returns:
-            タスクリストカードコンテナ
-        """
-        tasks = self.controller.get_tasks_by_status("someday")
-        task_data = self.presenter.create_task_list_data(tasks)
-
-        self.someday_tasks_card = TaskListCard(
-            props=TaskListCardProps(
-                title="いつか/多分",
-                icon_name=ft.Icons.CALENDAR_MONTH,
-                tasks=task_data,
-                on_task_click=self._handle_task_click,
-                on_show_more=self._handle_goto_tasks,
-            )
-        )
-        return ft.Container(content=self.someday_tasks_card)
-
-    def _build_actions(self) -> ft.Container:
-        """アクションボタン行を構築
-
-        Returns:
-            アクションボタンコンテナ
-        """
-        return ft.Container(
-            content=ft.Row(
+        # ヘッダー
+        header_container = ft.Container(
+            content=ft.Column(
                 controls=[
-                    ft.OutlinedButton(
-                        text="タスクを整理する",
-                        on_click=lambda _: self._handle_goto_tasks(),
+                    ft.Container(
+                        content=ft.Icon(
+                            name=ft.Icons.AUTO_AWESOME,
+                            size=48,
+                            color=ft.Colors.YELLOW_700,
+                        ),
+                        padding=ft.padding.all(16),
+                        bgcolor=f"{ft.Colors.YELLOW_700}1A",
+                        border_radius=50,
                     ),
-                    ft.OutlinedButton(
-                        text="プロジェクトを確認",
-                        on_click=lambda _: self._handle_goto_projects(),
+                    ft.Container(height=16),
+                    ft.Text(
+                        "システムの整理",
+                        size=28,
+                        weight=ft.FontWeight.BOLD,
+                        text_align=ft.TextAlign.CENTER,
                     ),
-                    ft.ElevatedButton(
-                        text="レビュー完了",
-                        on_click=lambda _: self._handle_complete_review(),
+                    ft.Container(height=8),
+                    ft.Text(
+                        "AIが気になる項目をピックアップしました。それぞれについて判断をお願いします。",
+                        size=16,
+                        color=ft.Colors.GREY_700,
+                        text_align=ft.TextAlign.CENTER,
                     ),
                 ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=0,
             ),
-            padding=ft.padding.all(24),
+            padding=ft.padding.symmetric(vertical=24),
         )
 
-    def _handle_checklist_toggle(self, item_id: str) -> None:
-        """チェックリスト項目のトグル処理
+        controls: list[ft.Control] = [header_container, ft.Container(height=24)]
+
+        total_items = len(self.review_state.zombie_tasks) + len(self.review_state.unprocessed_memos)
+
+        if total_items == 0:
+            # 整理項目なし
+            empty_card = EmptyStateCard(
+                props=EmptyStateCardProps(
+                    title="素晴らしい！",
+                    message="整理が必要な項目はありません。システムは良好な状態です。",
+                    icon_name=ft.Icons.CHECK_CIRCLE,
+                    icon_color=ft.Colors.GREEN_600,
+                )
+            )
+            controls.append(empty_card)
+        else:
+            # ゾンビタスクセクション
+            if self.review_state.zombie_tasks:
+                zombie_header = ft.Row(
+                    controls=[
+                        ft.Icon(
+                            name=ft.Icons.WARNING_AMBER,
+                            size=20,
+                            color=ft.Colors.YELLOW_700,
+                        ),
+                        ft.Text(
+                            f"長期滞留タスク ({len(self.review_state.zombie_tasks)}件)",
+                            size=18,
+                            weight=ft.FontWeight.W_600,
+                        ),
+                    ],
+                    spacing=8,
+                )
+                controls.append(zombie_header)
+                controls.append(ft.Container(height=12))
+
+                for task in self.review_state.zombie_tasks:
+                    # TODO: 実際のタスクオブジェクトから分析
+                    zombie_data = ZombieTaskData(
+                        task_id=str(task.id),
+                        title=task.title,
+                        reason="14日間進捗がありません。",
+                        selected_action=self.review_state.get_zombie_task_decision(str(task.id)),
+                    )
+                    zombie_card = ZombieTaskCard(
+                        props=ZombieTaskCardProps(
+                            task_data=zombie_data,
+                            on_action_selected=self._handle_zombie_task_action,
+                        )
+                    )
+                    controls.append(zombie_card)
+                    controls.append(ft.Container(height=12))
+
+            # 未処理メモセクション
+            if self.review_state.unprocessed_memos:
+                memo_header = ft.Row(
+                    controls=[
+                        ft.Icon(
+                            name=ft.Icons.DESCRIPTION,
+                            size=20,
+                            color=ft.Colors.BLUE_700,
+                        ),
+                        ft.Text(
+                            f"未処理メモ ({len(self.review_state.unprocessed_memos)}件)",
+                            size=18,
+                            weight=ft.FontWeight.W_600,
+                        ),
+                    ],
+                    spacing=8,
+                )
+                controls.append(memo_header)
+                controls.append(ft.Container(height=12))
+
+                for memo in self.review_state.unprocessed_memos:
+                    # TODO: 実際のメモオブジェクトから分析
+                    memo_data = UnprocessedMemoData(
+                        memo_id=str(memo.id),
+                        title=memo.title,
+                        content=memo.content,
+                        suggestion=self.presenter.generate_memo_analysis(memo.content, memo.title),
+                        selected_action=self.review_state.get_memo_decision(str(memo.id)),
+                    )
+                    memo_card = UnprocessedMemoCard(
+                        props=UnprocessedMemoCardProps(
+                            memo_data=memo_data,
+                            on_action_selected=self._handle_memo_action,
+                        )
+                    )
+                    controls.append(memo_card)
+                    controls.append(ft.Container(height=12))
+
+        return ft.Column(
+            controls=controls,
+            spacing=16,
+            scroll=ft.ScrollMode.AUTO,
+        )
+
+    def _render_step3_planning(self) -> ft.Control:
+        """Step3: 来週の計画をレンダリング
+
+        Returns:
+            Step3コンテンツ
+        """
+        # ヘッダー
+        header_container = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Icon(
+                            name=ft.Icons.CALENDAR_TODAY,
+                            size=48,
+                            color=ft.Colors.GREEN_700,
+                        ),
+                        padding=ft.padding.all(16),
+                        bgcolor=f"{ft.Colors.GREEN_700}1A",
+                        border_radius=50,
+                    ),
+                    ft.Container(height=16),
+                    ft.Text(
+                        "次週のプランニング",
+                        size=28,
+                        weight=ft.FontWeight.BOLD,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Container(height=8),
+                    ft.Text(
+                        "AIが来週注力すべき項目を提案します。承認または調整してください。",
+                        size=16,
+                        color=ft.Colors.GREY_700,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=0,
+            ),
+            padding=ft.padding.symmetric(vertical=24),
+        )
+
+        controls: list[ft.Control] = [header_container, ft.Container(height=24)]
+
+        if not self.review_state.recommendations:
+            # 推奨事項なし
+            empty_card = EmptyStateCard(
+                props=EmptyStateCardProps(
+                    title="すべて順調です！",
+                    message="特に緊急性の高いタスクはありません。新しいチャレンジに取り組む良い機会です。",
+                    icon_name=ft.Icons.CHECK_CIRCLE,
+                    icon_color=ft.Colors.BLUE_600,
+                )
+            )
+            controls.append(empty_card)
+        else:
+            # 推奨事項カード
+            for recommendation in self.review_state.recommendations:
+                if isinstance(recommendation, RecommendationData):
+                    rec_card = RecommendationCard(
+                        props=RecommendationCardProps(
+                            recommendation=recommendation,
+                            on_task_click=self._handle_task_click,
+                        )
+                    )
+                    controls.append(rec_card)
+                    controls.append(ft.Container(height=16))
+
+        # 完了カード
+        controls.append(ft.Container(height=8))
+        completion_card = CompletionCard(
+            props=CompletionCardProps(
+                title="レビュー完了",
+                message="今週も良い1週間にしていきましょう!",
+                on_finish=self._handle_complete_review,
+            )
+        )
+        controls.append(completion_card)
+
+        return ft.Column(
+            controls=controls,
+            spacing=16,
+            scroll=ft.ScrollMode.AUTO,
+        )
+
+    def _handle_prev_step(self) -> None:
+        """前のステップへ戻る"""
+        try:
+            self.controller.prev_step()
+            self._refresh_wizard()
+        except Exception as e:
+            logger.exception("前のステップへの遷移に失敗")
+            self.notify_error(f"エラーが発生しました: {type(e).__name__}")
+
+    def _handle_next_step(self) -> None:
+        """次のステップへ進む"""
+        try:
+            if self.review_state.current_step == self.review_state.total_steps:
+                # 最終ステップなら完了処理
+                self._handle_complete_review()
+            else:
+                self.controller.next_step()
+                self._refresh_wizard()
+        except Exception as e:
+            logger.exception("次のステップへの遷移に失敗")
+            self.notify_error(f"エラーが発生しました: {type(e).__name__}")
+
+    def _handle_zombie_task_action(self, task_id: str, action: ZombieTaskAction) -> None:
+        """ゾンビタスクのアクション選択処理
 
         Args:
-            item_id: 項目ID
+            task_id: タスクID
+            action: 選択されたアクション
         """
         try:
-            self.controller.toggle_checklist_item(item_id)
-            self._update_checklist()
-        except ValueError as e:
-            logger.warning(f"無効なチェックリスト項目ID: {item_id}")
-            self.notify_error(f"項目の更新に失敗しました: {e}")
+            self.controller.set_zombie_task_decision(task_id, action)
+            logger.info(f"ゾンビタスクアクション選択: {task_id} -> {action}")
         except Exception as e:
-            logger.exception("チェックリスト更新に失敗")
-            self.notify_error(f"予期しないエラーが発生しました: {type(e).__name__}: {e}")
+            logger.exception("ゾンビタスクアクション選択に失敗")
+            self.notify_error(f"エラーが発生しました: {type(e).__name__}")
 
-    def _handle_start_wizard(self, _: ft.ControlEvent) -> None:
-        """ウィザード開始処理
+    def _handle_memo_action(self, memo_id: str, action: MemoAction) -> None:
+        """メモアクション選択処理
 
         Args:
-            _: イベント
+            memo_id: メモID
+            action: 選択されたアクション
         """
-        logger.info("レビューウィザードを開始（未実装）")
-        self.show_info_snackbar("ウィザード機能は近日公開予定です")
+        try:
+            self.controller.set_memo_decision(memo_id, action)
+            logger.info(f"メモアクション選択: {memo_id} -> {action}")
+        except Exception as e:
+            logger.exception("メモアクション選択に失敗")
+            self.notify_error(f"エラーが発生しました: {type(e).__name__}")
 
     def _handle_task_click(self, task_id: str) -> None:
         """タスククリック処理
@@ -318,54 +500,49 @@ class WeeklyReviewView(BaseView):
         """
         self.page.go(f"/tasks/{task_id}")
 
-    def _handle_goto_tasks(self) -> None:
-        """タスク画面への遷移"""
-        self.page.go("/tasks")
-
-    def _handle_goto_projects(self) -> None:
-        """プロジェクト画面への遷移"""
-        self.page.go("/projects")
-
     def _handle_complete_review(self) -> None:
         """レビュー完了処理"""
+        self.show_info_snackbar("レビューを完了しました！")
         self.page.go("/home")
 
-    def _update_checklist(self) -> None:
-        """チェックリストを更新"""
-        if self.checklist_component:
-            checklist_data = self.presenter.create_checklist_data()
-            self.checklist_component.update_items(checklist_data)
+    def _refresh_wizard(self) -> None:
+        """ウィザード全体をリフレッシュ"""
+        # ステップインジケーター更新
+        if self.step_indicator:
+            self.step_indicator.set_props(
+                StepIndicatorProps(
+                    current_step=self.review_state.current_step,
+                    total_steps=self.review_state.total_steps,
+                    step_labels=self.presenter.get_step_labels(),
+                )
+            )
+
+        # コンテンツ更新
+        if self.step_content_container:
+            self.step_content_container.content = self._render_current_step()
+
+        # ナビゲーション更新
+        if self.wizard_navigation:
+            self.wizard_navigation.set_props(
+                WizardNavigationProps(
+                    current_step=self.review_state.current_step,
+                    total_steps=self.review_state.total_steps,
+                    on_prev=self._handle_prev_step,
+                    on_next=self._handle_next_step,
+                )
+            )
+
+        # ページ更新
+        if self.page:
+            self.page.update()
 
     def did_mount(self) -> None:
         """マウント時の初期化"""
         super().did_mount()
         try:
             self.controller.load_initial_data()
-            self._refresh_all()
+            # TODO: 実データ取得実装後にリフレッシュ
+            # self._refresh_wizard()
         except Exception as e:
             logger.exception("初期データ読み込みに失敗")
             self.notify_error(f"データの読み込みに失敗しました: {type(e).__name__}")
-            # UIは空の状態で表示を継続
-
-    def _refresh_all(self) -> None:
-        """全コンポーネントをリフレッシュ"""
-        # 統計カード更新
-        stats_data = self.presenter.create_stats_cards_data()
-        for i, card in enumerate(self.stats_cards):
-            if i < len(stats_data):
-                data = stats_data[i]
-                card.set_props(
-                    StatsCardProps(
-                        title=data.title,
-                        value=data.value,
-                        subtitle=data.subtitle,
-                        icon_name=data.icon_name,
-                    )
-                )
-
-        # チェックリスト更新
-        self._update_checklist()
-
-        # ページ更新
-        if self.page:
-            self.page.update()

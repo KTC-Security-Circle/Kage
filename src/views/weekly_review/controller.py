@@ -6,6 +6,7 @@
 from loguru import logger
 
 from logic.application.task_application_service import TaskApplicationService
+from views.weekly_review.components import MemoAction, ZombieTaskAction
 
 from .state import WeeklyReviewState, WeeklyStats
 
@@ -91,6 +92,36 @@ class WeeklyReviewController:
         for item in self.state.checklist:
             item.completed = False
         logger.info("チェックリストをリセット")
+
+    def next_step(self) -> None:
+        """次のステップへ進む"""
+        self.state.next_step()
+        logger.info(f"ステップ {self.state.current_step} へ進む")
+
+    def prev_step(self) -> None:
+        """前のステップへ戻る"""
+        self.state.prev_step()
+        logger.info(f"ステップ {self.state.current_step} へ戻る")
+
+    def set_zombie_task_decision(self, task_id: str, action: ZombieTaskAction) -> None:
+        """ゾンビタスクの意思決定を記録
+
+        Args:
+            task_id: タスクID
+            action: 選択されたアクション
+        """
+        self.state.set_zombie_task_decision(task_id, action)
+        logger.debug(f"ゾンビタスク決定: {task_id} -> {action}")
+
+    def set_memo_decision(self, memo_id: str, action: MemoAction) -> None:
+        """メモの意思決定を記録
+
+        Args:
+            memo_id: メモID
+            action: 選択されたアクション
+        """
+        self.state.set_memo_decision(memo_id, action)
+        logger.debug(f"メモ決定: {memo_id} -> {action}")
 
     def get_tasks_by_status(self, status: str) -> list:
         """指定ステータスのタスクを取得

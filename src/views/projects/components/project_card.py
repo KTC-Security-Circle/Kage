@@ -8,7 +8,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from views.theme import get_status_color
+from views.theme import (
+    get_error_color,
+    get_on_primary_color,
+    get_on_surface_color,
+    get_outline_color,
+    get_primary_color,
+    get_status_color,
+    get_surface_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -57,7 +67,7 @@ def create_project_card(
                                     ft.Text(
                                         project["description"],
                                         style=ft.TextThemeStyle.BODY_MEDIUM,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_text_secondary_color(),
                                         max_lines=2,
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
@@ -69,7 +79,7 @@ def create_project_card(
                                 content=ft.Text(
                                     project["status"],
                                     style=ft.TextThemeStyle.LABEL_SMALL,
-                                    color=ft.Colors.WHITE,
+                                    color=get_on_primary_color(),
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 bgcolor=status_color,
@@ -86,7 +96,7 @@ def create_project_card(
                     # Divider
                     ft.Divider(
                         height=1,
-                        color=ft.Colors.GREY_300,
+                        color=get_outline_color(),
                     ),
                     # Footer with metadata and actions
                     ft.Row(
@@ -97,12 +107,12 @@ def create_project_card(
                                     ft.Icon(
                                         ft.Icons.TASK_ALT,
                                         size=16,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_text_secondary_color(),
                                     ),
                                     ft.Text(
                                         f"{len(project.get('task_id', []))} タスク",
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_text_secondary_color(),
                                     ),
                                 ],
                                 spacing=4,
@@ -113,14 +123,14 @@ def create_project_card(
                                     ft.Icon(
                                         ft.Icons.CALENDAR_TODAY,
                                         size=16,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_text_secondary_color(),
                                     ),
                                     # TODO: created_at の表示整形
                                     # - ドメイン/Presenter 側で表示用フォーマットにして渡すと再利用性が高まります。
                                     ft.Text(
                                         project["created_at"],
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_text_secondary_color(),
                                     ),
                                 ],
                                 spacing=4,
@@ -134,14 +144,14 @@ def create_project_card(
                                         tooltip="編集",
                                         icon_size=20,
                                         on_click=lambda e, p=project: on_edit(e, p),
-                                        icon_color=ft.Colors.GREY_600,
+                                        icon_color=get_text_secondary_color(),
                                     ),
                                     ft.IconButton(
                                         icon=ft.Icons.DELETE_OUTLINE,
                                         tooltip="削除",
                                         icon_size=20,
                                         on_click=lambda e, p=project: on_delete(e, p),
-                                        icon_color=ft.Colors.RED,
+                                        icon_color=get_error_color(),
                                     ),
                                 ],
                                 spacing=0,
@@ -195,7 +205,7 @@ def create_project_card_from_vm(
                                 content=ft.Text(
                                     vm.status,
                                     style=ft.TextThemeStyle.LABEL_SMALL,
-                                    color=ft.Colors.WHITE,
+                                    color=get_on_primary_color(),
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 padding=ft.padding.symmetric(horizontal=8, vertical=4),
@@ -207,12 +217,12 @@ def create_project_card_from_vm(
                     ft.Text(
                         vm.subtitle,
                         style=ft.TextThemeStyle.BODY_SMALL,
-                        color=ft.Colors.GREY_600,
+                        color=get_text_secondary_color(),
                     ),
                     ft.Text(
                         vm.description,
                         style=ft.TextThemeStyle.BODY_SMALL,
-                        color=ft.Colors.GREY_700,
+                        color=get_on_surface_color(),
                         max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
@@ -223,14 +233,14 @@ def create_project_card_from_vm(
                                     ft.Text(
                                         vm.progress_text,
                                         style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
+                                        color=get_text_secondary_color(),
                                     ),
                                 ],
                             ),
                             ft.ProgressBar(
                                 value=vm.progress_value,
-                                color=ft.Colors.BLUE,
-                                bgcolor=ft.Colors.GREY_300,
+                                color=get_primary_color(),
+                                bgcolor=get_outline_color(),
                                 height=6,
                             ),
                         ],
@@ -244,6 +254,6 @@ def create_project_card_from_vm(
             on_click=lambda _: on_select(vm.id),
         ),
         elevation=1 if not is_selected else 3,
-        color=ft.Colors.WHITE if not is_selected else ft.Colors.BLUE_50,
-        surface_tint_color=ft.Colors.BLUE if is_selected else None,
+        color=get_surface_color() if not is_selected else get_surface_variant_color(),
+        surface_tint_color=get_primary_color() if is_selected else None,
     )

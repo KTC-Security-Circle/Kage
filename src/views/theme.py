@@ -533,6 +533,18 @@ def get_error_color() -> str:
     return LIGHT_COLORS.error
 
 
+def get_success_color() -> str:
+    """成功色を取得する。
+
+    Returns:
+        色コード（HEX形式）
+
+    Note:
+        成功メッセージ、完了ステータス表示などに使用。
+    """
+    return LIGHT_COLORS.success
+
+
 def get_on_error_color() -> str:
     """エラー色背景上のテキスト色を取得する。
 

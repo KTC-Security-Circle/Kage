@@ -14,6 +14,13 @@ from typing import TYPE_CHECKING, Final
 import flet as ft
 
 from views.tasks.components.shared.constants import TASK_STATUS_LABELS
+from views.theme import (
+    get_outline_color,
+    get_primary_color,
+    get_surface_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -78,9 +85,9 @@ class TaskCard(ft.Container):
             border_radius=CARD_BORDER_RADIUS,
             border=ft.border.all(
                 width=SELECTED_BORDER_WIDTH if data.is_selected else DEFAULT_BORDER_WIDTH,
-                color=ft.Colors.BLUE_400 if data.is_selected else ft.Colors.OUTLINE,
+                color=get_primary_color() if data.is_selected else get_outline_color(),
             ),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if data.is_selected else ft.Colors.SURFACE,
+            bgcolor=get_surface_variant_color() if data.is_selected else get_surface_color(),
             on_click=self._handle_click if data.on_click else None,
             ink=True,
             key=data.task_id,
@@ -98,14 +105,14 @@ class TaskCard(ft.Container):
             )
         ]
         if self._data.is_selected:
-            header_controls.append(ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.BLUE_400, size=20))
+            header_controls.append(ft.Icon(ft.Icons.CHEVRON_RIGHT, color=get_primary_color(), size=20))
 
         header = ft.Row(controls=header_controls, alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
         subtitle = ft.Text(
             self._data.subtitle,
             style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=ft.Colors.ON_SURFACE_VARIANT,
+            color=get_text_secondary_color(),
             max_lines=1,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
@@ -117,7 +124,7 @@ class TaskCard(ft.Container):
                 ft.Container(
                     content=ft.Text(status_text, size=10, weight=ft.FontWeight.BOLD),
                     padding=ft.padding.symmetric(horizontal=8, vertical=2),
-                    bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                    bgcolor=get_surface_variant_color(),
                     border_radius=12,
                 )
             )
@@ -128,7 +135,7 @@ class TaskCard(ft.Container):
                 ft.Text(
                     f"期限: {self._data.due_date}",
                     style=ft.TextThemeStyle.BODY_SMALL,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 )
             )
         elif hasattr(self._data, "status_timestamp") and self._data.status_timestamp:
@@ -136,7 +143,7 @@ class TaskCard(ft.Container):
                 ft.Text(
                     f"更新: {self._data.status_timestamp}",
                     style=ft.TextThemeStyle.BODY_SMALL,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 )
             )
 

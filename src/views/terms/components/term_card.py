@@ -21,6 +21,13 @@ from typing import TYPE_CHECKING, Final
 import flet as ft
 
 from models import TermStatus
+from views.theme import (
+    get_on_surface_color,
+    get_outline_color,
+    get_primary_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
 
 from .shared.constants import (
     CARD_PADDING,
@@ -99,9 +106,9 @@ class TermCard(ft.Container):
             border_radius=CARD_BORDER_RADIUS,
             border=ft.border.all(
                 width=SELECTED_BORDER_WIDTH if data.is_selected else DEFAULT_BORDER_WIDTH,
-                color=ft.Colors.PRIMARY if data.is_selected else ft.Colors.OUTLINE_VARIANT,
+                color=get_primary_color() if data.is_selected else get_outline_color(),
             ),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if data.is_selected else None,
+            bgcolor=get_surface_variant_color() if data.is_selected else None,
             on_click=self._handle_click if data.on_click else None,
             ink=True,
             key=data.term_id,
@@ -127,7 +134,7 @@ class TermCard(ft.Container):
                 ft.Text(
                     f"キー: {self._data.key}",
                     size=12,
-                    color=ft.Colors.OUTLINE,
+                    color=get_outline_color(),
                 ),
             ],
             spacing=2,
@@ -149,7 +156,7 @@ class TermCard(ft.Container):
         description = ft.Text(
             self._data.description,
             size=14,
-            color=ft.Colors.ON_SURFACE_VARIANT,
+            color=get_text_secondary_color(),
             max_lines=MAX_DESCRIPTION_LINES,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
@@ -182,7 +189,7 @@ class TermCard(ft.Container):
         return ft.Icon(
             icon_map.get(self._data.status, ft.Icons.HELP_OUTLINE),
             size=20,
-            color=ft.Colors.ON_SURFACE,
+            color=get_on_surface_color(),
         )
 
     def _build_synonyms_display(self) -> ft.Control:
@@ -201,10 +208,10 @@ class TermCard(ft.Container):
                 content=ft.Text(
                     synonym,
                     size=12,
-                    color=ft.Colors.ON_SECONDARY_CONTAINER,
+                    color=get_on_surface_color(),
                 ),
                 padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                bgcolor=get_surface_variant_color(),
                 border_radius=12,
             )
             for synonym in visible_synonyms
@@ -216,10 +223,10 @@ class TermCard(ft.Container):
                     content=ft.Text(
                         f"+{len(self._data.synonyms) - MAX_SYNONYMS_DISPLAY}",
                         size=12,
-                        color=ft.Colors.ON_SECONDARY_CONTAINER,
+                        color=get_on_surface_color(),
                     ),
                     padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                    bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                    bgcolor=get_surface_variant_color(),
                     border_radius=12,
                 )
             )

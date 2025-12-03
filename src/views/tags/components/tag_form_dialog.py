@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from views.theme import (
+    TAG_COLORS,
     get_error_color,
     get_grey_color,
     get_on_primary_color,
@@ -41,7 +42,7 @@ class TagFormDialog(ft.AlertDialog):
         *,
         title: str,
         initial_name: str = "",
-        initial_color: str = "#2196f3",
+        initial_color: str | None = None,
         initial_description: str = "",
         on_submit: Callable[[TagFormData], None],
         on_cancel: Callable[[], None],
@@ -59,7 +60,7 @@ class TagFormDialog(ft.AlertDialog):
         super().__init__()
         self._on_submit = on_submit
         self._on_cancel = on_cancel
-        self._selected_color = initial_color
+        self._selected_color = initial_color or TAG_COLORS.blue
 
         # フォームフィールド
         self._name_field = ft.TextField(
@@ -318,7 +319,7 @@ def show_tag_edit_dialog(
     dialog = TagFormDialog(
         title="タグを編集",
         initial_name=tag.get("name", ""),
-        initial_color=tag.get("color", "#2196f3"),
+        initial_color=tag.get("color"),
         initial_description=tag.get("description", ""),
         on_submit=on_submit,
         on_cancel=on_cancel,

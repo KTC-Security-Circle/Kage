@@ -45,6 +45,8 @@ from typing import TYPE_CHECKING, Final
 
 import flet as ft
 
+from views.theme import get_outline_color, get_surface_color, get_text_secondary_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -141,8 +143,8 @@ class Header(ft.Container):
         super().__init__(
             content=self._build_action_bar(),
             padding=ft.padding.all(HEADER_PADDING),
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
+            bgcolor=get_surface_color(),
+            border=ft.border.only(bottom=ft.BorderSide(width=1, color=get_outline_color())),
         )
 
     def _build_action_bar(self) -> ft.Control:
@@ -168,7 +170,7 @@ class Header(ft.Container):
                 ft.Text(
                     self._action_bar_data.subtitle,
                     style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
             ],
             spacing=4,

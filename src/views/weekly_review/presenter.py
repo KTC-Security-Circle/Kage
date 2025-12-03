@@ -17,9 +17,9 @@ from .state import WeeklyReviewState
 from .utils import format_count, format_percentage
 
 # Presenter constants
-THRESHOLD_HIGH_COMPLETED = 10
-THRESHOLD_MEDIUM_COMPLETED = 5
-LONG_DESCRIPTION_THRESHOLD = 100
+THRESHOLD_HIGH_COMPLETED = 10  # 1週間で「高達成」とみなす完了タスク数の閾値
+THRESHOLD_MEDIUM_COMPLETED = 5  # 1週間で「中達成」とみなす完了タスク数の閾値
+LONG_DESCRIPTION_THRESHOLD = 100  # タスク説明が「長文」と判定される文字数の閾値
 
 
 @dataclass(frozen=True, slots=True)

@@ -45,7 +45,6 @@ class Palette:
 
     # Green
     GREEN_500 = "#4CAF50"
-    GREEN_600 = "#43A047"  # Dark Green for light mode success? No, usually 700 or 500.
     GREEN_700 = "#388E3C"
     GREEN_400 = "#66BB6A"
 
@@ -78,7 +77,6 @@ class Palette:
     # Common
     WHITE = "#FFFFFF"
     BLACK = "#000000"
-    TRANSPARENT = "transparent"
 
     # Dark Theme Specifics
     DARK_BG = "#121212"

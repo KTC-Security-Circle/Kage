@@ -37,12 +37,13 @@ from typing import TYPE_CHECKING, Final
 
 import flet as ft
 
-from .shared.constants import (
-    CARD_BORDER_RADIUS,
-    CARD_PADDING,
-    DEFAULT_BORDER_WIDTH,
-    SELECTED_BORDER_WIDTH,
+from views.theme import (
+    get_outline_color,
+    get_primary_color,
+    get_text_secondary_color,
 )
+
+from .shared.constants import CARD_BORDER_RADIUS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -137,15 +138,19 @@ class MemoCard(ft.Container):
         self.max_content_lines = max_content_lines
 
         super().__init__(
-            content=self._build_card_content(),
-            padding=ft.padding.all(CARD_PADDING),
-            margin=ft.margin.symmetric(vertical=4),
+            content=ft.Card(
+                content=ft.Container(
+                    content=self._build_card_content(),
+                    padding=ft.padding.all(16),
+                ),
+                elevation=1 if data.is_selected else 0,
+            ),
+            margin=ft.margin.symmetric(vertical=4, horizontal=8),
             border_radius=CARD_BORDER_RADIUS,
             border=ft.border.all(
-                width=SELECTED_BORDER_WIDTH if data.is_selected else DEFAULT_BORDER_WIDTH,
-                color=ft.Colors.BLUE_400 if data.is_selected else ft.Colors.OUTLINE,
+                width=2 if data.is_selected else 0,
+                color=get_primary_color() if data.is_selected else get_outline_color(),
             ),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if data.is_selected else ft.Colors.SURFACE,
             on_click=self._handle_click if data.on_click else None,
             ink=True,
             key=str(data.memo_id),
@@ -162,7 +167,7 @@ class MemoCard(ft.Container):
             ft.Text(
                 self._card_data.title,
                 theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
-                weight=ft.FontWeight.BOLD,
+                weight=ft.FontWeight.W_500,
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
                 expand=True,
@@ -171,7 +176,7 @@ class MemoCard(ft.Container):
 
         if self._card_data.is_selected:
             header_controls.append(
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.BLUE_400, size=20),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=get_primary_color(), size=20),
             )
 
         header = ft.Row(
@@ -183,34 +188,46 @@ class MemoCard(ft.Container):
         content_text = ft.Text(
             self._card_data.content_preview,
             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=ft.Colors.ON_SURFACE_VARIANT,
+            color=get_text_secondary_color(),
             max_lines=self.max_content_lines,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
 
-        # フッター（バッジ + 日付）
-        footer_controls = []
+        # Divider
+        divider = ft.Divider(height=1, color=get_outline_color())
+
+        # フッター（日付 + バッジ）
+        footer_controls: list[ft.Control] = [
+            ft.Row(
+                controls=[
+                    ft.Icon(
+                        ft.Icons.CALENDAR_TODAY,
+                        size=16,
+                        color=get_text_secondary_color(),
+                    ),
+                    ft.Text(
+                        self._card_data.formatted_date,
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=get_text_secondary_color(),
+                    ),
+                ],
+                spacing=4,
+            ),
+        ]
 
         if self._card_data.badge_data:
+            footer_controls.append(ft.Container(expand=True))
             footer_controls.append(self._build_status_badge())
-
-        footer_controls.append(
-            ft.Text(
-                self._card_data.formatted_date,
-                theme_style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-        )
 
         footer = ft.Row(
             controls=footer_controls,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            alignment=ft.MainAxisAlignment.START,
             spacing=8,
         )
 
         return ft.Column(
-            controls=[header, content_text, footer],
-            spacing=8,
+            controls=[header, content_text, divider, footer],
+            spacing=12,
             tight=True,
         )
 
@@ -225,22 +242,34 @@ class MemoCard(ft.Container):
 
         badge = self._card_data.badge_data
 
+        from views.theme import get_on_primary_color
+
         content: ft.Control
         if badge.icon:
             content = ft.Row(
                 controls=[
-                    ft.Icon(badge.icon, size=12),
-                    ft.Text(badge.text, size=10, weight=ft.FontWeight.BOLD),
+                    ft.Icon(badge.icon, size=14, color=get_on_primary_color()),
+                    ft.Text(
+                        badge.text,
+                        theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                        color=get_on_primary_color(),
+                        weight=ft.FontWeight.W_500,
+                    ),
                 ],
                 spacing=4,
                 tight=True,
             )
         else:
-            content = ft.Text(badge.text, size=10, weight=ft.FontWeight.BOLD)
+            content = ft.Text(
+                badge.text,
+                theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                color=get_on_primary_color(),
+                weight=ft.FontWeight.W_500,
+            )
 
         return ft.Container(
             content=content,
-            padding=ft.padding.symmetric(horizontal=8, vertical=2),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
             bgcolor=badge.color,
             border_radius=12,
         )

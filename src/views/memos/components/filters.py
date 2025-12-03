@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from views.theme import get_surface_variant_color, get_text_secondary_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import date
@@ -96,7 +98,7 @@ class MemoFilters(ft.Container):
         super().__init__(
             content=self._build_filters(),
             padding=ft.padding.all(12),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
+            bgcolor=get_surface_variant_color(),
             border_radius=8,
             visible=False,  # 初期状態では非表示
         )
@@ -235,9 +237,9 @@ class MemoFilters(ft.Container):
             controls=[
                 ft.Text("タグ", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 ft.Text(
-                    "タグフィルタは統合フェーズで実装予定",
+                    "タグフィルターは統合フェーズで実装予定",
                     theme_style=ft.TextThemeStyle.BODY_SMALL,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
             ],
             spacing=8,

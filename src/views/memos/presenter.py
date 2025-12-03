@@ -75,6 +75,17 @@ from loguru import logger
 
 from models import AiSuggestionStatus, MemoStatus
 from views.shared.components import HeaderButtonData, HeaderData
+from views.theme import (
+    get_error_color,
+    get_on_primary_color,
+    get_on_surface_color,
+    get_outline_color,
+    get_primary_color,
+    get_status_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+    get_warning_color,
+)
 
 from .components.filters import FilterConfig, FilterData
 from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
@@ -386,22 +397,27 @@ def build_status_badge(status: MemoStatus) -> ft.Container:
         MemoStatus.ARCHIVE: "Archived",
     }
     color_map = {
-        MemoStatus.INBOX: ft.Colors.PRIMARY,
-        MemoStatus.ACTIVE: ft.Colors.SECONDARY,
-        MemoStatus.IDEA: ft.Colors.TERTIARY,
-        MemoStatus.ARCHIVE: ft.Colors.OUTLINE_VARIANT,
+        MemoStatus.INBOX: get_primary_color(),
+        MemoStatus.ACTIVE: get_status_color("進行中"),
+        MemoStatus.IDEA: get_warning_color(),
+        MemoStatus.ARCHIVE: get_outline_color(),
     }
     text_color_map = {
-        MemoStatus.ARCHIVE: ft.Colors.ON_SURFACE,
+        MemoStatus.ARCHIVE: get_on_surface_color(),
     }
 
     label = label_map.get(status, "Memo")
-    bgcolor = color_map.get(status, ft.Colors.PRIMARY)
-    text_color = text_color_map.get(status, ft.Colors.ON_PRIMARY)
+    bgcolor = color_map.get(status, get_primary_color())
+    text_color = text_color_map.get(status, get_on_primary_color())
 
     return ft.Container(
-        content=ft.Text(label, size=12, color=text_color, weight=ft.FontWeight.BOLD),
-        padding=ft.padding.symmetric(horizontal=12, vertical=4),
+        content=ft.Text(
+            label,
+            theme_style=ft.TextThemeStyle.LABEL_SMALL,
+            color=text_color,
+            weight=ft.FontWeight.W_500,
+        ),
+        padding=ft.padding.symmetric(horizontal=8, vertical=4),
         bgcolor=bgcolor,
         border_radius=12,
     )
@@ -419,22 +435,30 @@ def build_detail_metadata(created_text: str, updated_text: str) -> ft.Control:
     """
     return ft.Row(
         controls=[
-            ft.Column(
+            ft.Row(
                 controls=[
-                    ft.Text("作成日", theme_style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                    ft.Text(created_text, theme_style=ft.TextThemeStyle.BODY_SMALL),
+                    ft.Icon(ft.Icons.CALENDAR_TODAY, size=16, color=get_text_secondary_color()),
+                    ft.Text(
+                        f"作成: {created_text}",
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=get_text_secondary_color(),
+                    ),
                 ],
                 spacing=4,
             ),
-            ft.Column(
+            ft.Row(
                 controls=[
-                    ft.Text("更新日", theme_style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                    ft.Text(updated_text, theme_style=ft.TextThemeStyle.BODY_SMALL),
+                    ft.Icon(ft.Icons.UPDATE, size=16, color=get_text_secondary_color()),
+                    ft.Text(
+                        f"更新: {updated_text}",
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=get_text_secondary_color(),
+                    ),
                 ],
                 spacing=4,
             ),
         ],
-        spacing=32,
+        spacing=16,
     )
 
 
@@ -454,43 +478,37 @@ def build_detail_actions(
     Returns:
         アクションボタンコントロール
     """
-    return ft.Column(
+    return ft.Row(
         controls=[
-            ft.Row(
-                controls=[
-                    ft.ElevatedButton(
-                        content=ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.AUTO_AWESOME, size=16),
-                                ft.Text("AIでタスクを生成"),
-                            ],
-                            spacing=8,
-                            tight=True,
-                        ),
-                        on_click=on_ai_suggestion,
-                        expand=True,
-                    ),
-                ],
+            ft.ElevatedButton(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.AUTO_AWESOME, size=16, color=get_on_primary_color()),
+                        ft.Text("AI提案", color=get_on_primary_color()),
+                    ],
+                    spacing=8,
+                    tight=True,
+                ),
+                bgcolor=get_primary_color(),
+                on_click=on_ai_suggestion,
             ),
-            ft.Row(
-                controls=[
-                    ft.OutlinedButton(
-                        "編集",
-                        icon=ft.Icons.EDIT,
-                        on_click=on_edit,
-                        expand=True,
-                    ),
-                    ft.OutlinedButton(
-                        "削除",
-                        icon=ft.Icons.DELETE,
-                        on_click=on_delete,
-                        expand=True,
-                    ),
-                ],
-                spacing=8,
+            ft.Container(expand=True),
+            ft.IconButton(
+                icon=ft.Icons.EDIT_OUTLINED,
+                tooltip="編集",
+                icon_size=20,
+                icon_color=get_text_secondary_color(),
+                on_click=on_edit,
+            ),
+            ft.IconButton(
+                icon=ft.Icons.DELETE_OUTLINE,
+                tooltip="削除",
+                icon_size=20,
+                icon_color=get_error_color(),
+                on_click=on_delete,
             ),
         ],
-        spacing=8,
+        alignment=ft.MainAxisAlignment.START,
     )
 
 
@@ -544,7 +562,7 @@ def build_detail_panel(
                             selectable=True,
                         ),
                         padding=ft.padding.all(16),
-                        bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                        bgcolor=get_surface_variant_color(),
                         border_radius=8,
                     ),
                     # メタデータ
@@ -584,17 +602,17 @@ def build_empty_detail_panel() -> ft.Control:
     return ft.Container(
         content=ft.Column(
             controls=[
-                ft.Icon(ft.Icons.DESCRIPTION, size=64, color=ft.Colors.OUTLINE),
+                ft.Icon(ft.Icons.DESCRIPTION, size=64, color=get_outline_color()),
                 ft.Text(
                     "メモを選択して詳細を表示",
                     theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Text(
                     "左側のリストからメモを選択すると、\nここに詳細が表示されます。",
                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                     text_align=ft.TextAlign.CENTER,
                 ),
             ],

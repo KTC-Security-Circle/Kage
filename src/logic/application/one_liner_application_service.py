@@ -39,16 +39,7 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     """一言コメント生成 Application Service
 
     Task/設定情報を内部で収集し LLM Agent を直接呼び出します。
-
-    Note:
-        キャッシュはクラスレベルで共有され、全インスタンス間で再利用されます。
-        これにより、ホーム画面を開くたびにAIメッセージが再生成されることを防ぎます。
     """
-
-    # クラスレベルのキャッシュ（全インスタンス共有）
-    cached_message: str | None = None
-    cached_at: datetime.datetime | None = None
-    cache_ttl = datetime.timedelta(hours=1)  # デフォルト1時間
 
     def __init__(
         self,
@@ -69,6 +60,9 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
             self._device = raw_device.value
         else:
             self._device = str(raw_device or OpenVINODevice.CPU.value).upper()
+        self._cached_message: str | None = None
+        self._cached_at: datetime.datetime | None = None
+        self._cache_ttl = datetime.timedelta(hours=1)
 
         raw_model = None
         try:  # 設定から one_liner 用モデル名を取得
@@ -107,28 +101,17 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
     def get_instance(cls, *args: Any, **kwargs: Any) -> OneLinerApplicationService: ...
 
     # Public API ---------------------------------------------------------
-    def generate_one_liner(self, query: OneLinerState | None = None, *, force_refresh: bool = False) -> str:
-        """一言コメント生成 (空のクエリで自動集計).
-
-        Args:
-            query: コンテキスト情報（Noneの場合は自動収集）
-            force_refresh: Trueの場合はキャッシュを無視して強制再生成
-
-        Returns:
-            生成されたメッセージ
-        """
+    def generate_one_liner(self, query: OneLinerState | None = None) -> str:
+        """一言コメント生成 (空のクエリで自動集計)."""
         if query is not None:
             message, _ = self._generate_with_agent(query)
             return message
 
-        # 強制リフレッシュでない場合はキャッシュをチェック
-        if not force_refresh:
-            cached_message = self._get_cached_message()
-            if cached_message is not None:
-                return cached_message
+        cached_message = self._get_cached_message()
+        if cached_message is not None:
+            return cached_message
 
         try:
-            logger.info("[OneLiner] 新規メッセージ生成開始")
             ctx = self._build_context_auto()
             message, should_cache = self._generate_with_agent(ctx)
             if should_cache:
@@ -184,36 +167,20 @@ class OneLinerApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]
         raise OneLinerServiceError(msg)
 
     def _get_cached_message(self) -> str | None:
-        """キャッシュされたメッセージを取得する（有効期限チェック付き）。
-
-        Returns:
-            有効なキャッシュがあればメッセージ、なければNone
-        """
-        if self.__class__.cached_message is None or self.__class__.cached_at is None:
-            logger.debug("[OneLiner] キャッシュが空です")
+        if self._cached_message is None or self._cached_at is None:
             return None
-        if self.__class__.cached_at + self.__class__.cache_ttl <= self._now():
-            logger.info("[OneLiner] キャッシュ期限切れ（TTL: 1時間）")
+        if self._cached_at + self._cache_ttl <= self._now():
             self._clear_cache()
             return None
-        logger.info(f"[OneLiner] キャッシュヒット（生成時刻: {self.__class__.cached_at}）")
-        return self.__class__.cached_message
+        return self._cached_message
 
     def _update_cache(self, message: str) -> None:
-        """キャッシュを更新する。
-
-        Args:
-            message: キャッシュするメッセージ
-        """
-        self.__class__.cached_message = message
-        self.__class__.cached_at = self._now()
-        logger.info(f"[OneLiner] キャッシュ更新（有効期限: {self.__class__.cached_at + self.__class__.cache_ttl}）")
+        self._cached_message = message
+        self._cached_at = self._now()
 
     def _clear_cache(self) -> None:
-        """キャッシュをクリアする。"""
-        self.__class__.cached_message = None
-        self.__class__.cached_at = None
-        logger.debug("[OneLiner] キャッシュクリア")
+        self._cached_message = None
+        self._cached_at = None
 
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)

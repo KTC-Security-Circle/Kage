@@ -164,12 +164,12 @@ class Header(ft.Container):
             controls=[
                 ft.Text(
                     self._action_bar_data.title,
-                    style=ft.TextThemeStyle.HEADLINE_MEDIUM,
+                    theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
                     weight=ft.FontWeight.BOLD,
                 ),
                 ft.Text(
                     self._action_bar_data.subtitle,
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=get_text_secondary_color(),
                 ),
             ],

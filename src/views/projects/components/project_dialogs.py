@@ -228,7 +228,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                 ft.Icon(ft.Icons.ADD_CIRCLE, color=ft.Colors.BLUE_600, size=28),
                 ft.Text(
                     "新しいプロジェクト",
-                    style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                     color=ft.Colors.BLUE_700,
                     weight=ft.FontWeight.BOLD,
                 ),
@@ -242,7 +242,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                     ft.Container(
                         content=ft.Text(
                             "新しいプロジェクトの詳細を入力してください",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.GREY_600,
                         ),
                         margin=ft.margin.only(bottom=20),
@@ -299,7 +299,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                                 ft.Icon(ft.Icons.INFO, color=ft.Colors.BLUE_400, size=16),
                                 ft.Text(
                                     "タイトルは必須項目です",
-                                    style=ft.TextThemeStyle.BODY_SMALL,
+                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                                     color=ft.Colors.BLUE_600,
                                 ),
                             ],
@@ -557,7 +557,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                 ft.Icon(ft.Icons.EDIT, color=ft.Colors.ORANGE_600, size=28),
                 ft.Text(
                     "プロジェクトを編集",
-                    style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                     color=ft.Colors.ORANGE_700,
                     weight=ft.FontWeight.BOLD,
                 ),
@@ -571,7 +571,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                     ft.Container(
                         content=ft.Text(
                             f"「{project.get('name', '未名')}」の詳細を編集してください",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.GREY_600,
                         ),
                         margin=ft.margin.only(bottom=20),
@@ -632,7 +632,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                                 ft.Text(
                                     f"進捗: {project.get('completed_tasks', '0')}/"
                                     f"{project.get('tasks_count', '0')} タスク完了",
-                                    style=ft.TextThemeStyle.BODY_SMALL,
+                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                                     color=ft.Colors.ORANGE_600,
                                 ),
                             ],

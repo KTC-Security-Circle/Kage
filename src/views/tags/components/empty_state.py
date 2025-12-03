@@ -33,10 +33,10 @@ class EmptyTagsState(ft.Container):
         self.content = ft.Column(
             controls=[
                 ft.Icon(ft.Icons.LABEL_OUTLINE, size=64, color=get_grey_color(400)),
-                ft.Text("タグがありません", style=ft.TextThemeStyle.HEADLINE_SMALL, color=get_grey_color(600)),
+                ft.Text("タグがありません", theme_style=ft.TextThemeStyle.HEADLINE_SMALL, color=get_grey_color(600)),
                 ft.Text(
                     "新規タグを作成してタスクを分類しましょう",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=get_grey_color(600),
                     text_align=ft.TextAlign.CENTER,
                 ),

@@ -421,15 +421,15 @@ def build_detail_metadata(created_text: str, updated_text: str) -> ft.Control:
         controls=[
             ft.Column(
                 controls=[
-                    ft.Text("作成日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                    ft.Text(created_text, style=ft.TextThemeStyle.BODY_SMALL),
+                    ft.Text("作成日", theme_style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
+                    ft.Text(created_text, theme_style=ft.TextThemeStyle.BODY_SMALL),
                 ],
                 spacing=4,
             ),
             ft.Column(
                 controls=[
-                    ft.Text("更新日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                    ft.Text(updated_text, style=ft.TextThemeStyle.BODY_SMALL),
+                    ft.Text("更新日", theme_style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
+                    ft.Text(updated_text, theme_style=ft.TextThemeStyle.BODY_SMALL),
                 ],
                 spacing=4,
             ),
@@ -528,7 +528,7 @@ def build_detail_panel(
                         controls=[
                             ft.Text(
                                 memo.title or "無題のメモ",
-                                style=ft.TextThemeStyle.HEADLINE_SMALL,
+                                theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                                 weight=ft.FontWeight.BOLD,
                                 expand=True,
                             ),
@@ -540,7 +540,7 @@ def build_detail_panel(
                     ft.Container(
                         content=ft.Text(
                             memo.content,
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             selectable=True,
                         ),
                         padding=ft.padding.all(16),
@@ -587,13 +587,13 @@ def build_empty_detail_panel() -> ft.Control:
                 ft.Icon(ft.Icons.DESCRIPTION, size=64, color=ft.Colors.OUTLINE),
                 ft.Text(
                     "メモを選択して詳細を表示",
-                    style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Text(
                     "左側のリストからメモを選択すると、\nここに詳細が表示されます。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                     text_align=ft.TextAlign.CENTER,
                 ),
@@ -636,7 +636,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
             body_controls.append(
                 ft.Text(
                     "InboxメモはMemoToTaskAgentにタスク生成を依頼する前段階です。AIに生成を許可するとアクティブ状態に遷移します。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 )
             )
@@ -667,11 +667,11 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                             controls=[
                                 ft.Text(
                                     "MemoToTaskAgentがタスクを生成しています",
-                                    style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                 ),
                                 ft.Text(
                                     "生成が完了すると承認待ちとしてActiveメモに切り替わります",
-                                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                             ],
@@ -730,7 +730,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                         ),
                         ft.Text(
                             error_message or "MemoToTaskAgentでの生成に失敗しました。もう一度お試しください。",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.ON_SURFACE,
                         ),
                         ft.Row(
@@ -758,7 +758,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
             body_controls.append(
                 ft.Text(
                     "AI提案は処理済みです。詳細はタスク一覧で確認できます。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                 )
             )
 
@@ -772,12 +772,12 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                                 controls=[
                                     ft.Text(
                                         header_title,
-                                        style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                         weight=ft.FontWeight.BOLD,
                                     ),
                                     ft.Text(
                                         header_description,
-                                        style=ft.TextThemeStyle.BODY_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                         color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
                                 ],
@@ -830,7 +830,7 @@ def _build_ai_status_badge(status: AiSuggestionStatus) -> ft.Control:
     }
     text, color = label_map.get(status, (status.value, ft.Colors.SURFACE))
     return ft.Container(
-        content=ft.Text(text, style=ft.TextThemeStyle.BODY_SMALL),
+        content=ft.Text(text, theme_style=ft.TextThemeStyle.BODY_SMALL),
         padding=ft.padding.symmetric(horizontal=12, vertical=6),
         bgcolor=color,
         border_radius=16,
@@ -857,7 +857,7 @@ def _build_available_tasks_section(  # noqa: PLR0913
             ft.Container(
                 content=ft.Text(
                     "AI提案タスクがまだありません。タスクを追加して承認フローをテストできます。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 padding=ft.padding.symmetric(vertical=8),
@@ -915,18 +915,18 @@ def _build_task_summary_body(
 ) -> ft.Control:
     due_date_text = format_datetime(task.due_date)
     detail_controls: list[ft.Control] = [
-        ft.Text(task.title, style=ft.TextThemeStyle.TITLE_SMALL, weight=ft.FontWeight.BOLD),
-        ft.Text(task.description, style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT),
+        ft.Text(task.title, theme_style=ft.TextThemeStyle.TITLE_SMALL, weight=ft.FontWeight.BOLD),
+        ft.Text(task.description, theme_style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT),
     ]
     if due_date_text:
         detail_controls.append(
-            ft.Text(due_date_text, style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT)
+            ft.Text(due_date_text, theme_style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT)
         )
     if task.tags:
         tag_row = ft.Row(
             controls=[
                 ft.Chip(
-                    label=ft.Text(tag, style=ft.TextThemeStyle.BODY_SMALL),
+                    label=ft.Text(tag, theme_style=ft.TextThemeStyle.BODY_SMALL),
                     bgcolor=ft.Colors.SECONDARY_CONTAINER,
                 )
                 for tag in task.tags

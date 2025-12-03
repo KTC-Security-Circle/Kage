@@ -245,7 +245,7 @@ class ProjectsView(BaseView):
                                             controls=[
                                                 ft.Text(
                                                     project.title,
-                                                    style=ft.TextThemeStyle.HEADLINE_SMALL,
+                                                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                                                     weight=ft.FontWeight.BOLD,
                                                 ),
                                                 ft.Text(
@@ -253,7 +253,7 @@ class ProjectsView(BaseView):
                                                     # - ロケール/タイムゾーン/相対表現の方針は Presenter で統一し、
                                                     #   View は整形済み文字列のみを表示する。
                                                     f"{project.created_at} 作成",
-                                                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                                                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                                     color=ft.Colors.GREY_600,
                                                 ),
                                             ],
@@ -265,7 +265,7 @@ class ProjectsView(BaseView):
                                                 ft.Container(
                                                     content=ft.Text(
                                                         project.status,
-                                                        style=ft.TextThemeStyle.LABEL_MEDIUM,
+                                                        theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
                                                         color=ft.Colors.WHITE,
                                                         weight=ft.FontWeight.W_500,
                                                     ),
@@ -294,12 +294,12 @@ class ProjectsView(BaseView):
                                     controls=[
                                         ft.Text(
                                             "説明",
-                                            style=ft.TextThemeStyle.TITLE_SMALL,
+                                            theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                             color=ft.Colors.GREY_500,
                                         ),
                                         ft.Text(
                                             project.description,
-                                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                         ),
                                     ],
                                     spacing=8,
@@ -309,7 +309,7 @@ class ProjectsView(BaseView):
                                     controls=[
                                         ft.Text(
                                             "進捗",
-                                            style=ft.TextThemeStyle.TITLE_SMALL,
+                                            theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                             color=ft.Colors.GREY_500,
                                         ),
                                         ft.Column(
@@ -322,7 +322,7 @@ class ProjectsView(BaseView):
                                                 ),
                                                 ft.Text(
                                                     project.progress_text,
-                                                    style=ft.TextThemeStyle.BODY_SMALL,
+                                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                                                     color=ft.Colors.GREY_600,
                                                 ),
                                             ],
@@ -360,7 +360,7 @@ class ProjectsView(BaseView):
                         ),
                         ft.Text(
                             "プロジェクトを選択して詳細を表示",
-                            style=ft.TextThemeStyle.BODY_LARGE,
+                            theme_style=ft.TextThemeStyle.BODY_LARGE,
                             color=ft.Colors.GREY_500,
                             text_align=ft.TextAlign.CENTER,
                         ),
@@ -390,12 +390,12 @@ class ProjectsView(BaseView):
                     ),
                     ft.Text(
                         "プロジェクトがありません",
-                        style=ft.TextThemeStyle.HEADLINE_SMALL,
+                        theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                         color=ft.Colors.GREY_600,
                     ),
                     ft.Text(
                         "新規プロジェクトを作成してタスクを整理しましょう",
-                        style=ft.TextThemeStyle.BODY_MEDIUM,
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                         color=ft.Colors.GREY_600,
                         text_align=ft.TextAlign.CENTER,
                     ),
@@ -462,7 +462,7 @@ class ProjectsView(BaseView):
 
         dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("削除の確認", style=ft.TextThemeStyle.TITLE_MEDIUM),
+            title=ft.Text("削除の確認", theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
             content=ft.Text(f"「{vm.title}」を削除します。よろしいですか？"),
             actions=[
                 ft.TextButton("キャンセル", on_click=_close),

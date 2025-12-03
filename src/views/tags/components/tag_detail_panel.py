@@ -126,7 +126,7 @@ class TagDetailPanel(ft.Container):
                     ),
                     ft.Text(
                         "タグを選択して詳細を表示",
-                        style=ft.TextThemeStyle.BODY_LARGE,
+                        theme_style=ft.TextThemeStyle.BODY_LARGE,
                         color=get_grey_color(600),
                     ),
                 ],
@@ -150,13 +150,13 @@ class TagDetailPanel(ft.Container):
                         ),
                         ft.Text(
                             "このタグはまだ使用されていません",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=get_grey_color(700),
                             text_align=ft.TextAlign.CENTER,
                         ),
                         ft.Text(
                             "タスクやメモに付与すると、ここに表示されます",
-                            style=ft.TextThemeStyle.BODY_SMALL,
+                            theme_style=ft.TextThemeStyle.BODY_SMALL,
                             color=get_grey_color(600),
                             text_align=ft.TextAlign.CENTER,
                         ),
@@ -198,12 +198,12 @@ class TagDetailPanel(ft.Container):
                                     controls=[
                                         ft.Text(
                                             data.name,
-                                            style=ft.TextThemeStyle.TITLE_LARGE,
+                                            theme_style=ft.TextThemeStyle.TITLE_LARGE,
                                             weight=ft.FontWeight.BOLD,
                                         ),
                                         ft.Text(
                                             f"{data.total_count} 件のアイテム",
-                                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                             color=get_grey_color(600),
                                         ),
                                     ],
@@ -219,13 +219,13 @@ class TagDetailPanel(ft.Container):
                             controls=[
                                 ft.Text(
                                     "説明",
-                                    style=ft.TextThemeStyle.LABEL_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
                                     weight=ft.FontWeight.W_500,
                                     color=get_grey_color(700),
                                 ),
                                 ft.Text(
                                     data.description or "（説明なし）",
-                                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                     color=get_grey_color(600),
                                 ),
                             ],
@@ -237,7 +237,7 @@ class TagDetailPanel(ft.Container):
                             controls=[
                                 ft.Text(
                                     "カラー:",
-                                    style=ft.TextThemeStyle.LABEL_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
                                     weight=ft.FontWeight.W_500,
                                     color=get_grey_color(700),
                                 ),
@@ -250,7 +250,7 @@ class TagDetailPanel(ft.Container):
                                 ),
                                 ft.Text(
                                     data.color.upper(),
-                                    style=ft.TextThemeStyle.BODY_SMALL,
+                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                                     color=get_grey_color(600),
                                 ),
                             ],
@@ -268,7 +268,7 @@ class TagDetailPanel(ft.Container):
                                         ),
                                         ft.Text(
                                             f"作成: {data.created_at}",
-                                            style=ft.TextThemeStyle.BODY_SMALL,
+                                            theme_style=ft.TextThemeStyle.BODY_SMALL,
                                             color=get_grey_color(600),
                                         ),
                                     ],
@@ -283,7 +283,7 @@ class TagDetailPanel(ft.Container):
                                         ),
                                         ft.Text(
                                             f"更新: {data.updated_at}",
-                                            style=ft.TextThemeStyle.BODY_SMALL,
+                                            theme_style=ft.TextThemeStyle.BODY_SMALL,
                                             color=get_grey_color(600),
                                         ),
                                     ],
@@ -323,7 +323,7 @@ class TagDetailPanel(ft.Container):
         if count == 0:
             empty_message = ft.Text(
                 "関連なし",
-                style=ft.TextThemeStyle.BODY_SMALL,
+                theme_style=ft.TextThemeStyle.BODY_SMALL,
                 color=get_grey_color(500),
                 italic=True,
             )
@@ -342,7 +342,7 @@ class TagDetailPanel(ft.Container):
                                     ft.Icon(icon, size=20, color=get_primary_color()),
                                     ft.Text(
                                         f"{title} ({count})",
-                                        style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                         weight=ft.FontWeight.W_500,
                                     ),
                                 ],
@@ -409,7 +409,7 @@ class TagDetailPanel(ft.Container):
                                         controls=[
                                             ft.Text(
                                                 item.title,
-                                                style=ft.TextThemeStyle.BODY_MEDIUM,
+                                                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                                 weight=ft.FontWeight.W_500,
                                             ),
                                             status_badge if status_badge else ft.Container(),
@@ -418,7 +418,7 @@ class TagDetailPanel(ft.Container):
                                     ),
                                     ft.Text(
                                         item.description,
-                                        style=ft.TextThemeStyle.BODY_SMALL,
+                                        theme_style=ft.TextThemeStyle.BODY_SMALL,
                                         color=get_grey_color(600),
                                         max_lines=2,
                                         overflow=ft.TextOverflow.ELLIPSIS,

@@ -117,7 +117,7 @@ class TagFormDialog(ft.AlertDialog):
 
         # ダイアログ設定
         self.modal = True
-        self.title = ft.Text(title, style=ft.TextThemeStyle.TITLE_LARGE)
+        self.title = ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_LARGE)
         self.content = ft.Container(
             content=ft.Column(
                 controls=[
@@ -126,7 +126,7 @@ class TagFormDialog(ft.AlertDialog):
                     ft.Divider(),
                     ft.Text(
                         "カラー",
-                        style=ft.TextThemeStyle.TITLE_SMALL,
+                        theme_style=ft.TextThemeStyle.TITLE_SMALL,
                         weight=ft.FontWeight.W_500,
                     ),
                     self._color_preview,

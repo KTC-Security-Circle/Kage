@@ -115,7 +115,7 @@ class MemoFilters(ft.Container):
                 controls=[
                     ft.Text(
                         "フィルタ",
-                        style=ft.TextThemeStyle.TITLE_SMALL,
+                        theme_style=ft.TextThemeStyle.TITLE_SMALL,
                         weight=ft.FontWeight.BOLD,
                     ),
                     ft.IconButton(
@@ -182,7 +182,7 @@ class MemoFilters(ft.Container):
 
         return ft.Column(
             controls=[
-                ft.Text("作成日", style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
+                ft.Text("作成日", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 ft.Row(
                     controls=[self._date_from_field, self._date_to_field],
                     spacing=12,
@@ -215,7 +215,7 @@ class MemoFilters(ft.Container):
 
         return ft.Column(
             controls=[
-                ft.Text("AI提案", style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
+                ft.Text("AI提案", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 self._ai_status_dropdown,
             ],
             spacing=8,
@@ -233,10 +233,10 @@ class MemoFilters(ft.Container):
         """
         return ft.Column(
             controls=[
-                ft.Text("タグ", style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
+                ft.Text("タグ", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 ft.Text(
                     "タグフィルタは統合フェーズで実装予定",
-                    style=ft.TextThemeStyle.BODY_SMALL,
+                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
             ],

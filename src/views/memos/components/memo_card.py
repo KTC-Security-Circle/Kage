@@ -161,7 +161,7 @@ class MemoCard(ft.Container):
         header_controls: list[ft.Control] = [
             ft.Text(
                 self._card_data.title,
-                style=ft.TextThemeStyle.TITLE_MEDIUM,
+                theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                 weight=ft.FontWeight.BOLD,
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
@@ -182,7 +182,7 @@ class MemoCard(ft.Container):
         # コンテンツ（既に切り詰め済み）
         content_text = ft.Text(
             self._card_data.content_preview,
-            style=ft.TextThemeStyle.BODY_MEDIUM,
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
             color=ft.Colors.ON_SURFACE_VARIANT,
             max_lines=self.max_content_lines,
             overflow=ft.TextOverflow.ELLIPSIS,
@@ -197,7 +197,7 @@ class MemoCard(ft.Container):
         footer_controls.append(
             ft.Text(
                 self._card_data.formatted_date,
-                style=ft.TextThemeStyle.BODY_SMALL,
+                theme_style=ft.TextThemeStyle.BODY_SMALL,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
         )

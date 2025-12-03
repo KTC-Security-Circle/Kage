@@ -61,12 +61,12 @@ def create_project_card(
                                     # - ドメイン層 → Presenter で title に統一する想定です。
                                     ft.Text(
                                         project.get("title", project.get("name", "")),
-                                        style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                         weight=ft.FontWeight.W_500,
                                     ),
                                     ft.Text(
                                         project["description"],
-                                        style=ft.TextThemeStyle.BODY_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                         color=get_text_secondary_color(),
                                         max_lines=2,
                                         overflow=ft.TextOverflow.ELLIPSIS,
@@ -78,7 +78,7 @@ def create_project_card(
                             ft.Container(
                                 content=ft.Text(
                                     project["status"],
-                                    style=ft.TextThemeStyle.LABEL_SMALL,
+                                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
                                     color=get_on_primary_color(),
                                     weight=ft.FontWeight.W_500,
                                 ),
@@ -111,7 +111,7 @@ def create_project_card(
                                     ),
                                     ft.Text(
                                         f"{len(project.get('task_id', []))} タスク",
-                                        style=ft.TextThemeStyle.BODY_SMALL,
+                                        theme_style=ft.TextThemeStyle.BODY_SMALL,
                                         color=get_text_secondary_color(),
                                     ),
                                 ],
@@ -129,7 +129,7 @@ def create_project_card(
                                     # - ドメイン/Presenter 側で表示用フォーマットにして渡すと再利用性が高まります。
                                     ft.Text(
                                         project["created_at"],
-                                        style=ft.TextThemeStyle.BODY_SMALL,
+                                        theme_style=ft.TextThemeStyle.BODY_SMALL,
                                         color=get_text_secondary_color(),
                                     ),
                                 ],
@@ -197,14 +197,14 @@ def create_project_card_from_vm(
                         controls=[
                             ft.Text(
                                 vm.title,
-                                style=ft.TextThemeStyle.TITLE_SMALL,
+                                theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                 weight=ft.FontWeight.W_500,
                                 expand=True,
                             ),
                             ft.Container(
                                 content=ft.Text(
                                     vm.status,
-                                    style=ft.TextThemeStyle.LABEL_SMALL,
+                                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
                                     color=get_on_primary_color(),
                                     weight=ft.FontWeight.W_500,
                                 ),
@@ -216,12 +216,12 @@ def create_project_card_from_vm(
                     ),
                     ft.Text(
                         vm.subtitle,
-                        style=ft.TextThemeStyle.BODY_SMALL,
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
                         color=get_text_secondary_color(),
                     ),
                     ft.Text(
                         vm.description,
-                        style=ft.TextThemeStyle.BODY_SMALL,
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
                         color=get_on_surface_color(),
                         max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS,
@@ -232,7 +232,7 @@ def create_project_card_from_vm(
                                 controls=[
                                     ft.Text(
                                         vm.progress_text,
-                                        style=ft.TextThemeStyle.BODY_SMALL,
+                                        theme_style=ft.TextThemeStyle.BODY_SMALL,
                                         color=get_text_secondary_color(),
                                     ),
                                 ],

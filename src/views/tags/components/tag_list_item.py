@@ -103,7 +103,7 @@ class TagListItem(ft.Container):
                                     color_dot,
                                     ft.Text(
                                         props.name,
-                                        style=ft.TextThemeStyle.TITLE_SMALL,
+                                        theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                         weight=ft.FontWeight.W_500,
                                     ),
                                 ],

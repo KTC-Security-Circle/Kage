@@ -147,7 +147,7 @@ def create_kanban_board(
                             controls=[
                                 ft.Text(
                                     status,
-                                    style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                     color=get_on_surface_color(),
                                     weight=ft.FontWeight.BOLD,
                                 ),
@@ -261,7 +261,7 @@ def create_task_card(
                                 # タイトル
                                 ft.Text(
                                     task.get("title", "無題"),
-                                    style=ft.TextThemeStyle.TITLE_SMALL,
+                                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                     color=get_on_surface_color(),
                                     weight=ft.FontWeight.W_600,
                                     max_lines=2,
@@ -270,7 +270,7 @@ def create_task_card(
                                 # 説明（最初の50文字）
                                 ft.Text(
                                     truncated_description,
-                                    style=ft.TextThemeStyle.BODY_SMALL,
+                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                                     color=get_text_secondary_color(),
                                     max_lines=2,
                                     overflow=ft.TextOverflow.ELLIPSIS,
@@ -295,7 +295,7 @@ def create_task_card(
                                         ),
                                         ft.Text(
                                             task.get("assignee", "未割当"),
-                                            style=ft.TextThemeStyle.BODY_SMALL,
+                                            theme_style=ft.TextThemeStyle.BODY_SMALL,
                                             color=get_text_secondary_color(),
                                             expand=True,
                                         ),
@@ -306,7 +306,7 @@ def create_task_card(
                                         ),
                                         ft.Text(
                                             task.get("due_date", "未設定"),
-                                            style=ft.TextThemeStyle.BODY_SMALL,
+                                            theme_style=ft.TextThemeStyle.BODY_SMALL,
                                             color=get_text_secondary_color(),
                                         ),
                                     ],

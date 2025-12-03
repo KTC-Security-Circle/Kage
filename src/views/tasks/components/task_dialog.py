@@ -161,7 +161,7 @@ def show_create_task_dialog(
                 ft.Icon(ft.Icons.ADD_TASK, color=ft.Colors.BLUE_600, size=28),
                 ft.Text(
                     "新しいタスク",
-                    style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                     color=ft.Colors.BLUE_700,
                     weight=ft.FontWeight.BOLD,
                 ),
@@ -175,7 +175,7 @@ def show_create_task_dialog(
                     ft.Container(
                         content=ft.Text(
                             "新しいタスクの詳細を入力してください",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.GREY_600,
                         ),
                         margin=ft.margin.only(bottom=20),
@@ -303,7 +303,7 @@ def show_edit_task_dialog(
                 ft.Icon(ft.Icons.EDIT, color=ft.Colors.BLUE_600, size=28),
                 ft.Text(
                     "タスクを編集",
-                    style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                     color=ft.Colors.BLUE_700,
                     weight=ft.FontWeight.BOLD,
                 ),
@@ -317,7 +317,7 @@ def show_edit_task_dialog(
                     ft.Container(
                         content=ft.Text(
                             "タスクの詳細を編集してください",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.GREY_600,
                         ),
                         margin=ft.margin.only(bottom=20),

@@ -97,7 +97,7 @@ class TaskCard(ft.Container):
         header_controls: list[ft.Control] = [
             ft.Text(
                 self._data.title or DEFAULT_EMPTY_TITLE,
-                style=ft.TextThemeStyle.TITLE_MEDIUM,
+                theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                 weight=ft.FontWeight.BOLD,
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
@@ -111,7 +111,7 @@ class TaskCard(ft.Container):
 
         subtitle = ft.Text(
             self._data.subtitle,
-            style=ft.TextThemeStyle.BODY_MEDIUM,
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
             color=get_text_secondary_color(),
             max_lines=1,
             overflow=ft.TextOverflow.ELLIPSIS,
@@ -134,7 +134,7 @@ class TaskCard(ft.Container):
             footer_controls.append(
                 ft.Text(
                     f"期限: {self._data.due_date}",
-                    style=ft.TextThemeStyle.BODY_SMALL,
+                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                     color=get_text_secondary_color(),
                 )
             )
@@ -142,7 +142,7 @@ class TaskCard(ft.Container):
             footer_controls.append(
                 ft.Text(
                     f"更新: {self._data.status_timestamp}",
-                    style=ft.TextThemeStyle.BODY_SMALL,
+                    theme_style=ft.TextThemeStyle.BODY_SMALL,
                     color=get_text_secondary_color(),
                 )
             )

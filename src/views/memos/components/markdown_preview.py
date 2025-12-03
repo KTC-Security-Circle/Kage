@@ -31,17 +31,17 @@ def render_markdown_preview(markdown: str) -> list[ft.Control]:
     controls: list[ft.Control] = []
     for line in lines:
         if line.startswith("### "):
-            controls.append(ft.Text(line[4:], style=ft.TextThemeStyle.TITLE_MEDIUM, weight=ft.FontWeight.BOLD))
+            controls.append(ft.Text(line[4:], theme_style=ft.TextThemeStyle.TITLE_MEDIUM, weight=ft.FontWeight.BOLD))
             continue
         if line.startswith("## "):
-            controls.append(ft.Text(line[3:], style=ft.TextThemeStyle.TITLE_LARGE, weight=ft.FontWeight.BOLD))
+            controls.append(ft.Text(line[3:], theme_style=ft.TextThemeStyle.TITLE_LARGE, weight=ft.FontWeight.BOLD))
             continue
         if line.startswith("# "):
-            controls.append(ft.Text(line[2:], style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD))
+            controls.append(ft.Text(line[2:], theme_style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD))
             continue
 
         if line.startswith(("- ", "* ")):
-            controls.append(ft.Text("• " + line[2:], style=ft.TextThemeStyle.BODY_MEDIUM))
+            controls.append(ft.Text("• " + line[2:], theme_style=ft.TextThemeStyle.BODY_MEDIUM))
             continue
 
         # 太字/斜体/インラインコード（簡易置換）
@@ -57,6 +57,6 @@ def render_markdown_preview(markdown: str) -> list[ft.Control]:
         if not html_like.strip():
             controls.append(ft.Container(height=8))  # 空行
         else:
-            controls.append(ft.Text(html_like, style=ft.TextThemeStyle.BODY_MEDIUM))
+            controls.append(ft.Text(html_like, theme_style=ft.TextThemeStyle.BODY_MEDIUM))
 
     return controls

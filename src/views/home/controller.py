@@ -120,7 +120,8 @@ class HomeController:
             logger.debug("[Controller] AI一言生成開始（同期処理）")
             result = self.query.get_one_liner_message()
             logger.debug(f"[Controller] AI一言生成結果: {result[:50] if result else 'None'}...")
-            return result
         except Exception as e:
             logger.error(f"[Controller] AI一言メッセージの生成に失敗しました: {e}")
             return None
+        else:
+            return result

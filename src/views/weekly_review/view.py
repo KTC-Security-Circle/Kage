@@ -419,15 +419,14 @@ class WeeklyReviewView(BaseView):
         else:
             # 推奨事項カード
             for recommendation in self.review_state.recommendations:
-                if isinstance(recommendation, RecommendationData):
-                    rec_card = RecommendationCard(
-                        props=RecommendationCardProps(
-                            recommendation=recommendation,
-                            on_task_click=self._handle_task_click,
-                        )
+                rec_card = RecommendationCard(
+                    props=RecommendationCardProps(
+                        recommendation=recommendation,
+                        on_task_click=self._handle_task_click,
                     )
-                    controls.append(rec_card)
-                    controls.append(ft.Container(height=16))
+                )
+                controls.append(rec_card)
+                controls.append(ft.Container(height=16))
 
         # 完了カード
         controls.append(ft.Container(height=8))

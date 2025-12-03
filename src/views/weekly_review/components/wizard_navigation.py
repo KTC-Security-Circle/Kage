@@ -49,46 +49,7 @@ class WizardNavigation(ft.Container):
         """
         super().__init__()
         self.props = props
-
-        controls: list[ft.Control] = []
-
-        # 前へボタン
-        if self.props.show_prev and self.props.current_step > 1:
-            prev_button = ft.OutlinedButton(
-                text=self.props.prev_label,
-                icon=ft.Icons.CHEVRON_LEFT,
-                on_click=lambda _: self._handle_prev(),
-            )
-            controls.append(prev_button)
-
-        # スペーサー
-        if controls:
-            controls.append(ft.Container(expand=True))
-
-        # 次へボタン
-        if self.props.show_next and self.props.current_step < self.props.total_steps:
-            next_button = ft.ElevatedButton(
-                text=self.props.next_label,
-                icon=ft.Icons.CHEVRON_RIGHT,
-                icon_color=ft.Colors.WHITE,
-                on_click=lambda _: self._handle_next(),
-            )
-            controls.append(next_button)
-        elif self.props.show_next and self.props.current_step == self.props.total_steps:
-            # 最終ステップの場合
-            finish_button = ft.ElevatedButton(
-                text="完了",
-                icon=ft.Icons.CHECK_CIRCLE,
-                icon_color=ft.Colors.WHITE,
-                on_click=lambda _: self._handle_next(),
-            )
-            controls.append(finish_button)
-
-        self.content = ft.Row(
-            controls=controls,
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=16,
-        )
+        self.content = self._build_content()
         self.padding = ft.padding.symmetric(vertical=16)
 
     def _handle_prev(self) -> None:
@@ -118,8 +79,12 @@ class WizardNavigation(ft.Container):
         self.props = new_props
         self._rebuild()
 
-    def _rebuild(self) -> None:
-        """コンポーネントを再構築"""
+    def _build_content(self) -> ft.Row:
+        """ナビゲーションコンテンツを構築
+
+        Returns:
+            構築されたコンテンツ
+        """
         controls: list[ft.Control] = []
 
         # 前へボタン
@@ -150,11 +115,15 @@ class WizardNavigation(ft.Container):
             )
             controls.append(finish_button)
 
-        self.content = ft.Row(
+        return ft.Row(
             controls=controls,
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=16,
         )
+
+    def _rebuild(self) -> None:
+        """コンポーネントを再構築"""
+        self.content = self._build_content()
 
         try:
             self.update()

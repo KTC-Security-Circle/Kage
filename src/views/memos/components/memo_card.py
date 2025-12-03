@@ -179,13 +179,21 @@ class MemoCard(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
-        # コンテンツ（既に切り詰め済み）
-        content_text = ft.Text(
-            self._card_data.content_preview,
-            style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            max_lines=self.max_content_lines,
-            overflow=ft.TextOverflow.ELLIPSIS,
+        # コンテンツ（Markdownレンダリング、コンテンツ量に応じた高さ）
+        # 改行数をカウントして動的に高さを決定（最小20px、最大80px）
+        line_count = self._card_data.content_preview.count("\n") + 1
+        content_height = min(max(line_count * 20, 20), 80)
+
+        content_display = ft.Container(
+            content=ft.Markdown(
+                value=self._card_data.content_preview,
+                selectable=False,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                on_tap_link=lambda _: None,
+                fit_content=True,
+            ),
+            height=content_height,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
 
         # フッター（バッジ + 日付）
@@ -209,7 +217,7 @@ class MemoCard(ft.Container):
         )
 
         return ft.Column(
-            controls=[header, content_text, footer],
+            controls=[header, content_display, footer],
             spacing=8,
             tight=True,
         )

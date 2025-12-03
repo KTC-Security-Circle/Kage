@@ -216,56 +216,7 @@ class CompletedTasksList(ft.Card):
         """
         super().__init__()
         self.props = props
-
-        # ヘッダー
-        header = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Text(
-                        "完了したタスク一覧",
-                        size=16,
-                        weight=ft.FontWeight.W_600,
-                        expand=True,
-                    ),
-                    ft.Container(
-                        content=ft.Text(
-                            str(len(self.props.tasks)),
-                            size=12,
-                            color=ft.Colors.WHITE,
-                            weight=ft.FontWeight.W_600,
-                        ),
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                        bgcolor=ft.Colors.BLUE_600,
-                        border_radius=12,
-                    ),
-                ],
-                spacing=8,
-            ),
-            padding=ft.padding.only(left=16, right=16, top=16, bottom=8),
-        )
-
-        # タスクアイテム
-        items = []
-        display_tasks = self.props.tasks[: self.props.max_display]
-
-        for task_data in display_tasks:
-            item = self._build_task_item(task_data)
-            items.append(item)
-
-        items_column = ft.Column(
-            controls=items,
-            spacing=8,
-            scroll=ft.ScrollMode.AUTO,
-            height=320,
-        )
-
-        self.content = ft.Container(
-            content=ft.Column(
-                controls=[header, items_column],
-                spacing=8,
-            ),
-            padding=ft.padding.only(left=16, right=16, bottom=16),
-        )
+        self.content = self._build_content()
         self.elevation = 2
 
     def _build_task_item(self, task_data: CompletedTaskItemData) -> ft.Container:
@@ -355,8 +306,12 @@ class CompletedTasksList(ft.Card):
         )
         self._rebuild()
 
-    def _rebuild(self) -> None:
-        """コンポーネントを再構築"""
+    def _build_content(self) -> ft.Container:
+        """コンテンツを構築
+
+        Returns:
+            構築されたコンテンツ
+        """
         # ヘッダー
         header = ft.Container(
             content=ft.Row(
@@ -399,13 +354,17 @@ class CompletedTasksList(ft.Card):
             height=320,
         )
 
-        self.content = ft.Container(
+        return ft.Container(
             content=ft.Column(
                 controls=[header, items_column],
                 spacing=8,
             ),
             padding=ft.padding.only(left=16, right=16, bottom=16),
         )
+
+    def _rebuild(self) -> None:
+        """コンポーネントを再構築"""
+        self.content = self._build_content()
 
         try:
             self.update()

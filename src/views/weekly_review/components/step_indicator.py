@@ -41,44 +41,7 @@ class StepIndicator(ft.Container):
         """
         super().__init__()
         self.props = props
-
-        # プログレスバー
-        progress = (self.props.current_step / self.props.total_steps) * 100
-        progress_bar = ft.ProgressBar(
-            value=progress / 100,
-            color=ft.Colors.BLUE_600,
-            bgcolor=ft.Colors.BLUE_100,
-            height=8,
-        )
-
-        # ステップ情報
-        current_label = (
-            self.props.step_labels[self.props.current_step - 1]
-            if 0 < self.props.current_step <= len(self.props.step_labels)
-            else ""
-        )
-
-        step_info = ft.Row(
-            controls=[
-                ft.Text(
-                    f"ステップ {self.props.current_step} / {self.props.total_steps}",
-                    size=14,
-                    color=ft.Colors.GREY_600,
-                ),
-                ft.Text(
-                    current_label,
-                    size=14,
-                    color=ft.Colors.GREY_600,
-                    weight=ft.FontWeight.W_500,
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        )
-
-        self.content = ft.Column(
-            controls=[step_info, progress_bar],
-            spacing=8,
-        )
+        self.content = self._build_content()
         self.padding = ft.padding.symmetric(vertical=8)
 
     def set_props(self, new_props: StepIndicatorProps) -> None:
@@ -90,8 +53,12 @@ class StepIndicator(ft.Container):
         self.props = new_props
         self._rebuild()
 
-    def _rebuild(self) -> None:
-        """コンポーネントを再構築"""
+    def _build_content(self) -> ft.Column:
+        """ステップインジケーターのコンテンツを構築
+
+        Returns:
+            構築されたコンテンツ
+        """
         # プログレスバー
         progress = (self.props.current_step / self.props.total_steps) * 100
         progress_bar = ft.ProgressBar(
@@ -125,10 +92,14 @@ class StepIndicator(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
-        self.content = ft.Column(
+        return ft.Column(
             controls=[step_info, progress_bar],
             spacing=8,
         )
+
+    def _rebuild(self) -> None:
+        """コンポーネントを再構築"""
+        self.content = self._build_content()
 
         try:
             self.update()

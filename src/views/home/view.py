@@ -357,7 +357,7 @@ class HomeView(BaseView):
                     self.page.update()
                     logger.info("[UI更新] page.update による再描画完了")
         except Exception as e:
-            logger.error(f"[UI更新] Failed to update one-liner display: {e}")
+            logger.error(f"[UI更新] AI一言表示の更新に失敗しました: {e}")
 
     def _handle_action_click(self, route: str) -> None:
         """アクションクリック時の処理。

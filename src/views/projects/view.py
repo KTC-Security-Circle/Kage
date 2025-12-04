@@ -79,7 +79,7 @@ class ProjectsView(BaseView):
             プロジェクト画面のメインコンテンツ
         """
         # コンテナ初期化
-        self._list_container = ft.Column(expand=True, spacing=8)
+        self._list_container = ft.Column(expand=True, spacing=8, scroll=ft.ScrollMode.AUTO)
         self._detail_container = ft.Container(expand=True)
 
         # 初期データ取得: ここで refresh を呼ぶが、未マウント時の update() 呼び出しは

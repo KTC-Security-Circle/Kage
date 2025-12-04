@@ -779,5 +779,6 @@ def get_accent_border_color(color_name: str = "primary") -> str:
 # - presenter.py などは修正不要
 #
 # 【優先度】
+# - 週次レビューの対応: 高
 # - Priority: Medium (ユーザー体験向上)
 # - 推奨実装時期: Settings View 統合完了後

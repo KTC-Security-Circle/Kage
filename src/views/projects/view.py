@@ -6,39 +6,30 @@ MVP パターンの View として、Flet UI の描画とイベント配線の�
 
 from __future__ import annotations
 
-import contextlib
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 import flet as ft
+from loguru import logger
 
 if TYPE_CHECKING:
     from .presenter import ProjectCardVM, ProjectDetailVM
 
-from loguru import logger
-
-# Application service (domain access)
 from logic.application.project_application_service import ProjectApplicationService
 from models import ProjectStatus
-
-# View / UI layer components
-from views.projects.components.project_card import create_project_card_from_vm
-from views.projects.components.project_dialogs import (
+from views.projects.components import (
+    ProjectCardList,
+    ProjectDetailPanel,
+    ProjectNoSelection,
+    ProjectStatusTabs,
     show_create_project_dialog,
     show_edit_project_dialog,
 )
 from views.projects.controller import ProjectController
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import (
-    get_error_color,
-    get_grey_color,
-    get_on_primary_color,
-    get_outline_color,
-    get_primary_color,
-    get_surface_variant_color,
-)
+from views.theme import get_error_color, get_on_primary_color
 
 
 class ProjectsView(BaseView):
@@ -74,11 +65,10 @@ class ProjectsView(BaseView):
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
         )
 
-        # UI コンテナ
-        self._list_container: ft.Column | None = None
-        self._detail_container: ft.Container | None = None
-        self._tabs: ft.Tabs | None = None
-        self._current_vm: list[ProjectCardVM] = []
+        # UI コンポーネント
+        self._project_list: ProjectCardList | None = None
+        self._detail_panel: ProjectDetailPanel | ProjectNoSelection | None = None
+        self._status_tabs: ProjectStatusTabs | None = None
 
     def build_content(self) -> ft.Control:
         """プロジェクト画面のコンテンツを構築する。
@@ -86,17 +76,6 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクト画面のメインコンテンツ
         """
-        # コンテナ初期化
-        self._list_container = ft.Column(expand=True, spacing=8)
-        self._detail_container = ft.Container(expand=True)
-
-        # 初期データ取得: ここで refresh を呼ぶが、未マウント時の update() 呼び出しは
-        # _render_list / _render_detail 内で page 属性存在確認後に行うため安全。
-        try:
-            self._controller.refresh()
-        except Exception as e:  # [AI GENERATED] 初期ロード失敗のフォールバック
-            logger.warning(f"初期ロード時に一時的なエラー: {e}")
-
         # Headerコンポーネント (検索と新規作成ボタン)
         header = self.create_header(
             title="プロジェクト",
@@ -113,49 +92,51 @@ class ProjectsView(BaseView):
             ],
         )
 
-        # ステータスタブ (件数バッジ付き)
-        counts = self._safe_get_counts()
-        total = sum(counts.values())
-
-        # タブキー: 先頭に「すべて」(None)、その後に各ステータス
-        status_order = [ProjectStatus.ACTIVE, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED, ProjectStatus.CANCELLED]
-        self._tab_keys: list[ProjectStatus | None] = [None, *status_order]
-
-        tab_texts: list[str] = [f"すべて ({total})"] + [
-            f"{ProjectStatus.display_label(status)} ({counts.get(status, 0)})" for status in status_order
-        ]
-
-        self._tabs = ft.Tabs(
-            selected_index=self._current_tab_index(),
-            tabs=[ft.Tab(text=t) for t in tab_texts],
-            on_change=self._on_tabs_change,
-            expand=True,
-        )
-        tabs_list = ft.Row([self._tabs], spacing=0)
-
-        # 2カラムグリッド: 左にリスト、右に詳細
-        grid = ft.ResponsiveRow(
-            controls=[
-                ft.Container(
-                    content=self._list_container,
-                    col={"xs": 12, "lg": 5},
-                    padding=ft.padding.only(right=12),
-                ),
-                ft.Container(
-                    content=self._detail_container,
-                    col={"xs": 12, "lg": 7},
-                ),
-            ],
-            expand=True,
+        # ステータスタブ
+        self._status_tabs = ProjectStatusTabs(
+            on_tab_change=self._on_tabs_change,
+            active_status=self._controller.state.status,
+            tab_counts=self._safe_get_counts(),
         )
 
+        # プロジェクトリスト（初期は空）
+        self._project_list = ProjectCardList(
+            projects=[],
+            on_select=self._controller.select_project,
+            selected_id=self._controller.state.selected_id,
+            on_create=self._create_project,
+        )
+
+        # 詳細パネル（初期は未選択状態）
+        self._detail_panel = ProjectNoSelection()
+
+        # 初期データ取得（UIコンポーネント作成後に実行）
+        try:
+            self._controller.refresh()
+        except Exception as e:
+            logger.warning(f"初期ロード時に一時的なエラー: {e}")
+
+        # 2カラムレイアウト
         return ft.Container(
             content=ft.Column(
                 controls=[
                     header,
-                    tabs_list,
+                    self._status_tabs,
                     ft.Divider(),
-                    grid,
+                    ft.ResponsiveRow(
+                        controls=[
+                            ft.Container(
+                                content=self._project_list,
+                                col={"xs": 12, "lg": 5},
+                                padding=ft.padding.only(right=12),
+                            ),
+                            ft.Container(
+                                content=self._detail_panel,
+                                col={"xs": 12, "lg": 7},
+                            ),
+                        ],
+                        expand=True,
+                    ),
                 ],
                 spacing=16,
                 expand=True,
@@ -164,35 +145,23 @@ class ProjectsView(BaseView):
             expand=True,
         )
 
-    def _handle_create_click(self) -> None:
-        """Header作成ボタンのクリック処理。"""
-        self._create_project()
-
     def _render_list(self, projects: list[ProjectCardVM]) -> None:
         """プロジェクトリストを描画する。
 
         Args:
             projects: 表示するプロジェクトのViewModelリスト
         """
-        self._current_vm = projects
-
-        if not self._list_container:
+        if not self._project_list:
             return
 
-        if not projects:
-            # 空の状態
-            self._list_container.controls = [self._build_empty_state()]
-        else:
-            # プロジェクトカード
-            cards = [self._build_project_card(project) for project in projects]
-            self._list_container.controls = cards
-
-            # コントロールがまだ page に追加されていない初期段階では update() を避ける
-            if getattr(self._list_container, "page", None):
-                self._list_container.update()
+        self._project_list.update_projects(
+            projects,
+            selected_id=self._controller.state.selected_id,
+        )
 
         # タブバッジを更新
-        self._refresh_tabs_badges()
+        if self._status_tabs:
+            self._status_tabs.update_counts(self._safe_get_counts())
 
     def _render_detail(self, project: ProjectDetailVM | None) -> None:
         """プロジェクト詳細を描画する。
@@ -200,228 +169,20 @@ class ProjectsView(BaseView):
         Args:
             project: 表示するプロジェクトの詳細ViewModel（None の場合は空表示）
         """
-        if not self._detail_container:
-            return
-
         if project is None:
-            # 未選択状態
-            self._detail_container.content = self._build_no_selection()
+            if isinstance(self._detail_panel, ProjectDetailPanel):
+                # 詳細パネルから未選択状態へ切り替え
+                self._detail_panel = ProjectNoSelection()
+        elif isinstance(self._detail_panel, ProjectDetailPanel):
+            # 既存の詳細パネルを更新
+            self._detail_panel.update_project(project)
         else:
-            # 詳細表示
-            self._detail_container.content = self._build_project_detail(project)
-
-            if getattr(self._detail_container, "page", None):
-                self._detail_container.update()
-
-    def _build_project_card(self, project: ProjectCardVM) -> ft.Control:
-        """プロジェクトカードを構築する。
-
-        コンポーネント関数に委譲し、View層の責務を最小化。
-
-        Args:
-            project: プロジェクトViewModel
-
-        Returns:
-            プロジェクトカード
-        """
-        is_selected = self._controller.state.selected_id == project.id
-        return create_project_card_from_vm(
-            vm=project,
-            on_select=self._controller.select_project,
-            is_selected=is_selected,
-        )
-
-    def _build_project_detail(self, project: ProjectDetailVM) -> ft.Control:
-        """プロジェクト詳細を構築する。
-
-        Args:
-            project: プロジェクト詳細ViewModel
-
-        Returns:
-            プロジェクト詳細コンテンツ
-        """
-        return ft.Column(
-            controls=[
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                # ヘッダー
-                                ft.Row(
-                                    controls=[
-                                        ft.Column(
-                                            controls=[
-                                                ft.Text(
-                                                    project.title,
-                                                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                                                    weight=ft.FontWeight.BOLD,
-                                                ),
-                                                ft.Text(
-                                                    # TODO: 日付表示の整形
-                                                    # - ロケール/タイムゾーン/相対表現の方針は Presenter で統一し、
-                                                    #   View は整形済み文字列のみを表示する。
-                                                    f"{project.created_at} 作成",
-                                                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                                                    color=get_grey_color(600),
-                                                ),
-                                            ],
-                                            spacing=4,
-                                            expand=True,
-                                        ),
-                                        ft.Row(
-                                            controls=[
-                                                ft.Container(
-                                                    content=ft.Text(
-                                                        project.status,
-                                                        theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
-                                                        color=get_on_primary_color(),
-                                                        weight=ft.FontWeight.W_500,
-                                                    ),
-                                                    bgcolor=project.status_color,
-                                                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                                                    border_radius=16,
-                                                ),
-                                                ft.IconButton(
-                                                    icon=ft.Icons.EDIT,
-                                                    tooltip="編集",
-                                                    on_click=lambda _: self._open_edit_dialog(project),
-                                                ),
-                                                ft.IconButton(
-                                                    icon=ft.Icons.DELETE_OUTLINE,
-                                                    tooltip="削除",
-                                                    on_click=lambda _: self._confirm_delete(project),
-                                                ),
-                                            ],
-                                            spacing=8,
-                                            alignment=ft.MainAxisAlignment.END,
-                                        ),
-                                    ],
-                                ),
-                                # 説明
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "説明",
-                                            theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                            color=get_grey_color(500),
-                                        ),
-                                        ft.Text(
-                                            project.description,
-                                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                                        ),
-                                    ],
-                                    spacing=8,
-                                ),
-                                # 進捗
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "進捗",
-                                            theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                            color=get_grey_color(500),
-                                        ),
-                                        ft.Column(
-                                            controls=[
-                                                ft.ProgressBar(
-                                                    value=project.progress_value,
-                                                    color=get_primary_color(),
-                                                    bgcolor=get_surface_variant_color(),
-                                                    height=12,
-                                                ),
-                                                ft.Text(
-                                                    project.progress_text,
-                                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                                    color=get_grey_color(600),
-                                                ),
-                                            ],
-                                            spacing=8,
-                                        ),
-                                    ],
-                                    spacing=8,
-                                ),
-                            ],
-                            spacing=20,
-                        ),
-                        padding=24,
-                    ),
-                ),
-            ],
-            spacing=16,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
-        )
-
-    def _build_no_selection(self) -> ft.Control:
-        """未選択状態を構築する。
-
-        Returns:
-            未選択状態のコンテンツ
-        """
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Icon(
-                            ft.Icons.FOLDER_OPEN,
-                            size=48,
-                            color=get_outline_color(),
-                        ),
-                        ft.Text(
-                            "プロジェクトを選択して詳細を表示",
-                            theme_style=ft.TextThemeStyle.BODY_LARGE,
-                            color=get_grey_color(500),
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=16,
-                ),
-                alignment=ft.alignment.center,
-                padding=48,
-            ),
-            expand=True,
-        )
-
-    def _build_empty_state(self) -> ft.Control:
-        """空の状態を構築する。
-
-        Returns:
-            空の状態コンテンツ
-        """
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(
-                        ft.Icons.FOLDER_OPEN_OUTLINED,
-                        size=64,
-                        color=get_outline_color(),
-                    ),
-                    ft.Text(
-                        "プロジェクトがありません",
-                        theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                        color=get_grey_color(600),
-                    ),
-                    ft.Text(
-                        "新規プロジェクトを作成してタスクを整理しましょう",
-                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                        color=get_grey_color(600),
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(height=24),
-                    ft.ElevatedButton(
-                        text="最初のプロジェクトを作成",
-                        icon=ft.Icons.ADD,
-                        on_click=self._on_create_click,
-                        bgcolor=get_primary_color(),
-                        color=get_on_primary_color(),
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=16,
-            ),
-            alignment=ft.alignment.center,
-            expand=True,
-        )
+            # 未選択状態から詳細パネルへ切り替え
+            self._detail_panel = ProjectDetailPanel(
+                project=project,
+                on_edit=self._open_edit_dialog,
+                on_delete=self._confirm_delete,
+            )
 
     # ------------------------------------------------------------------
     # 編集 / 削除 ダイアログ操作
@@ -496,41 +257,18 @@ class ProjectsView(BaseView):
         """
         self._controller.set_keyword(query)
 
-    def _on_tabs_change(self, e: ft.ControlEvent) -> None:
+    def _on_tabs_change(self, status: ProjectStatus | None) -> None:
         """タブ変更時のイベントハンドラー。
 
         Args:
-            e: イベント
+            status: 選択されたステータス（None = すべて）
         """
-        idx = getattr(e.control, "selected_index", 0) or 0
-        # 0番目は「すべて」= None、それ以外は対応するステータス
-        new_status = self._tab_keys[idx] if idx < len(self._tab_keys) else None
-
-        if new_status is None:
+        if status is None:
             self._controller.set_status(None)
         else:
-            self._controller.set_status(new_status.value)
+            self._controller.set_status(status.value)
 
         self.safe_update()
-
-    def _current_tab_index(self) -> int:
-        """現在のステータスからタブインデックスを取得。
-
-        Returns:
-            タブインデックス
-        """
-        try:
-            status = self._controller.state.status
-            if not status:
-                return 0
-            # _tab_keysからインデックスを検索
-            for i, key in enumerate(self._tab_keys):
-                if key == status:
-                    return i
-        except Exception:
-            return 0
-        else:
-            return 0
 
     def _safe_get_counts(self) -> dict[ProjectStatus, int]:
         """各ステータスの件数を安全に取得。
@@ -539,53 +277,17 @@ class ProjectsView(BaseView):
             ステータスごとの件数辞書
         """
         try:
-            # Controllerから正確な件数を取得
             return self._controller.get_counts()
         except Exception:
-            # フォールバック: 現在のVMからカウント
-            counts: dict[ProjectStatus, int] = {}
-            all_statuses = [
-                ProjectStatus.ACTIVE,
-                ProjectStatus.ON_HOLD,
-                ProjectStatus.COMPLETED,
-                ProjectStatus.CANCELLED,
-            ]
-            for status in all_statuses:
-                counts[status] = sum(1 for vm in self._current_vm if vm.status == status.value)
-            return counts
+            return {
+                ProjectStatus.ACTIVE: 0,
+                ProjectStatus.ON_HOLD: 0,
+                ProjectStatus.COMPLETED: 0,
+                ProjectStatus.CANCELLED: 0,
+            }
 
-    def _refresh_tabs_badges(self) -> None:
-        """タブのバッジ件数を更新。"""
-        if not self._tabs:
-            return
-
-        counts = self._safe_get_counts()
-        total = sum(counts.values())
-
-        # 先頭（すべて）
-        if len(self._tabs.tabs) > 0:
-            self._tabs.tabs[0].text = f"すべて ({total})"
-
-        # 残りステータス
-        status_order = [
-            ProjectStatus.ACTIVE,
-            ProjectStatus.ON_HOLD,
-            ProjectStatus.COMPLETED,
-            ProjectStatus.CANCELLED,
-        ]
-        for i, status in enumerate(status_order, start=1):
-            if i < len(self._tabs.tabs):
-                self._tabs.tabs[i].text = f"{ProjectStatus.display_label(status)} ({counts.get(status, 0)})"
-
-        with contextlib.suppress(AssertionError):
-            self._tabs.update()
-
-    def _on_create_click(self, _: ft.ControlEvent) -> None:
-        """UIイベントハンドラ: プロジェクト作成ボタンのクリック時に呼ばれる。
-
-        Args:
-            _: イベント引数（未使用）
-        """
+    def _handle_create_click(self) -> None:
+        """Header作成ボタンのクリック処理。"""
         self._create_project()
 
     def _create_project(self) -> None:

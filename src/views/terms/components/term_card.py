@@ -1,9 +1,9 @@
 """用語カードコンポーネント。
 
 【責務】
-    用語リストの個別カード表示を担当。
+    用語リストの個別カード表示を担当。共通Cardコンポーネントを利用。
     - Props駆動の不変データ受信
-    - カードUI構築（タイトル、キー、説明プレビュー、同義語、ステータスバッジ）
+    - TermCardDataをCardDataに変換
     - 選択状態の視覚的フィードバック
     - クリックイベントのコールバック
 
@@ -21,16 +21,10 @@ from typing import TYPE_CHECKING, Final
 import flet as ft
 
 from models import TermStatus
-from views.theme import (
-    get_outline_color,
-    get_primary_color,
-    get_text_secondary_color,
-)
+from views.shared.components.card import Card, CardBadgeData, CardData, CardMetadataData
+from views.theme import get_primary_color
 
-from .shared.constants import (
-    MAX_DESCRIPTION_LINES,
-    MAX_SYNONYMS_DISPLAY,
-)
+from .shared.constants import MAX_SYNONYMS_DISPLAY
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -40,9 +34,6 @@ if TYPE_CHECKING:
 # TermCard 専用定数
 # ========================================
 
-CARD_BORDER_RADIUS: Final[int] = 8
-DEFAULT_BORDER_WIDTH: Final[float] = 1.0
-SELECTED_BORDER_WIDTH: Final[float] = 2.0
 DEFAULT_EMPTY_TITLE: Final[str] = "(無題)"
 
 
@@ -83,10 +74,10 @@ class TermCardData:
 # ========================================
 
 
-class TermCard(ft.Container):
+class TermCard(Card):
     """用語カード表示コンポーネント。
 
-    Presenter や View 側で整形済みの TermCardData を受け取り、純粋に描画する。
+    共通Cardコンポーネントを継承し、TermCardDataをCardDataに変換して表示する。
     """
 
     def __init__(self, data: TermCardData) -> None:
@@ -95,104 +86,46 @@ class TermCard(ft.Container):
         Args:
             data: 表示用データ
         """
-        self._data = data
-        super().__init__(
-            content=ft.Card(
-                content=ft.Container(
-                    content=self._build_card_content(),
-                    padding=20,
-                ),
-                elevation=1 if not data.is_selected else 3,
-            ),
-            margin=ft.margin.symmetric(vertical=4, horizontal=8),
-            border_radius=CARD_BORDER_RADIUS,
-            on_click=self._handle_click if data.on_click else None,
-            ink=True,
-            key=data.term_id,
+        self._term_data = data
+        self._status_icon = self._get_status_icon(data.status)
+
+        # ステータスバッジ（ボーダー付き）
+        badge = CardBadgeData(text=data.status_text, color=get_primary_color())
+
+        # メタデータ: キー + 同義語
+        metadata_items = [
+            CardMetadataData(icon=ft.Icons.KEY, text=f"キー: {data.key}"),
+        ]
+
+        # 同義語をメタデータとして追加
+        if data.synonyms:
+            synonyms_text = self._format_synonyms(data.synonyms)
+            metadata_items.append(CardMetadataData(icon=ft.Icons.LABEL_OUTLINE, text=synonyms_text))
+
+        # CardDataに変換
+        card_data = CardData(
+            title=data.title or DEFAULT_EMPTY_TITLE,
+            description=data.description,
+            badge=badge,
+            metadata=metadata_items,
+            actions=[],
+            is_selected=data.is_selected,
+            on_click=data.on_click,
         )
 
-    def _build_card_content(self) -> ft.Control:
-        """カードコンテンツを構築する（プロジェクトカードパターン準拠）。
+        super().__init__(card_data)
 
-        Returns:
-            カードコンテンツコントロール
-        """
-        # Header: Title + Status badge
-        status_icon = self._get_status_icon()
-        status_badge = ft.Container(
-            content=ft.Text(
-                self._data.status_text,
-                theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                color=get_primary_color(),
-                weight=ft.FontWeight.W_500,
-            ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            border=ft.border.all(1, get_primary_color()),
-            border_radius=12,
-        )
+        # ステータスアイコンをタイトルの前に追加
+        self._inject_status_icon()
 
-        header = ft.Row(
-            controls=[
-                ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                status_icon,
-                                ft.Text(
-                                    self._data.title or DEFAULT_EMPTY_TITLE,
-                                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                    weight=ft.FontWeight.W_500,
-                                    max_lines=1,
-                                    overflow=ft.TextOverflow.ELLIPSIS,
-                                ),
-                            ],
-                            spacing=8,
-                        ),
-                        ft.Text(
-                            f"キー: {self._data.key}",
-                            theme_style=ft.TextThemeStyle.BODY_SMALL,
-                            color=get_text_secondary_color(),
-                        ),
-                    ],
-                    spacing=4,
-                    expand=True,
-                ),
-                status_badge,
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.START,
-        )
-
-        # Divider
-        divider = ft.Divider(height=1, color=get_outline_color())
-
-        # Description preview
-        description = ft.Text(
-            self._data.description,
-            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=get_text_secondary_color(),
-            max_lines=MAX_DESCRIPTION_LINES,
-            overflow=ft.TextOverflow.ELLIPSIS,
-        )
-
-        # Footer: Synonyms
-        footer = self._build_synonyms_display()
-
-        return ft.Column(
-            controls=[
-                header,
-                divider,
-                description,
-                footer,
-            ],
-            spacing=16,
-        )
-
-    def _get_status_icon(self) -> ft.Control:
+    def _get_status_icon(self, status: TermStatus) -> ft.Icon:
         """ステータスアイコンを取得する。
 
+        Args:
+            status: 用語ステータス
+
         Returns:
-            ステータスアイコンコントロール
+            ステータスアイコン
         """
         icon_map = {
             TermStatus.APPROVED: ft.Icons.CHECK_CIRCLE,
@@ -201,57 +134,47 @@ class TermCard(ft.Container):
         }
 
         return ft.Icon(
-            icon_map.get(self._data.status, ft.Icons.HELP_OUTLINE),
+            icon_map.get(status, ft.Icons.HELP_OUTLINE),
             size=20,
             color=get_primary_color(),
         )
 
-    def _build_synonyms_display(self) -> ft.Control:
-        """同義語表示を構築する。
+    def _format_synonyms(self, synonyms: tuple[str, ...]) -> str:
+        """同義語を文字列にフォーマットする。
+
+        Args:
+            synonyms: 同義語タプル
 
         Returns:
-            同義語表示コントロール
+            フォーマットされた同義語文字列
         """
-        if not self._data.synonyms:
-            return ft.Container()
+        visible_synonyms = synonyms[:MAX_SYNONYMS_DISPLAY]
+        result = ", ".join(visible_synonyms)
 
-        visible_synonyms = self._data.synonyms[:MAX_SYNONYMS_DISPLAY]
+        if len(synonyms) > MAX_SYNONYMS_DISPLAY:
+            result += f" +{len(synonyms) - MAX_SYNONYMS_DISPLAY}"
 
-        synonym_chips: list[ft.Control] = [
-            ft.Container(
-                content=ft.Text(
-                    synonym,
-                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                    color=get_text_secondary_color(),
-                ),
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                border=ft.border.all(1, get_outline_color()),
-                border_radius=12,
-            )
-            for synonym in visible_synonyms
-        ]
+        return f"同義語: {result}"
 
-        if len(self._data.synonyms) > MAX_SYNONYMS_DISPLAY:
-            synonym_chips.append(
-                ft.Container(
-                    content=ft.Text(
-                        f"+{len(self._data.synonyms) - MAX_SYNONYMS_DISPLAY}",
-                        theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                        color=get_text_secondary_color(),
-                    ),
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                    border=ft.border.all(1, get_outline_color()),
-                    border_radius=12,
-                )
-            )
-
-        return ft.Row(
-            controls=synonym_chips,
-            spacing=4,
-            wrap=True,
-        )
-
-    def _handle_click(self, _: ft.ControlEvent) -> None:
-        """クリックイベントをハンドリングする。"""
-        if self._data.on_click:
-            self._data.on_click()
+    def _inject_status_icon(self) -> None:
+        """ステータスアイコンをタイトルの前に挿入する"""
+        try:
+            card_content = self.content
+            if isinstance(card_content, ft.Card):
+                container = card_content.content
+                if isinstance(container, ft.Container):
+                    column = container.content
+                    if isinstance(column, ft.Column) and len(column.controls) > 0:
+                        header_row = column.controls[0]
+                        if isinstance(header_row, ft.Row) and len(header_row.controls) > 0:
+                            title_column = header_row.controls[0]
+                            if isinstance(title_column, ft.Column) and len(title_column.controls) > 0:
+                                # タイトルテキストをRowでラップし、status_iconを前置
+                                title_text = title_column.controls[0]
+                                title_column.controls[0] = ft.Row(
+                                    controls=[self._status_icon, title_text],
+                                    spacing=8,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                )
+        except (AttributeError, IndexError):
+            pass  # エラーは無視（デフォルト表示のまま）

@@ -38,16 +38,11 @@ from logic.application.one_liner_application_service import OneLinerApplicationS
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.theme import (
-    SPACING,
-    get_on_surface_color,
-    get_outline_color,
-    get_surface_variant_color,
-    get_text_secondary_color,
-)
+from views.theme import SPACING
 
+from .components import DailyReviewCard, InboxMemosSection, StatsCards
+from .components.stats_cards import StatCardData
 from .controller import HomeController
-from .presenter import build_daily_review_card, build_inbox_memo_item, build_stat_card
 from .query import ApplicationHomeQuery, HomeQuery, InMemoryHomeQuery
 from .state import HomeViewState
 
@@ -171,7 +166,10 @@ class HomeView(BaseView):
         Returns:
             デイリーレビューコントロール
         """
-        return build_daily_review_card(self.home_state.daily_review, self._handle_action_click)
+        return DailyReviewCard(
+            review=self.home_state.daily_review,
+            on_action_click=self._handle_action_click,
+        )
 
     def _build_inbox_memos_section(self) -> ft.Control:
         """Inboxメモセクションを構築する。
@@ -179,50 +177,11 @@ class HomeView(BaseView):
         Returns:
             Inboxメモセクションコントロール
         """
-        memo_items = [build_inbox_memo_item(memo, self._handle_memo_click) for memo in self.home_state.inbox_memos[:3]]
-
-        return ft.Container(
-            content=ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Row(
-                                [
-                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=20, color=get_on_surface_color()),
-                                    ft.Text(
-                                        "メモ",
-                                        size=18,
-                                        weight=ft.FontWeight.W_600,
-                                    ),
-                                ],
-                                spacing=SPACING.xs,
-                            ),
-                            ft.TextButton(
-                                text="すべて見る",
-                                icon=ft.Icons.ARROW_FORWARD,
-                                icon_color=get_on_surface_color(),
-                                style=ft.ButtonStyle(color=get_on_surface_color()),
-                                on_click=lambda _: self._handle_action_click("/memos"),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                    ft.Text(
-                        "整理が必要なメモがあります。AIにタスクを生成させましょう。",
-                        size=14,
-                        color=get_text_secondary_color(),
-                    ),
-                    ft.Column(
-                        memo_items,
-                        spacing=SPACING.xs,
-                    ),
-                ],
-                spacing=SPACING.sm,
-            ),
-            padding=ft.padding.all(24),
-            bgcolor=get_surface_variant_color(),
-            border_radius=12,
-            border=ft.border.all(1, get_outline_color()),
+        return InboxMemosSection(
+            memos=self.home_state.inbox_memos,
+            on_memo_click=self._handle_memo_click,
+            on_see_all_click=lambda: self._handle_action_click("/memos"),
+            max_display=3,
         )
 
     def _build_stats_section(self) -> ft.Control:
@@ -231,35 +190,31 @@ class HomeView(BaseView):
         Returns:
             統計カードコントロール
         """
-        stats_cards = [
-            build_stat_card(
-                "次のアクション",
-                str(self.home_state.stats.get("todays_tasks", 0)),
-                "件のタスク",
-                ft.Icons.CHECK_BOX_OUTLINED,
-                lambda: self._handle_action_click("/tasks"),
+        stats = [
+            StatCardData(
+                title="次のアクション",
+                value=str(self.home_state.stats.get("todays_tasks", 0)),
+                subtitle="件のタスク",
+                icon=ft.Icons.CHECK_BOX_OUTLINED,
+                on_click=lambda: self._handle_action_click("/tasks"),
             ),
-            build_stat_card(
-                "インボックス",
-                str(self.home_state.stats.get("todo_tasks", 0)),
-                "未処理のタスク",
-                ft.Icons.SCHEDULE,
-                lambda: self._handle_action_click("/tasks"),
+            StatCardData(
+                title="インボックス",
+                value=str(self.home_state.stats.get("todo_tasks", 0)),
+                subtitle="未処理のタスク",
+                icon=ft.Icons.SCHEDULE,
+                on_click=lambda: self._handle_action_click("/tasks"),
             ),
-            build_stat_card(
-                "進行中プロジェクト",
-                str(self.home_state.stats.get("active_projects", 0)),
-                "件のプロジェクト",
-                ft.Icons.FOLDER_OPEN,
-                lambda: self._handle_action_click("/projects"),
+            StatCardData(
+                title="進行中プロジェクト",
+                value=str(self.home_state.stats.get("active_projects", 0)),
+                subtitle="件のプロジェクト",
+                icon=ft.Icons.FOLDER_OPEN,
+                on_click=lambda: self._handle_action_click("/projects"),
             ),
         ]
 
-        return ft.ResponsiveRow(
-            stats_cards,
-            spacing=SPACING.md,
-            run_spacing=SPACING.md,
-        )
+        return StatsCards(stats=stats)
 
     def _handle_memo_click(self, memo_id: str) -> None:
         """メモクリック時の処理。

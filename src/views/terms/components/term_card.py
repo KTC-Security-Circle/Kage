@@ -22,15 +22,12 @@ import flet as ft
 
 from models import TermStatus
 from views.theme import (
-    get_on_surface_color,
     get_outline_color,
     get_primary_color,
-    get_surface_variant_color,
     get_text_secondary_color,
 )
 
 from .shared.constants import (
-    CARD_PADDING,
     MAX_DESCRIPTION_LINES,
     MAX_SYNONYMS_DISPLAY,
 )
@@ -100,78 +97,95 @@ class TermCard(ft.Container):
         """
         self._data = data
         super().__init__(
-            content=self._build_card_content(),
-            padding=ft.padding.all(CARD_PADDING),
-            margin=ft.margin.symmetric(vertical=4),
-            border_radius=CARD_BORDER_RADIUS,
-            border=ft.border.all(
-                width=SELECTED_BORDER_WIDTH if data.is_selected else DEFAULT_BORDER_WIDTH,
-                color=get_primary_color() if data.is_selected else get_outline_color(),
+            content=ft.Card(
+                content=ft.Container(
+                    content=self._build_card_content(),
+                    padding=20,
+                ),
+                elevation=1 if not data.is_selected else 3,
             ),
-            bgcolor=get_surface_variant_color() if data.is_selected else None,
+            margin=ft.margin.symmetric(vertical=4, horizontal=8),
+            border_radius=CARD_BORDER_RADIUS,
             on_click=self._handle_click if data.on_click else None,
             ink=True,
             key=data.term_id,
         )
 
     def _build_card_content(self) -> ft.Control:
-        """カードコンテンツを構築する。
+        """カードコンテンツを構築する（プロジェクトカードパターン準拠）。
 
         Returns:
             カードコンテンツコントロール
         """
-        # Header: Status icon + Title + Status badge
+        # Header: Title + Status badge
         status_icon = self._get_status_icon()
-        title_column = ft.Column(
-            controls=[
-                ft.Text(
-                    self._data.title or DEFAULT_EMPTY_TITLE,
-                    size=16,
-                    weight=ft.FontWeight.BOLD,
-                    max_lines=1,
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                ),
-                ft.Text(
-                    f"キー: {self._data.key}",
-                    size=12,
-                    color=get_outline_color(),
-                ),
-            ],
-            spacing=2,
-            tight=True,
+        status_badge = ft.Container(
+            content=ft.Text(
+                self._data.status_text,
+                theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                color=get_primary_color(),
+                weight=ft.FontWeight.W_500,
+            ),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border=ft.border.all(1, get_primary_color()),
+            border_radius=12,
         )
 
         header = ft.Row(
             controls=[
-                ft.Row(
-                    controls=[status_icon, title_column],
-                    spacing=8,
+                ft.Column(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                status_icon,
+                                ft.Text(
+                                    self._data.title or DEFAULT_EMPTY_TITLE,
+                                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                                    weight=ft.FontWeight.W_500,
+                                    max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                            ],
+                            spacing=8,
+                        ),
+                        ft.Text(
+                            f"キー: {self._data.key}",
+                            theme_style=ft.TextThemeStyle.BODY_SMALL,
+                            color=get_text_secondary_color(),
+                        ),
+                    ],
+                    spacing=4,
                     expand=True,
                 ),
+                status_badge,
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.START,
         )
+
+        # Divider
+        divider = ft.Divider(height=1, color=get_outline_color())
 
         # Description preview
         description = ft.Text(
             self._data.description,
-            size=14,
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
             color=get_text_secondary_color(),
             max_lines=MAX_DESCRIPTION_LINES,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
 
-        # Synonyms chips
-        synonyms_row = self._build_synonyms_display()
+        # Footer: Synonyms
+        footer = self._build_synonyms_display()
 
         return ft.Column(
             controls=[
                 header,
+                divider,
                 description,
-                synonyms_row,
+                footer,
             ],
-            spacing=8,
-            tight=True,
+            spacing=16,
         )
 
     def _get_status_icon(self) -> ft.Control:
@@ -189,7 +203,7 @@ class TermCard(ft.Container):
         return ft.Icon(
             icon_map.get(self._data.status, ft.Icons.HELP_OUTLINE),
             size=20,
-            color=get_on_surface_color(),
+            color=get_primary_color(),
         )
 
     def _build_synonyms_display(self) -> ft.Control:
@@ -207,11 +221,11 @@ class TermCard(ft.Container):
             ft.Container(
                 content=ft.Text(
                     synonym,
-                    size=12,
-                    color=get_on_surface_color(),
+                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                    color=get_text_secondary_color(),
                 ),
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                bgcolor=get_surface_variant_color(),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                border=ft.border.all(1, get_outline_color()),
                 border_radius=12,
             )
             for synonym in visible_synonyms
@@ -222,11 +236,11 @@ class TermCard(ft.Container):
                 ft.Container(
                     content=ft.Text(
                         f"+{len(self._data.synonyms) - MAX_SYNONYMS_DISPLAY}",
-                        size=12,
-                        color=get_on_surface_color(),
+                        theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                        color=get_text_secondary_color(),
                     ),
-                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                    bgcolor=get_surface_variant_color(),
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    border=ft.border.all(1, get_outline_color()),
                     border_radius=12,
                 )
             )

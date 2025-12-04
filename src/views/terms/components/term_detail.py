@@ -28,7 +28,6 @@ from views.theme import (
     get_on_surface_color,
     get_outline_color,
     get_primary_color,
-    get_surface_color,
     get_surface_variant_color,
     get_text_secondary_color,
 )
@@ -112,27 +111,29 @@ class TermDetailPanel:
             self._root.update()
 
     def _placeholder(self) -> ft.Control:
-        """プレースホルダ表示を構築する。"""
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(
-                        ft.Icons.ARTICLE_OUTLINED,
-                        size=64,
-                        color=get_outline_color(),
-                    ),
-                    ft.Text(
-                        "用語を選択して詳細を表示",
-                        size=18,
-                        color=get_outline_color(),
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=16,
+        """プレースホルダ表示を構築する（プロジェクトパターン準拠）。"""
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(
+                            ft.Icons.ARTICLE_OUTLINED,
+                            size=48,
+                            color=get_outline_color(),
+                        ),
+                        ft.Text(
+                            "用語を選択して詳細を表示",
+                            theme_style=ft.TextThemeStyle.BODY_LARGE,
+                            color=get_text_secondary_color(),
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=16,
+                ),
+                alignment=ft.alignment.center,
+                padding=48,
             ),
-            padding=48,
-            alignment=ft.alignment.center,
             expand=True,
         )
 
@@ -172,7 +173,7 @@ class TermDetailPanel:
         )
 
     def _build_header(self, data: TermDetailData) -> ft.Control:
-        """ヘッダーセクションを構築する。
+        """ヘッダーセクションを構築する（プロジェクトパターン準拠）。
 
         Args:
             data: 詳細データ
@@ -184,39 +185,34 @@ class TermDetailPanel:
 
         return ft.Row(
             controls=[
-                ft.Row(
+                ft.Column(
                     controls=[
-                        ft.Icon(
-                            ft.Icons.BOOK_ROUNDED,
-                            size=32,
-                            color=get_primary_color(),
+                        ft.Text(
+                            data.title,
+                            theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
+                            weight=ft.FontWeight.BOLD,
                         ),
-                        ft.Column(
-                            controls=[
-                                ft.Text(
-                                    data.title,
-                                    size=24,
-                                    weight=ft.FontWeight.BOLD,
-                                ),
-                                ft.Container(
-                                    content=ft.Text(
-                                        data.key,
-                                        size=13,
-                                        color=get_text_secondary_color(),
-                                        font_family="monospace",
-                                    ),
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                                    bgcolor=get_surface_color(),
-                                    border_radius=4,
-                                ),
-                            ],
-                            spacing=8,
+                        ft.Text(
+                            f"{data.created_date} 作成",
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                            color=get_text_secondary_color(),
                         ),
                     ],
-                    spacing=16,
+                    spacing=4,
                     expand=True,
                 ),
-                status_badge,
+                ft.Row(
+                    controls=[
+                        status_badge,
+                        ft.IconButton(
+                            icon=ft.Icons.EDIT,
+                            tooltip="編集",
+                            on_click=lambda _: self._props.on_edit(data.term_id) if self._props.on_edit else None,
+                            icon_color=get_text_secondary_color(),
+                        ),
+                    ],
+                    spacing=8,
+                ),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
@@ -251,13 +247,13 @@ class TermDetailPanel:
         return ft.Container(
             content=ft.Text(
                 status_text,
-                size=14,
+                theme_style=ft.TextThemeStyle.LABEL_SMALL,
                 color=config["color"],
-                weight=ft.FontWeight.BOLD,
+                weight=ft.FontWeight.W_500,
             ),
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
             bgcolor=config["bgcolor"],
-            border_radius=8,
+            border_radius=12,
         )
 
     def _build_description_section(self, data: TermDetailData) -> ft.Control:
@@ -273,14 +269,12 @@ class TermDetailPanel:
             controls=[
                 ft.Text(
                     "説明",
-                    size=14,
-                    weight=ft.FontWeight.W_500,
+                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
                     color=get_text_secondary_color(),
                 ),
                 ft.Text(
                     data.description,
-                    size=15,
-                    color=get_on_surface_color(),
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                 ),
             ],
             spacing=8,

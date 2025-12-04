@@ -5,6 +5,7 @@ views_new/shared/components/ で使用される再利用可能なUIコンポー�
 
 from .card import Card, CardActionData, CardBadgeData, CardData, CardMetadataData
 from .header import Header, HeaderButtonData, HeaderData
+from .status_tabs import StatusTabs, TabDefinition
 
 __all__ = [
     "Card",
@@ -15,4 +16,6 @@ __all__ = [
     "Header",
     "HeaderData",
     "HeaderButtonData",
+    "StatusTabs",
+    "TabDefinition",
 ]

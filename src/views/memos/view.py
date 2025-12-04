@@ -302,12 +302,14 @@ class MemosView(BaseView):
             self.notify_error("検索に失敗しました", details=f"{type(e).__name__}: {e}")
         logger.debug(f"Search query: '{query}' (tab={self.memos_state.current_tab})")
 
-    def _handle_tab_change(self, status: MemoStatus) -> None:
+    def _handle_tab_change(self, status: MemoStatus | None) -> None:
         """タブ変更ハンドラー。
 
         Args:
-            status: 選択されたタブのステータス
+            status: 選択されたタブのステータス（Noneの場合は無視）
         """
+        if status is None:
+            return
         try:
             self.controller.update_tab(status)
             if self.memos_state.search_query:

@@ -38,7 +38,6 @@
     1. データクラス生成
         - create_memo_card_data(): MemoCardData生成
         - create_action_bar_data(): HeaderData生成（汎用views.shared.components.HeaderData）
-        - create_status_tabs_data(): StatusTabsData生成
         - create_filter_data(): FilterData生成
         - create_memo_list_data(): MemoListData生成
 
@@ -90,7 +89,6 @@ from views.theme import (
 from .components.filters import FilterConfig, FilterData
 from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
 from .components.shared.constants import DEFAULT_DATE_TEXT, DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH
-from .components.status_tabs import StatusTabsData, TabData
 from .components.types import MemoListData
 
 if TYPE_CHECKING:
@@ -189,43 +187,6 @@ def create_action_bar_data(
         action_buttons=action_buttons if action_buttons else None,
         show_search=on_search is not None,
     )
-
-
-def create_status_tabs_data(
-    *,
-    active_status: MemoStatus,
-    memo_counts: dict[MemoStatus, int],
-    on_tab_change: Callable[[MemoStatus], None] | None = None,
-) -> StatusTabsData:
-    """StatusTabsDataを生成する。
-
-    Args:
-        active_status: アクティブなステータス
-        memo_counts: ステータス毎の件数
-        on_tab_change: タブ切り替えコールバック
-
-    Returns:
-        StatusTabsData
-    """
-    tab_definitions = [
-        (MemoStatus.INBOX, "Inbox", ft.Icons.INBOX),
-        (MemoStatus.ACTIVE, "アクティブ", ft.Icons.AUTO_AWESOME),
-        (MemoStatus.IDEA, "アイデア", ft.Icons.LIGHTBULB),
-        (MemoStatus.ARCHIVE, "アーカイブ", ft.Icons.ARCHIVE),
-    ]
-
-    tabs = tuple(
-        TabData(
-            status=status,
-            label=label,
-            icon=icon,
-            count=memo_counts.get(status, 0),
-            is_active=(status == active_status),
-        )
-        for status, label, icon in tab_definitions
-    )
-
-    return StatusTabsData(tabs=tabs, on_tab_change=on_tab_change)
 
 
 def create_filter_data(

@@ -11,7 +11,12 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
-from views.theme import get_grey_color, get_on_primary_color, get_primary_color
+from views.theme import (
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,12 +37,16 @@ class EmptyTagsState(ft.Container):
         self._props = props
         self.content = ft.Column(
             controls=[
-                ft.Icon(ft.Icons.LABEL_OUTLINE, size=64, color=get_grey_color(400)),
-                ft.Text("タグがありません", theme_style=ft.TextThemeStyle.HEADLINE_SMALL, color=get_grey_color(600)),
+                ft.Icon(ft.Icons.LABEL_OUTLINE, size=64, color=get_outline_color()),
+                ft.Text(
+                    "タグがありません",
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    color=get_text_secondary_color(),
+                ),
                 ft.Text(
                     "新規タグを作成してタスクを分類しましょう",
                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=get_grey_color(600),
+                    color=get_text_secondary_color(),
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Container(height=24),

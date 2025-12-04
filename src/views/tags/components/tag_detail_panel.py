@@ -15,9 +15,11 @@ from loguru import logger
 from views.theme import (
     get_grey_color,
     get_on_primary_color,
+    get_outline_color,
     get_primary_color,
     get_tag_icon_bg_opacity,
     get_task_status_color,
+    get_text_secondary_color,
 )
 
 if TYPE_CHECKING:
@@ -115,25 +117,29 @@ class TagDetailPanel(ft.Container):
         )
 
     def _build_empty_state(self) -> ft.Control:
-        """空状態の表示"""
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(
-                        ft.Icons.LABEL_OUTLINE,
-                        size=48,
-                        color=get_grey_color(400),
-                    ),
-                    ft.Text(
-                        "タグを選択して詳細を表示",
-                        theme_style=ft.TextThemeStyle.BODY_LARGE,
-                        color=get_grey_color(600),
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=16,
+        """空状態の表示（プロジェクトパターン準拠）"""
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(
+                            ft.Icons.LABEL_OUTLINE,
+                            size=48,
+                            color=get_outline_color(),
+                        ),
+                        ft.Text(
+                            "タグを選択して詳細を表示",
+                            theme_style=ft.TextThemeStyle.BODY_LARGE,
+                            color=get_text_secondary_color(),
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=16,
+                ),
+                alignment=ft.alignment.center,
+                padding=48,
             ),
-            alignment=ft.alignment.center,
             expand=True,
         )
 
@@ -146,18 +152,18 @@ class TagDetailPanel(ft.Container):
                         ft.Icon(
                             ft.Icons.INFO_OUTLINE,
                             size=32,
-                            color=get_primary_color("light"),
+                            color=get_primary_color(),
                         ),
                         ft.Text(
                             "このタグはまだ使用されていません",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=get_grey_color(700),
+                            color=get_text_secondary_color(),
                             text_align=ft.TextAlign.CENTER,
                         ),
                         ft.Text(
                             "タスクやメモに付与すると、ここに表示されます",
                             theme_style=ft.TextThemeStyle.BODY_SMALL,
-                            color=get_grey_color(600),
+                            color=get_text_secondary_color(),
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ],
@@ -190,7 +196,7 @@ class TagDetailPanel(ft.Container):
             content=ft.Container(
                 content=ft.Column(
                     controls=[
-                        # タイトルとアイテム数
+                        # ヘッダー（タイトル + ステータス）
                         ft.Row(
                             controls=[
                                 color_icon,
@@ -198,65 +204,103 @@ class TagDetailPanel(ft.Container):
                                     controls=[
                                         ft.Text(
                                             data.name,
-                                            theme_style=ft.TextThemeStyle.TITLE_LARGE,
+                                            theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                                             weight=ft.FontWeight.BOLD,
                                         ),
                                         ft.Text(
-                                            f"{data.total_count} 件のアイテム",
+                                            f"{data.created_at} 作成",
                                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                                            color=get_grey_color(600),
+                                            color=get_text_secondary_color(),
                                         ),
                                     ],
                                     spacing=4,
                                     expand=True,
                                 ),
+                                ft.IconButton(
+                                    icon=ft.Icons.EDIT,
+                                    tooltip="編集",
+                                    on_click=on_edit,
+                                    icon_color=get_text_secondary_color(),
+                                ),
                             ],
                             spacing=12,
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
-                        ft.Divider(),
-                        # 説明
+                        # Divider
+                        ft.Divider(height=1, color=get_outline_color()),
+                        # 説明セクション
                         ft.Column(
                             controls=[
                                 ft.Text(
                                     "説明",
-                                    theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
-                                    weight=ft.FontWeight.W_500,
-                                    color=get_grey_color(700),
+                                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                                    color=get_text_secondary_color(),
                                 ),
                                 ft.Text(
                                     data.description or "（説明なし）",
                                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                                    color=get_grey_color(600),
-                                ),
-                            ],
-                            spacing=4,
-                        ),
-                        ft.Divider(),
-                        # カラー情報
-                        ft.Row(
-                            controls=[
-                                ft.Text(
-                                    "カラー:",
-                                    theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
-                                    weight=ft.FontWeight.W_500,
-                                    color=get_grey_color(700),
-                                ),
-                                ft.Container(
-                                    width=20,
-                                    height=20,
-                                    border_radius=ft.border_radius.all(4),
-                                    bgcolor=data.color,
-                                    border=ft.border.all(1, get_grey_color(400)),
-                                ),
-                                ft.Text(
-                                    data.color.upper(),
-                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=get_grey_color(600),
                                 ),
                             ],
                             spacing=8,
                         ),
-                        # 日時情報
+                        # 統計情報
+                        ft.Column(
+                            controls=[
+                                ft.Text(
+                                    "統計",
+                                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                                    color=get_text_secondary_color(),
+                                ),
+                                ft.Row(
+                                    controls=[
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(
+                                                    ft.Icons.DESCRIPTION_OUTLINED,
+                                                    size=16,
+                                                    color=get_text_secondary_color(),
+                                                ),
+                                                ft.Text(
+                                                    f"{data.memo_count} メモ",
+                                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                                    color=get_text_secondary_color(),
+                                                ),
+                                            ],
+                                            spacing=4,
+                                        ),
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(
+                                                    ft.Icons.TASK_ALT,
+                                                    size=16,
+                                                    color=get_text_secondary_color(),
+                                                ),
+                                                ft.Text(
+                                                    f"{data.task_count} タスク",
+                                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                                    color=get_text_secondary_color(),
+                                                ),
+                                            ],
+                                            spacing=4,
+                                        ),
+                                        ft.Container(
+                                            content=ft.Text(
+                                                f"合計 {data.total_count}",
+                                                theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                                                color=get_on_primary_color(),
+                                                weight=ft.FontWeight.W_500,
+                                            ),
+                                            bgcolor=get_primary_color(),
+                                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                            border_radius=12,
+                                        ),
+                                    ],
+                                    spacing=16,
+                                ),
+                            ],
+                            spacing=8,
+                        ),
+                        # メタデータ
                         ft.Column(
                             controls=[
                                 ft.Row(
@@ -264,12 +308,12 @@ class TagDetailPanel(ft.Container):
                                         ft.Icon(
                                             ft.Icons.CALENDAR_TODAY,
                                             size=16,
-                                            color=get_grey_color(600),
+                                            color=get_text_secondary_color(),
                                         ),
                                         ft.Text(
                                             f"作成: {data.created_at}",
                                             theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=get_grey_color(600),
+                                            color=get_text_secondary_color(),
                                         ),
                                     ],
                                     spacing=4,
@@ -279,12 +323,12 @@ class TagDetailPanel(ft.Container):
                                         ft.Icon(
                                             ft.Icons.UPDATE,
                                             size=16,
-                                            color=get_grey_color(600),
+                                            color=get_text_secondary_color(),
                                         ),
                                         ft.Text(
                                             f"更新: {data.updated_at}",
                                             theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=get_grey_color(600),
+                                            color=get_text_secondary_color(),
                                         ),
                                     ],
                                     spacing=4,
@@ -292,20 +336,10 @@ class TagDetailPanel(ft.Container):
                             ],
                             spacing=4,
                         ),
-                        ft.Divider(),
-                        # 編集ボタン
-                        ft.Container(
-                            content=ft.ElevatedButton(
-                                text="編集",
-                                icon=ft.Icons.EDIT_OUTLINED,
-                                on_click=on_edit,
-                            ),
-                            alignment=ft.alignment.center_right,
-                        ),
                     ],
-                    spacing=12,
+                    spacing=20,
                 ),
-                padding=20,
+                padding=24,
             ),
             elevation=2,
         )

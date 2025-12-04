@@ -118,17 +118,11 @@ class TasksView(BaseView):
 
         # タブコンポーネント
         counts = self._safe_get_counts()
-        total = 0
-        try:
-            total = self._controller.get_total_count()
-        except Exception:
-            total = len(self._current_vm)
 
         self._status_tabs = TaskStatusTabs(
             on_tab_change=self._on_tab_status_change,
             active_status=self._controller.state.status,
             tab_counts=counts,
-            total_count=total,
         )
 
         # 左: 一覧 / 右: 詳細 (components)
@@ -276,12 +270,7 @@ class TasksView(BaseView):
         if not self._status_tabs:
             return
         counts = self._safe_get_counts()
-        total = 0
-        try:
-            total = self._controller.get_total_count()
-        except Exception:
-            total = len(self._current_vm)
-        self._status_tabs.update_counts(counts, total)
+        self._status_tabs.update_counts(counts)
         # TODO: 大量件数時は counts を Controller 側の集計キャッシュから取得し、頻度を制御 (レート制限)。
 
     def _on_tab_status_change(self, status: str | None) -> None:

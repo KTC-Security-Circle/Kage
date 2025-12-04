@@ -127,7 +127,9 @@ class TagListItem(Card):
             # 親Cardの内容を更新
             temp_card = Card(card_data)
             self.content = temp_card.content
-            self.elevation = temp_card.elevation
+            # ft.Cardの属性として直接設定
+            if hasattr(temp_card, "elevation"):
+                self.elevation = temp_card.elevation  # type: ignore[attr-defined]
             self.on_click = temp_card.on_click
 
             # カラードットを再注入

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass
-from enum import Enum
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -18,11 +17,11 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
-class TabDefinition[TStatus: Enum]:
+class TabDefinition[TStatus]:
     """単一タブの定義データ。
 
     Attributes:
-        status: タブが表すステータス（None = 全件表示）
+        status: タブが表すステータス（None = 全件表示）。Enumまたはstr等
         label: タブのラベルテキスト
         icon: タブのアイコン名（オプション）
     """
@@ -32,10 +31,10 @@ class TabDefinition[TStatus: Enum]:
     icon: str | None = None
 
 
-class StatusTabs[TStatus: Enum](ft.Container):
+class StatusTabs[TStatus](ft.Container):
     """汎用ステータスタブコンポーネント。
 
-    任意のEnumステータスを持つデータをフィルタリングするためのタブバーを提供。
+    任意のステータス型（Enumまたはstr等）を持つデータをフィルタリングするためのタブバーを提供。
     各タブにはカウントバッジが表示され、アクティブタブは強調表示される。
     """
 

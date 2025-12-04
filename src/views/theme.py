@@ -3,6 +3,63 @@
 このモジュールは、Fletアプリケーション全体で使用する
 色、フォント、間隔、角丸等のデザイントークンを一元管理します。
 明暗テーマの両方に対応し、一貫性のあるUIを提供します。
+
+主要なカラー取得関数:
+    get_primary_color(variant="base") -> str:
+        プライマリカラーを取得（variant: "base", "light", "dark"）
+
+    get_surface_color() -> str:
+        サーフェス（カード・パネル）背景色を取得
+
+    get_on_surface_color() -> str:
+        サーフェス上のテキスト色を取得
+
+    get_background_color() -> str:
+        アプリ全体の背景色を取得
+
+    get_outline_color() -> str:
+        アウトライン（境界線・Divider）用の色を取得
+
+    get_text_secondary_color() -> str:
+        補助テキスト用の色を取得（キャプション、タイムスタンプなど）
+
+    get_surface_variant_color() -> str:
+        サーフェスバリアント（強調背景）色を取得（選択状態、ホバー状態など）
+
+    get_status_color(status: str) -> str:
+        ステータス名から対応する色コードを取得
+
+    get_tag_color_palette() -> list[dict[str, str]]:
+        タグ用のカラーパレットを取得
+
+使用例:
+    ```python
+    import flet as ft
+    from views.theme import (
+        get_primary_color,
+        get_surface_color,
+        get_on_surface_color,
+        get_outline_color,
+        SPACING,
+        BORDER_RADIUS,
+    )
+
+    # カード背景とテキスト色
+    card = ft.Container(
+        bgcolor=get_surface_color(),
+        border=ft.border.all(1, get_outline_color()),
+        border_radius=BORDER_RADIUS.md,
+        padding=SPACING.md,
+        content=ft.Text("カード", color=get_on_surface_color()),
+    )
+
+    # プライマリアクションボタン
+    button = ft.ElevatedButton(
+        text="保存",
+        bgcolor=get_primary_color(),
+        color=get_on_primary_color(),
+    )
+    ```
 """
 
 from __future__ import annotations

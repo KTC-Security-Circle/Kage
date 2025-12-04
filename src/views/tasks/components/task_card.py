@@ -15,10 +15,9 @@ import flet as ft
 
 from views.tasks.components.shared.constants import TASK_STATUS_LABELS
 from views.theme import (
+    get_on_primary_color,
     get_outline_color,
     get_primary_color,
-    get_surface_color,
-    get_surface_variant_color,
     get_text_secondary_color,
 )
 
@@ -87,7 +86,6 @@ class TaskCard(ft.Container):
                 width=SELECTED_BORDER_WIDTH if data.is_selected else DEFAULT_BORDER_WIDTH,
                 color=get_primary_color() if data.is_selected else get_outline_color(),
             ),
-            bgcolor=get_surface_variant_color() if data.is_selected else get_surface_color(),
             on_click=self._handle_click if data.on_click else None,
             ink=True,
             key=data.task_id,
@@ -122,9 +120,14 @@ class TaskCard(ft.Container):
         if status_text:
             footer_controls.append(
                 ft.Container(
-                    content=ft.Text(status_text, size=10, weight=ft.FontWeight.BOLD),
+                    content=ft.Text(
+                        status_text,
+                        size=10,
+                        weight=ft.FontWeight.BOLD,
+                        color=get_on_primary_color(),
+                    ),
                     padding=ft.padding.symmetric(horizontal=8, vertical=2),
-                    bgcolor=get_surface_variant_color(),
+                    bgcolor=get_primary_color(),
                     border_radius=12,
                 )
             )

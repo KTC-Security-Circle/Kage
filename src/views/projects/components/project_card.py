@@ -11,12 +11,9 @@ from typing import TYPE_CHECKING, Any
 from views.theme import (
     get_error_color,
     get_on_primary_color,
-    get_on_surface_color,
     get_outline_color,
     get_primary_color,
     get_status_color,
-    get_surface_color,
-    get_surface_variant_color,
     get_text_secondary_color,
 )
 
@@ -221,8 +218,8 @@ def create_project_card_from_vm(
                     ),
                     ft.Text(
                         vm.description,
-                        theme_style=ft.TextThemeStyle.BODY_SMALL,
-                        color=get_on_surface_color(),
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                        color=get_text_secondary_color(),
                         max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
@@ -254,6 +251,4 @@ def create_project_card_from_vm(
             on_click=lambda _: on_select(vm.id),
         ),
         elevation=1 if not is_selected else 3,
-        color=get_surface_color() if not is_selected else get_surface_variant_color(),
-        surface_tint_color=get_primary_color() if is_selected else None,
     )

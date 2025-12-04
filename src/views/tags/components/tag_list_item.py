@@ -16,8 +16,6 @@ from views.theme import (
     get_on_primary_color,
     get_outline_color,
     get_primary_color,
-    get_surface_color,
-    get_surface_variant_color,
     get_text_secondary_color,
 )
 
@@ -130,7 +128,7 @@ class TagListItem(ft.Container):
             spacing=16,
         )
 
-        # Card本体（プロジェクトカードパターン）
+        # Card本体(プロジェクトカードパターン)
         self.content = ft.Card(
             content=ft.Container(
                 content=ft.Column(
@@ -140,8 +138,6 @@ class TagListItem(ft.Container):
                 padding=20,
             ),
             elevation=1 if not props.selected else 3,
-            color=get_surface_color() if not props.selected else get_surface_variant_color(),
-            surface_tint_color=get_primary_color() if props.selected else None,
         )
         self.margin = ft.margin.symmetric(vertical=4, horizontal=8)
         self.border_radius = 8

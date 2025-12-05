@@ -74,11 +74,6 @@ class TasksView(BaseView):
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
         self._detail_panel = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
         self._no_selection = TaskNoSelection()
-        # 詳細パネル用のコンテナを保持（内容を動的に更新するため）
-        self._detail_container = ft.Container(
-            content=self._no_selection,
-            col={"xs": 12, "lg": 7},
-        )
         self._empty_state = TaskEmptyState(on_create=self._open_create_dialog)
         logger.info("TasksView initialized with ApplicationService")
 
@@ -139,7 +134,10 @@ class TasksView(BaseView):
                     col={"xs": 12, "lg": 5},
                     padding=ft.padding.only(right=12),
                 ),
-                self._detail_container,
+                ft.Container(
+                    content=self._detail_panel.control,
+                    col={"xs": 12, "lg": 7},
+                ),
             ],
             expand=True,
         )
@@ -254,11 +252,8 @@ class TasksView(BaseView):
 
         # 詳細パネルを表示
         self._detail_panel.set_item(dvm)
-        self._detail_container.content = self._detail_panel.control
         logger.debug("detail set: id={} title='{}' status={}", vm.id, vm.title, vm.status)
         self._controller.set_selected(vm.id)
-        # コンテナの内容を更新したので再描画
-        self.safe_update()
 
     def _count_by_status(self, status: str) -> int:
         return sum(1 for vm in self._current_vm if vm.status == status)

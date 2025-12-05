@@ -46,6 +46,13 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class _PromptKwargs(TypedDict, total=False):
+    """ReviewCopilotAgent に渡すプロンプト設定のキーワード引数。
+
+    Attributes:
+        prompt_custom_instructions: カスタム指示文。トーンや追加要件を補足する自由記述。
+        prompt_detail_level: 出力の詳細度レベル。brief/balanced/detailed のいずれか。
+    """
+
     prompt_custom_instructions: str
     prompt_detail_level: AgentDetailLevel
 

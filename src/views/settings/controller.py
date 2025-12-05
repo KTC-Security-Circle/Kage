@@ -459,15 +459,7 @@ class SettingsController:
         )
         self.state.update_current(new_snapshot)
 
-    def _parse_detail_level(self, raw: object | None) -> AgentDetailLevel:
-        if isinstance(raw, AgentDetailLevel):
-            return raw
-        if isinstance(raw, str):
-            try:
-                return AgentDetailLevel(raw)
-            except ValueError:
-                logger.warning("Invalid detail level value: %s", raw)
-        return AgentDetailLevel.BALANCED
+    # 重複していた詳細度変換ロジックは settings.utils.parse_detail_level に集約済み。
 
     def _validate_current_settings(self) -> None:
         """現在の設定値を検証する。

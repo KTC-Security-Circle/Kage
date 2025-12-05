@@ -19,6 +19,7 @@ def memo() -> MemoRead:
 
 
 def test_clarify_memo_injects_prompt_overrides(monkeypatch: pytest.MonkeyPatch, memo: MemoRead) -> None:
+    """MemoToTask エージェント呼び出し時にプロンプトオーバーライドが state に注入されることを検証する。"""
     instructions = "出力は丁寧に"
 
     class PromptStub:

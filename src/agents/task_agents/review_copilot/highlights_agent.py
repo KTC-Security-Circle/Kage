@@ -80,13 +80,12 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
             [
                 (
                     "system",
-                    """あなたはポジティブなエグゼクティブアシスタントです。
-完了タスクのブリーフを読み取り、励ますトーンの導入文と3件の箇条書きを生成してください。
-各箇条書きは30文字以内のタイトルと、質的な成果を表す説明文を含めます。
-出力粒度ヒント: {detail_hint}
-追加指示:
-{custom_instructions}
-""",
+                    "あなたはポジティブなエグゼクティブアシスタントです。\n"
+                    "完了タスクのブリーフを読み取り、励ますトーンの導入文と3件の箇条書きを生成してください。\n"
+                    "各箇条書きは30文字以内のタイトルと、質的な成果を表す説明文を含めます。\n"
+                    "出力粒度ヒント: {detail_hint}\n"
+                    "追加指示:\n"
+                    "{custom_instructions}\n",
                 ),
                 (
                     "human",

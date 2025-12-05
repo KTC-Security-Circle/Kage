@@ -1,64 +1,39 @@
 """Markdown preview helpers for memo views.
 
-簡易的なMarkdownをFletコントロールに変換する関数群。
-将来的に正式なMarkdownレンダラーへ差し替えることを想定し、
-依存箇所をこのモジュールに集約する。
+Flet標準のMarkdownコントロールを使用したプレビュー生成。
 """
 
 from __future__ import annotations
-
-import re
 
 import flet as ft
 
 from views.theme import get_text_secondary_color
 
 
-def render_markdown_preview(markdown: str) -> list[ft.Control]:
-    """最小限のMarkdownプレビューを生成する。
+def render_markdown_preview(markdown: str) -> ft.Control:
+    """Markdownプレビューを生成する。
 
-    対応: 見出し(#, ##, ###), 箇条書き(-, *), 太字(**text**/__text__), 斜体(*text*/_text_),
-    インラインコード(`code`)
+    Flet標準の`ft.Markdown`コントロールを使用してMarkdown文字列を
+    レンダリングする。GitHub Web拡張セットを有効化し、テーブル、
+    打ち消し線、タスクリストなどをサポート。
 
     Args:
-        markdown: 入力文字列
+        markdown: 入力Markdown文字列
 
     Returns:
-        生成されたコントロール群
+        レンダリングされたMarkdownコントロール
     """
-    if not markdown.strip():
-        return [ft.Text("プレビューはこちらに表示されます", color=get_text_secondary_color(), italic=True)]
-
-    lines = markdown.splitlines()
-    controls: list[ft.Control] = []
-    for line in lines:
-        if line.startswith("### "):
-            controls.append(ft.Text(line[4:], theme_style=ft.TextThemeStyle.TITLE_MEDIUM, weight=ft.FontWeight.BOLD))
-            continue
-        if line.startswith("## "):
-            controls.append(ft.Text(line[3:], theme_style=ft.TextThemeStyle.TITLE_LARGE, weight=ft.FontWeight.BOLD))
-            continue
-        if line.startswith("# "):
-            controls.append(ft.Text(line[2:], theme_style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD))
-            continue
-
-        if line.startswith(("- ", "* ")):
-            controls.append(ft.Text("• " + line[2:], theme_style=ft.TextThemeStyle.BODY_MEDIUM))
-            continue
-
-        # 太字/斜体/インラインコード（簡易置換）
-        html_like = line
-        html_like = re.sub(r"\*\*(.+?)\*\*|__(.+?)__", lambda m: m.group(1) or m.group(2), html_like)
-        html_like = re.sub(
-            r"(?<!\*)\*([^*]+?)\*(?!\*)|(?<!_)_([^_]+?)_(?!_)",
-            lambda m: m.group(1) or m.group(2),
-            html_like,
+    if not markdown.strip()
+        return ft.Text(
+            "プレビューはこちらに表示されます",
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            italic=True,
         )
-        html_like = re.sub(r"`(.+?)`", lambda m: m.group(1), html_like)
 
-        if not html_like.strip():
-            controls.append(ft.Container(height=8))  # 空行
-        else:
-            controls.append(ft.Text(html_like, theme_style=ft.TextThemeStyle.BODY_MEDIUM))
-
-    return controls
+    return ft.Markdown(
+        value=markdown,
+        selectable=True,
+        extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+        on_tap_link=lambda _: None,  # リンククリックは無効化(必要に応じて page.launch_url(e.data) に変更可能)
+        fit_content=True,
+    )

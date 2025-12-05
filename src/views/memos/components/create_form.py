@@ -114,21 +114,28 @@ class CreateForm(ft.Container):
         )
 
         self._preview_panel = ft.Container(
-            content=ft.Column(controls=render_markdown_preview(content), spacing=8),
+            content=ft.Column(
+                controls=[render_markdown_preview(content)],
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
+            ),
             bgcolor=ft.Colors.SURFACE,
             border_radius=8,
             border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
             padding=ft.padding.all(12),
         )
 
-        edit_tab = ft.Container(content=self._content_editor)
-        preview_tab = ft.Container(content=self._preview_panel)
+        self._edit_tab_content = ft.Container(content=self._content_editor)
+        self._preview_tab_content = ft.Container(content=self._preview_panel)
 
         self._tabs = ft.Tabs(
             selected_index=0 if active_tab == "edit" else 1,
             on_change=lambda e: self._handle_tab_change(int(e.control.selected_index)),  # type: ignore[arg-type]
-            tabs=[ft.Tab(text="編集"), ft.Tab(text="プレビュー")],
-            expand=False,
+            tabs=[
+                ft.Tab(text="編集", content=self._edit_tab_content),
+                ft.Tab(text="プレビュー", content=self._preview_tab_content),
+            ],
+            expand=True,
         )
 
         content_card = ft.Card(
@@ -137,15 +144,13 @@ class CreateForm(ft.Container):
                     [
                         ft.Text("内容", weight=ft.FontWeight.BOLD),
                         self._tabs,
-                        ft.Container(
-                            content=edit_tab if active_tab == "edit" else preview_tab,
-                        ),
                         ft.Text("ヒント: Ctrl+Enter で送信", size=11, color=ft.Colors.ON_SURFACE_VARIANT),
                     ],
                     spacing=10,
                 ),
                 padding=ft.padding.all(16),
-            )
+            ),
+            expand=True,
         )
 
         return ft.Column([basic_card, content_card], spacing=12, expand=True)
@@ -154,7 +159,11 @@ class CreateForm(ft.Container):
     def _handle_content_change(self, value: str) -> None:
         self._callbacks.on_content_change(value)
         if self._tabs and self._preview_panel and self._tabs.selected_index == 1:
-            self._preview_panel.content = ft.Column(controls=render_markdown_preview(value), spacing=8)
+            self._preview_panel.content = ft.Column(
+                controls=[render_markdown_preview(value)],
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
+            )
             self.update()
 
     def _handle_tab_change(self, idx: int) -> None:
@@ -163,7 +172,9 @@ class CreateForm(ft.Container):
         # タブ切替時、プレビューが選択されたなら最新化
         if tab == "preview" and self._preview_panel and self._content_editor:
             self._preview_panel.content = ft.Column(
-                controls=render_markdown_preview(self._content_editor.value or ""), spacing=8
+                controls=[render_markdown_preview(self._content_editor.value or "")],
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
             )
             self.update()
 

@@ -293,18 +293,20 @@ class HomeView(BaseView):
         """AI一言生成完了時にデイリーレビューカードを更新する。
 
         Stateから最新の状態を取得し、既存のCardを再構築して内容を置き換える。
+        build()実行前の場合は状態のみ更新し、カード作成時に反映される。
         """
         try:
             logger.info(f"[UI更新] デイリーレビューカード更新開始（loading={self.home_state.is_loading_one_liner}）")
+
+            # カード参照がまだない場合（build()実行前）は状態のみ更新して終了
+            if self._daily_review_card is None:
+                logger.info("[UI更新] カードが未作成のため状態のみ更新（build時に反映されます）")
+                return
 
             # カード再構築を共通メソッドに委譲
             self._rebuild_daily_review_card()
 
             # UI更新を実行
-            if self._daily_review_card is None:
-                logger.warning("[UI更新] カード参照が None のため更新をスキップ")
-                return
-
             try:
                 if getattr(self._daily_review_card, "page", None) is not None:
                     self._daily_review_card.update()

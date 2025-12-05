@@ -32,6 +32,23 @@ class TaskCardVM:
 
 
 @dataclass(frozen=True)
+class RelatedTaskVM:
+    """関連タスク表示用のViewModel。
+
+    Attributes:
+        id: タスクID
+        title: タスクタイトル
+        status: ステータス表示用文字列
+        is_completed: 完了フラグ
+    """
+
+    id: str
+    title: str
+    status: str
+    is_completed: bool
+
+
+@dataclass(frozen=True)
 class TaskDetailVM:
     """タスク詳細表示用 ViewModel。
 
@@ -46,6 +63,8 @@ class TaskDetailVM:
         due_date: 期限日（文字列、未設定は None）
         completed_at: 完了日時（文字列、未設定は None）
         project_id: プロジェクトID（文字列、未設定は None）
+        project_name: プロジェクト名（文字列、未設定は None）
+        project_status: プロジェクトステータス（文字列、未設定は None）
         memo_id: メモID（文字列、未設定は None）
         is_recurring: 繰り返しタスクフラグ（未設定は False）
         recurrence_rule: RRULE形式などの繰り返しルール（未設定は None）
@@ -61,11 +80,18 @@ class TaskDetailVM:
     due_date: str | None = None
     completed_at: str | None = None
     project_id: str | None = None
+    project_name: str | None = None
+    project_status: str | None = None
+    project_tasks: list[RelatedTaskVM] = None  # type: ignore[assignment]
     memo_id: str | None = None
     is_recurring: bool = False
     recurrence_rule: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.project_tasks is None:
+            object.__setattr__(self, "project_tasks", [])
 
 
 # TODO: 日付/時刻の整形 (subtitle のローカライズ) を集中管理するヘルパーを導入する。
@@ -100,6 +126,21 @@ def to_detail_vm(item: dict) -> TaskDetailVM:
     Returns:
         TaskDetailVM
     """
+    # 関連タスクを変換
+    project_tasks_data = item.get("project_tasks", [])
+    if not isinstance(project_tasks_data, list):
+        project_tasks_data = []
+
+    project_tasks = [
+        RelatedTaskVM(
+            id=str(task.get("id", "")),
+            title=str(task.get("title", "無題のタスク")),
+            status=str(task.get("status", "")),
+            is_completed=task.get("is_completed", "False") in ("True", "true", "1"),
+        )
+        for task in project_tasks_data
+    ]
+
     return TaskDetailVM(
         id=str(item.get("id")),
         title=str(item.get("title", "(無題)")),
@@ -109,6 +150,9 @@ def to_detail_vm(item: dict) -> TaskDetailVM:
         due_date=str(item.get("due_date")) if item.get("due_date") is not None else None,
         completed_at=str(item.get("completed_at")) if item.get("completed_at") is not None else None,
         project_id=str(item.get("project_id")) if item.get("project_id") is not None else None,
+        project_name=str(item.get("project_name")) if item.get("project_name") else None,
+        project_status=str(item.get("project_status")) if item.get("project_status") else None,
+        project_tasks=project_tasks,
         memo_id=str(item.get("memo_id")) if item.get("memo_id") is not None else None,
         is_recurring=bool(item.get("is_recurring", False)),
         recurrence_rule=str(item.get("recurrence_rule")) if item.get("recurrence_rule") is not None else None,
@@ -136,6 +180,9 @@ def to_detail_from_card(vm: TaskCardVM) -> TaskDetailVM:
         due_date=None,
         completed_at=None,
         project_id=None,
+        project_name=None,
+        project_status=None,
+        project_tasks=[],
         memo_id=None,
         is_recurring=False,
         recurrence_rule=None,

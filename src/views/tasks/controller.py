@@ -325,6 +325,50 @@ class TasksController:
         def _s(v: object | None) -> str:
             return "" if v is None else str(v)
 
+        # プロジェクト情報と関連タスクを取得
+        project_name: str | None = None
+        project_status: str | None = None
+        project_tasks: list[dict[str, str]] = []
+        if task.project_id:
+            try:
+                from logic.application.project_application_service import ProjectApplicationService
+                from models import TaskStatus
+
+                if hasattr(self._apps, "get_service"):
+                    project_service = self._apps.get_service(ProjectApplicationService)  # type: ignore[union-attr]
+                    project = project_service.get_project_by_id(str(task.project_id))
+                    if project:
+                        project_name = str(project.title)
+                        if hasattr(project.status, "display_label"):
+                            project_status = project.status.display_label()
+                        else:
+                            project_status = str(project.status)
+
+                        # 同じプロジェクトに属する他のタスクを取得
+                        all_tasks = self._service.get_all_tasks()
+                        project_tasks.extend(
+                            [
+                                {
+                                    "id": str(other_task.id),
+                                    "title": str(other_task.title),
+                                    "status": (
+                                        other_task.status.display_label()
+                                        if hasattr(other_task.status, "display_label")
+                                        else str(other_task.status)
+                                    ),
+                                    "is_completed": str(other_task.status == TaskStatus.COMPLETED),
+                                }
+                                for other_task in all_tasks
+                                if (other_task.project_id == task.project_id and str(other_task.id) != str(task.id))
+                            ]
+                        )
+                        logger.debug(
+                            f"タスク {task.id} のプロジェクト関連タスク取得: "
+                            f"project_id={task.project_id}, 関連タスク数={len(project_tasks)}"
+                        )
+            except Exception as e:
+                logger.warning(f"タスク {task.id} のプロジェクト情報取得エラー: {e}")
+
         return {
             "id": _s(task.id),
             "title": _s(task.title),
@@ -335,6 +379,9 @@ class TasksController:
             "updated_at": _s(task.updated_at),
             "completed_at": _s(task.completed_at),
             "project_id": _s(task.project_id),
+            "project_name": project_name or "",
+            "project_status": project_status or "",
+            "project_tasks": project_tasks,  # type: ignore[dict-item]
         }
         # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。
 

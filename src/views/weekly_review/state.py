@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
+from views.weekly_review.components import MemoAction, ZombieTaskAction
+
 
 class ReviewStep(Enum):
     """レビューウィザードのステップ"""
@@ -69,7 +71,8 @@ class WeeklyReviewState:
     """
 
     # レビューウィザード状態
-    current_step: ReviewStep = ReviewStep.OVERVIEW
+    current_step: int = 1  # 1: 成果, 2: 整理, 3: 計画
+    total_steps: int = 3
     wizard_active: bool = False
 
     # チェックリスト状態
@@ -87,6 +90,21 @@ class WeeklyReviewState:
 
     # 統計データ
     stats: WeeklyStats | None = None
+
+    # ユーザーの意思決定記録 (Step2)
+    zombie_task_decisions: dict[str, ZombieTaskAction] = field(default_factory=dict)
+    memo_decisions: dict[str, MemoAction] = field(default_factory=dict)
+
+    # Step1: 成果データ
+    completed_tasks_this_week: list = field(default_factory=list)  # タスクリスト
+    achievement_highlights: list[str] = field(default_factory=list)  # ハイライト
+
+    # Step2: 整理データ
+    zombie_tasks: list = field(default_factory=list)  # 長期滞留タスク
+    unprocessed_memos: list = field(default_factory=list)  # 未処理メモ
+
+    # Step3: 計画データ
+    recommendations: list = field(default_factory=list)  # 来週の推奨事項
 
     # 期間設定
     current_week_start: datetime = field(default_factory=lambda: _get_week_start())
@@ -147,3 +165,53 @@ class WeeklyReviewState:
         start_str = self.current_week_start.strftime("%Y/%m/%d")
         end_str = self.current_week_end.strftime("%Y/%m/%d")
         return f"{start_str} - {end_str}"
+
+    def next_step(self) -> None:
+        """次のステップへ進む"""
+        if self.current_step < self.total_steps:
+            self.current_step += 1
+
+    def prev_step(self) -> None:
+        """前のステップへ戻る"""
+        if self.current_step > 1:
+            self.current_step -= 1
+
+    def set_zombie_task_decision(self, task_id: str, action: ZombieTaskAction) -> None:
+        """ゾンビタスクの意思決定を記録
+
+        Args:
+            task_id: タスクID
+            action: 選択されたアクション
+        """
+        self.zombie_task_decisions[task_id] = action
+
+    def set_memo_decision(self, memo_id: str, action: MemoAction) -> None:
+        """メモの意思決定を記録
+
+        Args:
+            memo_id: メモID
+            action: 選択されたアクション
+        """
+        self.memo_decisions[memo_id] = action
+
+    def get_zombie_task_decision(self, task_id: str) -> ZombieTaskAction:
+        """ゾンビタスクの意思決定を取得
+
+        Args:
+            task_id: タスクID
+
+        Returns:
+            選択されたアクション (なければNone)
+        """
+        return self.zombie_task_decisions.get(task_id)
+
+    def get_memo_decision(self, memo_id: str) -> MemoAction:
+        """メモの意思決定を取得
+
+        Args:
+            memo_id: メモID
+
+        Returns:
+            選択されたアクション (なければNone)
+        """
+        return self.memo_decisions.get(memo_id)

@@ -16,6 +16,11 @@ from views.weekly_review.components.task_list_card import TaskItemData
 from .state import WeeklyReviewState
 from .utils import format_count, format_percentage
 
+# Presenter constants
+THRESHOLD_HIGH_COMPLETED = 10  # 1週間で「高達成」とみなす完了タスク数の閾値
+THRESHOLD_MEDIUM_COMPLETED = 5  # 1週間で「中達成」とみなす完了タスク数の閾値
+LONG_DESCRIPTION_THRESHOLD = 100  # タスク説明が「長文」と判定される文字数の閾値
+
 
 @dataclass(frozen=True, slots=True)
 class StatsCardData:
@@ -154,3 +159,69 @@ class WeeklyReviewPresenter:
             )
             for task in tasks
         ]
+
+    def generate_achievement_summary_message(self) -> str:
+        """成果サマリーメッセージを生成
+
+        Returns:
+            成果サマリーメッセージ
+        """
+        completed_count = len(self.state.completed_tasks_this_week)
+
+        if completed_count == 0:
+            return "今週は記録されたタスクの完了がありませんでしたが、目に見えない成果もたくさんあるはずです。"
+
+        if completed_count >= THRESHOLD_HIGH_COMPLETED:
+            return f"素晴らしい！今週は {completed_count} 件のタスクを完了しました。大きな進捗です！"
+        if completed_count >= THRESHOLD_MEDIUM_COMPLETED:
+            return f"お疲れ様です！今週は {completed_count} 件のタスクを完了しました。着実に前進しています！"
+        return f"今週は {completed_count} 件のタスクを完了しました。一歩ずつ進んでいます。"
+
+    def generate_zombie_task_analysis(self, task: TaskRead, days_since_creation: int) -> str:
+        """ゾンビタスクの分析メッセージを生成(AI風)
+
+        Args:
+            task: タスク
+            days_since_creation: 作成からの日数
+
+        Returns:
+            分析メッセージ
+        """
+        messages = [f"{days_since_creation} 日間進捗がありません。"]
+
+        if len(task.description or "") > LONG_DESCRIPTION_THRESHOLD:
+            messages.append("タスクの粒度が大きすぎる可能性があります。")
+
+        if not task.due_date:
+            messages.append("期限が設定されていません。")
+
+        return " ".join(messages)
+
+    def generate_memo_analysis(self, memo_content: str, memo_title: str) -> str:
+        """未処理メモの分析メッセージを生成（AI風）
+
+        Args:
+            memo_content: メモ内容
+            memo_title: メモタイトル
+
+        Returns:
+            分析メッセージ
+        """
+        # 簡易的なキーワード分析
+        action_keywords = ["TODO", "やる", "作成", "実装", "確認", "修正", "対応"]
+        content_to_check = memo_content + memo_title
+
+        has_action = any(keyword in content_to_check for keyword in action_keywords)
+
+        if has_action:
+            return "アクションが必要な内容が含まれています。タスクにし忘れていませんか？"
+
+        return "アイデアや参考情報として保存することをお勧めします。"
+
+    def get_step_labels(self) -> list[str]:
+        """ウィザードステップのラベルを取得
+
+        Returns:
+            ステップラベルのリスト
+        """
+        return ["成果の振り返り", "システムの整理", "来週の計画"]

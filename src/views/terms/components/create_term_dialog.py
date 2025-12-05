@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from models import TermStatus
+from views.theme import get_error_color, get_surface_variant_color, get_text_secondary_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -121,7 +122,7 @@ class CreateTermDialog:
         # エラーバナー（初期状態は非表示）
         self._error_banner = ft.Container(
             visible=False,
-            bgcolor=ft.Colors.ERROR_CONTAINER,
+            bgcolor=get_surface_variant_color(),
             padding=12,
             border_radius=8,
         )
@@ -140,7 +141,7 @@ class CreateTermDialog:
                 ft.Text(
                     "* 必須項目",
                     size=12,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=get_text_secondary_color(),
                 ),
             ],
             spacing=12,
@@ -304,10 +305,10 @@ class CreateTermDialog:
         if self._error_banner:
             self._error_banner.content = ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ON_ERROR_CONTAINER),
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=get_error_color()),
                     ft.Text(
                         error_message,
-                        color=ft.Colors.ON_ERROR_CONTAINER,
+                        color=get_error_color(),
                         weight=ft.FontWeight.W_500,
                         expand=True,
                     ),

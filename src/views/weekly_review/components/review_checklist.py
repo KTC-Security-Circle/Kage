@@ -31,10 +31,15 @@ class ReviewChecklist(ft.Container):
         """
         super().__init__()
         self.props = props
-        self._build_checklist()
+        self.content = self._build_content()
+        self.expand = True
 
-    def _build_checklist(self) -> None:
-        """チェックリストを構築"""
+    def _build_content(self) -> ft.Card:
+        """チェックリストコンテンツを構築
+
+        Returns:
+            構築されたカード
+        """
         checklist_items = []
 
         for item_data in self.props.items:
@@ -102,12 +107,10 @@ class ReviewChecklist(ft.Container):
             padding=20,
         )
 
-        # コンテナの設定
-        self.content = ft.Card(
+        return ft.Card(
             content=card_content,
             elevation=2,
         )
-        self.expand = True
 
     def _handle_toggle(self, item_id: str) -> None:
         """チェックボックストグル処理
@@ -137,6 +140,6 @@ class ReviewChecklist(ft.Container):
             items=new_items,
             on_toggle=self.props.on_toggle,
         )
-        self._build_checklist()
+        self.content = self._build_content()
         with suppress(Exception):
             self.update()

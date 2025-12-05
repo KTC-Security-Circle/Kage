@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from views.tasks.components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
+from views.theme import get_grey_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -93,7 +94,7 @@ class TaskDetailPanel:
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
                         ft.Text(vm.title, size=16),
-                        ft.Text(getattr(vm, "description", "") or "説明なし", color=ft.Colors.GREY_700),
+                        ft.Text(getattr(vm, "description", "") or "説明なし", color=get_grey_color(700)),
                         ft.Divider(),
                         ft.Row([ft.Text("ステータス:"), self._status_dd]),
                         ft.Row([ft.Text("更新日:"), ft.Text(getattr(vm, "subtitle", ""))]),
@@ -125,7 +126,7 @@ class TaskDetailPanel:
     def _placeholder(self) -> ft.Control:
         return ft.Container(
             content=ft.Column(
-                [ft.Text("タスクを選択して詳細を表示", color=ft.Colors.GREY_600)],
+                [ft.Text("タスクを選択して詳細を表示", color=get_grey_color(600))],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),

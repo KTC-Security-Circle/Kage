@@ -24,6 +24,7 @@ from logic.application.memo_application_service import MemoApplicationService
 from models import MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import Header, HeaderButtonData
+from views.theme import get_error_color, get_outline_color, get_text_secondary_color
 
 from .components.create_form import CreateForm, FormCallbacks
 
@@ -128,7 +129,7 @@ class CreateMemoView(BaseView):
                         content=right,
                         width=320,
                         padding=ft.padding.only(left=12, top=12, bottom=12),
-                        border=ft.border.only(left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+                        border=ft.border.only(left=ft.BorderSide(1, get_outline_color())),
                     ),
                 ],
                 expand=True,
@@ -181,7 +182,7 @@ class CreateMemoView(BaseView):
                 content=ft.Column(
                     [
                         ft.Text("タグ", weight=ft.FontWeight.BOLD),
-                        ft.Text("タグ機能は後続で統合予定", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                        ft.Text("タグ機能は後続で統合予定", size=12, color=get_text_secondary_color()),
                     ],
                     spacing=6,
                 ),
@@ -238,7 +239,7 @@ class CreateMemoView(BaseView):
 
     def _handle_save(self) -> None:
         if not self._can_save():
-            self.show_snack_bar("内容を入力してください", bgcolor=ft.Colors.ERROR)
+            self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
             return
         title = self.state_local.title.strip() or "無題のメモ"
         content = self.state_local.content.strip()

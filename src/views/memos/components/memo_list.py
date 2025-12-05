@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from views.memos import presenter
+from views.theme import get_outline_color, get_text_secondary_color
 
 from .memo_card import MemoCard
 
@@ -70,11 +71,11 @@ class MemoCardList(ft.Column):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Icon(ft.Icons.NOTE_ADD, size=_EMPTY_ICON_SIZE, color=ft.Colors.OUTLINE),
+                    ft.Icon(ft.Icons.NOTE_ADD, size=_EMPTY_ICON_SIZE, color=get_outline_color()),
                     ft.Text(
                         self.empty_message,
-                        style=ft.TextThemeStyle.BODY_LARGE,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
+                        theme_style=ft.TextThemeStyle.BODY_LARGE,
+                        color=get_text_secondary_color(),
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],

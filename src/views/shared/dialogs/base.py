@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import flet as ft
 from loguru import logger
 
-from views.theme import BORDER_RADIUS, SPACING, get_dark_color, get_light_color
+from views.theme import BORDER_RADIUS, SPACING, get_dark_color, get_error_color, get_light_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -114,7 +114,7 @@ class BaseDialog(ft.AlertDialog, ABC):
             # TODO: titleのcolorプロパティ設定は統合フェーズで対応
 
         # 影とボーダーの設定
-        self.surface_tint_color = ft.Colors.TRANSPARENT
+        self.surface_tint_color = ft.Colors.TRANSPARENT  # Transparent is theme-independent
         self.elevation = 24
 
     def _setup_keyboard_handling(self) -> None:
@@ -282,7 +282,7 @@ class BaseFormDialog(BaseDialog):
             self.page.open(
                 ft.SnackBar(
                     content=ft.Text(error_messages),
-                    bgcolor=ft.Colors.ERROR,
+                    bgcolor=get_error_color(),
                 )
             )
             if hasattr(self.page, "update"):

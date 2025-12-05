@@ -20,7 +20,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -30,6 +29,7 @@ from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
 
+from .components import TaskEmptyState, TaskNoSelection, TaskStatusTabs
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
 from .components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
 from .components.task_card import TaskCardData
@@ -68,16 +68,23 @@ class TasksView(BaseView):
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
         )
 
-        self._tabs: ft.Tabs | None = None
         self._current_vm: list[TaskCardVM] = []
         # Components
+        self._status_tabs: TaskStatusTabs | None = None
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
-        self._detail_comp = TaskDetailPanel(
-            DetailPanelProps(on_status_change=self._on_status_change, on_edit=self._on_edit_task)
-        )
+        self._detail_panel = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
+        self._no_selection = TaskNoSelection()
+        self._empty_state = TaskEmptyState(on_create=self._open_create_dialog)
         logger.info("TasksView initialized with ApplicationService")
-        # 初期描画データ
-        self._controller.refresh()
+
+        # 初期描画データ（エラーハンドリング付き）
+        try:
+            self._controller.refresh()
+            logger.debug(f"TasksView: 初期データ読み込み完了 ({len(self._current_vm)}件)")
+        except Exception as e:
+            logger.error(f"TasksView: 初期データ読み込みエラー: {e}")
+            # エラーが発生しても空状態で画面を表示する
+            self._current_vm = []
 
     # BaseView から呼ばれる
     def build_content(self) -> ft.Control:
@@ -108,25 +115,14 @@ class TasksView(BaseView):
             ],
         )
 
-        # タブ (React テンプレート準拠) - 各ステータス件数をバッジ表示
+        # タブコンポーネント
         counts = self._safe_get_counts()
-        # タブ: 先頭に「すべて」を追加し単一ソースに統一（status=None を表す）
-        total = 0
-        try:
-            total = self._controller.get_total_count()
-        except Exception:
-            total = len(self._current_vm)
-        self._tab_keys: list[str | None] = [None, *STATUS_ORDER]  # 0番目は None (=すべて)
-        tab_texts: list[str] = [f"すべて ({total})"] + [
-            f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})" for status in STATUS_ORDER
-        ]
-        self._tabs = ft.Tabs(
-            selected_index=self._current_tab_index(),
-            tabs=[ft.Tab(text=t) for t in tab_texts],
-            on_change=self._on_tabs_change,
-            expand=True,
+
+        self._status_tabs = TaskStatusTabs(
+            on_tab_change=self._on_tab_status_change,
+            active_status=self._controller.state.status,
+            tab_counts=counts,
         )
-        tabs_list = ft.Row([self._tabs], spacing=0)
 
         # 左: 一覧 / 右: 詳細 (components)
         self._render_items(self._current_vm)
@@ -139,7 +135,7 @@ class TasksView(BaseView):
                     padding=ft.padding.only(right=12),
                 ),
                 ft.Container(
-                    content=self._detail_comp.control,
+                    content=self._detail_panel.control,
                     col={"xs": 12, "lg": 7},
                 ),
             ],
@@ -150,7 +146,7 @@ class TasksView(BaseView):
         controls = ft.Column(
             controls=[
                 header,
-                tabs_list,
+                self._status_tabs,
                 ft.Divider(),
                 grid,
             ],
@@ -222,6 +218,12 @@ class TasksView(BaseView):
 
     def _render_items(self, items: list[TaskCardVM]) -> None:
         """ListViewへアイテムを反映。"""
+        # 空状態の場合はTaskListに空カードリストを渡す
+        if not items:
+            self._list_comp.set_cards([])
+            logger.debug("TasksView: タスクリストが空です")
+            return
+
         # TaskCardDataへ変換し子コンポーネントへ渡す（MemoCardパターン踏襲）
         cards: list[TaskCardData] = []
         selected = self._controller.state.selected_id
@@ -247,7 +249,9 @@ class TasksView(BaseView):
         """選択タスク詳細を右ペインに表示する。"""
         # Presenter で詳細用VMに昇格させてから渡す
         dvm = to_detail_from_card(vm)
-        self._detail_comp.set_item(dvm)
+
+        # 詳細パネルを表示
+        self._detail_panel.set_item(dvm)
         logger.debug("detail set: id={} title='{}' status={}", vm.id, vm.title, vm.status)
         self._controller.set_selected(vm.id)
 
@@ -260,42 +264,20 @@ class TasksView(BaseView):
         except Exception:
             return {s: self._count_by_status(s) for s in STATUS_ORDER}
 
-    def _current_tab_index(self) -> int:
-        try:
-            status = self._controller.state.status
-            if not status:
-                return 0
-            return 1 + STATUS_ORDER.index(status)
-        except Exception:
-            return 0
-
     def _refresh_tabs_badges(self) -> None:
-        if not self._tabs:
+        if not self._status_tabs:
             return
         counts = self._safe_get_counts()
-        # 先頭（すべて）
-        total = 0
-        try:
-            total = self._controller.get_total_count()
-        except Exception:
-            total = len(self._current_vm)
-        if len(self._tabs.tabs) > 0:
-            self._tabs.tabs[0].text = f"すべて ({total})"
-        # 残りステータス
-        for i, status in enumerate(STATUS_ORDER, start=1):
-            if i < len(self._tabs.tabs):
-                self._tabs.tabs[i].text = f"{TASK_STATUS_LABELS.get(status, status)} ({counts.get(status, 0)})"
-        with contextlib.suppress(AssertionError):
-            self._tabs.update()
+        self._status_tabs.update_counts(counts)
         # TODO: 大量件数時は counts を Controller 側の集計キャッシュから取得し、頻度を制御 (レート制限)。
 
-    def _on_tabs_change(self, e: ft.ControlEvent) -> None:
-        """タブ選択変更時のハンドラー。"""
-        idx = e.control.selected_index
-        if idx < 0 or idx >= len(self._tab_keys):
-            return
-        new_status = self._tab_keys[idx]
-        self._controller.set_status(new_status)
+    def _on_tab_status_change(self, status: str | None) -> None:
+        """タブステータス変更時のコールバック。
+
+        Args:
+            status: 新しいステータス（Noneは「すべて」）
+        """
+        self._controller.set_status(status)
         self.safe_update()
 
     def get_state_snapshot(self) -> TasksState:

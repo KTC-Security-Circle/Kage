@@ -13,8 +13,8 @@
 
 【設計上の特徴】
 - MemoCardDataを受け取る設計（データと表示の完全分離）
+- 共通カードコンポーネント（views.shared.components.card）を使用
 - このファイル内でデータクラスと専用定数を定義（凝集度向上）
-- 内部状態は最小限（表示に必要なデータのみ）
 - 純粋な表示コンポーネント（副作用なし）
 
 【使用例】
@@ -37,12 +37,7 @@ from typing import TYPE_CHECKING, Final
 
 import flet as ft
 
-from .shared.constants import (
-    CARD_BORDER_RADIUS,
-    CARD_PADDING,
-    DEFAULT_BORDER_WIDTH,
-    SELECTED_BORDER_WIDTH,
-)
+from views.shared.components import Card, CardBadgeData, CardData, CardMetadataData
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -61,6 +56,12 @@ MAX_CONTENT_LINES: Final[int] = 3
 
 DEFAULT_MEMO_TITLE: Final[str] = "無題のメモ"
 """タイトルが空の場合のデフォルト値（MemoCard専用）"""
+
+LINE_HEIGHT_PX: Final[int] = 20
+"""Markdownコンテンツの1行あたりの高さ（ピクセル単位、MemoCard専用）"""
+
+MAX_CONTENT_HEIGHT_PX: Final[int] = 80
+"""Markdownコンテンツ表示の最大高さ（ピクセル単位、MemoCard専用）"""
 
 
 # ========================================
@@ -114,142 +115,42 @@ class MemoCardData:
 # ========================================
 
 
-class MemoCard(ft.Container):
+class MemoCard(Card):
     """メモカード表示コンポーネント
 
+    共通カードコンポーネントを継承し、メモ専用のデータ変換を行う。
     整形済みのMemoCardDataを受け取り、視覚的なカードUIを構築する。
-    データ変換やフォーマットはPresenterで完了している前提。
     """
 
     def __init__(
         self,
         data: MemoCardData,
-        *,
-        max_content_lines: int = MAX_CONTENT_LINES,
     ) -> None:
         """メモカードを初期化。
 
         Args:
             data: 表示用データ（整形済み）
-            max_content_lines: コンテンツの最大表示行数
         """
-        self._card_data = data
-        self.max_content_lines = max_content_lines
-
-        super().__init__(
-            content=self._build_card_content(),
-            padding=ft.padding.all(CARD_PADDING),
-            margin=ft.margin.symmetric(vertical=4),
-            border_radius=CARD_BORDER_RADIUS,
-            border=ft.border.all(
-                width=SELECTED_BORDER_WIDTH if data.is_selected else DEFAULT_BORDER_WIDTH,
-                color=ft.Colors.BLUE_400 if data.is_selected else ft.Colors.OUTLINE,
-            ),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER if data.is_selected else ft.Colors.SURFACE,
-            on_click=self._handle_click if data.on_click else None,
-            ink=True,
-            key=str(data.memo_id),
-        )
-
-    def _build_card_content(self) -> ft.Control:
-        """カードの内容を構築（純粋なUI組み立て）。
-
-        Returns:
-            構築されたコントロール
-        """
-        # ヘッダー（タイトル + 選択インジケーター）
-        header_controls: list[ft.Control] = [
-            ft.Text(
-                self._card_data.title,
-                style=ft.TextThemeStyle.TITLE_MEDIUM,
-                weight=ft.FontWeight.BOLD,
-                max_lines=1,
-                overflow=ft.TextOverflow.ELLIPSIS,
-                expand=True,
-            ),
-        ]
-
-        if self._card_data.is_selected:
-            header_controls.append(
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.BLUE_400, size=20),
+        # MemoCardDataをCardDataに変換
+        card_data = CardData(
+            title=data.title,
+            description=data.content_preview,
+            badge=CardBadgeData(
+                text=data.badge_data.text,
+                color=data.badge_data.color,
             )
-
-        header = ft.Row(
-            controls=header_controls,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            if data.badge_data
+            else None,
+            metadata=[
+                CardMetadataData(
+                    icon=ft.Icons.CALENDAR_TODAY,
+                    text=data.formatted_date,
+                ),
+            ],
+            on_click=data.on_click,
+            is_selected=data.is_selected,
         )
 
-        # コンテンツ（既に切り詰め済み）
-        content_text = ft.Text(
-            self._card_data.content_preview,
-            style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            max_lines=self.max_content_lines,
-            overflow=ft.TextOverflow.ELLIPSIS,
-        )
-
-        # フッター（バッジ + 日付）
-        footer_controls = []
-
-        if self._card_data.badge_data:
-            footer_controls.append(self._build_status_badge())
-
-        footer_controls.append(
-            ft.Text(
-                self._card_data.formatted_date,
-                style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-        )
-
-        footer = ft.Row(
-            controls=footer_controls,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            spacing=8,
-        )
-
-        return ft.Column(
-            controls=[header, content_text, footer],
-            spacing=8,
-            tight=True,
-        )
-
-    def _build_status_badge(self) -> ft.Container:
-        """ステータスバッジを構築（データから生成）。
-
-        Returns:
-            バッジコンテナ
-        """
-        if not self._card_data.badge_data:
-            return ft.Container()
-
-        badge = self._card_data.badge_data
-
-        content: ft.Control
-        if badge.icon:
-            content = ft.Row(
-                controls=[
-                    ft.Icon(badge.icon, size=12),
-                    ft.Text(badge.text, size=10, weight=ft.FontWeight.BOLD),
-                ],
-                spacing=4,
-                tight=True,
-            )
-        else:
-            content = ft.Text(badge.text, size=10, weight=ft.FontWeight.BOLD)
-
-        return ft.Container(
-            content=content,
-            padding=ft.padding.symmetric(horizontal=8, vertical=2),
-            bgcolor=badge.color,
-            border_radius=12,
-        )
-
-    def _handle_click(self, _: ft.ControlEvent) -> None:
-        """クリックイベントをコールバックに委譲。
-
-        Args:
-            _: Fletのイベントオブジェクト（未使用）
-        """
-        if self._card_data.on_click:
-            self._card_data.on_click()
+        # 共通カードコンポーネントを初期化
+        super().__init__(data=card_data)
+        self.key = str(data.memo_id)

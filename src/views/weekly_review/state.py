@@ -6,6 +6,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Literal
+
+from models import TaskRead
+from views.weekly_review.components import MemoAction, RecommendationData, ZombieTaskAction
 
 
 class ReviewStep(Enum):
@@ -40,6 +44,27 @@ class WeeklyStats:
     completed_last_week: int
 
 
+@dataclass
+class ZombieTaskReviewItem:
+    """UI 表示用のゾンビタスク情報"""
+
+    id: str
+    title: str
+    reason: str
+    stale_days: int
+
+
+@dataclass
+class MemoReviewItem:
+    """UI 表示用の未処理メモ情報"""
+
+    id: str
+    title: str
+    content: str
+    suggestion: str | None = None
+    recommended_route: Literal["task", "reference", "someday", "discard"] | None = None
+
+
 def _get_week_start() -> datetime:
     """今週の開始日（月曜日）を取得
 
@@ -69,8 +94,11 @@ class WeeklyReviewState:
     """
 
     # レビューウィザード状態
-    current_step: ReviewStep = ReviewStep.OVERVIEW
+    current_step: int = 1  # 1: 成果, 2: 整理, 3: 計画
+    total_steps: int = 3
     wizard_active: bool = False
+    has_started: bool = False
+    data_loaded: bool = False
 
     # チェックリスト状態
     checklist: list[ChecklistItem] = field(
@@ -87,6 +115,22 @@ class WeeklyReviewState:
 
     # 統計データ
     stats: WeeklyStats | None = None
+    highlights_intro: str | None = None
+
+    # ユーザーの意思決定記録 (Step2)
+    zombie_task_decisions: dict[str, ZombieTaskAction] = field(default_factory=dict)
+    memo_decisions: dict[str, MemoAction] = field(default_factory=dict)
+
+    # Step1: 成果データ
+    completed_tasks_this_week: list[TaskRead] = field(default_factory=list)
+    achievement_highlights: list[str] = field(default_factory=list)
+
+    # Step2: 整理データ
+    zombie_tasks: list[ZombieTaskReviewItem] = field(default_factory=list)
+    unprocessed_memos: list[MemoReviewItem] = field(default_factory=list)
+
+    # Step3: 計画データ
+    recommendations: list[RecommendationData] = field(default_factory=list)
 
     # 期間設定
     current_week_start: datetime = field(default_factory=lambda: _get_week_start())
@@ -147,3 +191,53 @@ class WeeklyReviewState:
         start_str = self.current_week_start.strftime("%Y/%m/%d")
         end_str = self.current_week_end.strftime("%Y/%m/%d")
         return f"{start_str} - {end_str}"
+
+    def next_step(self) -> None:
+        """次のステップへ進む"""
+        if self.current_step < self.total_steps:
+            self.current_step += 1
+
+    def prev_step(self) -> None:
+        """前のステップへ戻る"""
+        if self.current_step > 1:
+            self.current_step -= 1
+
+    def set_zombie_task_decision(self, task_id: str, action: ZombieTaskAction) -> None:
+        """ゾンビタスクの意思決定を記録
+
+        Args:
+            task_id: タスクID
+            action: 選択されたアクション
+        """
+        self.zombie_task_decisions[task_id] = action
+
+    def set_memo_decision(self, memo_id: str, action: MemoAction) -> None:
+        """メモの意思決定を記録
+
+        Args:
+            memo_id: メモID
+            action: 選択されたアクション
+        """
+        self.memo_decisions[memo_id] = action
+
+    def get_zombie_task_decision(self, task_id: str) -> ZombieTaskAction:
+        """ゾンビタスクの意思決定を取得
+
+        Args:
+            task_id: タスクID
+
+        Returns:
+            選択されたアクション (なければNone)
+        """
+        return self.zombie_task_decisions.get(task_id)
+
+    def get_memo_decision(self, memo_id: str) -> MemoAction:
+        """メモの意思決定を取得
+
+        Args:
+            memo_id: メモID
+
+        Returns:
+            選択されたアクション (なければNone)
+        """
+        return self.memo_decisions.get(memo_id)

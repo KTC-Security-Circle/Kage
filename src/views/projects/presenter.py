@@ -9,8 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import flet as ft
-
 from models import ProjectStatus
 
 if TYPE_CHECKING:
@@ -166,13 +164,15 @@ def _project_to_card_vm(project: dict[str, str]) -> ProjectCardVM:
     progress_value = (completed_count / task_count) if task_count > 0 else 0.0
     progress_text = f"{completed_count}/{task_count} タスク完了"
 
-    # 表示用の値（ステータス色はドメイン層から取得）
+    # 表示用の値（ステータス色は theme.py から取得）
+    from views.theme import get_status_color
+
     subtitle = f"{project.get('created_at', '')} 作成"
     try:
-        status_enum = ProjectStatus.parse(status)
-        status_color = ProjectStatus.get_color(status_enum)
+        ProjectStatus.parse(status)  # Validate status
+        status_color = get_status_color(status)
     except ValueError:
-        status_color = ft.Colors.GREY
+        status_color = get_status_color("on_hold")
 
     # 説明文の省略（カード表示用）
     max_desc_length = 80
@@ -225,12 +225,14 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     raw_due = project.get("due_date")
     due_date = None if raw_due in (None, "") else str(raw_due)
 
-    # 表示用の値（ステータス色はドメイン層から取得）
+    # 表示用の値（theme.py を使用）
+    from views.theme import get_status_color
+
     try:
-        status_enum = ProjectStatus.parse(status)
-        status_color = ProjectStatus.get_color(status_enum)
+        ProjectStatus.parse(status)  # Validate status
+        status_color = get_status_color(status)
     except ValueError:
-        status_color = ft.Colors.GREY
+        status_color = get_status_color("on_hold")
 
     return ProjectDetailVM(
         id=project_id,
@@ -276,13 +278,15 @@ def _project_read_to_card_vm(project: ProjectRead) -> ProjectCardVM:  # type: ig
     created_at = str(getattr(project, "created_at", ""))
     subtitle = f"{created_at} 作成" if created_at else "作成日不明"
 
-    # ステータス表示（ドメイン層のメソッドを使用）
+    # ステータス表示（theme.py を使用）
+    from views.theme import get_status_color
+
     if isinstance(status_enum, ProjectStatus):
         status_display = ProjectStatus.display_label(status_enum)
-        status_color = ProjectStatus.get_color(status_enum)
+        status_color = get_status_color(status_display)
     else:
         status_display = str(status_enum)
-        status_color = ft.Colors.GREY
+        status_color = get_status_color("on_hold")
 
     # 説明文の省略（カード表示用）
     max_desc_length = 80
@@ -332,13 +336,15 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
     due_date_raw = getattr(project, "due_date", None)
     due_date = None if due_date_raw in (None, "") else str(due_date_raw)
 
-    # ステータス表示（ドメイン層のメソッドを使用）
+    # ステータス表示（theme.py を使用）
+    from views.theme import get_status_color
+
     if isinstance(status_enum, ProjectStatus):
         status_display = ProjectStatus.display_label(status_enum)
-        status_color = ProjectStatus.get_color(status_enum)
+        status_color = get_status_color(status_display)
     else:
         status_display = str(status_enum)
-        status_color = ft.Colors.GREY
+        status_color = get_status_color("on_hold")
 
     return ProjectDetailVM(
         id=project_id,

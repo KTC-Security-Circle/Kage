@@ -93,15 +93,16 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
 
     def _generate_highlights(self, state: HighlightsState) -> dict[str, object]:
         chain = self._create_chain()
-        self._logger.debug(
-            "HighlightsAgent state summaries=%s tone=%s", state["completed_task_summaries"], state["tone_hint"]
-        )
+        debug_msg = f"Generating highlights for summaries: {state['completed_task_summaries']} with tone hint: {state['tone_hint']}"  # noqa: E501
+        self._logger.debug(debug_msg)
         summary_text = "\n".join(f"- {line}" for line in state["completed_task_summaries"])
         response = chain.invoke({"task_summaries": summary_text, "tone_hint": state["tone_hint"]})
-        self._logger.debug("HighlightsAgent raw response: %s", response)
+        debug_msg = f"HighlightsAgent raw response: {response}"
+        self._logger.debug(debug_msg)
         output = self.validate_output(response, HighlightsAgentOutput)
         if isinstance(output, AgentError):
-            self._logger.warning("HighlightsAgent validation error: %s", output)
+            debug_msg = f"HighlightsAgent validation error: {output}"
+            self._logger.warning(debug_msg)
             return {"error": output}
         return {"intro": output.intro, "bullets": output.bullets}
 

@@ -108,13 +108,16 @@ class ZombieSuggestionAgent(BaseAgent[ZombieTaskState, ZombieAgentResult]):
 
     def _suggest_actions(self, state: ZombieTaskState) -> dict[str, object]:
         chain = self._chain()
-        self._logger.debug("ZombieAgent state tasks=%s tone=%s", state["tasks"], state["tone_hint"])
+        debug_msg = f"Suggesting actions for tasks: {state['tasks']} with tone hint: {state['tone_hint']}"
+        self._logger.debug(debug_msg)
         task_text = "\n".join(f"- {task['title']}: {task['summary']}" for task in state["tasks"])
         response = chain.invoke({"tasks": task_text, "tone_hint": state["tone_hint"]})
-        self._logger.debug("ZombieAgent raw response: %s", response)
+        debug_msg = f"ZombieAgent raw response: {response}"
+        self._logger.debug(debug_msg)
         output = self.validate_output(response, ZombieAgentOutput)
         if isinstance(output, AgentError):
-            self._logger.warning("ZombieAgent validation error: %s", output)
+            debug_msg = f"ZombieAgent validation error: {output}"
+            self._logger.warning(debug_msg)
             return {"error": output}
         return {"tasks": output.tasks}
 

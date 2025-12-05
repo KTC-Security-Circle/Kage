@@ -49,6 +49,7 @@ from settings.models import (
     EditableUserSettings,
     EditableWindowSettings,
 )
+from settings.utils import parse_detail_level
 
 from .query import SettingsQuery  # noqa: TC001 - Runtime dependency
 from .state import SettingsSnapshot, SettingsViewState
@@ -125,11 +126,17 @@ class SettingsController:
                 ),
                 memo_to_task_prompt=EditableMemoToTaskPromptSettings(
                     custom_instructions=str(memo_prompt_data.get("custom_instructions", "")),
-                    detail_level=self._parse_detail_level(memo_prompt_data.get("detail_level")),
+                    detail_level=parse_detail_level(
+                        memo_prompt_data.get("detail_level"),
+                        default=AgentDetailLevel.BALANCED,
+                    ),
                 ),
                 review_prompt=EditableReviewPromptSettings(
                     custom_instructions=str(review_prompt_data.get("custom_instructions", "")),
-                    detail_level=self._parse_detail_level(review_prompt_data.get("detail_level")),
+                    detail_level=parse_detail_level(
+                        review_prompt_data.get("detail_level"),
+                        default=AgentDetailLevel.BALANCED,
+                    ),
                 ),
             )
 

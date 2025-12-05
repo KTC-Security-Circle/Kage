@@ -6,10 +6,10 @@ from typing import cast
 
 from agents.agent_conf import LLMProvider
 from agents.task_agents.review_copilot.agent import ReviewCopilotAgent
-from agents.task_agents.review_copilot.highlights_agent import HighlightBullet
-from agents.task_agents.review_copilot.memo_audit_agent import MemoAuditOutputItem
-from agents.task_agents.review_copilot.zombie_agent import ZombieAction, ZombieTaskOutput
-from models import CompletedTaskDigest, MemoAuditDigest, ZombieTaskDigest
+from agents.task_agents.review_copilot.highlights_agent import HighlightBullet, ReviewHighlightsAgent
+from agents.task_agents.review_copilot.memo_audit_agent import MemoAuditOutputItem, MemoAuditSuggestionAgent
+from agents.task_agents.review_copilot.zombie_agent import ZombieAction, ZombieSuggestionAgent, ZombieTaskOutput
+from models import CompletedTaskDigest, MemoAuditDigest, MemoRead, TaskRead, ZombieTaskDigest
 from settings.models import AgentDetailLevel
 
 
@@ -72,9 +72,9 @@ def test_review_copilot_attaches_prompt_overrides() -> None:
     highlights_stub = _StubHighlightsAgent()
     zombie_stub = _StubZombieAgent()
     memo_stub = _StubMemoAgent()
-    agent._highlights_agent = cast("object", highlights_stub)
-    agent._zombie_agent = cast("object", zombie_stub)
-    agent._memo_agent = cast("object", memo_stub)
+    agent._highlights_agent = cast("ReviewHighlightsAgent", highlights_stub)
+    agent._zombie_agent = cast("ZombieSuggestionAgent", zombie_stub)
+    agent._memo_agent = cast("MemoAuditSuggestionAgent", memo_stub)
 
     agent.build_highlights([_sample_completed_digest()])
     agent.build_zombie_suggestions([_sample_zombie_digest()], zombie_threshold_days=7)

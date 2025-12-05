@@ -354,20 +354,18 @@ class SettingsService(ServiceBase):
                 device=device,
             )
 
-            def _parse_detail_level_with_label(raw: object, field_label: str) -> AgentDetailLevel:
-                value = parse_detail_level(raw, default=AgentDetailLevel.BALANCED)
-                # 入力が不正だった場合でも parse_detail_level は default を返すため、
-                # フィールドごとのユーザ向けエラーメッセージを出したい場合は別途検証が必要。
-                return value
+            def _parse_detail_level_value(raw: object) -> AgentDetailLevel:
+                # 入力が不正だった場合でも default を返す共通ロジックを使用する。
+                return parse_detail_level(raw, default=AgentDetailLevel.BALANCED)
 
             memo_prompt = agent.get("memo_to_task_prompt", {}) or {}
             editable.agents.memo_to_task_prompt = EditableMemoToTaskPromptSettings(
                 custom_instructions=str(memo_prompt.get("custom_instructions", "")).strip(),
-                detail_level=_parse_detail_level_with_label(memo_prompt.get("detail_level"), "MemoToTaskの生成粒度"),
+                detail_level=_parse_detail_level_value(memo_prompt.get("detail_level")),
             )
 
             review_prompt = agent.get("review_prompt", {}) or {}
             editable.agents.review_prompt = EditableReviewPromptSettings(
                 custom_instructions=str(review_prompt.get("custom_instructions", "")).strip(),
-                detail_level=_parse_detail_level_with_label(review_prompt.get("detail_level"), "レビュー生成粒度"),
+                detail_level=_parse_detail_level_value(review_prompt.get("detail_level")),
             )

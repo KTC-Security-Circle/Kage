@@ -139,108 +139,18 @@ class MemoCard(Card):
                 text=data.badge_data.text,
                 color=data.badge_data.color,
             )
-# <<<<<<< 217-fix-ColorSettingsForTheEntireDesign
-#             if data.badge_data
-#             else None,
-#             metadata=[
-#                 CardMetadataData(
-#                     icon=ft.Icons.CALENDAR_TODAY,
-#                     text=data.formatted_date,
-#                 ),
-#             ],
-#             on_click=data.on_click,
-#             is_selected=data.is_selected,
-#         )
+            if data.badge_data
+            else None,
+            metadata=[
+                CardMetadataData(
+                    icon=ft.Icons.CALENDAR_TODAY,
+                    text=data.formatted_date,
+                ),
+            ],
+            on_click=data.on_click,
+            is_selected=data.is_selected,
+        )
 
-#         # 共通カードコンポーネントを初期化
-#         super().__init__(data=card_data)
-#         self.key = str(data.memo_id)
-# =======
-
-#         header = ft.Row(
-#             controls=header_controls,
-#             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-#         )
-
-#         # コンテンツ（Markdownレンダリング、コンテンツ量に応じた高さ）
-#         line_count = self._card_data.content_preview.count("\n") + 1
-#         content_height = min(max(line_count * LINE_HEIGHT_PX, LINE_HEIGHT_PX), MAX_CONTENT_HEIGHT_PX)
-
-#         content_display = ft.Container(
-#             content=ft.Markdown(
-#                 value=self._card_data.content_preview,
-#                 selectable=False,
-#                 extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-#                 on_tap_link=lambda _: None,
-#                 fit_content=True,
-#             ),
-#             height=content_height,
-#             clip_behavior=ft.ClipBehavior.HARD_EDGE,
-#         )
-
-#         # フッター（バッジ + 日付）
-#         footer_controls = []
-
-#         if self._card_data.badge_data:
-#             footer_controls.append(self._build_status_badge())
-
-#         footer_controls.append(
-#             ft.Text(
-#                 self._card_data.formatted_date,
-#                 style=ft.TextThemeStyle.BODY_SMALL,
-#                 color=ft.Colors.ON_SURFACE_VARIANT,
-#             ),
-#         )
-
-#         footer = ft.Row(
-#             controls=footer_controls,
-#             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-#             spacing=8,
-#         )
-
-#         return ft.Column(
-#             controls=[header, content_display, footer],
-#             spacing=8,
-#             tight=True,
-#         )
-
-#     def _build_status_badge(self) -> ft.Container:
-#         """ステータスバッジを構築（データから生成）。
-
-#         Returns:
-#             バッジコンテナ
-#         """
-#         if not self._card_data.badge_data:
-#             return ft.Container()
-
-#         badge = self._card_data.badge_data
-
-#         content: ft.Control
-#         if badge.icon:
-#             content = ft.Row(
-#                 controls=[
-#                     ft.Icon(badge.icon, size=12),
-#                     ft.Text(badge.text, size=10, weight=ft.FontWeight.BOLD),
-#                 ],
-#                 spacing=4,
-#                 tight=True,
-#             )
-#         else:
-#             content = ft.Text(badge.text, size=10, weight=ft.FontWeight.BOLD)
-
-#         return ft.Container(
-#             content=content,
-#             padding=ft.padding.symmetric(horizontal=8, vertical=2),
-#             bgcolor=badge.color,
-#             border_radius=12,
-#         )
-
-#     def _handle_click(self, _: ft.ControlEvent) -> None:
-#         """クリックイベントをコールバックに委譲。
-
-#         Args:
-#             _: Fletのイベントオブジェクト（未使用）
-#         """
-#         if self._card_data.on_click:
-#             self._card_data.on_click()
-# >>>>>>> main
+        # 共通カードコンポーネントを初期化
+        super().__init__(data=card_data)
+        self.key = str(data.memo_id)

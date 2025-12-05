@@ -425,14 +425,12 @@ def build_detail_metadata(created_text: str, updated_text: str) -> ft.Control:
 
 def build_detail_actions(
     *,
-    on_ai_suggestion: Callable,
     on_edit: Callable,
     on_delete: Callable,
 ) -> ft.Control:
     """詳細パネルのアクションボタンを構築する。
 
     Args:
-        on_ai_suggestion: AI提案ボタンのコールバック
         on_edit: 編集ボタンのコールバック
         on_delete: 削除ボタンのコールバック
 
@@ -441,18 +439,6 @@ def build_detail_actions(
     """
     return ft.Row(
         controls=[
-            ft.ElevatedButton(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.AUTO_AWESOME, size=16, color=get_on_primary_color()),
-                        ft.Text("AI提案", color=get_on_primary_color()),
-                    ],
-                    spacing=8,
-                    tight=True,
-                ),
-                bgcolor=get_primary_color(),
-                on_click=on_ai_suggestion,
-            ),
             ft.Container(expand=True),
             ft.IconButton(
                 icon=ft.Icons.EDIT_OUTLINED,

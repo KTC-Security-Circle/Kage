@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import flet as ft
 
-from views.theme import get_text_secondary_color
-
 
 def render_markdown_preview(markdown: str) -> ft.Control:
     """Markdownプレビューを生成する。
@@ -23,7 +21,7 @@ def render_markdown_preview(markdown: str) -> ft.Control:
     Returns:
         レンダリングされたMarkdownコントロール
     """
-    if not markdown.strip()
+    if not markdown.strip():
         return ft.Text(
             "プレビューはこちらに表示されます",
             color=ft.Colors.ON_SURFACE_VARIANT,

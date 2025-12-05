@@ -69,6 +69,8 @@ class ProjectsView(BaseView):
         self._project_list: ProjectCardList | None = None
         self._detail_panel: ProjectDetailPanel | ProjectNoSelection | None = None
         self._status_tabs: ProjectStatusTabs | None = None
+        # 詳細パネル用のコンテナを保持（内容を動的に更新するため）
+        self._detail_container: ft.Container | None = None
 
     def build_content(self) -> ft.Control:
         """プロジェクト画面のコンテンツを構築する。
@@ -76,7 +78,6 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクト画面のメインコンテンツ
         """
-
         # Headerコンポーネント (検索と新規作成ボタン)
         header = self.create_header(
             title="プロジェクト",
@@ -108,8 +109,14 @@ class ProjectsView(BaseView):
             on_create=self._create_project,
         )
 
-        # 詳細パネル（初期は未選択状態）
+        # 詳細パネル(初期は未選択状態)
         self._detail_panel = ProjectNoSelection()
+
+        # 詳細パネル用のコンテナを作成
+        self._detail_container = ft.Container(
+            content=self._detail_panel,
+            col={"xs": 12, "lg": 7},
+        )
 
         # 初期データ取得（UIコンポーネント作成後に実行）
         try:
@@ -131,10 +138,7 @@ class ProjectsView(BaseView):
                                 col={"xs": 12, "lg": 5},
                                 padding=ft.padding.only(right=12),
                             ),
-                            ft.Container(
-                                content=self._detail_panel,
-                                col={"xs": 12, "lg": 7},
-                            ),
+                            self._detail_container,
                         ],
                         expand=True,
                     ),
@@ -171,9 +175,10 @@ class ProjectsView(BaseView):
             project: 表示するプロジェクトの詳細ViewModel（None の場合は空表示）
         """
         if project is None:
-            if isinstance(self._detail_panel, ProjectDetailPanel):
-                # 詳細パネルから未選択状態へ切り替え
-                self._detail_panel = ProjectNoSelection()
+            # 詳細パネルから未選択状態へ切り替え
+            self._detail_panel = ProjectNoSelection()
+            if self._detail_container:
+                self._detail_container.content = self._detail_panel
         elif isinstance(self._detail_panel, ProjectDetailPanel):
             # 既存の詳細パネルを更新
             self._detail_panel.update_project(project)
@@ -184,6 +189,11 @@ class ProjectsView(BaseView):
                 on_edit=self._open_edit_dialog,
                 on_delete=self._confirm_delete,
             )
+            if self._detail_container:
+                self._detail_container.content = self._detail_panel
+
+        # コンテナの内容を更新したので再描画
+        self.safe_update()
 
     # ------------------------------------------------------------------
     # 編集 / 削除 ダイアログ操作

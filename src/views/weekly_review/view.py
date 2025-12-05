@@ -45,6 +45,8 @@ from .presenter import WeeklyReviewPresenter
 from .state import WeeklyReviewState
 
 if TYPE_CHECKING:
+    from logic.application.memo_application_service import MemoApplicationService
+    from logic.application.review_application_service import WeeklyReviewApplicationService
     from logic.application.task_application_service import TaskApplicationService
 
 # View step constants
@@ -69,11 +71,15 @@ class WeeklyReviewView(BaseView):
 
         # 依存性注入
         self.task_app_service: TaskApplicationService = props.apps.task
+        self.review_app_service: WeeklyReviewApplicationService = props.apps.review
+        self.memo_app_service: MemoApplicationService = props.apps.memo
 
         # 状態・コントローラー・プレゼンター初期化
         self.review_state = WeeklyReviewState()
         self.controller = WeeklyReviewController(
             task_app_service=self.task_app_service,
+            review_app_service=self.review_app_service,
+            memo_app_service=self.memo_app_service,
             state=self.review_state,
         )
         self.presenter = WeeklyReviewPresenter(state=self.review_state)
@@ -331,12 +337,12 @@ class WeeklyReviewView(BaseView):
                 controls.append(ft.Container(height=12))
 
                 for task in self.review_state.zombie_tasks:
-                    # TODO: 実際のタスクオブジェクトから分析
+                    reason_text = task.reason or "停滞中のタスクです"
                     zombie_data = ZombieTaskData(
-                        task_id=str(task.id),
+                        task_id=task.id,
                         title=task.title,
-                        reason="14日間進捗がありません。",
-                        selected_action=self.review_state.get_zombie_task_decision(str(task.id)),
+                        reason=reason_text,
+                        selected_action=self.review_state.get_zombie_task_decision(task.id),
                     )
                     zombie_card = ZombieTaskCard(
                         props=ZombieTaskCardProps(
@@ -368,13 +374,16 @@ class WeeklyReviewView(BaseView):
                 controls.append(ft.Container(height=12))
 
                 for memo in self.review_state.unprocessed_memos:
-                    # TODO: 実際のメモオブジェクトから分析
+                    suggestion_text = memo.suggestion or self.presenter.generate_memo_analysis(
+                        memo.content,
+                        memo.title,
+                    )
                     memo_data = UnprocessedMemoData(
-                        memo_id=str(memo.id),
+                        memo_id=memo.id,
                         title=memo.title,
                         content=memo.content,
-                        suggestion=self.presenter.generate_memo_analysis(memo.content, memo.title),
-                        selected_action=self.review_state.get_memo_decision(str(memo.id)),
+                        suggestion=suggestion_text,
+                        selected_action=self.review_state.get_memo_decision(memo.id),
                     )
                     memo_card = UnprocessedMemoCard(
                         props=UnprocessedMemoCardProps(
@@ -548,8 +557,7 @@ class WeeklyReviewView(BaseView):
             logger.info("週次レビューの初期データをロード中...")
             self.controller.load_initial_data()
             logger.info("週次レビューの初期データロード完了")
-            # TODO: 実データ取得実装後にリフレッシュ
-            # self._refresh_wizard()
+            self._refresh_wizard()
         except Exception as e:
             logger.exception("週次レビューの初期データ読み込みに失敗")
             self.notify_error("週次レビューデータの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")

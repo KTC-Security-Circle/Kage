@@ -6,8 +6,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Literal
 
-from views.weekly_review.components import MemoAction, ZombieTaskAction
+from models import TaskRead
+from views.weekly_review.components import MemoAction, RecommendationData, ZombieTaskAction
 
 
 class ReviewStep(Enum):
@@ -40,6 +42,27 @@ class WeeklyStats:
     someday_count: int
     active_projects: int
     completed_last_week: int
+
+
+@dataclass
+class ZombieTaskReviewItem:
+    """UI 表示用のゾンビタスク情報"""
+
+    id: str
+    title: str
+    reason: str
+    stale_days: int
+
+
+@dataclass
+class MemoReviewItem:
+    """UI 表示用の未処理メモ情報"""
+
+    id: str
+    title: str
+    content: str
+    suggestion: str | None = None
+    recommended_route: Literal["task", "reference", "someday", "discard"] | None = None
 
 
 def _get_week_start() -> datetime:
@@ -90,21 +113,22 @@ class WeeklyReviewState:
 
     # 統計データ
     stats: WeeklyStats | None = None
+    highlights_intro: str | None = None
 
     # ユーザーの意思決定記録 (Step2)
     zombie_task_decisions: dict[str, ZombieTaskAction] = field(default_factory=dict)
     memo_decisions: dict[str, MemoAction] = field(default_factory=dict)
 
     # Step1: 成果データ
-    completed_tasks_this_week: list = field(default_factory=list)  # タスクリスト
-    achievement_highlights: list[str] = field(default_factory=list)  # ハイライト
+    completed_tasks_this_week: list[TaskRead] = field(default_factory=list)
+    achievement_highlights: list[str] = field(default_factory=list)
 
     # Step2: 整理データ
-    zombie_tasks: list = field(default_factory=list)  # 長期滞留タスク
-    unprocessed_memos: list = field(default_factory=list)  # 未処理メモ
+    zombie_tasks: list[ZombieTaskReviewItem] = field(default_factory=list)
+    unprocessed_memos: list[MemoReviewItem] = field(default_factory=list)
 
     # Step3: 計画データ
-    recommendations: list = field(default_factory=list)  # 来週の推奨事項
+    recommendations: list[RecommendationData] = field(default_factory=list)
 
     # 期間設定
     current_week_start: datetime = field(default_factory=lambda: _get_week_start())

@@ -166,6 +166,9 @@ class WeeklyReviewPresenter:
         Returns:
             成果サマリーメッセージ
         """
+        if self.state.highlights_intro:
+            return self.state.highlights_intro
+
         completed_count = len(self.state.completed_tasks_this_week)
 
         if completed_count == 0:

@@ -532,6 +532,7 @@ class ProjectController:
         project_id = getattr(p, "id", None)
         task_ids: list[str] = []
         completed_count = 0
+        tasks_details: list[dict[str, str]] = []
         if project_id:
             try:
                 from logic.application.task_application_service import TaskApplicationService
@@ -546,6 +547,22 @@ class ProjectController:
                 task_ids = [str(task.id) for task in related_tasks]
                 # 完了タスクをカウント
                 completed_count = sum(1 for task in related_tasks if task.status == TaskStatus.COMPLETED)
+                # タスク詳細を作成
+                tasks_details.extend(
+                    [
+                        {
+                            "id": str(task.id),
+                            "title": str(task.title),
+                            "status": (
+                                task.status.display_label()
+                                if hasattr(task.status, "display_label")
+                                else str(task.status)
+                            ),
+                            "is_completed": str(task.status == TaskStatus.COMPLETED),
+                        }
+                        for task in related_tasks
+                    ]
+                )
             except Exception as e:
                 logger.warning(f"プロジェクト {project_id} の関連タスク取得エラー: {e}")
 
@@ -561,4 +578,5 @@ class ProjectController:
             "task_count": str(len(task_ids)),
             "completed_count": str(completed_count),
             "task_id": task_ids,  # type: ignore[dict-item]
+            "tasks": tasks_details,  # type: ignore[dict-item]
         }

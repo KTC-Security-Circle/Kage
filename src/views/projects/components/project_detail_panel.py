@@ -152,6 +152,29 @@ class ProjectDetailPanel(ft.Column):
             completed = self.project.completed_count
             progress = completed / task_count if task_count > 0 else 0.0
 
+            # タスクリスト項目を作成
+            task_items = [
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(
+                                ft.Icons.CHECK_CIRCLE if task.is_completed else ft.Icons.CIRCLE_OUTLINED,
+                                size=16,
+                                color=get_primary_color() if task.is_completed else get_grey_color(400),
+                            ),
+                            ft.Text(
+                                task.title,
+                                theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                color=get_grey_color(600) if task.is_completed else None,
+                            ),
+                        ],
+                        spacing=8,
+                    ),
+                    padding=ft.padding.symmetric(vertical=4),
+                )
+                for task in self.project.tasks
+            ]
+
             tasks_display = ft.Column(
                 controls=[
                     ft.Row(
@@ -185,6 +208,12 @@ class ProjectDetailPanel(ft.Column):
                         ],
                         spacing=6,
                     ),
+                    ft.Column(
+                        controls=task_items,
+                        spacing=2,
+                    )
+                    if task_items
+                    else ft.Container(),
                 ],
                 spacing=12,
             )

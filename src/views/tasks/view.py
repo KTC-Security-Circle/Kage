@@ -72,7 +72,9 @@ class TasksView(BaseView):
         # Components
         self._status_tabs: TaskStatusTabs | None = None
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
-        self._detail_panel = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
+        self._detail_panel = TaskDetailPanel(
+            DetailPanelProps(on_status_change=self._on_status_change, on_edit=self._on_edit_task)
+        )
         self._no_selection = TaskNoSelection()
         self._empty_state = TaskEmptyState(on_create=self._open_create_dialog)
         logger.info("TasksView initialized with ApplicationService")

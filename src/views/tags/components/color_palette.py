@@ -35,7 +35,7 @@ def create_color_palette(
         ft.Container(
             content=ft.Text(
                 color["name"],
-                style=ft.TextThemeStyle.BODY_SMALL,
+                theme_style=ft.TextThemeStyle.BODY_SMALL,
                 color=get_on_primary_color(),
                 text_align=ft.TextAlign.CENTER,
             ),
@@ -55,7 +55,7 @@ def create_color_palette(
             controls=[
                 ft.Text(
                     "色を選択",
-                    style=ft.TextThemeStyle.TITLE_SMALL,
+                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
                     weight=ft.FontWeight.W_500,
                 ),
                 ft.Container(

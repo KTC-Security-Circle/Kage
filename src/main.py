@@ -31,17 +31,24 @@ def main(page: ft.Page) -> None:
         "default": "/fonts/BIZ_UDGothic/BIZUDGothic-Regular.ttf",
         "bold": "/fonts/BIZ_UDGothic/BIZUDGothic-Bold.ttf",
     }
-    page.theme = ft.Theme(
-        color_scheme_seed=ft.Colors.GREY_700,
-        page_transitions=ft.PageTransitionsTheme(
-            windows=ft.PageTransitionTheme.NONE,
-            linux=ft.PageTransitionTheme.NONE,
-            macos=ft.PageTransitionTheme.NONE,
-            ios=ft.PageTransitionTheme.NONE,
-            android=ft.PageTransitionTheme.NONE,
-        ),
-        font_family="default",
+
+    # theme.py で定義したテーマを使用
+    from views.theme import create_dark_theme, create_light_theme
+
+    page.theme = create_light_theme()
+    page.dark_theme = create_dark_theme()
+
+    # ページトランジションとフォントの設定
+    page.theme.page_transitions = ft.PageTransitionsTheme(
+        windows=ft.PageTransitionTheme.NONE,
+        linux=ft.PageTransitionTheme.NONE,
+        macos=ft.PageTransitionTheme.NONE,
+        ios=ft.PageTransitionTheme.NONE,
+        android=ft.PageTransitionTheme.NONE,
     )
+    page.theme.font_family = "default"
+    page.dark_theme.page_transitions = page.theme.page_transitions
+    page.dark_theme.font_family = "default"
 
     apps = ApplicationServices.create()
 

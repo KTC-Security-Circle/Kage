@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from views.theme import get_grey_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -379,7 +381,7 @@ class ColorFormField(BaseFormField):
                     height=40,
                     bgcolor=self.get_value() or "#ffffff",
                     border_radius=5,
-                    border=ft.border.all(1, ft.Colors.GREY_400),
+                    border=ft.border.all(1, get_grey_color(400)),
                 ),
             ],
             spacing=10,

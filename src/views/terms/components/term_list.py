@@ -21,6 +21,8 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from views.theme import get_outline_color, get_text_secondary_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -100,12 +102,12 @@ class TermList:
                     ft.Icon(
                         ft.Icons.ARTICLE_OUTLINED,
                         size=48,
-                        color=ft.Colors.OUTLINE,
+                        color=get_outline_color(),
                     ),
                     ft.Text(
                         self._props.empty_message,
                         size=16,
-                        color=ft.Colors.OUTLINE,
+                        color=get_text_secondary_color(),
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],

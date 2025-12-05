@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from views.theme import get_surface_variant_color, get_text_secondary_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import date
@@ -96,7 +98,7 @@ class MemoFilters(ft.Container):
         super().__init__(
             content=self._build_filters(),
             padding=ft.padding.all(12),
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
+            bgcolor=get_surface_variant_color(),
             border_radius=8,
             visible=False,  # 初期状態では非表示
         )
@@ -115,7 +117,7 @@ class MemoFilters(ft.Container):
                 controls=[
                     ft.Text(
                         "フィルタ",
-                        style=ft.TextThemeStyle.TITLE_SMALL,
+                        theme_style=ft.TextThemeStyle.TITLE_SMALL,
                         weight=ft.FontWeight.BOLD,
                     ),
                     ft.IconButton(
@@ -182,7 +184,7 @@ class MemoFilters(ft.Container):
 
         return ft.Column(
             controls=[
-                ft.Text("作成日", style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
+                ft.Text("作成日", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 ft.Row(
                     controls=[self._date_from_field, self._date_to_field],
                     spacing=12,
@@ -215,7 +217,7 @@ class MemoFilters(ft.Container):
 
         return ft.Column(
             controls=[
-                ft.Text("AI提案", style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
+                ft.Text("AI提案", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 self._ai_status_dropdown,
             ],
             spacing=8,
@@ -233,11 +235,11 @@ class MemoFilters(ft.Container):
         """
         return ft.Column(
             controls=[
-                ft.Text("タグ", style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
+                ft.Text("タグ", theme_style=ft.TextThemeStyle.BODY_MEDIUM, weight=ft.FontWeight.BOLD),
                 ft.Text(
-                    "タグフィルタは統合フェーズで実装予定",
-                    style=ft.TextThemeStyle.BODY_SMALL,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    "タグフィルターは統合フェーズで実装予定",
+                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                    color=get_text_secondary_color(),
                 ),
             ],
             spacing=8,

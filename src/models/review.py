@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 from uuid import UUID  # noqa: TC003
 
-from pydantic import BaseModel, ConfigDict, Field, FieldValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
     from models import MemoRead, ProjectRead, TaskRead
@@ -76,7 +76,7 @@ class ReviewPeriod(BaseModel):
 
     @field_validator("end")
     @classmethod
-    def _validate_range(cls, end: datetime, info: FieldValidationInfo) -> datetime:
+    def _validate_range(cls, end: datetime, info: ValidationInfo) -> datetime:
         start = info.data.get("start") if info.data is not None else None
         if isinstance(start, datetime) and end < start:
             msg = "end は start 以降である必要があります"

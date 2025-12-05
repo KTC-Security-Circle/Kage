@@ -10,7 +10,7 @@ import flet as ft
 
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog
-from views.theme import SPACING, get_light_color
+from views.theme import SPACING, get_light_color, get_text_secondary_color
 
 from .components.agent_section import AgentSection
 from .components.appearance_section import AppearanceSection
@@ -188,7 +188,7 @@ class SettingsView(BaseView):
                                         ft.Text(
                                             description,
                                             size=14,
-                                            color=ft.Colors.OUTLINE,
+                                            color=get_text_secondary_color(),
                                         ),
                                     ],
                                     spacing=2,

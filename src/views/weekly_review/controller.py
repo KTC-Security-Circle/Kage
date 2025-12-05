@@ -112,10 +112,15 @@ class WeeklyReviewController:
     def _load_completed_tasks(self, items: list[WeeklyReviewHighlightsItem]) -> list[TaskRead]:
         """ハイライトに含まれるタスクIDから TaskRead を読み込む。"""
         tasks: list[TaskRead] = []
-        ordered_ids: dict[UUID, None] = {}
+        seen_ids: set[UUID] = set()
+        ordered_ids: list[UUID] = []
+
+        # 最初の出現順を保持しつつ重複を排除する
         for item in items:
             for task_id in item.source_task_ids:
-                ordered_ids[task_id] = None
+                if task_id not in seen_ids:
+                    seen_ids.add(task_id)
+                    ordered_ids.append(task_id)
 
         for task_id in ordered_ids:
             task = self._safe_get_task(task_id)

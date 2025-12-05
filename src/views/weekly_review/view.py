@@ -567,17 +567,22 @@ class WeeklyReviewView(BaseView):
         self._refresh_flow_content()
 
         def _load() -> None:
-            self.controller.load_initial_data()
+            """レビュー初期データの読み込みと完了後の状態更新を一括で行う。"""
+            try:
+                self.controller.load_initial_data()
+                # 成功時: 読み込み完了フラグを立て、UIを更新
+                self.review_state.data_loaded = True
+                self._refresh_flow_content()
+                self._refresh_wizard()
+            except Exception as e:
+                # 失敗時: 開始状態を巻き戻してスタート画面へ復帰
+                logger.exception("週次レビューデータの取得に失敗")
+                self.notify_error(f"エラーが発生しました: {type(e).__name__}")
+                self.review_state.has_started = False
+                self._refresh_flow_content()
 
+        # 非同期実行であっても、完了後の状態更新は _load 内で行う
         self.with_loading(_load, user_error_message="週次レビューデータの取得に失敗しました")
-
-        if not self.review_state.data_loaded:
-            # エラーなどで読み込めなかった場合はスタート画面へ戻す
-            self.review_state.has_started = False
-        self._refresh_flow_content()
-
-        if self.review_state.data_loaded:
-            self._refresh_wizard()
 
     def _handle_prev_step(self) -> None:
         """前のステップへ戻る"""

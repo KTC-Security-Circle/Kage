@@ -24,6 +24,7 @@ from models import (
     ZombieTaskInsight,
     ZombieTaskSuggestion,
 )
+from settings.models import AgentDetailLevel
 
 POSITIVITY_PREFIX = "お疲れさまです！"
 MEMO_LINE_THRESHOLD = 3
@@ -57,10 +58,14 @@ class ReviewCopilotAgent:
         *,
         model_name: HuggingFaceModel | str | None = None,
         device: str | None = None,
+        prompt_custom_instructions: str = "",
+        prompt_detail_level: AgentDetailLevel = AgentDetailLevel.BALANCED,
         **agent_kwargs: object,
     ) -> None:
         self.provider = provider
         self._logger = agents_logger
+        self._custom_instructions = prompt_custom_instructions.strip()
+        self._detail_hint = self._detail_hint_from_level(prompt_detail_level)
         shared_kwargs = {
             "provider": provider,
             "model_name": model_name,
@@ -92,6 +97,7 @@ class ReviewCopilotAgent:
             ],
             "tone_hint": f"{len(completed)}件の成果を肯定的にまとめる",
         }
+        self._apply_prompt_overrides(cast("dict[str, object]", state))
         try:
             result = self._highlights_agent.invoke(state, thread_id=str(uuid4()))
         except Exception:
@@ -141,6 +147,7 @@ class ReviewCopilotAgent:
             ],
             "tone_hint": f"{zombie_threshold_days}日以上滞留したタスクを整理",
         }
+        self._apply_prompt_overrides(cast("dict[str, object]", state))
         try:
             result = self._zombie_agent.invoke(state, thread_id=str(uuid4()))
         except Exception:
@@ -200,6 +207,7 @@ class ReviewCopilotAgent:
             ],
             "tone_hint": "優先順位づけを助けるフレンドリーな問いかけ",
         }
+        self._apply_prompt_overrides(cast("dict[str, object]", state))
         try:
             result = self._memo_agent.invoke(state, thread_id=str(uuid4()))
         except Exception:
@@ -229,6 +237,25 @@ class ReviewCopilotAgent:
             )
 
         return WeeklyReviewMemoAuditPayload(status="ready", audits=audits)
+
+    def _apply_prompt_overrides(self, state: dict[str, object]) -> None:
+        overrides = self._prompt_overrides()
+        state["detail_hint"] = overrides["detail_hint"]
+        state["custom_instructions"] = overrides["custom_instructions"]
+
+    def _prompt_overrides(self) -> dict[str, str]:
+        return {
+            "detail_hint": self._detail_hint or "バランスよく丁寧にまとめてください。",
+            "custom_instructions": self._custom_instructions or "追加指示はありません。",
+        }
+
+    @staticmethod
+    def _detail_hint_from_level(level: AgentDetailLevel) -> str:
+        if level == AgentDetailLevel.BRIEF:
+            return "要点のみを簡潔に整理してください。"
+        if level == AgentDetailLevel.DETAILED:
+            return "背景や理由も含めて丁寧に説明してください。"
+        return "過不足なくバランスよく表現してください。"
 
     def _build_highlights_fallback(self, completed: list[CompletedTaskDigest]) -> WeeklyReviewHighlightsPayload:
         message = "今週は完了済みタスクが見つからなかったため、自由入力の振り返りをおすすめします。"

@@ -5,6 +5,7 @@ View層からSession管理を分離し、ビジネスロジックを調整する
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, override
 from uuid import uuid4
@@ -282,6 +283,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             memo_id,
             ai_status=AiSuggestionStatus.PENDING,
             memo_status=MemoStatus.ACTIVE if memo.status == MemoStatus.INBOX else None,
+            clear_analysis_log=True,
         )
         queue = get_memo_ai_job_queue()
         return queue.enqueue(updated, callback=self._handle_ai_job_callback)
@@ -297,6 +299,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
 
     def _handle_ai_job_callback(self, snapshot: MemoAiJobSnapshot) -> None:
         if snapshot.status == MemoAiJobStatus.SUCCEEDED:
+            self._persist_ai_snapshot(snapshot)
             self._mark_ai_status(snapshot.memo_id, ai_status=AiSuggestionStatus.AVAILABLE)
         elif snapshot.status == MemoAiJobStatus.FAILED:
             self._mark_ai_status(snapshot.memo_id, ai_status=AiSuggestionStatus.FAILED)
@@ -342,13 +345,39 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         *,
         ai_status: AiSuggestionStatus,
         memo_status: MemoStatus | None = None,
+        clear_analysis_log: bool = False,
     ) -> MemoRead:
         """メモのAIステータスを更新する。"""
+        payload_kwargs: dict[str, Any] = {"ai_suggestion_status": ai_status}
         if memo_status is not None:
-            payload = MemoUpdate(ai_suggestion_status=ai_status, status=memo_status)
-        else:
-            payload = MemoUpdate(ai_suggestion_status=ai_status)
+            payload_kwargs["status"] = memo_status
+        if clear_analysis_log:
+            payload_kwargs["ai_analysis_log"] = None
+        payload = MemoUpdate(**payload_kwargs)
         return self.update(memo_id, payload)
+
+    def _persist_ai_snapshot(self, snapshot: MemoAiJobSnapshot) -> None:
+        tasks_payload = [
+            {
+                "task_id": task.task_id,
+                "title": task.title,
+                "description": task.description,
+                "tags": list(task.tags),
+                "route": task.route,
+                "due_date": task.due_date,
+                "project_title": task.project_title,
+            }
+            for task in snapshot.tasks
+        ]
+        log_payload = {
+            "version": 1,
+            "job_id": str(snapshot.job_id),
+            "generated_at": datetime.now(UTC).isoformat(),
+            "suggested_memo_status": snapshot.suggested_memo_status,
+            "tasks": tasks_payload,
+        }
+        serialized = json.dumps(log_payload, ensure_ascii=False)
+        self.update(snapshot.memo_id, MemoUpdate(ai_analysis_log=serialized))
 
     def search(
         self,

@@ -42,14 +42,18 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+from loguru import logger
 
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 
 if TYPE_CHECKING:
-    from datetime import datetime
-    from uuid import UUID
+    from collections.abc import Iterable
 
 
 @dataclass(slots=True)
@@ -102,6 +106,7 @@ class MemosViewState:
         self.all_memos = list(memos)
         # 一貫性のため、全件からインデックスを再構築
         self._rebuild_index()
+        self._restore_ai_flow_from_iterable(self.all_memos)
 
     def set_search_result(self, query: str, results: list[MemoRead] | None) -> None:
         """検索クエリと結果を保存する。
@@ -112,6 +117,8 @@ class MemosViewState:
         """
         self.search_query = query
         self.search_results = results
+        if results is not None:
+            self._restore_ai_flow_from_iterable(results)
 
     def set_current_tab(self, tab: MemoStatus | None) -> None:
         """アクティブなタブを設定する。
@@ -251,6 +258,74 @@ class MemosViewState:
         state = self.ai_flow_state_for(memo_id)
         return [task for task in state.generated_tasks if task.task_id in state.selected_task_ids]
 
+    def _restore_ai_flow_from_iterable(self, memos: Iterable[MemoRead]) -> None:
+        for memo in memos:
+            self._restore_ai_flow_from_memo(memo)
+
+    def _restore_ai_flow_from_memo(self, memo: MemoRead) -> None:
+        tasks = self._parse_ai_analysis_log(getattr(memo, "ai_analysis_log", None))
+        if not tasks:
+            state = self._ai_flow.pop(memo.id, None)
+            if state is not None:
+                state.generated_tasks.clear()
+                state.selected_task_ids.clear()
+                state.editing_task_id = None
+            return
+
+        state = self.ai_flow_state_for(memo.id)
+        state.generated_tasks = tasks
+        state.selected_task_ids = {task.task_id for task in tasks}
+        state.is_generating = False
+        state.editing_task_id = None
+        if memo.ai_suggestion_status in (AiSuggestionStatus.AVAILABLE, AiSuggestionStatus.PENDING):
+            state.status_override = memo.ai_suggestion_status
+        else:
+            state.status_override = None
+
+    def _parse_ai_analysis_log(self, log: str | None) -> list[AiSuggestedTask]:
+        if not log:
+            return []
+        try:
+            data = json.loads(log)
+        except json.JSONDecodeError:
+            logger.warning("Failed to decode ai_analysis_log: %s", log)
+            return []
+        tasks_data = data.get("tasks")
+        if not isinstance(tasks_data, list):
+            return []
+
+        parsed: list[AiSuggestedTask] = []
+        for entry in tasks_data:
+            if not isinstance(entry, dict):
+                continue
+            task_id = str(entry.get("task_id") or uuid4().hex)
+            due_raw = entry.get("due_date")
+            due_date = self._parse_due_date(due_raw) if isinstance(due_raw, str) else None
+            tags_value = entry.get("tags")
+            tags = tuple(str(tag) for tag in tags_value) if isinstance(tags_value, (list, tuple)) else ()
+            parsed.append(
+                AiSuggestedTask(
+                    task_id=task_id,
+                    title=str(entry.get("title", "")),
+                    description=str(entry.get("description") or ""),
+                    tags=tags,
+                    due_date=due_date,
+                )
+            )
+        return parsed
+
+    @staticmethod
+    def _parse_due_date(value: str | None) -> datetime | None:
+        if not value:
+            return None
+        raw = value
+        try:
+            if raw.endswith("Z"):
+                raw = raw.replace("Z", "+00:00")
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+
     # --- Priority C: optional helper for single-memo updates ---
     def upsert_memo(self, memo: MemoRead) -> None:
         """単一メモを all_memos とインデックスに反映する。
@@ -267,3 +342,4 @@ class MemosViewState:
                 break
         else:
             self.all_memos.append(memo)
+        self._restore_ai_flow_from_iterable([memo])

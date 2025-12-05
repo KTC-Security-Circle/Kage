@@ -707,6 +707,12 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
             footer_row = ft.Row(
                 controls=[
                     ft.OutlinedButton(
+                        "再生成",
+                        icon=ft.Icons.REFRESH,
+                        on_click=on_retry_ai,
+                        expand=True,
+                    ),
+                    ft.OutlinedButton(
                         "アイデアとしてマーク",
                         icon=ft.Icons.LIGHTBULB,
                         on_click=on_mark_as_idea,

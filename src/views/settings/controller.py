@@ -41,7 +41,15 @@ from loguru import logger
 
 from agents.agent_conf import LLMProvider, OpenVINODevice
 from errors import ValidationError
-from settings.models import EditableAgentRuntimeSettings, EditableUserSettings, EditableWindowSettings
+from settings.models import (
+    AgentDetailLevel,
+    EditableAgentRuntimeSettings,
+    EditableMemoToTaskPromptSettings,
+    EditableReviewPromptSettings,
+    EditableUserSettings,
+    EditableWindowSettings,
+)
+from settings.utils import parse_detail_level
 
 from .query import SettingsQuery  # noqa: TC001 - Runtime dependency
 from .state import SettingsSnapshot, SettingsViewState
@@ -95,6 +103,9 @@ class SettingsController:
                 device_enum = OpenVINODevice(device_value)
             except ValueError:
                 device_enum = OpenVINODevice.CPU
+            memo_prompt_data = agent_data.get("memo_to_task_prompt") or {}
+            review_prompt_data = agent_data.get("review_prompt") or {}
+
             snapshot = SettingsSnapshot(
                 appearance=EditableUserSettings(
                     theme=data["appearance"]["theme"],
@@ -112,6 +123,20 @@ class SettingsController:
                     temperature=float(agent_data.get("temperature", 0.2)),
                     debug_mode=bool(agent_data.get("debug_mode", False)),
                     device=device_enum,
+                ),
+                memo_to_task_prompt=EditableMemoToTaskPromptSettings(
+                    custom_instructions=str(memo_prompt_data.get("custom_instructions", "")),
+                    detail_level=parse_detail_level(
+                        memo_prompt_data.get("detail_level"),
+                        default=AgentDetailLevel.BALANCED,
+                    ),
+                ),
+                review_prompt=EditableReviewPromptSettings(
+                    custom_instructions=str(review_prompt_data.get("custom_instructions", "")),
+                    detail_level=parse_detail_level(
+                        review_prompt_data.get("detail_level"),
+                        default=AgentDetailLevel.BALANCED,
+                    ),
                 ),
             )
 
@@ -162,6 +187,14 @@ class SettingsController:
                     "temperature": self.state.current.agent.temperature,
                     "debug_mode": self.state.current.agent.debug_mode,
                     "device": self.state.current.agent.device.value,
+                    "memo_to_task_prompt": {
+                        "custom_instructions": self.state.current.memo_to_task_prompt.custom_instructions,
+                        "detail_level": self.state.current.memo_to_task_prompt.detail_level.value,
+                    },
+                    "review_prompt": {
+                        "custom_instructions": self.state.current.review_prompt.custom_instructions,
+                        "detail_level": self.state.current.review_prompt.detail_level.value,
+                    },
                 },
             }
 
@@ -316,6 +349,52 @@ class SettingsController:
         new_agent = self.state.current.agent.model_copy(update={"device": device})
         self._update_snapshot(agent=new_agent)
 
+    def update_memo_prompt_instructions(self, instructions: str) -> None:
+        """MemoToTask エージェントへの追加指示を更新する。"""
+        if self.state.current is None:
+            return
+
+        sanitized = instructions.strip()
+        new_prompt = self.state.current.memo_to_task_prompt.model_copy(update={"custom_instructions": sanitized})
+        self._update_snapshot(memo_prompt=new_prompt)
+
+    def update_memo_prompt_detail_level(self, level_value: str) -> None:
+        """MemoToTask の生成粒度を更新する。"""
+        if self.state.current is None:
+            return
+
+        try:
+            level = AgentDetailLevel(level_value)
+        except ValueError:
+            self.state.set_error("MemoToTaskの生成粒度が不正です")
+            return
+
+        new_prompt = self.state.current.memo_to_task_prompt.model_copy(update={"detail_level": level})
+        self._update_snapshot(memo_prompt=new_prompt)
+
+    def update_review_prompt_instructions(self, instructions: str) -> None:
+        """週次レビューエージェントの追加指示を更新する。"""
+        if self.state.current is None:
+            return
+
+        sanitized = instructions.strip()
+        new_prompt = self.state.current.review_prompt.model_copy(update={"custom_instructions": sanitized})
+        self._update_snapshot(review_prompt=new_prompt)
+
+    def update_review_prompt_detail_level(self, level_value: str) -> None:
+        """レビュー生成粒度を更新する。"""
+        if self.state.current is None:
+            return
+
+        try:
+            level = AgentDetailLevel(level_value)
+        except ValueError:
+            self.state.set_error("レビュー生成粒度が不正です")
+            return
+
+        new_prompt = self.state.current.review_prompt.model_copy(update={"detail_level": level})
+        self._update_snapshot(review_prompt=new_prompt)
+
     def apply_runtime_effects(self, page: Page) -> None:
         """ページに設定を適用する（ランタイム副作用）。
 
@@ -343,26 +422,51 @@ class SettingsController:
         except Exception as e:
             logger.warning(f"ランタイム設定の適用に失敗しました: {e}")
 
-    def _update_snapshot(
-        self,
-        *,
-        appearance: EditableUserSettings | None = None,
-        window: EditableWindowSettings | None = None,
-        database_url: str | None = None,
-        agent_provider: LLMProvider | None = None,
-        agent: EditableAgentRuntimeSettings | None = None,
-    ) -> None:
+    def _update_snapshot(self, **overrides: object) -> None:
         if self.state.current is None:
             return
 
+        current = self.state.current
+        appearance = overrides.get("appearance")
+        if not isinstance(appearance, EditableUserSettings):
+            appearance = current.appearance
+
+        window = overrides.get("window")
+        if not isinstance(window, EditableWindowSettings):
+            window = current.window
+
+        database_url = overrides.get("database_url")
+        if not isinstance(database_url, str):
+            database_url = current.database_url
+
+        agent_provider = overrides.get("agent_provider")
+        if not isinstance(agent_provider, LLMProvider):
+            agent_provider = current.agent_provider
+
+        agent_runtime = overrides.get("agent")
+        if not isinstance(agent_runtime, EditableAgentRuntimeSettings):
+            agent_runtime = current.agent
+
+        memo_prompt = overrides.get("memo_prompt")
+        if not isinstance(memo_prompt, EditableMemoToTaskPromptSettings):
+            memo_prompt = current.memo_to_task_prompt
+
+        review_prompt = overrides.get("review_prompt")
+        if not isinstance(review_prompt, EditableReviewPromptSettings):
+            review_prompt = current.review_prompt
+
         new_snapshot = SettingsSnapshot(
-            appearance=appearance or self.state.current.appearance,
-            window=window or self.state.current.window,
-            database_url=database_url if database_url is not None else self.state.current.database_url,
-            agent_provider=agent_provider if agent_provider is not None else self.state.current.agent_provider,
-            agent=agent or self.state.current.agent,
+            appearance=appearance,
+            window=window,
+            database_url=database_url,
+            agent_provider=agent_provider,
+            agent=agent_runtime,
+            memo_to_task_prompt=memo_prompt,
+            review_prompt=review_prompt,
         )
         self.state.update_current(new_snapshot)
+
+    # 重複していた詳細度変換ロジックは settings.utils.parse_detail_level に集約済み。
 
     def _validate_current_settings(self) -> None:
         """現在の設定値を検証する。

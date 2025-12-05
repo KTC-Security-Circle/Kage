@@ -14,11 +14,15 @@ from errors import ValidationError
 from logic.services.base import ServiceBase
 from settings.manager import ConfigManager, get_config_manager
 from settings.models import (
+    AgentDetailLevel,
     EditableAgentRuntimeSettings,
     EditableDatabaseSettings,
+    EditableMemoToTaskPromptSettings,
+    EditableReviewPromptSettings,
     EditableUserSettings,
     EditableWindowSettings,
 )
+from settings.utils import parse_detail_level
 
 if TYPE_CHECKING:
     from settings.models import (
@@ -277,6 +281,14 @@ class SettingsService(ServiceBase):
                 "temperature": settings.agents.runtime.temperature,
                 "debug_mode": settings.agents.runtime.debug_mode,
                 "device": settings.agents.runtime.device.value,
+                "memo_to_task_prompt": {
+                    "custom_instructions": settings.agents.memo_to_task_prompt.custom_instructions,
+                    "detail_level": settings.agents.memo_to_task_prompt.detail_level.value,
+                },
+                "review_prompt": {
+                    "custom_instructions": settings.agents.review_prompt.custom_instructions,
+                    "detail_level": settings.agents.review_prompt.detail_level.value,
+                },
             },
         }
 
@@ -340,4 +352,20 @@ class SettingsService(ServiceBase):
                 temperature=temperature,
                 debug_mode=bool(agent.get("debug_mode", editable.agents.runtime.debug_mode)),
                 device=device,
+            )
+
+            def _parse_detail_level_value(raw: object) -> AgentDetailLevel:
+                # 入力が不正だった場合でも default を返す共通ロジックを使用する。
+                return parse_detail_level(raw, default=AgentDetailLevel.BALANCED)
+
+            memo_prompt = agent.get("memo_to_task_prompt", {}) or {}
+            editable.agents.memo_to_task_prompt = EditableMemoToTaskPromptSettings(
+                custom_instructions=str(memo_prompt.get("custom_instructions", "")).strip(),
+                detail_level=_parse_detail_level_value(memo_prompt.get("detail_level")),
+            )
+
+            review_prompt = agent.get("review_prompt", {}) or {}
+            editable.agents.review_prompt = EditableReviewPromptSettings(
+                custom_instructions=str(review_prompt.get("custom_instructions", "")).strip(),
+                detail_level=_parse_detail_level_value(review_prompt.get("detail_level")),
             )

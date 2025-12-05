@@ -117,14 +117,8 @@ class ProjectsView(BaseView):
             col={"xs": 12, "lg": 7},
         )
 
-        # 初期データ取得（UIコンポーネント作成後に実行）
-        try:
-            self._controller.refresh()
-        except Exception as e:
-            logger.warning(f"初期ロード時に一時的なエラー: {e}")
-
         # 2カラムレイアウト
-        return ft.Container(
+        layout = ft.Container(
             content=ft.Column(
                 controls=[
                     header,
@@ -148,6 +142,16 @@ class ProjectsView(BaseView):
             padding=24,
             expand=True,
         )
+
+        # UIコンポーネントが構築された後に初期データを読み込む
+        try:
+            self._controller.refresh()
+            logger.debug("ProjectsView: 初期データ読み込み完了")
+        except Exception as e:
+            logger.error(f"ProjectsView: 初期データ読み込みエラー: {e}")
+            # エラーが発生しても空状態で画面を表示する
+
+        return layout
 
     def _render_list(self, projects: list[ProjectCardVM]) -> None:
         """プロジェクトリストを描画する。
@@ -191,7 +195,11 @@ class ProjectsView(BaseView):
         # コンテナの内容を更新
         if self._detail_container:
             self._detail_container.content = self._detail_panel
-            self._detail_container.update()
+            try:
+                self._detail_container.update()
+            except AssertionError:
+                # ページにまだ追加されていない場合はスキップ
+                logger.debug("詳細コンテナがまだページに追加されていません")
 
     # ------------------------------------------------------------------
     # 編集 / 削除 ダイアログ操作

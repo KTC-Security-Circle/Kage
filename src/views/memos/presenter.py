@@ -38,7 +38,6 @@
     1. データクラス生成
         - create_memo_card_data(): MemoCardData生成
         - create_action_bar_data(): HeaderData生成（汎用views.shared.components.HeaderData）
-        - create_status_tabs_data(): StatusTabsData生成
         - create_filter_data(): FilterData生成
         - create_memo_list_data(): MemoListData生成
 
@@ -75,11 +74,21 @@ from loguru import logger
 
 from models import AiSuggestionStatus, MemoStatus
 from views.shared.components import HeaderButtonData, HeaderData
+from views.theme import (
+    get_error_color,
+    get_on_primary_color,
+    get_on_surface_color,
+    get_outline_color,
+    get_primary_color,
+    get_status_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+    get_warning_color,
+)
 
 from .components.filters import FilterConfig, FilterData
 from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
 from .components.shared.constants import DEFAULT_DATE_TEXT, DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH
-from .components.status_tabs import StatusTabsData, TabData
 from .components.types import MemoListData
 
 if TYPE_CHECKING:
@@ -180,43 +189,6 @@ def create_action_bar_data(
     )
 
 
-def create_status_tabs_data(
-    *,
-    active_status: MemoStatus,
-    memo_counts: dict[MemoStatus, int],
-    on_tab_change: Callable[[MemoStatus], None] | None = None,
-) -> StatusTabsData:
-    """StatusTabsDataを生成する。
-
-    Args:
-        active_status: アクティブなステータス
-        memo_counts: ステータス毎の件数
-        on_tab_change: タブ切り替えコールバック
-
-    Returns:
-        StatusTabsData
-    """
-    tab_definitions = [
-        (MemoStatus.INBOX, "Inbox", ft.Icons.INBOX),
-        (MemoStatus.ACTIVE, "アクティブ", ft.Icons.AUTO_AWESOME),
-        (MemoStatus.IDEA, "アイデア", ft.Icons.LIGHTBULB),
-        (MemoStatus.ARCHIVE, "アーカイブ", ft.Icons.ARCHIVE),
-    ]
-
-    tabs = tuple(
-        TabData(
-            status=status,
-            label=label,
-            icon=icon,
-            count=memo_counts.get(status, 0),
-            is_active=(status == active_status),
-        )
-        for status, label, icon in tab_definitions
-    )
-
-    return StatusTabsData(tabs=tabs, on_tab_change=on_tab_change)
-
-
 def create_filter_data(
     *,
     show_date_filter: bool = True,
@@ -288,12 +260,12 @@ def _create_status_badge_data(status: MemoStatus) -> StatusBadgeData:
         StatusBadgeData
     """
     badge_map = {
-        MemoStatus.INBOX: StatusBadgeData(text="新規", color=ft.Colors.BLUE_100, icon=ft.Icons.FIBER_NEW),
-        MemoStatus.ACTIVE: StatusBadgeData(text="進行中", color=ft.Colors.GREEN_100, icon=ft.Icons.PLAY_ARROW),
-        MemoStatus.IDEA: StatusBadgeData(text="アイデア", color=ft.Colors.YELLOW_100, icon=ft.Icons.LIGHTBULB),
-        MemoStatus.ARCHIVE: StatusBadgeData(text="保管", color=ft.Colors.GREY_300, icon=ft.Icons.ARCHIVE),
+        MemoStatus.INBOX: StatusBadgeData(text="新規", color=get_primary_color(), icon=ft.Icons.FIBER_NEW),
+        MemoStatus.ACTIVE: StatusBadgeData(text="進行中", color=get_status_color("進行中"), icon=ft.Icons.PLAY_ARROW),
+        MemoStatus.IDEA: StatusBadgeData(text="アイデア", color=get_warning_color(), icon=ft.Icons.LIGHTBULB),
+        MemoStatus.ARCHIVE: StatusBadgeData(text="保管", color=get_outline_color(), icon=ft.Icons.ARCHIVE),
     }
-    return badge_map.get(status, StatusBadgeData(text="メモ", color=ft.Colors.GREY_100))
+    return badge_map.get(status, StatusBadgeData(text="メモ", color=get_outline_color()))
 
 
 # ========================================
@@ -386,22 +358,27 @@ def build_status_badge(status: MemoStatus) -> ft.Container:
         MemoStatus.ARCHIVE: "Archived",
     }
     color_map = {
-        MemoStatus.INBOX: ft.Colors.PRIMARY,
-        MemoStatus.ACTIVE: ft.Colors.SECONDARY,
-        MemoStatus.IDEA: ft.Colors.TERTIARY,
-        MemoStatus.ARCHIVE: ft.Colors.OUTLINE_VARIANT,
+        MemoStatus.INBOX: get_primary_color(),
+        MemoStatus.ACTIVE: get_status_color("進行中"),
+        MemoStatus.IDEA: get_warning_color(),
+        MemoStatus.ARCHIVE: get_outline_color(),
     }
     text_color_map = {
-        MemoStatus.ARCHIVE: ft.Colors.ON_SURFACE,
+        MemoStatus.ARCHIVE: get_on_surface_color(),
     }
 
     label = label_map.get(status, "Memo")
-    bgcolor = color_map.get(status, ft.Colors.PRIMARY)
-    text_color = text_color_map.get(status, ft.Colors.ON_PRIMARY)
+    bgcolor = color_map.get(status, get_primary_color())
+    text_color = text_color_map.get(status, get_on_primary_color())
 
     return ft.Container(
-        content=ft.Text(label, size=12, color=text_color, weight=ft.FontWeight.BOLD),
-        padding=ft.padding.symmetric(horizontal=12, vertical=4),
+        content=ft.Text(
+            label,
+            theme_style=ft.TextThemeStyle.LABEL_SMALL,
+            color=text_color,
+            weight=ft.FontWeight.W_500,
+        ),
+        padding=ft.padding.symmetric(horizontal=8, vertical=4),
         bgcolor=bgcolor,
         border_radius=12,
     )
@@ -419,85 +396,72 @@ def build_detail_metadata(created_text: str, updated_text: str) -> ft.Control:
     """
     return ft.Row(
         controls=[
-            ft.Column(
+            ft.Row(
                 controls=[
-                    ft.Text("作成日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                    ft.Text(created_text, style=ft.TextThemeStyle.BODY_SMALL),
+                    ft.Icon(ft.Icons.CALENDAR_TODAY, size=16, color=get_text_secondary_color()),
+                    ft.Text(
+                        f"作成: {created_text}",
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=get_text_secondary_color(),
+                    ),
                 ],
                 spacing=4,
             ),
-            ft.Column(
+            ft.Row(
                 controls=[
-                    ft.Text("更新日", style=ft.TextThemeStyle.BODY_SMALL, weight=ft.FontWeight.BOLD),
-                    ft.Text(updated_text, style=ft.TextThemeStyle.BODY_SMALL),
+                    ft.Icon(ft.Icons.UPDATE, size=16, color=get_text_secondary_color()),
+                    ft.Text(
+                        f"更新: {updated_text}",
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=get_text_secondary_color(),
+                    ),
                 ],
                 spacing=4,
             ),
         ],
-        spacing=32,
+        spacing=16,
     )
 
 
 def build_detail_actions(
     *,
-    on_ai_suggestion: Callable,
     on_edit: Callable,
     on_delete: Callable,
 ) -> ft.Control:
     """詳細パネルのアクションボタンを構築する。
 
     Args:
-        on_ai_suggestion: AI提案ボタンのコールバック
         on_edit: 編集ボタンのコールバック
         on_delete: 削除ボタンのコールバック
 
     Returns:
         アクションボタンコントロール
     """
-    return ft.Column(
+    return ft.Row(
         controls=[
-            ft.Row(
-                controls=[
-                    ft.ElevatedButton(
-                        content=ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.AUTO_AWESOME, size=16),
-                                ft.Text("AIでタスクを生成"),
-                            ],
-                            spacing=8,
-                            tight=True,
-                        ),
-                        on_click=on_ai_suggestion,
-                        expand=True,
-                    ),
-                ],
+            ft.Container(expand=True),
+            ft.IconButton(
+                icon=ft.Icons.EDIT_OUTLINED,
+                tooltip="編集",
+                icon_size=20,
+                icon_color=get_text_secondary_color(),
+                on_click=on_edit,
             ),
-            ft.Row(
-                controls=[
-                    ft.OutlinedButton(
-                        "編集",
-                        icon=ft.Icons.EDIT,
-                        on_click=on_edit,
-                        expand=True,
-                    ),
-                    ft.OutlinedButton(
-                        "削除",
-                        icon=ft.Icons.DELETE,
-                        on_click=on_delete,
-                        expand=True,
-                    ),
-                ],
-                spacing=8,
+            ft.IconButton(
+                icon=ft.Icons.DELETE_OUTLINE,
+                tooltip="削除",
+                icon_size=20,
+                icon_color=get_error_color(),
+                on_click=on_delete,
             ),
         ],
-        spacing=8,
+        alignment=ft.MainAxisAlignment.START,
     )
 
 
 def build_detail_panel(
     memo: MemoRead,
     *,
-    on_ai_suggestion: Callable,
     on_edit: Callable,
     on_delete: Callable,
     extra_sections: tuple[ft.Control, ...] | None = None,
@@ -528,7 +492,7 @@ def build_detail_panel(
                         controls=[
                             ft.Text(
                                 memo.title or "無題のメモ",
-                                style=ft.TextThemeStyle.HEADLINE_SMALL,
+                                theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                                 weight=ft.FontWeight.BOLD,
                                 expand=True,
                             ),
@@ -551,7 +515,7 @@ def build_detail_panel(
                             scroll=ft.ScrollMode.AUTO,
                         ),
                         padding=ft.padding.all(16),
-                        bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                        bgcolor=get_surface_variant_color(),
                         border_radius=8,
                         # 高さは指定せず、コンテンツに応じて自動調整
                     ),
@@ -559,7 +523,6 @@ def build_detail_panel(
                     build_detail_metadata(created_text, updated_text),
                     # アクションボタン
                     build_detail_actions(
-                        on_ai_suggestion=on_ai_suggestion,
                         on_edit=on_edit,
                         on_delete=on_delete,
                     ),
@@ -592,17 +555,17 @@ def build_empty_detail_panel() -> ft.Control:
     return ft.Container(
         content=ft.Column(
             controls=[
-                ft.Icon(ft.Icons.DESCRIPTION, size=64, color=ft.Colors.OUTLINE),
+                ft.Icon(ft.Icons.DESCRIPTION, size=64, color=get_outline_color()),
                 ft.Text(
                     "メモを選択して詳細を表示",
-                    style=ft.TextThemeStyle.HEADLINE_SMALL,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
+                    color=get_text_secondary_color(),
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Text(
                     "左側のリストからメモを選択すると、\nここに詳細が表示されます。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                    color=get_text_secondary_color(),
                     text_align=ft.TextAlign.CENTER,
                 ),
             ],
@@ -644,7 +607,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
             body_controls.append(
                 ft.Text(
                     "InboxメモはMemoToTaskAgentにタスク生成を依頼する前段階です。AIに生成を許可するとアクティブ状態に遷移します。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 )
             )
@@ -675,11 +638,11 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                             controls=[
                                 ft.Text(
                                     "MemoToTaskAgentがタスクを生成しています",
-                                    style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                 ),
                                 ft.Text(
                                     "生成が完了すると承認待ちとしてActiveメモに切り替わります",
-                                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                             ],
@@ -738,7 +701,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                         ),
                         ft.Text(
                             error_message or "MemoToTaskAgentでの生成に失敗しました。もう一度お試しください。",
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=ft.Colors.ON_SURFACE,
                         ),
                         ft.Row(
@@ -766,7 +729,7 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
             body_controls.append(
                 ft.Text(
                     "AI提案は処理済みです。詳細はタスク一覧で確認できます。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                 )
             )
 
@@ -780,12 +743,12 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
                                 controls=[
                                     ft.Text(
                                         header_title,
-                                        style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                                         weight=ft.FontWeight.BOLD,
                                     ),
                                     ft.Text(
                                         header_description,
-                                        style=ft.TextThemeStyle.BODY_MEDIUM,
+                                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                                         color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
                                 ],
@@ -838,7 +801,7 @@ def _build_ai_status_badge(status: AiSuggestionStatus) -> ft.Control:
     }
     text, color = label_map.get(status, (status.value, ft.Colors.SURFACE))
     return ft.Container(
-        content=ft.Text(text, style=ft.TextThemeStyle.BODY_SMALL),
+        content=ft.Text(text, theme_style=ft.TextThemeStyle.BODY_SMALL),
         padding=ft.padding.symmetric(horizontal=12, vertical=6),
         bgcolor=color,
         border_radius=16,
@@ -865,7 +828,7 @@ def _build_available_tasks_section(  # noqa: PLR0913
             ft.Container(
                 content=ft.Text(
                     "AI提案タスクがまだありません。タスクを追加して承認フローをテストできます。",
-                    style=ft.TextThemeStyle.BODY_MEDIUM,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 padding=ft.padding.symmetric(vertical=8),
@@ -923,18 +886,18 @@ def _build_task_summary_body(
 ) -> ft.Control:
     due_date_text = format_datetime(task.due_date)
     detail_controls: list[ft.Control] = [
-        ft.Text(task.title, style=ft.TextThemeStyle.TITLE_SMALL, weight=ft.FontWeight.BOLD),
-        ft.Text(task.description, style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT),
+        ft.Text(task.title, theme_style=ft.TextThemeStyle.TITLE_SMALL, weight=ft.FontWeight.BOLD),
+        ft.Text(task.description, theme_style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT),
     ]
     if due_date_text:
         detail_controls.append(
-            ft.Text(due_date_text, style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT)
+            ft.Text(due_date_text, theme_style=ft.TextThemeStyle.BODY_SMALL, color=ft.Colors.ON_SURFACE_VARIANT)
         )
     if task.tags:
         tag_row = ft.Row(
             controls=[
                 ft.Chip(
-                    label=ft.Text(tag, style=ft.TextThemeStyle.BODY_SMALL),
+                    label=ft.Text(tag, theme_style=ft.TextThemeStyle.BODY_SMALL),
                     bgcolor=ft.Colors.SECONDARY_CONTAINER,
                 )
                 for tag in task.tags

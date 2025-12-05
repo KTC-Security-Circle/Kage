@@ -1,25 +1,41 @@
 """Shared constants for term components."""
 
-import flet as ft
+from views.theme import (
+    get_error_color,
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_surface_variant_color,
+)
 
-# Status badge configuration
-STATUS_BADGE_CONFIG = {
-    "APPROVED": {
-        "text": "承認済み",
-        "bgcolor": ft.colors.PRIMARY,
-        "color": ft.colors.ON_PRIMARY,
-    },
-    "DRAFT": {
-        "text": "草案",
-        "bgcolor": ft.colors.OUTLINE_VARIANT,
-        "color": ft.colors.OUTLINE,
-    },
-    "DEPRECATED": {
-        "text": "非推奨",
-        "bgcolor": ft.colors.ERROR_CONTAINER,
-        "color": ft.colors.ON_ERROR_CONTAINER,
-    },
-}
+
+def get_status_badge_config() -> dict[str, dict[str, str]]:
+    """ステータスバッジの設定を取得する。
+
+    Returns:
+        ステータスバッジの設定辞書
+
+    Note:
+        theme.py から動的に色を取得するため、関数として提供。
+    """
+    return {
+        "APPROVED": {
+            "text": "承認済み",
+            "bgcolor": get_primary_color(),
+            "color": get_on_primary_color(),
+        },
+        "DRAFT": {
+            "text": "草案",
+            "bgcolor": get_surface_variant_color(),
+            "color": get_outline_color(),
+        },
+        "DEPRECATED": {
+            "text": "非推奨",
+            "bgcolor": get_error_color(),
+            "color": get_on_primary_color(),
+        },
+    }
+
 
 # Display limits
 MAX_SYNONYMS_DISPLAY = 3

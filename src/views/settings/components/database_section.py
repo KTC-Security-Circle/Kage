@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import SPACING
+from views.theme import SPACING, get_error_color, get_success_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -140,7 +140,7 @@ class DatabaseSection(ft.Column):
             success: 成功かどうか
         """
         self.result_text.value = message
-        self.result_text.color = ft.Colors.GREEN if success else ft.Colors.ERROR
+        self.result_text.color = get_success_color() if success else get_error_color()
         self.result_text.visible = True
         if self.page:
             self.update()

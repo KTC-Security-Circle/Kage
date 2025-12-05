@@ -194,12 +194,14 @@ class TermsView(BaseView):
             if self.page:
                 self.show_error_snackbar(self.page, "検索に失敗しました")
 
-    def _handle_status_change(self, status: TermStatus) -> None:
+    def _handle_status_change(self, status: TermStatus | None) -> None:
         """ステータスタブの変更をハンドリングする。
 
         Args:
-            status: 選択されたステータス
+            status: 選択されたステータス（Noneの場合は無視）
         """
+        if status is None:
+            return
         self.controller.update_tab(status)
         self._refresh_term_list()
         self._refresh_status_tabs()

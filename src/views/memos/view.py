@@ -47,6 +47,7 @@ from logic.application.memo_application_service import MemoApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
+from views.theme import get_error_color, get_outline_color
 
 from . import presenter
 from .components import MemoCardList, MemoFilters, MemoStatusTabs
@@ -170,7 +171,7 @@ class MemosView(BaseView):
                         content=self._memo_list,
                         width=400,
                         padding=ft.padding.all(8),
-                        border=ft.border.only(right=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
+                        border=ft.border.only(right=ft.BorderSide(width=1, color=get_outline_color())),
                     ),
                     # 右側：詳細パネル
                     ft.Container(
@@ -198,7 +199,6 @@ class MemosView(BaseView):
 
         return presenter.build_detail_panel(
             selected_memo,
-            on_ai_suggestion=self._handle_ai_suggestion,
             on_edit=self._handle_edit_memo,
             on_delete=self._handle_delete_memo,
             extra_sections=extra_sections,
@@ -301,12 +301,14 @@ class MemosView(BaseView):
             self.notify_error("検索に失敗しました", details=f"{type(e).__name__}: {e}")
         logger.debug(f"Search query: '{query}' (tab={self.memos_state.current_tab})")
 
-    def _handle_tab_change(self, status: MemoStatus) -> None:
+    def _handle_tab_change(self, status: MemoStatus | None) -> None:
         """タブ変更ハンドラー。
 
         Args:
-            status: 選択されたタブのステータス
+            status: 選択されたタブのステータス（Noneの場合は無視）
         """
+        if status is None:
+            return
         try:
             self.controller.update_tab(status)
             if self.memos_state.search_query:
@@ -461,7 +463,7 @@ class MemosView(BaseView):
         """選択されたAI提案タスクを承認済みとして扱う。"""
         ai_state = self.memos_state.ai_flow_state_for(memo.id)
         if not ai_state.selected_task_ids:
-            self.show_snack_bar("承認するタスクを選択してください", bgcolor=ft.Colors.ERROR)
+            self.show_snack_bar("承認するタスクを選択してください", bgcolor=get_error_color())
             return
         ai_state.status_override = AiSuggestionStatus.REVIEWED
         ai_state.is_generating = False
@@ -562,7 +564,7 @@ class MemosView(BaseView):
             title = (title_field.value or "").strip() or "無題のメモ"
             content = (content_field.value or "").strip()
             if not content:
-                self.show_snack_bar("内容を入力してください", bgcolor=ft.Colors.ERROR)
+                self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
                 return
 
             def _save() -> None:
@@ -652,7 +654,7 @@ class MemosView(BaseView):
             content=ft.Text("この操作は取り消せません。よろしいですか？"),
             actions=[
                 ft.TextButton("キャンセル", on_click=_cancel),
-                ft.ElevatedButton("削除", bgcolor=ft.Colors.ERROR, on_click=_confirm_delete),
+                ft.ElevatedButton("削除", bgcolor=get_error_color(), on_click=_confirm_delete),
             ],
         )
 

@@ -108,7 +108,7 @@ def create_demo_app() -> ft.Control:
 
     return ft.Column(
         controls=[
-            ft.Text("フォームコンポーネントデモ", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+            ft.Text("フォームコンポーネントデモ", theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
             ft.Divider(),
             *demo_form.build(),
             ft.Row(

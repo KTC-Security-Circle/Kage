@@ -234,10 +234,12 @@ class TagsController:
             self.state.selected_id = None
 
     def _serialize_tag(self, tag: TagRead) -> TagDict:
+        from views.theme import TAG_COLORS
+
         tag_id = getattr(tag, "id", None)
         name = getattr(tag, "name", "")
         description = getattr(tag, "description", "") or ""
-        color = getattr(tag, "color", None) or "#607d8b"
+        color = getattr(tag, "color", None) or TAG_COLORS.grey
         created_at = self._format_datetime(getattr(tag, "created_at", None))
         updated_at = self._format_datetime(getattr(tag, "updated_at", None))
         if tag_id is None:

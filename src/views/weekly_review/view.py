@@ -6,6 +6,8 @@ Step2: システムの整理
 Step3: 来週の計画
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import flet as ft
@@ -88,61 +90,30 @@ class WeeklyReviewView(BaseView):
         self.step_indicator: StepIndicator | None = None
         self.wizard_navigation: WizardNavigation | None = None
         self.step_content_container: ft.Container | None = None
+        self.body_container: ft.Container | None = None
 
     def build_content(self) -> ft.Control:
-        """メインコンテンツを構築
-
-        Returns:
-            構築されたコンテンツ
-        """
-        # ヘッダー
+        """メインコンテンツを構築"""
         header = self._build_header()
+        body = self._render_flow_content()
 
-        # ステップインジケーター
-        self.step_indicator = StepIndicator(
-            props=StepIndicatorProps(
-                current_step=self.review_state.current_step,
-                total_steps=self.review_state.total_steps,
-                step_labels=self.presenter.get_step_labels(),
-            )
-        )
-
-        # ステップコンテンツ
-        self.step_content_container = ft.Container(
-            content=self._render_current_step(),
-            expand=True,
-        )
-
-        # ウィザードナビゲーション
-        self.wizard_navigation = WizardNavigation(
-            props=WizardNavigationProps(
-                current_step=self.review_state.current_step,
-                total_steps=self.review_state.total_steps,
-                on_prev=self._handle_prev_step,
-                on_next=self._handle_next_step,
-            )
-        )
+        if self.body_container is None:
+            self.body_container = ft.Container(expand=True, content=body)
+        else:
+            self.body_container.content = body
 
         content = ft.Column(
             controls=[
                 header,
                 ft.Container(height=16),
-                self.step_indicator,
-                ft.Divider(),
-                ft.Container(height=8),
-                self.step_content_container,
-                ft.Container(height=8),
-                ft.Divider(),
-                self.wizard_navigation,
+                self.body_container,
             ],
-            spacing=0,
+            spacing=16,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
 
-        # 初期データロード
         self.did_mount()
-
         return content
 
     def _build_header(self) -> ft.Control:
@@ -155,6 +126,134 @@ class WeeklyReviewView(BaseView):
             title="週次レビュー",
             subtitle="AIがサポートする週次レビュー - 事務作業はAI、意思決定は人間",
             show_search=False,
+        )
+
+    def _render_flow_content(self) -> ft.Control:
+        """現在の状態に応じて表示するコンテンツを切り替える。"""
+        if not self.review_state.has_started:
+            return self._render_start_page()
+        if not self.review_state.data_loaded:
+            return self._render_loading_view()
+        return self._render_wizard_content()
+
+    def _render_start_page(self) -> ft.Control:
+        """開始前のスタート画面を構築する。"""
+        bullet_points = [
+            "成果・課題をAIが集計して要約",
+            "ゾンビタスクと未処理メモを自動抽出",
+            "次週に向けた推奨アクションを提示",
+        ]
+        bullet_controls = [
+            ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, color=ft.Colors.BLUE_400, size=20),
+                    ft.Text(point, size=14),
+                ],
+                spacing=8,
+            )
+            for point in bullet_points
+        ]
+
+        start_button = ft.ElevatedButton(
+            text="AIレビューを開始",
+            icon=ft.Icons.PLAY_ARROW,
+            on_click=self._handle_start_button,
+            height=48,
+            width=220,
+        )
+
+        card = ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Text("週次レビューを開始", size=24, weight=ft.FontWeight.BOLD),
+                        ft.Text(
+                            "1週間の記録をAIが整理し、次のアクションづくりを支援します。",
+                            size=14,
+                            color=ft.Colors.GREY_700,
+                        ),
+                        ft.Column(controls=bullet_controls, spacing=8),
+                        ft.Container(height=8),
+                        start_button,
+                    ],
+                    spacing=16,
+                ),
+                padding=ft.padding.all(24),
+                expand=True,
+            ),
+            elevation=3,
+        )
+
+        return ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Text("AIが週次レビューを実行します", size=16, color=ft.Colors.GREY_600),
+                    card,
+                ],
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True,
+            ),
+            alignment=ft.alignment.center,
+            expand=True,
+        )
+
+    def _render_loading_view(self) -> ft.Control:
+        """AI集計中のローディングビューを構築する。"""
+        return ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.ProgressRing(width=64, height=64),
+                    ft.Text("AIが週次レビューを準備しています...", size=16),
+                    ft.Text(
+                        "数十秒かかる場合があります。アプリを閉じずにお待ちください。",
+                        size=13,
+                        color=ft.Colors.GREY_600,
+                        text_align=ft.TextAlign.CENTER,
+                        width=320,
+                    ),
+                ],
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            alignment=ft.alignment.center,
+            expand=True,
+        )
+
+    def _render_wizard_content(self) -> ft.Control:
+        """本来のウィザードUIを構築する。"""
+        self.step_indicator = StepIndicator(
+            props=StepIndicatorProps(
+                current_step=self.review_state.current_step,
+                total_steps=self.review_state.total_steps,
+                step_labels=self.presenter.get_step_labels(),
+            )
+        )
+        self.step_content_container = ft.Container(
+            content=self._render_current_step(),
+            expand=True,
+        )
+        self.wizard_navigation = WizardNavigation(
+            props=WizardNavigationProps(
+                current_step=self.review_state.current_step,
+                total_steps=self.review_state.total_steps,
+                on_prev=self._handle_prev_step,
+                on_next=self._handle_next_step,
+            )
+        )
+
+        return ft.Column(
+            controls=[
+                self.step_indicator,
+                ft.Divider(),
+                ft.Container(height=8),
+                self.step_content_container,
+                ft.Container(height=8),
+                ft.Divider(),
+                self.wizard_navigation,
+            ],
+            spacing=0,
+            expand=True,
         )
 
     def _render_current_step(self) -> ft.Control:
@@ -456,6 +555,30 @@ class WeeklyReviewView(BaseView):
             scroll=ft.ScrollMode.AUTO,
         )
 
+    def _handle_start_button(self, _: ft.ControlEvent) -> None:
+        """スタートボタン押下時の処理。"""
+        if self.state.loading:
+            return
+        if self.review_state.data_loaded:
+            return
+
+        self.review_state.has_started = True
+        self.review_state.data_loaded = False
+        self._refresh_flow_content()
+
+        def _load() -> None:
+            self.controller.load_initial_data()
+
+        self.with_loading(_load, user_error_message="週次レビューデータの取得に失敗しました")
+
+        if not self.review_state.data_loaded:
+            # エラーなどで読み込めなかった場合はスタート画面へ戻す
+            self.review_state.has_started = False
+        self._refresh_flow_content()
+
+        if self.review_state.data_loaded:
+            self._refresh_wizard()
+
     def _handle_prev_step(self) -> None:
         """前のステップへ戻る"""
         try:
@@ -519,6 +642,13 @@ class WeeklyReviewView(BaseView):
         self.show_info_snackbar("レビューを完了しました！")
         self.page.go("/")
 
+    def _refresh_flow_content(self) -> None:
+        """スタート/ローディング/ウィザード表示を最新にする。"""
+        if not self.body_container:
+            return
+        self.body_container.content = self._render_flow_content()
+        self.safe_update()
+
     def _refresh_wizard(self) -> None:
         """ウィザード全体をリフレッシュ"""
         # ステップインジケーター更新
@@ -553,11 +683,4 @@ class WeeklyReviewView(BaseView):
     def did_mount(self) -> None:
         """マウント時の初期化"""
         super().did_mount()
-        try:
-            logger.info("週次レビューの初期データをロード中...")
-            self.controller.load_initial_data()
-            logger.info("週次レビューの初期データロード完了")
-            self._refresh_wizard()
-        except Exception as e:
-            logger.exception("週次レビューの初期データ読み込みに失敗")
-            self.notify_error("週次レビューデータの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
+        logger.info("週次レビュービューをマウントしました。ユーザー操作待ちです。")

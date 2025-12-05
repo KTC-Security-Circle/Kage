@@ -99,6 +99,7 @@ class WeeklyReviewController:
             active_projects=len(insights.metadata.project_filters) or len(self.state.recommendations),
             completed_last_week=completed_count,
         )
+        self.state.data_loaded = True
 
     def _format_highlights(self, items: list[WeeklyReviewHighlightsItem]) -> list[str]:
         """ハイライト項目をUI表示用のテキストに整形する。"""

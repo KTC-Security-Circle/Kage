@@ -97,6 +97,8 @@ class WeeklyReviewState:
     current_step: int = 1  # 1: 成果, 2: 整理, 3: 計画
     total_steps: int = 3
     wizard_active: bool = False
+    has_started: bool = False
+    data_loaded: bool = False
 
     # チェックリスト状態
     checklist: list[ChecklistItem] = field(

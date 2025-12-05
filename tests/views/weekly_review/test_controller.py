@@ -121,3 +121,4 @@ def test_load_initial_data_populates_state() -> None:
     assert state.zombie_tasks[0].title == "停滞タスク"
     assert state.unprocessed_memos[0].title == "メモA"
     assert state.recommendations, "推奨事項が生成されていません"
+    assert state.data_loaded is True

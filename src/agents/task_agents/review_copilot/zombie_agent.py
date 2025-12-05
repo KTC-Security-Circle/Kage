@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, NotRequired, cast
 
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import START, StateGraph
@@ -22,6 +22,8 @@ ZombieActionType = Literal["split", "defer", "someday", "delete"]
 class ZombieTaskState(BaseAgentState):
     tasks: list[dict[str, object]]
     tone_hint: str
+    detail_hint: NotRequired[str]
+    custom_instructions: NotRequired[str]
 
 
 class ZombieAction(BaseModel):
@@ -94,7 +96,10 @@ class ZombieSuggestionAgent(BaseAgent[ZombieTaskState, ZombieAgentResult]):
                     (
                         "あなたは生産性コーチです。\n"
                         "各タスクが停滞している理由を推測し、最大3件の処置案を返してください。\n"
-                        "処置案は split/defer/someday/delete のいずれかを使用し、理由とサブタスク案を含めます。"
+                        "処置案は split/defer/someday/delete のいずれかを使用し、理由とサブタスク案を含めます。\n"
+                        "出力粒度ヒント: {detail_hint}\n"
+                        "追加指示:\n"
+                        "{custom_instructions}\n"
                     ),
                 ),
                 (
@@ -110,7 +115,8 @@ class ZombieSuggestionAgent(BaseAgent[ZombieTaskState, ZombieAgentResult]):
         chain = self._chain()
         self._logger.debug("ZombieAgent state tasks=%s tone=%s", state["tasks"], state["tone_hint"])
         task_text = "\n".join(f"- {task['title']}: {task['summary']}" for task in state["tasks"])
-        response = chain.invoke({"tasks": task_text, "tone_hint": state["tone_hint"]})
+        overrides = self._prompt_overrides(state)
+        response = chain.invoke({"tasks": task_text, "tone_hint": state["tone_hint"], **overrides})
         self._logger.debug("ZombieAgent raw response: %s", response)
         output = self.validate_output(response, ZombieAgentOutput)
         if isinstance(output, AgentError):
@@ -134,3 +140,11 @@ class ZombieSuggestionAgent(BaseAgent[ZombieTaskState, ZombieAgentResult]):
         if isinstance(final_response, AgentError):
             return final_response
         return AgentError("Invalid zombie suggestion response")
+
+    def _prompt_overrides(self, state: ZombieTaskState) -> dict[str, str]:
+        detail_hint = str(state.get("detail_hint", "") or "").strip()
+        custom_text = str(state.get("custom_instructions", "") or "").strip()
+        return {
+            "detail_hint": detail_hint or "停滞の理由と対処を簡潔に提示してください。",
+            "custom_instructions": custom_text or "追加指示はありません。",
+        }

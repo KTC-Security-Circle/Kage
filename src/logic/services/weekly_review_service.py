@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypedDict, TypeVar
 
 from loguru import logger
 
@@ -27,6 +27,7 @@ from models import (
     ZombieTaskDigest,
 )
 from settings.manager import get_config_manager
+from settings.models import AgentDetailLevel
 from settings.review import get_review_settings
 
 DEFAULT_STATUS_FILTER: tuple[TaskStatus, ...] = (
@@ -42,6 +43,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from uuid import UUID
 
     from settings.models import ReviewSettings
+
+
+class _PromptKwargs(TypedDict, total=False):
+    prompt_custom_instructions: str
+    prompt_detail_level: AgentDetailLevel
 
 
 @dataclass(slots=True)
@@ -84,7 +90,19 @@ class WeeklyReviewInsightsService(ServiceBase):
         if runtime_cfg and getattr(runtime_cfg, "device", None) is not None:
             device = str(runtime_cfg.device.value)
         model_name = cfg.get_model_name("review")
-        agent = ReviewCopilotAgent(provider=provider, model_name=model_name, device=device)
+        prompt_cfg = getattr(cfg, "review_prompt", None)
+        prompt_kwargs: _PromptKwargs = {}
+        if prompt_cfg is not None:
+            prompt_kwargs["prompt_custom_instructions"] = str(getattr(prompt_cfg, "custom_instructions", "") or "")
+            level = getattr(prompt_cfg, "detail_level", None)
+            if isinstance(level, AgentDetailLevel):
+                prompt_kwargs["prompt_detail_level"] = level
+        agent = ReviewCopilotAgent(
+            provider=provider,
+            model_name=model_name,
+            device=device,
+            **prompt_kwargs,
+        )
         return cls(task_repo, memo_repo, project_repo, agent)
 
     @handle_service_errors("週次レビュー", "集計", WeeklyReviewInsightsError)

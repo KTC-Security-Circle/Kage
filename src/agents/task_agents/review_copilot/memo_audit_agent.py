@@ -21,6 +21,8 @@ class MemoAuditState(BaseAgentState):
     memos: list[dict[str, str | None]]
     tone_hint: str
     audits: NotRequired[list[MemoAuditOutputItem]]
+    detail_hint: NotRequired[str]
+    custom_instructions: NotRequired[str]
 
 
 class MemoAuditOutputItem(BaseModel):
@@ -79,7 +81,10 @@ class MemoAuditSuggestionAgent(BaseAgent[MemoAuditState, MemoAuditAgentResult]):
                     (
                         "あなたはメモ整理のアシスタントです。\n"
                         "各メモを読み、task/reference/someday/discard のいずれかの扱いを提案し、"
-                        "短い説明を返してください。"
+                        "短い説明を返してください。\n"
+                        "出力粒度ヒント: {detail_hint}\n"
+                        "追加指示:\n"
+                        "{custom_instructions}\n"
                     ),
                 ),
                 (
@@ -96,7 +101,8 @@ class MemoAuditSuggestionAgent(BaseAgent[MemoAuditState, MemoAuditAgentResult]):
         msg = f"MemoAuditAgent state memos={state['memos']} tone={state['tone_hint']}"
         self._logger.debug(msg)
         memo_text = "\n".join(f"- {memo['title']}: {memo.get('content', '')}" for memo in state["memos"])
-        response = chain.invoke({"memo_list": memo_text, "tone_hint": state["tone_hint"]})
+        overrides = self._prompt_overrides(state)
+        response = chain.invoke({"memo_list": memo_text, "tone_hint": state["tone_hint"], **overrides})
         msg = f"MemoAuditAgent raw response: {response}"
         self._logger.debug(msg)
         output = self.validate_output(response, MemoAuditAgentOutput)
@@ -122,3 +128,11 @@ class MemoAuditSuggestionAgent(BaseAgent[MemoAuditState, MemoAuditAgentResult]):
         if isinstance(final_response, AgentError):
             return final_response
         return AgentError("Invalid memo audit response")
+
+    def _prompt_overrides(self, state: MemoAuditState) -> dict[str, str]:
+        detail_hint = str(state.get("detail_hint", "") or "").strip()
+        custom_text = str(state.get("custom_instructions", "") or "").strip()
+        return {
+            "detail_hint": detail_hint or "優先順位づけに必要な粒度で整理してください。",
+            "custom_instructions": custom_text or "追加指示はありません。",
+        }

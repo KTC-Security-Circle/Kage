@@ -25,6 +25,7 @@ from logic.application.base import BaseApplicationService
 from logic.application.settings_application_service import SettingsApplicationService
 from logic.unit_of_work import SqlModelUnitOfWork
 from models import MemoRead
+from settings.models import AgentDetailLevel
 
 
 class MemoToTaskServiceError(ApplicationError):
@@ -88,6 +89,7 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
             "existing_tags": self._collect_existing_tag_names(),
             "current_datetime_iso": self._current_datetime_iso(),
         }
+        self._apply_prompt_overrides(state)
 
         result = self._invoke_agent(state)
         if result is None:
@@ -165,6 +167,41 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
     def _log_error_and_raise(self, msg: str) -> None:
         logger.error(msg)
         raise MemoToTaskServiceError(msg)
+
+    def _apply_prompt_overrides(self, state: MemoToTaskState) -> None:
+        overrides = self._get_prompt_overrides()
+        state["custom_instructions"] = overrides["custom_instructions"]
+        state["detail_hint"] = overrides["detail_hint"]
+
+    def _get_prompt_overrides(self) -> dict[str, str]:
+        from typing import cast
+
+        settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
+        agents_settings = settings_app.get_agents_settings()
+        prompt_cfg = getattr(agents_settings, "memo_to_task_prompt", None)
+        if prompt_cfg is None:
+            return {"custom_instructions": "", "detail_hint": self._detail_hint_from_level(AgentDetailLevel.BALANCED)}
+
+        custom_text = str(getattr(prompt_cfg, "custom_instructions", "") or "").strip()
+        detail_level = getattr(prompt_cfg, "detail_level", AgentDetailLevel.BALANCED)
+        try:
+            level_enum = (
+                detail_level if isinstance(detail_level, AgentDetailLevel) else AgentDetailLevel(str(detail_level))
+            )
+        except ValueError:
+            level_enum = AgentDetailLevel.BALANCED
+        return {
+            "custom_instructions": custom_text,
+            "detail_hint": self._detail_hint_from_level(level_enum),
+        }
+
+    @staticmethod
+    def _detail_hint_from_level(level: AgentDetailLevel) -> str:
+        if level == AgentDetailLevel.BRIEF:
+            return "回答は要点のみを簡潔にまとめてください。"
+        if level == AgentDetailLevel.DETAILED:
+            return "背景や理由も含めて丁寧に説明してください。"
+        return "バランスよく適度な詳細度で回答してください。"
 
 
 # 型ヒント用の前方宣言

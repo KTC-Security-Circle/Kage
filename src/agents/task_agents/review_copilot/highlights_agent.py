@@ -23,6 +23,8 @@ class HighlightsState(BaseAgentState):
     completed_task_summaries: list[str]
     tone_hint: str
     intro: NotRequired[str]
+    detail_hint: NotRequired[str]
+    custom_instructions: NotRequired[str]
 
 
 class HighlightBullet(BaseModel):
@@ -78,9 +80,13 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
             [
                 (
                     "system",
-                    """あなたはポジティブなエグゼクティブアシスタントです。\n"
-"完了タスクのブリーフを読み取り、励ますトーンの導入文と3件の箇条書きを生成してください。\n"
-"各箇条書きは30文字以内のタイトルと、質的な成果を表す説明文を含めます。""",
+                    """あなたはポジティブなエグゼクティブアシスタントです。
+完了タスクのブリーフを読み取り、励ますトーンの導入文と3件の箇条書きを生成してください。
+各箇条書きは30文字以内のタイトルと、質的な成果を表す説明文を含めます。
+出力粒度ヒント: {detail_hint}
+追加指示:
+{custom_instructions}
+""",
                 ),
                 (
                     "human",
@@ -97,7 +103,14 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
             "HighlightsAgent state summaries=%s tone=%s", state["completed_task_summaries"], state["tone_hint"]
         )
         summary_text = "\n".join(f"- {line}" for line in state["completed_task_summaries"])
-        response = chain.invoke({"task_summaries": summary_text, "tone_hint": state["tone_hint"]})
+        overrides = self._prompt_overrides(state)
+        response = chain.invoke(
+            {
+                "task_summaries": summary_text,
+                "tone_hint": state["tone_hint"],
+                **overrides,
+            }
+        )
         self._logger.debug("HighlightsAgent raw response: %s", response)
         output = self.validate_output(response, HighlightsAgentOutput)
         if isinstance(output, AgentError):
@@ -129,3 +142,11 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
         if isinstance(final_response, AgentError):
             return final_response
         return AgentError("Invalid highlights response")
+
+    def _prompt_overrides(self, state: HighlightsState) -> dict[str, str]:
+        detail_hint = str(state.get("detail_hint", "") or "").strip()
+        custom_text = str(state.get("custom_instructions", "") or "").strip()
+        return {
+            "detail_hint": detail_hint or "バランスよくポジティブにまとめてください。",
+            "custom_instructions": custom_text or "追加指示はありません。",
+        }

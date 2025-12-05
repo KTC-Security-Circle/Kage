@@ -38,9 +38,20 @@ if TYPE_CHECKING:
     from agents.agent_conf import LLMProvider
     from settings.models import (
         EditableAgentRuntimeSettings,
+        EditableMemoToTaskPromptSettings,
+        EditableReviewPromptSettings,
         EditableUserSettings,
         EditableWindowSettings,
     )
+else:  # pragma: no cover - runtime type aliases for linting
+    from typing import Any as _Any
+
+    LLMProvider = _Any  # type: ignore[assignment]
+    EditableAgentRuntimeSettings = _Any  # type: ignore[assignment]
+    EditableMemoToTaskPromptSettings = _Any  # type: ignore[assignment]
+    EditableReviewPromptSettings = _Any  # type: ignore[assignment]
+    EditableUserSettings = _Any  # type: ignore[assignment]
+    EditableWindowSettings = _Any  # type: ignore[assignment]
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +67,8 @@ class SettingsSnapshot:
     database_url: str
     agent_provider: LLMProvider
     agent: EditableAgentRuntimeSettings
+    memo_to_task_prompt: EditableMemoToTaskPromptSettings
+    review_prompt: EditableReviewPromptSettings
 
 
 @dataclass(slots=True)
@@ -99,6 +112,8 @@ class SettingsViewState(BaseViewState):
             database_url=snapshot.database_url,
             agent_provider=snapshot.agent_provider,
             agent=snapshot.agent.model_copy(deep=True),
+            memo_to_task_prompt=snapshot.memo_to_task_prompt.model_copy(deep=True),
+            review_prompt=snapshot.review_prompt.model_copy(deep=True),
         )
 
     def update_current(self, snapshot: SettingsSnapshot) -> None:
@@ -119,6 +134,8 @@ class SettingsViewState(BaseViewState):
                 database_url=self.current.database_url,
                 agent_provider=self.current.agent_provider,
                 agent=self.current.agent.model_copy(deep=True),
+                memo_to_task_prompt=self.current.memo_to_task_prompt.model_copy(deep=True),
+                review_prompt=self.current.review_prompt.model_copy(deep=True),
             )
 
     def start_loading(self) -> None:

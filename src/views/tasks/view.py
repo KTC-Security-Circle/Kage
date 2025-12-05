@@ -318,10 +318,10 @@ class TasksView(BaseView):
             task_id = self.page.client_storage.get("pending_task_id")
             if task_id:
                 logger.info(f"一時保存されたタスクIDを検出: {task_id}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_task_id")
                 # タスクを選択
                 self._on_item_clicked_id(task_id)
-                # 一時保存データをクリア
-                self.page.client_storage.remove("pending_task_id")
                 logger.debug(f"タスクを選択しました: {task_id}")
         except Exception as e:
             logger.warning(f"一時保存タスクIDの処理に失敗: {e}")

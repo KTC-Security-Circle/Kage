@@ -184,10 +184,10 @@ class ProjectsView(BaseView):
             project_id = self.page.client_storage.get("pending_project_id")
             if project_id:
                 logger.info(f"一時保存されたプロジェクトIDを検出: {project_id}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_project_id")
                 # プロジェクトを選択
                 self._controller.select_project(project_id)
-                # 一時保存データをクリア
-                self.page.client_storage.remove("pending_project_id")
                 logger.debug(f"プロジェクトを選択しました: {project_id}")
         except Exception as e:
             logger.warning(f"一時保存プロジェクトIDの処理に失敗: {e}")

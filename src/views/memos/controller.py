@@ -230,7 +230,15 @@ class MemosController:
         ai_status: AiSuggestionStatus | None = None,
     ) -> MemoRead:
         """既存のメモを更新する。"""
-        update_payload = MemoUpdate(title=title, content=content, status=status, ai_suggestion_status=ai_status)
+        update_payload = MemoUpdate()
+        if title is not None:
+            update_payload.title = title
+        if content is not None:
+            update_payload.content = content
+        if status is not None:
+            update_payload.status = status
+        if ai_status is not None:
+            update_payload.ai_suggestion_status = ai_status
         updated = self.memo_app.update(memo_id, update_payload)
         self.state.upsert_memo(updated)
         self.state.set_all_memos(sort_memos(self.state.all_memos))

@@ -33,10 +33,15 @@ class StatsCard(ft.Container):
         """
         super().__init__()
         self.props = props
-        self._build_card()
+        self.content = self._build_content()
+        self.expand = True
 
-    def _build_card(self) -> None:
-        """カードを構築"""
+    def _build_content(self) -> ft.Card:
+        """カードコンテンツを構築
+
+        Returns:
+            構築されたカード
+        """
         # ヘッダー（タイトルとアイコン）
         header = ft.Container(
             content=ft.Row(
@@ -84,12 +89,10 @@ class StatsCard(ft.Container):
             padding=ft.padding.all(16),
         )
 
-        # カードを設定
-        self.content = ft.Card(
+        return ft.Card(
             content=card_content,
             elevation=1,
         )
-        self.expand = True
 
     def set_props(self, new_props: StatsCardProps) -> None:
         """プロパティを更新してカードを再構築
@@ -98,6 +101,6 @@ class StatsCard(ft.Container):
             new_props: 新しいプロパティ
         """
         self.props = new_props
-        self._build_card()
+        self.content = self._build_content()
         with suppress(Exception):
             self.update()

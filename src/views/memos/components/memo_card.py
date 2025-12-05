@@ -62,6 +62,12 @@ MAX_CONTENT_LINES: Final[int] = 3
 DEFAULT_MEMO_TITLE: Final[str] = "無題のメモ"
 """タイトルが空の場合のデフォルト値（MemoCard専用）"""
 
+LINE_HEIGHT_PX: Final[int] = 20
+"""Markdownコンテンツの1行あたりの高さ（ピクセル単位、MemoCard専用）"""
+
+MAX_CONTENT_HEIGHT_PX: Final[int] = 80
+"""Markdownコンテンツ表示の最大高さ（ピクセル単位、MemoCard専用）"""
+
 
 # ========================================
 # MemoCard専用データクラス
@@ -179,13 +185,20 @@ class MemoCard(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
-        # コンテンツ（既に切り詰め済み）
-        content_text = ft.Text(
-            self._card_data.content_preview,
-            style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            max_lines=self.max_content_lines,
-            overflow=ft.TextOverflow.ELLIPSIS,
+        # コンテンツ（Markdownレンダリング、コンテンツ量に応じた高さ）
+        line_count = self._card_data.content_preview.count("\n") + 1
+        content_height = min(max(line_count * LINE_HEIGHT_PX, LINE_HEIGHT_PX), MAX_CONTENT_HEIGHT_PX)
+
+        content_display = ft.Container(
+            content=ft.Markdown(
+                value=self._card_data.content_preview,
+                selectable=False,
+                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                on_tap_link=lambda _: None,
+                fit_content=True,
+            ),
+            height=content_height,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
 
         # フッター（バッジ + 日付）
@@ -209,7 +222,7 @@ class MemoCard(ft.Container):
         )
 
         return ft.Column(
-            controls=[header, content_text, footer],
+            controls=[header, content_display, footer],
             spacing=8,
             tight=True,
         )

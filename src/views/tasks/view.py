@@ -66,6 +66,7 @@ class TasksView(BaseView):
             service=service,
             on_change=self._on_view_model_change,
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
+            apps=self.apps,
         )
 
         self._current_vm: list[TaskCardVM] = []
@@ -73,7 +74,11 @@ class TasksView(BaseView):
         self._status_tabs: TaskStatusTabs | None = None
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
         self._detail_panel = TaskDetailPanel(
-            DetailPanelProps(on_status_change=self._on_status_change, on_edit=self._on_edit_task)
+            DetailPanelProps(
+                on_status_change=self._on_status_change,
+                on_edit=self._on_edit_task,
+                on_task_select=self._on_item_clicked_id,
+            )
         )
         self._no_selection = TaskNoSelection()
         self._empty_state = TaskEmptyState(on_create=self._open_create_dialog)
@@ -249,8 +254,11 @@ class TasksView(BaseView):
 
     def _show_detail(self, vm: TaskCardVM) -> None:
         """選択タスク詳細を右ペインに表示する。"""
-        # Presenter で詳細用VMに昇格させてから渡す
-        dvm = to_detail_from_card(vm)
+        # Controller から完全な詳細データを取得
+        from .presenter import to_detail_vm
+
+        detail_dict = self._controller.get_detail(vm.id)
+        dvm = to_detail_vm(detail_dict) if detail_dict else to_detail_from_card(vm)
 
         # 詳細パネルを表示
         self._detail_panel.set_item(dvm)

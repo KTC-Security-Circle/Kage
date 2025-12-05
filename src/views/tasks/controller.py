@@ -86,6 +86,7 @@ class TasksController:
         service: TaskApplicationPort,
         on_change: Callable[[list[TaskCardVM]], None],
         on_error: Callable[[str], None] | None = None,
+        apps: object | None = None,
     ) -> None:
         """Controller 初期化。
 
@@ -93,11 +94,13 @@ class TasksController:
             service: TaskApplicationPort 実装(ApplicationService を抽象化)
             on_change: 一覧 VM 更新時コールバック
             on_error: ユーザー通知用エラーハンドラ(SnackBar 等)
+            apps: ApplicationService コンテナ
         """
         self._service = service
         self._state = TasksState()
         self._on_change = on_change
         self._on_error = on_error
+        self._apps = apps
 
     def _notify_error(self, message: str) -> None:
         """UI 層へエラー通知(存在すれば)。"""
@@ -271,6 +274,26 @@ class TasksController:
         except Exception:
             return 0
 
+    def get_detail(self, task_id: str) -> dict | None:
+        """タスクIDから詳細データを取得する。
+
+        Args:
+            task_id: タスクID
+
+        Returns:
+            タスク詳細の辞書、見つからない場合はNone
+        """
+        from uuid import UUID
+
+        try:
+            task_uuid = UUID(task_id)
+            task = self._service.get_by_id(task_uuid, with_details=True)
+            if task:
+                return self._task_read_to_dict(task)
+        except Exception as e:
+            logger.error(f"タスク詳細取得エラー: task_id={task_id}, error={e}")
+        return None
+
     # --- Internal orchestration ---
     def _update_and_render(self, new_state: TasksState) -> None:
         """状態を更新してUIを再描画する。
@@ -331,30 +354,32 @@ class TasksController:
         project_tasks: list[dict[str, str]] = []
         if task.project_id:
             try:
+                from uuid import UUID
+
                 from logic.application.project_application_service import ProjectApplicationService
                 from models import TaskStatus
 
                 if hasattr(self._apps, "get_service"):
                     project_service = self._apps.get_service(ProjectApplicationService)  # type: ignore[union-attr]
-                    project = project_service.get_project_by_id(str(task.project_id))
+                    project = project_service.get_by_id(UUID(str(task.project_id)))
                     if project:
+                        from models import ProjectStatus
+
                         project_name = str(project.title)
-                        if hasattr(project.status, "display_label"):
-                            project_status = project.status.display_label()
-                        else:
-                            project_status = str(project.status)
+                        project_status = ProjectStatus.display_label(project.status)
 
                         # 同じプロジェクトに属する他のタスクを取得
                         all_tasks = self._service.get_all_tasks()
+                        from views.tasks.components.shared.constants import TASK_STATUS_LABELS
+
                         project_tasks.extend(
                             [
                                 {
                                     "id": str(other_task.id),
                                     "title": str(other_task.title),
-                                    "status": (
-                                        other_task.status.display_label()
-                                        if hasattr(other_task.status, "display_label")
-                                        else str(other_task.status)
+                                    "status": TASK_STATUS_LABELS.get(
+                                        other_task.status.value if other_task.status else "",
+                                        str(other_task.status) if other_task.status else "",
                                     ),
                                     "is_completed": str(other_task.status == TaskStatus.COMPLETED),
                                 }

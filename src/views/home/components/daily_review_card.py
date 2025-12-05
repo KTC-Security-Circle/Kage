@@ -31,15 +31,18 @@ class DailyReviewCard(ft.Container):
         *,
         review: dict[str, Any],
         on_action_click: Callable[[str], None] | None = None,
+        is_loading: bool = False,
     ) -> None:
         """デイリーレビューカードを初期化。
 
         Args:
             review: デイリーレビュー情報（message, color, icon, action_text, action_route）
             on_action_click: アクションボタンクリック時のコールバック
+            is_loading: AI一言生成中の場合True
         """
         self.review = review
         self.on_action_click = on_action_click
+        self.is_loading = is_loading
 
         super().__init__(
             content=self._build_content(),
@@ -82,12 +85,26 @@ class DailyReviewCard(ft.Container):
             shadow=create_medium_shadow(),
         )
 
-        message_text = ft.Text(
-            self.review.get("message", ""),
-            size=18,
-            weight=ft.FontWeight.NORMAL,
-            color=get_on_surface_color(),
-        )
+        if self.is_loading:
+            message_content = ft.Row(
+                [
+                    ft.ProgressRing(width=16, height=16, stroke_width=2),
+                    ft.Text(
+                        "AI一言を生成中...",
+                        size=18,
+                        weight=ft.FontWeight.NORMAL,
+                        color=get_on_surface_color(),
+                    ),
+                ],
+                spacing=SPACING.sm,
+            )
+        else:
+            message_content = ft.Text(
+                self.review.get("message", ""),
+                size=18,
+                weight=ft.FontWeight.NORMAL,
+                color=get_on_surface_color(),
+            )
 
         action_button = None
         if self.on_action_click:
@@ -115,7 +132,7 @@ class DailyReviewCard(ft.Container):
                 [
                     icon_container,
                     ft.Container(
-                        content=ft.Column([message_text], spacing=0),
+                        content=ft.Column([message_content], spacing=0),
                         expand=True,
                     ),
                 ],
@@ -129,13 +146,15 @@ class DailyReviewCard(ft.Container):
 
         return ft.Column(controls, spacing=0)
 
-    def update_review(self, review: dict[str, Any]) -> None:
+    def update_review(self, review: dict[str, Any], *, is_loading: bool = False) -> None:
         """レビュー情報を更新する。
 
         Args:
             review: 新しいレビュー情報
+            is_loading: AI一言生成中の場合True
         """
         self.review = review
+        self.is_loading = is_loading
         self.content = self._build_content()
         self.bgcolor = self._get_background_color()
         self.border = ft.border.all(BORDER_WIDTH.thin, self._get_border_color())

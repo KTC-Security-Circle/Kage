@@ -99,12 +99,18 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[str], None]) -> ft.Container:
+def build_daily_review_card(
+    review: dict[str, Any],
+    on_action_click: Callable[[str], None],
+    *,
+    is_loading_one_liner: bool = False,
+) -> ft.Container:
     """デイリーレビューカードを構築する。
 
     Args:
         review: デイリーレビュー情報
         on_action_click: アクションボタンのクリックハンドラ
+        is_loading_one_liner: AI一言生成中の場合True
 
     Returns:
         デイリーレビューカードのコンテナ
@@ -125,6 +131,34 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
     border_color = ft.Colors.with_opacity(OPACITY.border_light, get_accent_border_color(color_name))
     icon_color = get_on_surface_color()
 
+    # AI一言生成中はローディング表示、それ以外はメッセージを表示
+    if is_loading_one_liner:
+        message_content = ft.Row(
+            [
+                ft.ProgressRing(
+                    width=16,
+                    height=16,
+                    stroke_width=2,
+                    color=get_on_surface_color(),
+                ),
+                ft.Text(
+                    "AI一言を生成中...",
+                    size=18,
+                    weight=ft.FontWeight.NORMAL,
+                    color=ft.Colors.with_opacity(OPACITY.medium, get_on_surface_color()),
+                ),
+            ],
+            spacing=SPACING.sm,
+            alignment=ft.MainAxisAlignment.START,
+        )
+    else:
+        message_content = ft.Text(
+            review.get("message", ""),
+            size=18,
+            weight=ft.FontWeight.NORMAL,
+            color=get_on_surface_color(),
+        )
+
     return ft.Container(
         content=ft.Column(
             [
@@ -139,14 +173,7 @@ def build_daily_review_card(review: dict[str, Any], on_action_click: Callable[[s
                         ),
                         ft.Container(
                             content=ft.Column(
-                                [
-                                    ft.Text(
-                                        review.get("message", ""),
-                                        size=18,
-                                        weight=ft.FontWeight.NORMAL,
-                                        color=get_on_surface_color(),
-                                    ),
-                                ],
+                                [message_content],
                                 spacing=0,
                             ),
                             expand=True,

@@ -83,3 +83,45 @@ class HomeController:
         全データを最新の状態に更新する。
         """
         self.load_initial_data()
+
+    def start_loading_one_liner(self) -> None:
+        """AI一言生成のローディングを開始する。
+
+        バックグラウンド生成開始時に呼び出され、State をローディング状態に設定する。
+        """
+        logger.debug("[Controller] AI一言ローディング状態をTrueに設定")
+        self.state.set_loading_one_liner(is_loading=True)
+
+    def set_one_liner_message(self, message: str | None) -> None:
+        """AI一言メッセージを設定する。
+
+        バックグラウンド生成完了時に呼び出され、State にメッセージを反映する。
+
+        Args:
+            message: 生成されたメッセージ(失敗時はNone)
+        """
+        logger.debug(f"[Controller] AI一言メッセージを設定: {message[:50] if message else 'None'}...")
+        self.state.set_one_liner_message(message)
+
+        # daily_reviewのmessageフィールドを更新(生成された場合のみ)
+        if message:
+            self.state.update_daily_review_message(message)
+            logger.debug("[Controller] daily_reviewにメッセージを反映")
+
+    def generate_one_liner_sync(self) -> str | None:
+        """AI一言メッセージを同期的に生成する。
+
+        バックグラウンドスレッドから呼び出される公開メソッド。
+
+        Returns:
+            生成されたメッセージ(失敗時はNone)
+        """
+        try:
+            logger.debug("[Controller] AI一言生成開始（同期処理）")
+            result = self.query.get_one_liner_message()
+            logger.debug(f"[Controller] AI一言生成結果: {result[:50] if result else 'None'}...")
+        except Exception as e:
+            logger.error(f"[Controller] AI一言メッセージの生成に失敗しました: {e}")
+            return None
+        else:
+            return result

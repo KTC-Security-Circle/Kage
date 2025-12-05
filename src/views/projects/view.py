@@ -207,6 +207,7 @@ class ProjectsView(BaseView):
     # ------------------------------------------------------------------
     def _open_edit_dialog(self, vm: ProjectDetailVM) -> None:
         """編集ダイアログを開いて保存時に更新処理を呼び出す。"""
+        logger.debug(f"編集ダイアログを開きます: project_id={vm.id}, title={vm.title}")
         # VMのステータスを内部コードへ逆変換
         try:
             status_code = ProjectStatus.parse(vm.status).value
@@ -222,6 +223,7 @@ class ProjectsView(BaseView):
             "tasks_count": str(vm.task_count),
             "completed_tasks": str(vm.completed_count),
         }
+        logger.debug(f"プロジェクト辞書作成完了: {project_dict}")
 
         def _on_save(updated: dict[str, str]) -> None:
             changes = {
@@ -244,7 +246,13 @@ class ProjectsView(BaseView):
 
         # 利用可能なタスクを取得
         available_tasks = self._get_available_tasks()
-        show_edit_project_dialog(self.page, project_dict, on_save=_on_save, available_tasks=available_tasks)
+        logger.debug(f"利用可能なタスク数: {len(available_tasks)}")
+        try:
+            show_edit_project_dialog(self.page, project_dict, on_save=_on_save, available_tasks=available_tasks)
+            logger.debug("編集ダイアログ表示完了")
+        except Exception as e:
+            logger.exception(f"編集ダイアログ表示エラー: {e}")
+            self.notify_error(f"ダイアログの表示に失敗しました: {e}")
 
     def _confirm_delete(self, vm: ProjectDetailVM) -> None:
         """削除確認を表示し、確定時に削除処理を実行する。"""

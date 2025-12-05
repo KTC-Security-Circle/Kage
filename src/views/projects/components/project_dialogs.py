@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING, Any
 
 from views.theme import (
@@ -101,7 +102,8 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
                     on_delete=lambda e, tid=task_id: remove_task(tid, e.control),
                 )
             )
-            tasks_wrap.update()
+            with contextlib.suppress(AssertionError):
+                tasks_wrap.update()
             task_dropdown.value = None
             task_dropdown.update()
 
@@ -387,6 +389,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         available_tasks: 選択可能なタスクのリスト（id, title, project_idを含む辞書のリスト）
     """
     import flet as ft
+    from loguru import logger
+
+    logger.debug(f"show_edit_project_dialog 呼び出し: project={project.get('id')}, tasks={len(available_tasks or [])}")
 
     # available_tasksがNoneの場合は空リストを使用
     tasks_list = available_tasks or []
@@ -448,7 +453,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         task_id = task_dropdown.value
         if task_id not in selected_tasks:
             selected_tasks.append(task_id)
-            _add_chip(task_id)
+            _add_chip(task_id, do_update=True)
             task_dropdown.value = None
             task_dropdown.update()
 
@@ -456,9 +461,10 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         if task_id in selected_tasks:
             selected_tasks.remove(task_id)
             tasks_wrap.controls.remove(chip_control)
-            tasks_wrap.update()
+            with contextlib.suppress(AssertionError):
+                tasks_wrap.update()
 
-    def _add_chip(task_id: str) -> None:
+    def _add_chip(task_id: str, *, do_update: bool = True) -> None:
         task_title = selected_task_titles.get(task_id, task_id)
         tasks_wrap.controls.append(
             ft.Chip(
@@ -466,11 +472,15 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
                 on_delete=lambda e, tid=task_id: remove_task(tid, e.control),
             )
         )
-        tasks_wrap.update()
+        if do_update:
+            with contextlib.suppress(AssertionError):
+                tasks_wrap.update()
+            with contextlib.suppress(AssertionError):
+                tasks_wrap.update()
 
-    # 初期タスクの表示
+    # 初期タスクの表示（この時点ではページに未追加なのでupdate不要）
     for task_id in selected_tasks:
-        _add_chip(task_id)
+        _add_chip(task_id, do_update=False)
 
     # 実際のタスクからドロップダウンオプションを生成
     # このプロジェクトに属していないタスクまたはproject_idがNoneのタスクのみ選択可能

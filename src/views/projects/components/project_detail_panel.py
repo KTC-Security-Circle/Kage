@@ -44,7 +44,6 @@ class ProjectDetailPanel(ft.Column):
                             controls=[
                                 self._build_header(),
                                 self._build_description(),
-                                self._build_progress(),
                                 self._build_tasks(),
                             ],
                             spacing=20,
@@ -133,39 +132,6 @@ class ProjectDetailPanel(ft.Column):
             spacing=8,
         )
 
-    def _build_progress(self) -> ft.Control:
-        """進捗部分を構築。
-
-        Returns:
-            進捗コントロール
-        """
-        return ft.Column(
-            controls=[
-                ft.Text(
-                    "進捗",
-                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                    color=get_grey_color(500),
-                ),
-                ft.Column(
-                    controls=[
-                        ft.ProgressBar(
-                            value=self.project.progress_value,
-                            color=get_primary_color(),
-                            bgcolor=get_surface_variant_color(),
-                            height=12,
-                        ),
-                        ft.Text(
-                            self.project.progress_text,
-                            theme_style=ft.TextThemeStyle.BODY_SMALL,
-                            color=get_grey_color(600),
-                        ),
-                    ],
-                    spacing=8,
-                ),
-            ],
-            spacing=8,
-        )
-
     def _build_tasks(self) -> ft.Control:
         """関連タスク部分を構築。
 
@@ -237,8 +203,13 @@ class ProjectDetailPanel(ft.Column):
 
     def _handle_edit(self) -> None:
         """編集ハンドラ。"""
+        from loguru import logger
+
+        logger.debug(f"編集ボタンクリック: project_id={self.project.id}, on_edit={self.on_edit is not None}")
         if self.on_edit:
             self.on_edit(self.project)
+        else:
+            logger.warning("on_editコールバックが設定されていません")
 
     def _handle_delete(self) -> None:
         """削除ハンドラ。"""
@@ -259,7 +230,6 @@ class ProjectDetailPanel(ft.Column):
                         controls=[
                             self._build_header(),
                             self._build_description(),
-                            self._build_progress(),
                             self._build_tasks(),
                         ],
                         spacing=20,

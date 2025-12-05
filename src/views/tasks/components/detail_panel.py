@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING
 import flet as ft
 
 from views.tasks.components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
-from views.theme import get_grey_color
+from views.theme import (
+    get_grey_color,
+    get_outline_color,
+    get_success_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -27,6 +32,7 @@ class DetailPanelProps:
     on_status_change: Callable[[str, str], None]
     on_edit: Callable[[str], None]  # タスクIDを受け取る編集コールバック
     on_task_select: Callable[[str], None] | None = None  # 関連タスク選択コールバック
+    on_project_select: Callable[[str], None] | None = None  # プロジェクト選択コールバック
 
 
 class TaskDetailPanel:
@@ -72,46 +78,100 @@ class TaskDetailPanel:
             width=220,
         )
 
-        # 編集ボタン
-        edit_button = ft.ElevatedButton(
+        # 詳細セクションを構築
+        details_sections = [
+            # ヘッダー
+            ft.Text("タスク詳細", theme_style=ft.TextThemeStyle.BODY_LARGE, weight=ft.FontWeight.W_500),
+            ft.Divider(height=1),
+            # タイトル
+            self._build_section("タイトル", ft.Text(vm.title, theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
+            # 説明
+            self._build_section(
+                "説明",
+                ft.Text(
+                    getattr(vm, "description", "") or "説明なし",
+                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                    color=get_text_secondary_color(),
+                ),
+            ),
+            # ステータス
+            self._build_section("ステータス", self._status_dd),
+        ]
+
+        # 期限（設定されている場合）
+        due_date = getattr(vm, "due_date", None)
+        if due_date:
+            details_sections.append(
+                self._build_section("期限", ft.Text(str(due_date), theme_style=ft.TextThemeStyle.BODY_SMALL))
+            )
+
+        # 完了日時（設定されている場合）
+        completed_at = getattr(vm, "completed_at", None)
+        if completed_at:
+            details_sections.append(
+                self._build_section("完了", ft.Text(str(completed_at), theme_style=ft.TextThemeStyle.BODY_SMALL))
+            )
+
+        # 繰り返し（設定されている場合）
+        is_recurring = getattr(vm, "is_recurring", False)
+        if is_recurring:
+            recurrence_rule = getattr(vm, "recurrence_rule", None)
+            details_sections.append(
+                self._build_section(
+                    "繰り返し設定",
+                    ft.Column(
+                        controls=[
+                            ft.Container(
+                                content=ft.Text(
+                                    "繰り返しタスク",
+                                    size=11,
+                                    weight=ft.FontWeight.W_500,
+                                ),
+                                border=ft.border.all(1, get_outline_color()),
+                                border_radius=4,
+                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                            ),
+                            ft.Text(
+                                str(recurrence_rule) if recurrence_rule else "",
+                                size=11,
+                                color=get_text_secondary_color(),
+                            )
+                            if recurrence_rule
+                            else ft.Container(),
+                        ],
+                        spacing=4,
+                    ),
+                )
+            )
+
+        # プロジェクト情報
+        project_info = self._build_project_info(vm)
+        if project_info.controls:  # プロジェクト情報がある場合のみ追加（Columnのcontrolsをチェック）
+            details_sections.append(project_info)
+
+        # 作成日
+        created_at = getattr(vm, "created_at", None)
+        if created_at:
+            details_sections.append(
+                self._build_section("作成日", ft.Text(str(created_at), theme_style=ft.TextThemeStyle.BODY_SMALL))
+            )
+
+        # 編集ボタン（最下部）
+        edit_button = ft.OutlinedButton(
             text="編集",
             icon=ft.Icons.EDIT,
             on_click=lambda _: self._handle_edit(),
-            bgcolor=ft.Colors.BLUE_600,
-            color=ft.Colors.WHITE,
+            expand=True,
         )
+        details_sections.append(edit_button)
 
         card = ft.Card(
             expand=True,
             content=ft.Container(
                 expand=True,
                 content=ft.Column(
-                    [
-                        ft.Row(
-                            [
-                                ft.Text("タスク詳細", weight=ft.FontWeight.BOLD, size=18),
-                                edit_button,
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        ),
-                        ft.Text(vm.title, size=16),
-                        ft.Text(getattr(vm, "description", "") or "説明なし", color=get_grey_color(700)),
-                        ft.Divider(),
-                        ft.Row([ft.Text("ステータス:"), self._status_dd]),
-                        ft.Row([ft.Text("更新日:"), ft.Text(getattr(vm, "subtitle", ""))]),
-                        ft.Row([ft.Text("期限:"), ft.Text(str(getattr(vm, "due_date", "") or "-"))]),
-                        ft.Row([ft.Text("完了:"), ft.Text(str(getattr(vm, "completed_at", "") or "-"))]),
-                        ft.Row([ft.Text("メモID:"), ft.Text(str(getattr(vm, "memo_id", "") or "-"))]),
-                        ft.Row(
-                            [
-                                ft.Text("繰り返し:"),
-                                ft.Text("あり" if getattr(vm, "is_recurring", False) else "なし"),
-                            ]
-                        ),
-                        ft.Row([ft.Text("RRULE:"), ft.Text(str(getattr(vm, "recurrence_rule", "") or "-"))]),
-                        self._build_project_info(vm),
-                    ],
-                    spacing=8,
+                    controls=details_sections,
+                    spacing=16,
                     scroll=ft.ScrollMode.AUTO,
                     expand=True,
                 ),
@@ -125,32 +185,103 @@ class TaskDetailPanel:
 
     # Internal
     def _placeholder(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Column(
-                [ft.Text("タスクを選択して詳細を表示", color=get_grey_color(600))],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(
+                            ft.Icons.TASK_ALT,
+                            size=48,
+                            color=get_outline_color(),
+                        ),
+                        ft.Text(
+                            "タスクを選択して詳細を表示",
+                            theme_style=ft.TextThemeStyle.BODY_LARGE,
+                            color=get_text_secondary_color(),
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=16,
+                ),
+                alignment=ft.alignment.center,
+                padding=48,
             ),
             expand=True,
         )
 
-    def _build_project_info(self, vm: TaskDetailVM | TaskCardVM) -> ft.Control:
+    def _build_section(self, label: str, content: ft.Control) -> ft.Column:
+        """ラベル付きセクションを構築する。
+
+        Args:
+            label: セクションラベル
+            content: セクションコンテンツ
+
+        Returns:
+            セクションColumn
+        """
+        return ft.Column(
+            controls=[
+                ft.Text(
+                    label,
+                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                    color=get_text_secondary_color(),
+                ),
+                content,
+            ],
+            spacing=4,
+        )
+
+    def _build_project_info(self, vm: TaskDetailVM | TaskCardVM) -> ft.Column:
         """プロジェクト情報を表示するコントロールを構築。
 
         Args:
             vm: タスクViewModel
 
         Returns:
-            プロジェクト情報のCard
+            プロジェクト情報のセクション（ft.Column）
         """
-        from views.theme import get_outline_color, get_primary_color, get_text_secondary_color
-
         project_name = getattr(vm, "project_name", None)
         project_status = getattr(vm, "project_status", None)
         project_tasks = getattr(vm, "project_tasks", [])
+        project_id = getattr(vm, "project_id", None)
 
         if not project_name:
-            return ft.Container()
+            return ft.Column()  # 空のColumnを返す
+
+        # プロジェクト画面への遷移コールバック
+        def on_project_click(_: ft.ControlEvent) -> None:
+            from loguru import logger
+
+            logger.info(f"プロジェクトボタンがクリックされました: project_id={project_id}")
+            if self._props.on_project_select and project_id:
+                logger.debug(f"on_project_selectコールバックを呼び出します: {project_id}")
+                try:
+                    self._props.on_project_select(str(project_id))
+                    logger.debug("コールバック呼び出しが完了しました")
+                except Exception as e:
+                    logger.error(f"コールバック呼び出しでエラーが発生: {e}", exc_info=True)
+            else:
+                logger.warning(
+                    f"プロジェクト遷移がスキップされました: "
+                    f"on_project_select={self._props.on_project_select}, project_id={project_id}"
+                )
+
+        # プロジェクト情報の表示コントロール
+        project_button = ft.OutlinedButton(
+            text=project_name,
+            icon=ft.Icons.OPEN_IN_NEW,
+            icon_color=get_grey_color(600),
+            on_click=on_project_click,
+        )
+
+        project_status_text = ft.Text(
+            f"ステータス: {project_status}",
+            size=11,
+            color=get_text_secondary_color(),
+        )
+
+        project_section_controls = [project_button, project_status_text]
 
         # 関連タスクセクション
         if project_tasks:
@@ -185,7 +316,7 @@ class TaskDetailPanel:
                             ft.Icon(
                                 ft.Icons.CHECK_CIRCLE if task.is_completed else ft.Icons.CIRCLE_OUTLINED,
                                 size=16,
-                                color=ft.Colors.GREEN if task.is_completed else get_grey_color(400),
+                                color=get_success_color() if task.is_completed else get_grey_color(400),
                             ),
                             ft.Column(
                                 controls=[
@@ -219,54 +350,15 @@ class TaskDetailPanel:
             task_items = [create_task_item(task) for task in project_tasks]
 
             tasks_list.controls = task_items
-            tasks_section_controls = [ft.Divider(height=1), toggle_button, tasks_list]
-        else:
-            tasks_section_controls = []
+            project_section_controls.extend([toggle_button, tasks_list])
 
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    controls=[
-                        # セクションヘッダー
-                        ft.Container(
-                            content=ft.Row(
-                                controls=[
-                                    ft.Icon(ft.Icons.FOLDER_OUTLINED, size=20, color=get_primary_color()),
-                                    ft.Text(
-                                        "プロジェクト",
-                                        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                ],
-                                spacing=8,
-                            ),
-                            padding=ft.padding.only(bottom=8),
-                        ),
-                        ft.Divider(height=1, color=get_outline_color()),
-                        # プロジェクト情報
-                        ft.Column(
-                            controls=[
-                                ft.Text(
-                                    project_name,
-                                    theme_style=ft.TextThemeStyle.BODY_LARGE,
-                                    weight=ft.FontWeight.W_500,
-                                ),
-                                ft.Text(
-                                    f"ステータス: {project_status}",
-                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=get_text_secondary_color(),
-                                ),
-                            ],
-                            spacing=4,
-                        ),
-                        # 関連タスク
-                        *tasks_section_controls,
-                    ],
-                    spacing=8,
-                ),
-                padding=16,
+        # プロジェクト情報全体をセクションとして返す
+        return self._build_section(
+            "プロジェクト",
+            ft.Column(
+                controls=project_section_controls,
+                spacing=8,
             ),
-            elevation=1,
         )
 
     def _handle_status_change(self, new_status: str) -> None:

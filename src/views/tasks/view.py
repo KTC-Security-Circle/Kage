@@ -78,6 +78,7 @@ class TasksView(BaseView):
                 on_status_change=self._on_status_change,
                 on_edit=self._on_edit_task,
                 on_task_select=self._on_item_clicked_id,
+                on_project_select=self._on_project_clicked,
             )
         )
         self._no_selection = TaskNoSelection()
@@ -304,6 +305,23 @@ class TasksView(BaseView):
             if vm.id == task_id:
                 self._show_detail(vm)
                 return
+
+    def _on_project_clicked(self, project_id: str) -> None:
+        """プロジェクト詳細画面へ遷移する。
+
+        Args:
+            project_id: プロジェクトID
+        """
+        logger.info(f"プロジェクト画面への遷移を開始: project_id={project_id}")
+        try:
+            # プロジェクトIDをページのクライアントストレージに一時保存
+            self.page.client_storage.set("pending_project_id", project_id)
+            # プロジェクト画面に遷移
+            self.page.go("/projects")
+            logger.debug(f"プロジェクト画面への遷移が完了: /projects (pending_project_id={project_id})")
+        except Exception as e:
+            logger.error(f"プロジェクト画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
 
     def _on_status_change(self, task_id: str, new_status: str) -> None:
         """タスクステータス変更時のコールバック。

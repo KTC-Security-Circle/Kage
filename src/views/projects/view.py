@@ -172,6 +172,26 @@ class ProjectsView(BaseView):
         if self._status_tabs:
             self._status_tabs.update_counts(self._safe_get_counts())
 
+        # 一時保存されたプロジェクトIDを取得して選択（初回のみ）
+        if not hasattr(self, "_pending_handled"):
+            self._handle_pending_project()
+            self._pending_handled = True
+
+    def _handle_pending_project(self) -> None:
+        """一時保存されたプロジェクトIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            project_id = self.page.client_storage.get("pending_project_id")
+            if project_id:
+                logger.info(f"一時保存されたプロジェクトIDを検出: {project_id}")
+                # プロジェクトを選択
+                self._controller.select_project(project_id)
+                # 一時保存データをクリア
+                self.page.client_storage.remove("pending_project_id")
+                logger.debug(f"プロジェクトを選択しました: {project_id}")
+        except Exception as e:
+            logger.warning(f"一時保存プロジェクトIDの処理に失敗: {e}")
+
     def _render_detail(self, project: ProjectDetailVM | None) -> None:
         """プロジェクト詳細を描画する。
 

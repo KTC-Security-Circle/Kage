@@ -187,6 +187,11 @@ class TasksView(BaseView):
         # フィルタ/検索/並び替えの反映を確実に UI に適用
         self.safe_update()
 
+        # 一時保存されたタスクIDを取得して選択（初回のみ）
+        if not hasattr(self, "_pending_handled"):
+            self._handle_pending_task()
+            self._pending_handled = True
+
     # --- Search debounce ---
     _SEARCH_DEBOUNCE_MS: int = 300
     _search_debounce_task: asyncio.Task | None = None
@@ -305,6 +310,21 @@ class TasksView(BaseView):
             if vm.id == task_id:
                 self._show_detail(vm)
                 return
+
+    def _handle_pending_task(self) -> None:
+        """一時保存されたタスクIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            task_id = self.page.client_storage.get("pending_task_id")
+            if task_id:
+                logger.info(f"一時保存されたタスクIDを検出: {task_id}")
+                # タスクを選択
+                self._on_item_clicked_id(task_id)
+                # 一時保存データをクリア
+                self.page.client_storage.remove("pending_task_id")
+                logger.debug(f"タスクを選択しました: {task_id}")
+        except Exception as e:
+            logger.warning(f"一時保存タスクIDの処理に失敗: {e}")
 
     def _on_project_clicked(self, project_id: str) -> None:
         """プロジェクト詳細画面へ遷移する。

@@ -192,6 +192,23 @@ class ProjectsView(BaseView):
         except Exception as e:
             logger.warning(f"一時保存プロジェクトIDの処理に失敗: {e}")
 
+    def _on_task_clicked(self, task_id: str) -> None:
+        """タスク詳細画面へ遷移する。
+
+        Args:
+            task_id: タスクID
+        """
+        logger.info(f"タスク画面への遷移を開始: task_id={task_id}")
+        try:
+            # タスクIDをページのクライアントストレージに一時保存
+            self.page.client_storage.set("pending_task_id", task_id)
+            # タスク画面に遷移
+            self.page.go("/tasks")
+            logger.debug(f"タスク画面への遷移が完了: /tasks (pending_task_id={task_id})")
+        except Exception as e:
+            logger.error(f"タスク画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
+
     def _render_detail(self, project: ProjectDetailVM | None) -> None:
         """プロジェクト詳細を描画する。
 
@@ -211,6 +228,7 @@ class ProjectsView(BaseView):
                 project=project,
                 on_edit=self._open_edit_dialog,
                 on_delete=self._confirm_delete,
+                on_task_select=self._on_task_clicked,
             )
 
         # コンテナの内容を更新

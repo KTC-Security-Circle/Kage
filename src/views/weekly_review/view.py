@@ -102,19 +102,19 @@ class WeeklyReviewView(BaseView):
         else:
             self.body_container.content = body
 
+        # scrollを持つcontentを作成
         content = ft.Column(
-            controls=[
-                header,
-                ft.Container(height=16),
-                self.body_container,
-            ],
+            controls=[self.body_container],
             spacing=16,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
 
         self.did_mount()
-        return content
+        return self.create_standard_layout(
+            header=header,
+            content=content,
+        )
 
     def _build_header(self) -> ft.Control:
         """ヘッダーを構築

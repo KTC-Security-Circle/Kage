@@ -138,37 +138,16 @@ class TermsView(BaseView):
         self._refresh_term_list()
 
         # 2カラムレイアウト（左: リスト、右: 詳細）
-        grid = ft.ResponsiveRow(
-            controls=[
-                ft.Container(
-                    content=ft.Column(
-                        controls=[
-                            self.status_tabs,
-                            self.term_list.control,
-                        ],
-                        spacing=16,
-                        expand=True,
-                    ),
-                    col={"xs": 12, "lg": 5},
-                    padding=ft.padding.only(right=12),
-                ),
-                ft.Container(
-                    content=self.detail_panel.control,
-                    col={"xs": 12, "lg": 7},
-                ),
-            ],
-            expand=True,
+        grid = self.create_two_column_layout(
+            left_content=self.term_list.control,
+            right_content=self.detail_panel.control,
         )
 
         # メインコンテンツ
-        return ft.Column(
-            controls=[
-                header,
-                ft.Divider(),
-                grid,
-            ],
-            spacing=16,
-            expand=True,
+        return self.create_standard_layout(
+            header=header,
+            status_tabs=self.status_tabs,
+            content=grid,
         )
 
     def _handle_search(self, query: str) -> None:

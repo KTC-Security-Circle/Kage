@@ -33,7 +33,7 @@ from .components import TaskEmptyState, TaskNoSelection, TaskStatusTabs
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
 from .components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
 from .components.task_card import TaskCardData
-from .components.task_dialog import show_create_task_dialog
+from .components.task_dialog import show_create_task_dialog, show_edit_task_dialog
 from .components.task_list import TaskList, TaskListProps
 from .controller import TasksController
 from .presenter import to_detail_from_card
@@ -66,13 +66,21 @@ class TasksView(BaseView):
             service=service,
             on_change=self._on_view_model_change,
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
+            apps=self.apps,
         )
 
         self._current_vm: list[TaskCardVM] = []
         # Components
         self._status_tabs: TaskStatusTabs | None = None
         self._list_comp = TaskList(TaskListProps(on_item_click=self._on_item_clicked_id))
-        self._detail_panel = TaskDetailPanel(DetailPanelProps(on_status_change=self._on_status_change))
+        self._detail_panel = TaskDetailPanel(
+            DetailPanelProps(
+                on_status_change=self._on_status_change,
+                on_edit=self._on_edit_task,
+                on_task_select=self._on_item_clicked_id,
+                on_project_select=self._on_project_clicked,
+            )
+        )
         self._no_selection = TaskNoSelection()
         self._empty_state = TaskEmptyState(on_create=self._open_create_dialog)
         logger.info("TasksView initialized with ApplicationService")
@@ -127,34 +135,17 @@ class TasksView(BaseView):
         # 左: 一覧 / 右: 詳細 (components)
         self._render_items(self._current_vm)
 
-        grid = ft.ResponsiveRow(
-            controls=[
-                ft.Container(
-                    content=self._list_comp.control,
-                    col={"xs": 12, "lg": 5},
-                    padding=ft.padding.only(right=12),
-                ),
-                ft.Container(
-                    content=self._detail_panel.control,
-                    col={"xs": 12, "lg": 7},
-                ),
-            ],
-            expand=True,
-        )
         # TODO: 右ペインをタブ化 (概要/履歴/コメント) するなどの拡張を検討。アクティビティ連携も想定。
-
-        controls = ft.Column(
-            controls=[
-                header,
-                self._status_tabs,
-                ft.Divider(),
-                grid,
-            ],
-            spacing=16,
-            expand=True,
+        grid = self.create_two_column_layout(
+            left_content=self._list_comp.control,
+            right_content=self._detail_panel.control,
         )
 
-        return ft.Container(content=controls, padding=24, expand=True)
+        return self.create_standard_layout(
+            header=header,
+            status_tabs=self._status_tabs,
+            content=grid,
+        )
 
     # --- Controller のコールバック ---
     def _on_view_model_change(self, vm_list: list[TaskCardVM]) -> None:
@@ -178,6 +169,11 @@ class TasksView(BaseView):
             logger.debug(f"filter debug logging failed: {e}")
         # フィルタ/検索/並び替えの反映を確実に UI に適用
         self.safe_update()
+
+        # 一時保存されたタスクIDを取得して選択（初回のみ）
+        if not hasattr(self, "_pending_handled"):
+            self._handle_pending_task()
+            self._pending_handled = True
 
     # --- Search debounce ---
     _SEARCH_DEBOUNCE_MS: int = 300
@@ -247,8 +243,11 @@ class TasksView(BaseView):
 
     def _show_detail(self, vm: TaskCardVM) -> None:
         """選択タスク詳細を右ペインに表示する。"""
-        # Presenter で詳細用VMに昇格させてから渡す
-        dvm = to_detail_from_card(vm)
+        # Controller から完全な詳細データを取得
+        from .presenter import to_detail_vm
+
+        detail_dict = self._controller.get_detail(vm.id)
+        dvm = to_detail_vm(detail_dict) if detail_dict else to_detail_from_card(vm)
 
         # 詳細パネルを表示
         self._detail_panel.set_item(dvm)
@@ -294,6 +293,38 @@ class TasksView(BaseView):
             if vm.id == task_id:
                 self._show_detail(vm)
                 return
+
+    def _handle_pending_task(self) -> None:
+        """一時保存されたタスクIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            task_id = self.page.client_storage.get("pending_task_id")
+            if task_id:
+                logger.info(f"一時保存されたタスクIDを検出: {task_id}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_task_id")
+                # タスクを選択
+                self._on_item_clicked_id(task_id)
+                logger.debug(f"タスクを選択しました: {task_id}")
+        except Exception as e:
+            logger.warning(f"一時保存タスクIDの処理に失敗: {e}")
+
+    def _on_project_clicked(self, project_id: str) -> None:
+        """プロジェクト詳細画面へ遷移する。
+
+        Args:
+            project_id: プロジェクトID
+        """
+        logger.info(f"プロジェクト画面への遷移を開始: project_id={project_id}")
+        try:
+            # プロジェクトIDをページのクライアントストレージに一時保存
+            self.page.client_storage.set("pending_project_id", project_id)
+            # プロジェクト画面に遷移
+            self.page.go("/projects")
+            logger.debug(f"プロジェクト画面への遷移が完了: /projects (pending_project_id={project_id})")
+        except Exception as e:
+            logger.error(f"プロジェクト画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
 
     def _on_status_change(self, task_id: str, new_status: str) -> None:
         """タスクステータス変更時のコールバック。
@@ -348,3 +379,70 @@ class TasksView(BaseView):
         except Exception as e:
             logger.exception(f"タスク作成中にエラー: {e}")
             self.show_error_snackbar(self.page, "タスクの作成に失敗しました。詳細はログを参照してください。")
+
+    def _on_edit_task(self, task_id: str) -> None:
+        """タスク編集ダイアログを開く。
+
+        Args:
+            task_id: 編集対象のタスクID
+        """
+        # 現在のVM一覧から該当タスクを検索
+        vm = None
+        for v in self._current_vm:
+            if str(v.id) == task_id:
+                vm = v
+                break
+
+        if not vm:
+            self.show_error_snackbar(self.page, "タスクが見つかりませんでした。")
+            return
+
+        # VMからダイアログ用データを作成
+        task_data = {
+            "id": str(vm.id),
+            "title": vm.title,
+            "description": getattr(vm, "description", ""),
+            "status": vm.status,
+            "due_date": str(getattr(vm, "due_date", "") or ""),
+        }
+
+        show_edit_task_dialog(
+            page=self.page,
+            task_data=task_data,
+            on_save=self._handle_edit_task,
+        )
+
+    def _handle_edit_task(self, task_data: dict[str, str]) -> None:
+        """タスク編集処理を実行する。
+
+        Args:
+            task_data: 更新後のタスクデータ
+        """
+        task_id = task_data.get("id", "").strip()
+        title = task_data.get("title", "").strip()
+        description = task_data.get("description", "").strip() or None
+        status = task_data.get("status", "").strip()
+        due_date = task_data.get("due_date", "").strip() or None
+
+        if not task_id or not title:
+            self.show_error_snackbar(self.page, "タスクIDとタイトルは必須です。")
+            return
+
+        # Controllerにタスク更新を委譲
+        def _update() -> None:
+            self._controller.update_task(
+                task_id=task_id,
+                title=title,
+                description=description,
+                status=status,
+                due_date=due_date,
+            )
+
+        try:
+            self.with_loading(_update)
+            self.show_success_snackbar(f"タスク「{title}」を更新しました。")
+            logger.info(f"タスク更新成功: {task_id}")
+            self.safe_update()
+        except Exception as e:
+            logger.exception(f"タスク更新中にエラー: {e}")
+            self.show_error_snackbar(self.page, "タスクの更新に失敗しました。詳細はログを参照してください。")

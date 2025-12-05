@@ -51,6 +51,23 @@ class ProjectCardVM:
 
 
 @dataclass(frozen=True)
+class TaskItemVM:
+    """タスク表示用のViewModel。
+
+    Attributes:
+        id: タスクID
+        title: タスクタイトル
+        status: ステータス表示用文字列
+        is_completed: 完了フラグ
+    """
+
+    id: str
+    title: str
+    status: str
+    is_completed: bool
+
+
+@dataclass(frozen=True)
 class ProjectDetailVM:
     """プロジェクト詳細表示用のViewModel。
 
@@ -70,6 +87,7 @@ class ProjectDetailVM:
         task_count: タスク総数
         completed_count: 完了タスク数
         task_id: 関連タスクIDリスト
+        tasks: 関連タスク詳細リスト
     """
 
     id: str
@@ -85,6 +103,7 @@ class ProjectDetailVM:
     task_count: int
     completed_count: int
     task_id: list[str]
+    tasks: list[TaskItemVM]
 
 
 def to_card_vm(items: Iterable[dict[str, str]]) -> list[ProjectCardVM]:
@@ -234,6 +253,21 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
     except ValueError:
         status_color = get_status_color("on_hold")
 
+    # タスク詳細リストを変換
+    tasks_data = project.get("tasks", [])
+    if not isinstance(tasks_data, list):
+        tasks_data = []
+
+    tasks_list = [
+        TaskItemVM(
+            id=str(task.get("id", "")),
+            title=str(task.get("title", "無題のタスク")),
+            status=str(task.get("status", "")),
+            is_completed=task.get("is_completed", "False") in ("True", "true", "1"),
+        )
+        for task in tasks_data
+    ]
+
     return ProjectDetailVM(
         id=project_id,
         title=title,
@@ -248,6 +282,7 @@ def _project_to_detail_vm(project: dict[str, str]) -> ProjectDetailVM:
         task_count=task_count,
         completed_count=completed_count,
         task_id=task_id_list,  # type: ignore[arg-type]
+        tasks=tasks_list,  # type: ignore[arg-type]
     )
 
 
@@ -336,6 +371,9 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
     due_date_raw = getattr(project, "due_date", None)
     due_date = None if due_date_raw in (None, "") else str(due_date_raw)
 
+    # タスクリスト（現状は空リスト）
+    tasks: list[TaskItemVM] = []
+
     # ステータス表示（theme.py を使用）
     from views.theme import get_status_color
 
@@ -360,4 +398,5 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
         task_count=task_count,
         completed_count=completed_count,
         task_id=task_id_list,
+        tasks=tasks,
     )

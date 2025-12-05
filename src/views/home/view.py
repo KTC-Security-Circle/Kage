@@ -38,7 +38,6 @@ from logic.application.one_liner_application_service import OneLinerApplicationS
 from logic.application.project_application_service import ProjectApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.theme import SPACING
 
 from .components import DailyReviewCard, InboxMemosSection, StatsCards
 from .components.stats_cards import StatCardData
@@ -116,37 +115,27 @@ class HomeView(BaseView):
         Returns:
             構築されたコントロール
         """
+        header = self._build_header()
         content_sections = [
-            self._build_header(),
-            ft.Container(height=SPACING.md),
             self._build_daily_review_section(),
         ]
 
         # Inboxメモセクションを追加（メモがある場合のみ）
         if self.home_state.has_inbox_memos():
-            content_sections.extend(
-                [
-                    ft.Container(height=SPACING.lg),
-                    self._build_inbox_memos_section(),
-                ]
-            )
+            content_sections.append(self._build_inbox_memos_section())
 
-        content_sections.extend(
-            [
-                ft.Container(height=SPACING.lg),
-                self._build_stats_section(),
-            ]
+        content_sections.append(self._build_stats_section())
+
+        content = ft.Column(
+            content_sections,
+            spacing=16,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
         )
 
-        return ft.Container(
-            content=ft.Column(
-                content_sections,
-                spacing=0,
-                scroll=ft.ScrollMode.AUTO,
-                expand=True,
-            ),
-            padding=ft.padding.all(32),
-            expand=True,
+        return self.create_standard_layout(
+            header=header,
+            content=content,
         )
 
     def _build_header(self) -> ft.Control:

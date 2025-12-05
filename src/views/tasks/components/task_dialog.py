@@ -75,72 +75,31 @@ def show_create_task_dialog(
     )
 
     # DatePicker を用いた期限入力
-    due_date_text = ft.TextField(
-        label="期限日",
-        hint_text="YYYY-MM-DD",
-        border_color=get_outline_color(),
-        focused_border_color=get_primary_color(),
-        label_style=ft.TextStyle(color=get_primary_color()),
-        expand=True,
-    )
-
     date_picker = ft.DatePicker(
         on_change=lambda e: (
             setattr(due_date_text, "value", e.control.value.strftime("%Y-%m-%d") if e.control.value else ""),
             due_date_text.update(),
         ),
     )
-    page.overlay.append(date_picker)
 
     def _open_date_picker(_: ft.ControlEvent) -> None:
         """DatePicker を開く"""
-        date_picker.pick_date()
+        page.open(date_picker)
 
-    completed_at_field = ft.TextField(
-        label="完了日時",
-        hint_text="YYYY-MM-DD HH:MM:SS",
+    calendar_button = ft.IconButton(
+        icon=ft.Icons.CALENDAR_MONTH,
+        icon_size=20,
+        tooltip="カレンダーから選択",
+        on_click=_open_date_picker,
+    )
+
+    due_date_text = ft.TextField(
+        label="期限日",
+        hint_text="YYYY-MM-DD 形式で入力",
         border_color=get_outline_color(),
         focused_border_color=get_primary_color(),
         label_style=ft.TextStyle(color=get_primary_color()),
-        expand=True,
-    )
-
-    project_id_field = ft.TextField(
-        label="プロジェクトID",
-        hint_text="UUID",
-        border_color=get_outline_color(),
-        focused_border_color=get_primary_color(),
-        label_style=ft.TextStyle(color=get_primary_color()),
-        expand=True,
-    )
-
-    memo_id_field = ft.TextField(
-        label="メモID",
-        hint_text="UUID",
-        border_color=get_outline_color(),
-        focused_border_color=get_primary_color(),
-        label_style=ft.TextStyle(color=get_primary_color()),
-        expand=True,
-    )
-
-    recurrence_rule_field = ft.TextField(
-        label="繰り返しルール",
-        hint_text="例: FREQ=DAILY",
-        border_color=get_outline_color(),
-        focused_border_color=get_primary_color(),
-        label_style=ft.TextStyle(color=get_primary_color()),
-        visible=False,
-        expand=True,
-    )
-
-    def on_recurring_change(e: ft.ControlEvent) -> None:
-        recurrence_rule_field.visible = e.control.value
-        recurrence_rule_field.update()
-
-    is_recurring_checkbox = ft.Checkbox(
-        label="繰り返しタスク",
-        on_change=on_recurring_change,
-        fill_color=get_primary_color(),
+        suffix=calendar_button,
     )
 
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
@@ -177,11 +136,6 @@ def show_create_task_dialog(
             "description": (description_field.value or "").strip(),
             "status": status_dropdown.value or "todo",
             "due_date": due_date_val,
-            "completed_at": completed_at_field.value.strip() if completed_at_field.value else None,
-            "project_id": project_id_field.value.strip() if project_id_field.value else None,
-            "memo_id": memo_id_field.value.strip() if memo_id_field.value else None,
-            "is_recurring": str(is_recurring_checkbox.value),
-            "recurrence_rule": recurrence_rule_field.value.strip() if recurrence_rule_field.value else None,
         }
 
         if on_save:
@@ -210,7 +164,7 @@ def show_create_task_dialog(
                     # 説明テキスト
                     ft.Container(
                         content=ft.Text(
-                            "新しいタスクの詳細を入力してください",
+                            "タスクのタイトル、説明、ステータス、期限日を入力してください。\n期限日はカレンダーから選択するか、YYYY-MM-DD形式で直接入力できます。",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=get_text_secondary_color(),
                         ),
@@ -219,55 +173,21 @@ def show_create_task_dialog(
                     # フォームフィールド
                     title_field,
                     description_field,
+                    # ステータスと期限を横並び
                     ft.Row(
                         controls=[
-                            ft.Container(content=status_dropdown, expand=True),
-                            ft.Container(
-                                content=ft.Row(
-                                    controls=[
-                                        ft.Row(
-                                            controls=[
-                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.BLUE_600),
-                                                due_date_text,
-                                            ],
-                                            spacing=6,
-                                            alignment=ft.MainAxisAlignment.START,
-                                        ),
-                                        ft.IconButton(
-                                            icon=ft.Icons.EVENT_AVAILABLE,
-                                            tooltip="期限を選択",
-                                            on_click=_open_date_picker,
-                                            icon_size=26,
-                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
-                                        ),
-                                        ft.IconButton(
-                                            icon=ft.Icons.CLEAR,
-                                            tooltip="期限クリア",
-                                            on_click=lambda _: (
-                                                setattr(due_date_text, "value", ""),
-                                                due_date_text.update(),
-                                            ),
-                                            icon_size=22,
-                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
-                                        ),
-                                    ],
-                                    spacing=8,
-                                    alignment=ft.MainAxisAlignment.START,
-                                ),
-                            ),
+                            ft.Container(content=status_dropdown, expand=1),
+                            ft.Container(content=due_date_text, expand=1),
                         ],
-                        spacing=20,
+                        spacing=16,
                     ),
-                    ft.Row([project_id_field, memo_id_field], spacing=20),
-                    completed_at_field,
-                    is_recurring_checkbox,
-                    recurrence_rule_field,
                 ],
-                spacing=16,
+                spacing=20,
                 tight=True,
                 scroll=ft.ScrollMode.AUTO,
             ),
             width=600,
+            padding=ft.padding.symmetric(horizontal=4),
         ),
         actions=[
             ft.TextButton(
@@ -347,15 +267,6 @@ def show_edit_task_dialog(
 
     # DatePicker を用いた期限入力
     due_date_raw = task_data.get("due_date", "")
-    due_date_text = ft.TextField(
-        label="期限日",
-        hint_text="YYYY-MM-DD",
-        value=due_date_raw[:DATE_SLICE_LENGTH] if due_date_raw else "",
-        border_color=get_outline_color(),
-        focused_border_color=get_primary_color(),
-        label_style=ft.TextStyle(color=get_primary_color()),
-        expand=True,
-    )
 
     date_picker = ft.DatePicker(
         on_change=lambda e: (
@@ -363,11 +274,27 @@ def show_edit_task_dialog(
             due_date_text.update(),
         ),
     )
-    page.overlay.append(date_picker)
 
     def _open_date_picker(_: ft.ControlEvent) -> None:
         """DatePicker を開く"""
-        date_picker.pick_date()
+        page.open(date_picker)
+
+    calendar_button = ft.IconButton(
+        icon=ft.Icons.CALENDAR_MONTH,
+        icon_size=20,
+        tooltip="カレンダーから選択",
+        on_click=_open_date_picker,
+    )
+
+    due_date_text = ft.TextField(
+        label="期限日",
+        hint_text="YYYY-MM-DD 形式で入力",
+        value=due_date_raw[:DATE_SLICE_LENGTH] if due_date_raw else "",
+        border_color=get_outline_color(),
+        focused_border_color=get_primary_color(),
+        label_style=ft.TextStyle(color=get_primary_color()),
+        suffix=calendar_button,
+    )
 
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """ダイアログを閉じる"""
@@ -432,7 +359,7 @@ def show_edit_task_dialog(
                     # 説明テキスト
                     ft.Container(
                         content=ft.Text(
-                            "タスクの詳細を編集してください",
+                            "タスクのタイトル、説明、ステータス、期限日を編集できます。\n期限日はカレンダーから選択するか、YYYY-MM-DD形式で直接入力できます。",
                             theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                             color=get_text_secondary_color(),
                         ),
@@ -441,51 +368,21 @@ def show_edit_task_dialog(
                     # フォームフィールド
                     title_field,
                     description_field,
+                    # ステータスと期限を横並び
                     ft.Row(
                         controls=[
-                            ft.Container(content=status_dropdown, expand=True),
-                            ft.Container(
-                                content=ft.Row(
-                                    controls=[
-                                        ft.Row(
-                                            controls=[
-                                                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.BLUE_600),
-                                                due_date_text,
-                                            ],
-                                            spacing=6,
-                                            alignment=ft.MainAxisAlignment.START,
-                                        ),
-                                        ft.IconButton(
-                                            icon=ft.Icons.EVENT_AVAILABLE,
-                                            tooltip="期限を選択",
-                                            on_click=_open_date_picker,
-                                            icon_size=26,
-                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
-                                        ),
-                                        ft.IconButton(
-                                            icon=ft.Icons.CLEAR,
-                                            tooltip="期限クリア",
-                                            on_click=lambda _: (
-                                                setattr(due_date_text, "value", ""),
-                                                due_date_text.update(),
-                                            ),
-                                            icon_size=22,
-                                            style=ft.ButtonStyle(padding=ft.padding.all(8)),
-                                        ),
-                                    ],
-                                    spacing=8,
-                                    alignment=ft.MainAxisAlignment.START,
-                                ),
-                            ),
+                            ft.Container(content=status_dropdown, expand=1),
+                            ft.Container(content=due_date_text, expand=1),
                         ],
-                        spacing=20,
+                        spacing=16,
                     ),
                 ],
-                spacing=16,
+                spacing=20,
                 tight=True,
                 scroll=ft.ScrollMode.AUTO,
             ),
             width=600,
+            padding=ft.padding.symmetric(horizontal=4),
         ),
         actions=[
             ft.TextButton(

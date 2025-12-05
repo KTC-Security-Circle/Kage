@@ -536,16 +536,24 @@ def build_detail_panel(
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
-                    # 内容
+                    # 内容（Markdownレンダリング、コンテンツ量に応じた高さ）
                     ft.Container(
-                        content=ft.Text(
-                            memo.content,
-                            style=ft.TextThemeStyle.BODY_MEDIUM,
-                            selectable=True,
+                        content=ft.Column(
+                            controls=[
+                                ft.Markdown(
+                                    value=memo.content,
+                                    selectable=True,
+                                    extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                                    on_tap_link=lambda _: None,
+                                    fit_content=True,
+                                )
+                            ],
+                            scroll=ft.ScrollMode.AUTO,
                         ),
                         padding=ft.padding.all(16),
                         bgcolor=ft.Colors.SECONDARY_CONTAINER,
                         border_radius=8,
+                        # 高さは指定せず、コンテンツに応じて自動調整
                     ),
                     # メタデータ
                     build_detail_metadata(created_text, updated_text),

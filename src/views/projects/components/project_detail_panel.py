@@ -45,6 +45,7 @@ class ProjectDetailPanel(ft.Column):
                                 self._build_header(),
                                 self._build_description(),
                                 self._build_progress(),
+                                self._build_tasks(),
                             ],
                             spacing=20,
                         ),
@@ -165,6 +166,75 @@ class ProjectDetailPanel(ft.Column):
             spacing=8,
         )
 
+    def _build_tasks(self) -> ft.Control:
+        """関連タスク部分を構築。
+
+        Returns:
+            関連タスクコントロール
+        """
+        task_count = len(self.project.task_id) if self.project.task_id else 0
+
+        if task_count == 0:
+            tasks_display = ft.Text(
+                "関連付けられたタスクはありません",
+                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                color=get_grey_color(400),
+                italic=True,
+            )
+        else:
+            # タスクの完了数と進捗を計算
+            completed = self.project.completed_count
+            progress = completed / task_count if task_count > 0 else 0.0
+
+            tasks_display = ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Icon(
+                                ft.Icons.TASK_ALT,
+                                size=20,
+                                color=get_primary_color(),
+                            ),
+                            ft.Text(
+                                f"{task_count} 件のタスク",
+                                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                                weight=ft.FontWeight.W_500,
+                            ),
+                        ],
+                        spacing=8,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.ProgressBar(
+                                value=progress,
+                                color=get_primary_color(),
+                                bgcolor=get_surface_variant_color(),
+                                height=8,
+                            ),
+                            ft.Text(
+                                f"{completed} / {task_count} 完了 ({progress:.0%})",
+                                theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                color=get_grey_color(600),
+                            ),
+                        ],
+                        spacing=6,
+                    ),
+                ],
+                spacing=12,
+            )
+
+        return ft.Column(
+            controls=[
+                ft.Text(
+                    "関連タスク",
+                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                    color=get_grey_color(500),
+                ),
+                tasks_display,
+            ],
+            spacing=8,
+        )
+
     def _handle_edit(self) -> None:
         """編集ハンドラ。"""
         if self.on_edit:
@@ -190,6 +260,7 @@ class ProjectDetailPanel(ft.Column):
                             self._build_header(),
                             self._build_description(),
                             self._build_progress(),
+                            self._build_tasks(),
                         ],
                         spacing=20,
                     ),

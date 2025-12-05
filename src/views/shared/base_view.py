@@ -272,14 +272,22 @@ class BaseView(ft.Container, ErrorHandlingMixin):
     # ---------------------------------------------------------------------
     def with_loading(
         self,
-        fn_or_coro: Callable[[], Any] | Awaitable[Any],
+        fn_or_coro: Callable[[], object] | Awaitable[object],
         user_error_message: str = "処理に失敗しました",
-    ) -> None:
-        """処理を loading 状態でラップし UI フリーズを防ぐ。"""
+    ) -> object:
+        """処理を loading 状態でラップし UI フリーズを防ぐ。
+
+        Args:
+            fn_or_coro: 実行する関数またはコルーチン
+            user_error_message: エラー時のユーザー向けメッセージ
+
+        Returns:
+            同期関数の場合は関数の戻り値、非同期の場合はNone
+        """
         self.state = replace(self.state, loading=True)
         self.safe_update()
 
-        async def _runner_async(coro: Awaitable[Any]) -> None:
+        async def _runner_async(coro: Awaitable[object]) -> None:
             try:
                 await coro
             except Exception as e:
@@ -290,12 +298,13 @@ class BaseView(ft.Container, ErrorHandlingMixin):
                 self.state = replace(self.state, loading=False)
                 self.safe_update()
 
-        def _runner_sync(fn: Callable[[], Any]) -> None:
+        def _runner_sync(fn: Callable[[], object]) -> object:
             try:
-                fn()
+                return fn()
             except Exception as e:
                 msg = getattr(e, "user_message", user_error_message)
                 self.notify_error(msg, details=f"{type(e).__name__}: {e}\n{traceback.format_exc()}")
+                return None
             finally:
                 self.state = replace(self.state, loading=False)
                 self.safe_update()
@@ -308,8 +317,8 @@ class BaseView(ft.Container, ErrorHandlingMixin):
             self._running_tasks.append(task)
             # タスク終了後クリーンアップ
             task.add_done_callback(lambda t: self._running_tasks.remove(t) if t in self._running_tasks else None)
-        else:
-            _runner_sync(fn_or_coro)  # type: ignore[arg-type]
+            return None
+        return _runner_sync(fn_or_coro)  # type: ignore[arg-type]
 
     # Convenience: 明示的に state.error_message をクリア
     def clear_error(self) -> None:

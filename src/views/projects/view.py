@@ -63,6 +63,7 @@ class ProjectsView(BaseView):
             on_detail_change=self._render_detail,
             # BaseView.show_error_snackbar は (page, message) 署名のためアダプタで統一
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
+            apps=self.apps,
         )
 
         # UI コンポーネント
@@ -229,10 +230,21 @@ class ProjectsView(BaseView):
                 "status": updated.get("status", ""),
                 "due_date": updated.get("due_date"),
             }
+            # task_idsが含まれていればタスクのproject_idを更新
+            if "task_ids" in updated:
+                task_ids_value = updated["task_ids"]
+                logger.debug(f"プロジェクト編集: task_ids={task_ids_value}, type={type(task_ids_value)}")
+                if isinstance(task_ids_value, list):
+                    logger.debug(f"タスクをプロジェクトに更新: project_id={vm.id}, task_ids={task_ids_value}")
+                    self._controller.update_project_tasks(vm.id, task_ids_value)
+            else:
+                logger.debug("プロジェクト編集: task_idsは含まれていません")
             self.with_loading(lambda: self._controller.update_project(vm.id, changes))
             self.show_success_snackbar("プロジェクトを更新しました")
 
-        show_edit_project_dialog(self.page, project_dict, on_save=_on_save)
+        # 利用可能なタスクを取得
+        available_tasks = self._get_available_tasks()
+        show_edit_project_dialog(self.page, project_dict, on_save=_on_save, available_tasks=available_tasks)
 
     def _confirm_delete(self, vm: ProjectDetailVM) -> None:
         """削除確認を表示し、確定時に削除処理を実行する。"""
@@ -303,6 +315,29 @@ class ProjectsView(BaseView):
                 ProjectStatus.CANCELLED: 0,
             }
 
+    def _get_available_tasks(self) -> list[dict[str, str | None]]:
+        """利用可能なタスクを取得する
+
+        Returns:
+            タスクのリスト（id, title, project_idを含む辞書）
+        """
+        try:
+            from logic.application.task_application_service import TaskApplicationService
+
+            task_service = self.apps.get_service(TaskApplicationService)
+            tasks = task_service.get_all_tasks()
+            return [
+                {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "project_id": str(task.project_id) if task.project_id else None,
+                }
+                for task in tasks
+            ]
+        except Exception as e:
+            logger.warning(f"タスクの取得に失敗しました: {e}")
+            return []
+
     def _handle_create_click(self) -> None:
         """Header作成ボタンのクリック処理。"""
         self._create_project()
@@ -347,8 +382,23 @@ class ProjectsView(BaseView):
                 "task_count": "0",
                 "completed_count": "0",
             }
+            # task_idsが含まれていればタスクのproject_idを設定
+            task_ids = data.get("task_ids", [])
+            logger.debug(f"プロジェクト作成: task_ids={task_ids}, type={type(task_ids)}")
             # 作成処理もローディング表示で包み、更新/削除と挙動を統一
-            self.with_loading(lambda: self._controller.create_project(new_project, select=True))
+            project_id = self.with_loading(lambda: self._controller.create_project(new_project, select=True))
+            logger.debug(f"プロジェクト作成完了: project_id={project_id}")
+            # タスクをプロジェクトに割り当て
+            if task_ids and project_id and isinstance(task_ids, list) and isinstance(project_id, str):
+                logger.debug(f"タスクをプロジェクトに割り当て: project_id={project_id}, task_ids={task_ids}")
+                self._controller.update_project_tasks(project_id, task_ids)
+            else:
+                logger.debug(
+                    f"タスク割り当てスキップ: task_ids={task_ids}, "
+                    f"project_id={project_id}, is_list={isinstance(task_ids, list)}"
+                )
             self.show_success_snackbar("プロジェクトを追加しました")
 
-        show_create_project_dialog(self.page, on_save=_on_save)
+        # 利用可能なタスクを取得
+        available_tasks = self._get_available_tasks()
+        show_create_project_dialog(self.page, on_save=_on_save, available_tasks=available_tasks)

@@ -27,6 +27,7 @@ DATE_SLICE_LENGTH = 10  # YYYY-MM-DD 長さ
 def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     page: ft.Page,  # type: ignore[name-defined]
     on_save: Callable[[dict[str, Any]], None] | None = None,
+    available_tasks: list[dict[str, Any]] | None = None,
 ) -> None:
     """新規プロジェクト作成ダイアログを表示する（入力/バリデーション統合）。
 
@@ -35,8 +36,12 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     Args:
         page: Fletページインスタンス
         on_save: 保存時のコールバック関数
+        available_tasks: 選択可能なタスクのリスト（id, titleを含む辞書のリスト）
     """
     import flet as ft
+
+    # available_tasksがNoneの場合は空リストを使用
+    tasks_list = available_tasks or []
 
     # フォームフィールドを作成（prefix_icon非推奨のためRow構成）
     name_field = ft.TextField(
@@ -77,45 +82,54 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
     )
 
     # タスク選択用（複数選択UI）
-    selected_tasks: list[str] = []
+    selected_tasks: list[str] = []  # タスクIDのリスト
+    selected_task_titles: dict[str, str] = {}  # ID -> タイトルのマッピング
     tasks_wrap = ft.Row(wrap=True, spacing=5)
 
     def add_task(_: ft.ControlEvent) -> None:
         if not task_dropdown.value:
             return
-        task_val = task_dropdown.value
-        if task_val not in selected_tasks:
-            selected_tasks.append(task_val)
+        task_id = task_dropdown.value
+        if task_id not in selected_tasks:
+            selected_tasks.append(task_id)
+            # タイトルを取得
+            task_title = selected_task_titles.get(task_id, task_id)
             # Chipを追加
             tasks_wrap.controls.append(
                 ft.Chip(
-                    label=ft.Text(task_val),
-                    on_delete=lambda e: remove_task(task_val, e.control),
+                    label=ft.Text(task_title),
+                    on_delete=lambda e, tid=task_id: remove_task(tid, e.control),
                 )
             )
             tasks_wrap.update()
             task_dropdown.value = None
             task_dropdown.update()
 
-    def remove_task(task_val: str, chip_control: ft.Control) -> None:
-        if task_val in selected_tasks:
-            selected_tasks.remove(task_val)
+    def remove_task(task_id: str, chip_control: ft.Control) -> None:
+        if task_id in selected_tasks:
+            selected_tasks.remove(task_id)
             tasks_wrap.controls.remove(chip_control)
             tasks_wrap.update()
 
-    # タスク選択用ドロップダウン（ロジック未実装のためダミー）
+    # 実際のタスクからドロップダウンオプションを生成
+    task_options = []
+    for task in tasks_list:
+        task_id = str(task.get("id", ""))
+        task_title = task.get("title", "無題のタスク")
+        selected_task_titles[task_id] = task_title
+        # project_idがNoneのタスクのみ選択可能
+        if not task.get("project_id"):
+            task_options.append(ft.dropdown.Option(task_id, task_title))
+
     task_dropdown = ft.Dropdown(
         label="関連タスク追加",
-        hint_text="タスクを選択してください",
+        hint_text="プロジェクトに未割り当てのタスクを選択",
         border_color=get_outline_color(),
         focused_border_color=get_primary_color(),
         label_style=ft.TextStyle(color=get_primary_color()),
-        options=[
-            ft.dropdown.Option("dummy-task-1", "サンプルタスク 1"),
-            ft.dropdown.Option("dummy-task-2", "サンプルタスク 2"),
-            ft.dropdown.Option("dummy-task-3", "サンプルタスク 3"),
-        ],
+        options=task_options,
         on_change=add_task,
+        disabled=len(task_options) == 0,
     )
 
     # DatePicker を用いた期限入力
@@ -217,7 +231,7 @@ def show_create_project_dialog(  # noqa: PLR0915, C901 - UI構築で許容
             "description": (description_field.value or "").strip(),
             "status": status_normalized,
             "due_date": due_date_val,
-            "task_id": selected_tasks,
+            "task_ids": selected_tasks,  # 選択されたタスクのIDリスト
             "created_at": now_iso,
             "updated_at": now_iso,
         }
@@ -362,6 +376,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     page: ft.Page,  # type: ignore[name-defined]
     project: dict[str, Any],
     on_save: Callable[[dict[str, Any]], None] | None = None,
+    available_tasks: list[dict[str, Any]] | None = None,
 ) -> None:
     """美しいプロジェクト編集ダイアログを表示する。
 
@@ -369,8 +384,12 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         page: Fletページインスタンス
         project: 編集対象のプロジェクト
         on_save: 保存時のコールバック関数
+        available_tasks: 選択可能なタスクのリスト（id, title, project_idを含む辞書のリスト）
     """
     import flet as ft
+
+    # available_tasksがNoneの場合は空リストを使用
+    tasks_list = available_tasks or []
 
     # 既存データでフォームフィールドを初期化
     name_field = ft.TextField(
@@ -410,43 +429,59 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
     )
 
     # タスク選択用（複数選択UI）
-    current_task_ids = project.get("task_id", [])
-    selected_tasks: list[str] = current_task_ids if isinstance(current_task_ids, list) else []
+    project_id = str(project.get("id", ""))
+    selected_tasks: list[str] = []  # タスクIDのリスト
+    selected_task_titles: dict[str, str] = {}  # ID -> タイトルのマッピング
     tasks_wrap = ft.Row(wrap=True, spacing=5)
+
+    # このプロジェクトに既に属しているタスクを初期選択として設定
+    for task in tasks_list:
+        task_id = str(task.get("id", ""))
+        task_title = task.get("title", "無題のタスク")
+        selected_task_titles[task_id] = task_title
+        if str(task.get("project_id", "")) == project_id:
+            selected_tasks.append(task_id)
 
     def add_task(_: ft.ControlEvent) -> None:
         if not task_dropdown.value:
             return
-        task_val = task_dropdown.value
-        if task_val not in selected_tasks:
-            selected_tasks.append(task_val)
-            _add_chip(task_val)
+        task_id = task_dropdown.value
+        if task_id not in selected_tasks:
+            selected_tasks.append(task_id)
+            _add_chip(task_id)
             task_dropdown.value = None
             task_dropdown.update()
 
-    def remove_task(task_val: str, chip_control: ft.Control) -> None:
-        if task_val in selected_tasks:
-            selected_tasks.remove(task_val)
+    def remove_task(task_id: str, chip_control: ft.Control) -> None:
+        if task_id in selected_tasks:
+            selected_tasks.remove(task_id)
             tasks_wrap.controls.remove(chip_control)
             tasks_wrap.update()
 
-    def _add_chip(task_val: str) -> None:
+    def _add_chip(task_id: str) -> None:
+        task_title = selected_task_titles.get(task_id, task_id)
         tasks_wrap.controls.append(
             ft.Chip(
-                label=ft.Text(task_val),
-                on_delete=lambda e: remove_task(task_val, e.control),
+                label=ft.Text(task_title),
+                on_delete=lambda e, tid=task_id: remove_task(tid, e.control),
             )
         )
         tasks_wrap.update()
 
     # 初期タスクの表示
     for task_id in selected_tasks:
-        tasks_wrap.controls.append(
-            ft.Chip(
-                label=ft.Text(task_id),
-                on_delete=lambda e, t=task_id: remove_task(t, e.control),
-            )
-        )
+        _add_chip(task_id)
+
+    # 実際のタスクからドロップダウンオプションを生成
+    # このプロジェクトに属していないタスクまたはproject_idがNoneのタスクのみ選択可能
+    task_options = []
+    for task in tasks_list:
+        task_id = str(task.get("id", ""))
+        task_title = task.get("title", "無題のタスク")
+        task_project_id = task.get("project_id")
+        # 未割り当てまたは他のプロジェクトに属していないタスクのみ
+        if (not task_project_id or str(task_project_id) == project_id) and task_id not in selected_tasks:
+            task_options.append(ft.dropdown.Option(task_id, task_title))
 
     task_dropdown = ft.Dropdown(
         label="関連タスク追加",
@@ -454,12 +489,9 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
         border_color=get_outline_color(),
         focused_border_color=get_primary_color(),
         label_style=ft.TextStyle(color=get_primary_color()),
-        options=[
-            ft.dropdown.Option("dummy-task-1", "サンプルタスク 1"),
-            ft.dropdown.Option("dummy-task-2", "サンプルタスク 2"),
-            ft.dropdown.Option("dummy-task-3", "サンプルタスク 3"),
-        ],
+        options=task_options,
         on_change=add_task,
+        disabled=len(task_options) == 0,
     )
 
     # 期限フィールド（編集時は既存値を反映）
@@ -537,7 +569,7 @@ def show_edit_project_dialog(  # noqa: PLR0915, C901 - 設計上の複合UI構�
             "description": desc_val,
             "status": normalized_status,
             "due_date": due_raw,
-            "task_id": selected_tasks,
+            "task_ids": selected_tasks,  # 選択されたタスクのIDリスト
             "updated_at": _dt.datetime.now(tz=tz).isoformat(),
         }
         try:

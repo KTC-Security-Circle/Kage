@@ -89,6 +89,8 @@ class ProjectController:
         on_list_change: Callable[[list[ProjectCardVM]], None],
         on_detail_change: Callable[[ProjectDetailVM | None], None],
         on_error: Callable[[str], None] | None = None,
+        *,
+        apps: object | None = None,
     ) -> None:
         """Controller 初期化。
 
@@ -97,12 +99,14 @@ class ProjectController:
             on_list_change: 一覧 VM 更新時コールバック
             on_detail_change: 詳細 VM 更新時コールバック
             on_error: ユーザ通知用エラーハンドラ（SnackBar 等）
+            apps: ApplicationServices インスタンス（タスク取得用）
         """
         self._service = service
         self._state = ProjectState()
         self._on_list_change = on_list_change
         self._on_detail_change = on_detail_change
         self._on_error = on_error
+        self._apps = apps
 
     def _notify_error(self, message: str) -> None:
         """UI 層へエラー通知（存在すれば）。"""
@@ -241,12 +245,15 @@ class ProjectController:
         else:
             return counts
 
-    def create_project(self, project: dict[str, str], *, select: bool = True) -> None:
+    def create_project(self, project: dict[str, str], *, select: bool = True) -> str | None:
         """新規プロジェクトを ApplicationService 経由で作成する。
 
         Args:
             project: ダイアログ等から受け取った新規作成データ（title, description, status 等）
             select: 作成後に選択状態にするか
+
+        Returns:
+            作成されたプロジェクトのID（文字列）、失敗時はNone
         """
         title = str(project.get("title") or project.get("name") or "").strip()
         description = str(project.get("description") or "").strip() or None
@@ -262,11 +269,12 @@ class ProjectController:
 
         if not title:
             self._notify_error("タイトルを入力してください。")
-            return
+            return None
 
         try:
             created = self._service.create(title, description, status=status_enum)
             new_id = str(getattr(created, "id", ""))
+            logger.debug(f"プロジェクト作成成功: new_id={new_id}, created.id={created.id}")
 
             new_state = self._state
             if select:
@@ -277,6 +285,9 @@ class ProjectController:
         except Exception as e:
             logger.exception(f"プロジェクト作成中にエラー: {e}")
             self._notify_error("プロジェクトの作成に失敗しました。詳細はログを参照してください。")
+            return None
+        else:
+            return new_id
 
     def update_project(self, project_id: str, changes: dict[str, Any]) -> None:
         """既存プロジェクトを ApplicationService 経由で更新する。
@@ -316,6 +327,43 @@ class ProjectController:
         except Exception as e:
             logger.exception(f"プロジェクト更新中にエラー: {e}")
             self._notify_error("プロジェクトの更新に失敗しました。詳細はログを参照してください。")
+
+    def update_project_tasks(self, project_id: str, task_ids: list[str]) -> None:
+        """プロジェクトに関連するタスクのproject_idを更新する。
+
+        Args:
+            project_id: プロジェクトID
+            task_ids: 関連付けるタスクIDのリスト
+        """
+        try:
+            from logic.application.task_application_service import TaskApplicationService
+            from logic.unit_of_work import SqlModelUnitOfWork
+            from models import TaskUpdate
+
+            pid = UUID(project_id)
+
+            # TaskApplicationServiceを初期化
+            task_service = TaskApplicationService(SqlModelUnitOfWork)
+
+            # このプロジェクトに以前属していたタスクを取得してクリア
+            all_tasks = task_service.get_all_tasks()
+            for task in all_tasks:
+                if task.project_id == pid and str(task.id) not in task_ids:
+                    # このプロジェクトから外す
+                    task_service.update(task.id, TaskUpdate(project_id=None))
+
+            # 新しく選択されたタスクを更新
+            for task_id_str in task_ids:
+                try:
+                    tid = UUID(task_id_str)
+                    task_service.update(tid, TaskUpdate(project_id=pid))
+                except ValueError:
+                    logger.warning(f"不正なタスクID: {task_id_str}")
+
+            logger.info(f"プロジェクト {project_id} のタスクを更新しました")
+        except Exception as e:
+            logger.exception(f"タスク更新中にエラー: {e}")
+            self._notify_error("タスクの更新に失敗しました。")
 
     def delete_project(self, project_id: str) -> None:
         """プロジェクトを ApplicationService 経由で削除する。
@@ -480,6 +528,27 @@ class ProjectController:
         else:
             status_text = _s(status_value)
 
+        # 関連タスクIDリストと完了数を取得
+        project_id = getattr(p, "id", None)
+        task_ids: list[str] = []
+        completed_count = 0
+        if project_id:
+            try:
+                from logic.application.task_application_service import TaskApplicationService
+                from models import TaskStatus
+
+                if not hasattr(self._apps, "get_service"):
+                    return {}
+                task_service = self._apps.get_service(TaskApplicationService)  # type: ignore[union-attr]
+                all_tasks = task_service.get_all_tasks()
+                # プロジェクトに関連するタスクをフィルタ
+                related_tasks = [task for task in all_tasks if task.project_id == project_id]
+                task_ids = [str(task.id) for task in related_tasks]
+                # 完了タスクをカウント
+                completed_count = sum(1 for task in related_tasks if task.status == TaskStatus.COMPLETED)
+            except Exception as e:
+                logger.warning(f"プロジェクト {project_id} の関連タスク取得エラー: {e}")
+
         return {
             "id": _s(getattr(p, "id", "")),
             "title": _s(getattr(p, "title", "")),
@@ -488,7 +557,8 @@ class ProjectController:
             "created_at": _s(getattr(p, "created_at", "")),
             "updated_at": _s(getattr(p, "updated_at", "")),
             "due_date": _s(getattr(p, "due_date", "")),
-            # 進捗系（未集計のため 0）
-            "task_count": "0",
-            "completed_count": "0",
+            # 進捗系
+            "task_count": str(len(task_ids)),
+            "completed_count": str(completed_count),
+            "task_id": task_ids,  # type: ignore[dict-item]
         }

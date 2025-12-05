@@ -412,8 +412,8 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         *,
         left_content: ft.Control,
         right_content: ft.Control,
-        left_col_size: dict[str, int] | None = None,
-        right_col_size: dict[str, int] | None = None,
+        left_col_size: dict[str, Any] | None = None,
+        right_col_size: dict[str, Any] | None = None,
     ) -> ft.ResponsiveRow:
         """2カラムレスポンシブレイアウトを生成する。
 

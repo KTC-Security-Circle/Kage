@@ -371,6 +371,9 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
     due_date_raw = getattr(project, "due_date", None)
     due_date = None if due_date_raw in (None, "") else str(due_date_raw)
 
+    # タスクリスト（現状は空リスト）
+    tasks: list[TaskItemVM] = []
+
     # ステータス表示（theme.py を使用）
     from views.theme import get_status_color
 
@@ -395,4 +398,5 @@ def _project_read_to_detail_vm(project: ProjectRead) -> ProjectDetailVM:  # type
         task_count=task_count,
         completed_count=completed_count,
         task_id=task_id_list,
+        tasks=tasks,
     )

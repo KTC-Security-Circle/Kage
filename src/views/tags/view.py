@@ -129,33 +129,14 @@ class TagsView(BaseView):
         self._detail_panel = TagDetailPanel(detail_props)
 
         # 2カラムレイアウト
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    self._header,
-                    ft.Divider(),
-                    ft.Row(
-                        controls=[
-                            ft.Container(
-                                content=self._list_column,
-                                expand=1,
-                                padding=ft.padding.only(right=8),
-                            ),
-                            ft.Container(
-                                content=self._detail_panel,
-                                expand=2,
-                                padding=ft.padding.only(left=8),
-                            ),
-                        ],
-                        expand=True,
-                        spacing=0,
-                    ),
-                ],
-                spacing=16,
-                expand=True,
-            ),
-            padding=24,
-            expand=True,
+        grid = self.create_two_column_layout(
+            left_content=self._list_column,
+            right_content=self._detail_panel,
+        )
+
+        return self.create_standard_layout(
+            header=self._header,
+            content=grid,
         )
 
     # ------------------------------------------------------------------

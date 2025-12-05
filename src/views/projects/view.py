@@ -115,33 +115,18 @@ class ProjectsView(BaseView):
         # 詳細パネル用のコンテナを保持
         self._detail_container = ft.Container(
             content=self._detail_panel,
-            col={"xs": 12, "lg": 7},
         )
 
         # 2カラムレイアウト
-        layout = ft.Container(
-            content=ft.Column(
-                controls=[
-                    header,
-                    self._status_tabs,
-                    ft.Divider(),
-                    ft.ResponsiveRow(
-                        controls=[
-                            ft.Container(
-                                content=self._project_list,
-                                col={"xs": 12, "lg": 5},
-                                padding=ft.padding.only(right=12),
-                            ),
-                            self._detail_container,
-                        ],
-                        expand=True,
-                    ),
-                ],
-                spacing=16,
-                expand=True,
-            ),
-            padding=24,
-            expand=True,
+        two_column = self.create_two_column_layout(
+            left_content=self._project_list,
+            right_content=self._detail_container,
+        )
+
+        layout = self.create_standard_layout(
+            header=header,
+            status_tabs=self._status_tabs,
+            content=two_column,
         )
 
         # UIコンポーネントが構築された後に初期データを読み込む

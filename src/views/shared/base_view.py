@@ -365,6 +365,95 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         )
         return Header(header_data)
 
+    # ---------------------------------------------------------------------
+    # 統一レイアウトヘルパー
+    # ---------------------------------------------------------------------
+    def create_standard_layout(
+        self,
+        *,
+        header: ft.Control,
+        content: ft.Control,
+        status_tabs: ft.Control | None = None,
+    ) -> ft.Container:
+        """標準的な画面レイアウトを生成する。
+
+        全ビューで統一されたレイアウト構造（padding=24, spacing=16）を提供します。
+
+        Args:
+            header: ヘッダーコントロール（通常はcreate_headerで生成）
+            content: メインコンテンツコントロール
+            status_tabs: ステータスタブコントロール（オプション）
+
+        Returns:
+            統一されたレイアウトのContainer
+
+        Example:
+            >>> header = self.create_header(title="タスク", subtitle="タスク管理")
+            >>> content = ft.ResponsiveRow([...])
+            >>> return self.create_standard_layout(header=header, content=content)
+        """
+        controls = [header]
+        if status_tabs is not None:
+            controls.append(status_tabs)
+        controls.extend([ft.Divider(), content])
+
+        return ft.Container(
+            content=ft.Column(
+                controls=controls,
+                spacing=16,
+                expand=True,
+            ),
+            padding=24,
+            expand=True,
+        )
+
+    def create_two_column_layout(
+        self,
+        *,
+        left_content: ft.Control,
+        right_content: ft.Control,
+        left_col_size: dict[str, int] | None = None,
+        right_col_size: dict[str, int] | None = None,
+    ) -> ft.ResponsiveRow:
+        """2カラムレスポンシブレイアウトを生成する。
+
+        全ビューで統一された2カラム構造を提供します。
+        デフォルトは左5:右7の比率で、レスポンシブ対応（xs=12でモバイル時は縦積み）。
+
+        Args:
+            left_content: 左カラムのコンテンツ
+            right_content: 右カラムのコンテンツ
+            left_col_size: 左カラムのサイズ指定（デフォルト: {"xs": 12, "lg": 5}）
+            right_col_size: 右カラムのサイズ指定（デフォルト: {"xs": 12, "lg": 7}）
+
+        Returns:
+            2カラムのResponsiveRow
+
+        Example:
+            >>> list_view = ft.Column([...])
+            >>> detail_view = ft.Column([...])
+            >>> layout = self.create_two_column_layout(left_content=list_view, right_content=detail_view)
+        """
+        if left_col_size is None:
+            left_col_size = {"xs": 12, "lg": 5}
+        if right_col_size is None:
+            right_col_size = {"xs": 12, "lg": 7}
+
+        return ft.ResponsiveRow(
+            controls=[
+                ft.Container(
+                    content=left_content,
+                    col=left_col_size,
+                    padding=ft.padding.only(right=12),
+                ),
+                ft.Container(
+                    content=right_content,
+                    col=right_col_size,
+                ),
+            ],
+            expand=True,
+        )
+
 
 class LoadingMixin:
     """ローディング状態管理を提供するミックスイン。

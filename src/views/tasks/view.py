@@ -135,34 +135,17 @@ class TasksView(BaseView):
         # 左: 一覧 / 右: 詳細 (components)
         self._render_items(self._current_vm)
 
-        grid = ft.ResponsiveRow(
-            controls=[
-                ft.Container(
-                    content=self._list_comp.control,
-                    col={"xs": 12, "lg": 5},
-                    padding=ft.padding.only(right=12),
-                ),
-                ft.Container(
-                    content=self._detail_panel.control,
-                    col={"xs": 12, "lg": 7},
-                ),
-            ],
-            expand=True,
-        )
         # TODO: 右ペインをタブ化 (概要/履歴/コメント) するなどの拡張を検討。アクティビティ連携も想定。
-
-        controls = ft.Column(
-            controls=[
-                header,
-                self._status_tabs,
-                ft.Divider(),
-                grid,
-            ],
-            spacing=16,
-            expand=True,
+        grid = self.create_two_column_layout(
+            left_content=self._list_comp.control,
+            right_content=self._detail_panel.control,
         )
 
-        return ft.Container(content=controls, padding=24, expand=True)
+        return self.create_standard_layout(
+            header=header,
+            status_tabs=self._status_tabs,
+            content=grid,
+        )
 
     # --- Controller のコールバック ---
     def _on_view_model_change(self, vm_list: list[TaskCardVM]) -> None:

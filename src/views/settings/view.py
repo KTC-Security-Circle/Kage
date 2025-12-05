@@ -89,56 +89,50 @@ class SettingsView(BaseView):
             self.controller.load_settings()
             self._update_sections_from_state()
 
-        return ft.Container(
-            content=ft.Column(
-                [
-                    # ページヘッダー
-                    self._create_page_header(),
-                    # メインコンテンツ
-                    ft.Container(
-                        content=ft.Column(
-                            [
-                                # 外観設定
-                                self._create_section_card(
-                                    "外観",
-                                    "テーマとUI設定",
-                                    ft.Icons.PALETTE,
-                                    self.appearance_section,
-                                ),
-                                # ウィンドウ設定
-                                self._create_section_card(
-                                    "ウィンドウ",
-                                    "サイズと位置の設定",
-                                    ft.Icons.WINDOW,
-                                    self.window_section,
-                                ),
-                                # AIエージェント設定
-                                self._create_section_card(
-                                    "AIエージェント",
-                                    "LLM モデルやデバッグモードの設定",
-                                    ft.Icons.AUTO_AWESOME,
-                                    self.agent_section,
-                                ),
-                                # データベース設定
-                                self._create_section_card(
-                                    "データベース",
-                                    "データベース接続設定",
-                                    ft.Icons.STORAGE,
-                                    self.database_section,
-                                ),
-                                # アクションボタン
-                                self._create_action_buttons(),
-                            ],
-                            spacing=SPACING.lg,
-                            scroll=ft.ScrollMode.AUTO,
-                        ),
-                        expand=True,
-                    ),
-                ],
-                spacing=SPACING.lg,
-            ),
-            padding=ft.padding.all(SPACING.lg),
+        header = self._create_page_header()
+
+        # メインコンテンツ
+        content = ft.Column(
+            [
+                # 外観設定
+                self._create_section_card(
+                    "外観",
+                    "テーマとUI設定",
+                    ft.Icons.PALETTE,
+                    self.appearance_section,
+                ),
+                # ウィンドウ設定
+                self._create_section_card(
+                    "ウィンドウ",
+                    "サイズと位置の設定",
+                    ft.Icons.WINDOW,
+                    self.window_section,
+                ),
+                # AIエージェント設定
+                self._create_section_card(
+                    "AIエージェント",
+                    "LLM モデルやデバッグモードの設定",
+                    ft.Icons.AUTO_AWESOME,
+                    self.agent_section,
+                ),
+                # データベース設定
+                self._create_section_card(
+                    "データベース",
+                    "データベース接続設定",
+                    ft.Icons.STORAGE,
+                    self.database_section,
+                ),
+                # アクションボタン
+                self._create_action_buttons(),
+            ],
+            spacing=SPACING.lg,
+            scroll=ft.ScrollMode.AUTO,
             expand=True,
+        )
+
+        return self.create_standard_layout(
+            header=header,
+            content=content,
         )
 
     def _create_page_header(self) -> ft.Control:

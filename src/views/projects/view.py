@@ -76,6 +76,7 @@ class ProjectsView(BaseView):
         Returns:
             プロジェクト画面のメインコンテンツ
         """
+
         # Headerコンポーネント (検索と新規作成ボタン)
         header = self.create_header(
             title="プロジェクト",

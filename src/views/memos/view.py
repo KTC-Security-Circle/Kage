@@ -199,7 +199,6 @@ class MemosView(BaseView):
 
         return presenter.build_detail_panel(
             selected_memo,
-            on_ai_suggestion=self._handle_ai_suggestion,
             on_edit=self._handle_edit_memo,
             on_delete=self._handle_delete_memo,
             extra_sections=extra_sections,

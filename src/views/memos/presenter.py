@@ -462,7 +462,6 @@ def build_detail_actions(
 def build_detail_panel(
     memo: MemoRead,
     *,
-    on_ai_suggestion: Callable,
     on_edit: Callable,
     on_delete: Callable,
     extra_sections: tuple[ft.Control, ...] | None = None,
@@ -524,7 +523,6 @@ def build_detail_panel(
                     build_detail_metadata(created_text, updated_text),
                     # アクションボタン
                     build_detail_actions(
-                        on_ai_suggestion=on_ai_suggestion,
                         on_edit=on_edit,
                         on_delete=on_delete,
                     ),

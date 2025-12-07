@@ -204,14 +204,9 @@ class ApplicationHomeQuery(HomeQuery):
         Returns:
             デイリーレビュー情報を含む辞書
         """
-        review = self._build_daily_review(self._get_tasks(), self._get_memos())
-
-        # AI一言が利用可能ならメッセージを置き換える
-        one_liner = self._generate_one_liner_message()
-        if one_liner:
-            review["message"] = one_liner
-
-        return review
+        # HomeView 側での非同期AI生成に備え、ここではシナリオのみを構築する。
+        # LLM呼び出しは UI スレッドをブロックしないようバックグラウンドで実行する。
+        return self._build_daily_review(self._get_tasks(), self._get_memos())
 
     def get_one_liner_message(self) -> str | None:
         """AI一言メッセージのみを生成する。

@@ -482,29 +482,31 @@ def _calculate_completed_at(offset_days: int | None) -> datetime | None:
     return datetime.now() - timedelta(days=offset_days)
 
 
-def _apply_task_created_offsets(offset_mapping: dict[uuid.UUID, int]) -> None:
+def _apply_task_created_offsets(apps: ApplicationServices, offset_mapping: dict["uuid.UUID", int]) -> None:
     """Task.created_at を過去日にずらして停滞タスクを用意する。
 
     Args:
+        apps: ApplicationServices ファサード。
         offset_mapping: タスクIDと過去に遡る日数の対応。
     """
     valid_offsets = {task_id: days for task_id, days in offset_mapping.items() if days > 0}
     if not valid_offsets:
         return
 
-    with SqlModelUnitOfWork() as uow:
-        for task_id, days in valid_offsets.items():
-            task = uow.session.get(Task, task_id)
-            if task is None:
-                logger.warning(f"created_at を更新できませんでした: task_id={task_id}")
-                continue
-            target_created_at = datetime.now() - timedelta(days=days)
-            task.created_at = target_created_at
-            if task.updated_at is None or task.updated_at < target_created_at:
-                task.updated_at = target_created_at
-            uow.session.add(task)
-        uow.commit()
-    logger.info("停滞タスク用の created_at を {} 件更新しました。", len(valid_offsets))
+    updated_count = 0
+    for task_id, days in valid_offsets.items():
+        task = apps.task.get_task(task_id)
+        if task is None:
+            logger.warning(f"created_at を更新できませんでした: task_id={task_id}")
+            continue
+        target_created_at = datetime.now() - timedelta(days=days)
+        update_data = TaskUpdate(
+            created_at=target_created_at,
+            updated_at=target_created_at if task.updated_at is None or task.updated_at < target_created_at else task.updated_at,
+        )
+        apps.task.update(task_id, update_data)
+        updated_count += 1
+    logger.info("停滞タスク用の created_at を {} 件更新しました。", updated_count)
 
 
 def seed_tags(apps: ApplicationServices) -> dict[str, uuid.UUID]:

@@ -12,6 +12,23 @@ if TYPE_CHECKING:
 
     import flet as ft
 
+from views.theme import (
+    get_grey_color,
+    get_on_primary_color,
+    get_on_surface_color,
+    get_outline_color,
+    get_primary_color,
+    get_status_color,
+    get_surface_color,
+    get_surface_variant_color,
+    get_text_secondary_color,
+)
+
+# 新規コンポーネントをインポート
+from .empty_state import TaskEmptyState
+from .no_selection import TaskNoSelection
+from .status_tabs import TaskStatusTabs
+
 # 定数定義
 DESCRIPTION_MAX_LENGTH = 50
 
@@ -20,6 +37,9 @@ __all__ = [
     "create_action_bar",
     "create_kanban_board",
     "create_task_card",
+    "TaskEmptyState",
+    "TaskNoSelection",
+    "TaskStatusTabs",
 ]
 
 
@@ -51,8 +71,8 @@ def create_action_bar(
                     icon=ft.Icons.ADD,
                     on_click=on_create,
                     style=ft.ButtonStyle(
-                        color=ft.Colors.WHITE,
-                        bgcolor=ft.Colors.BLUE_600,
+                        color=get_on_primary_color(),
+                        bgcolor=get_primary_color(),
                         elevation=2,
                     ),
                 ),
@@ -73,8 +93,8 @@ def create_action_bar(
                     tooltip="フィルター",
                     on_click=on_filter,
                     style=ft.ButtonStyle(
-                        icon_color=ft.Colors.GREY_700,
-                        bgcolor=ft.Colors.GREY_100,
+                        icon_color=get_text_secondary_color(),
+                        bgcolor=get_surface_variant_color(),
                     ),
                 ),
                 # 更新ボタン
@@ -83,8 +103,8 @@ def create_action_bar(
                     tooltip="更新",
                     on_click=on_refresh,
                     style=ft.ButtonStyle(
-                        icon_color=ft.Colors.GREY_700,
-                        bgcolor=ft.Colors.GREY_100,
+                        icon_color=get_text_secondary_color(),
+                        bgcolor=get_surface_variant_color(),
                     ),
                 ),
             ],
@@ -93,9 +113,9 @@ def create_action_bar(
             spacing=16,
         ),
         padding=ft.padding.symmetric(horizontal=16, vertical=12),
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=get_surface_color(),
         border_radius=ft.border_radius.all(8),
-        border=ft.border.all(1, ft.Colors.GREY_300),
+        border=ft.border.all(1, get_outline_color()),
     )
 
 
@@ -135,18 +155,18 @@ def create_kanban_board(
                             controls=[
                                 ft.Text(
                                     status,
-                                    style=ft.TextThemeStyle.TITLE_MEDIUM,
-                                    color=ft.Colors.GREY_800,
+                                    theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
+                                    color=get_on_surface_color(),
                                     weight=ft.FontWeight.BOLD,
                                 ),
                                 ft.Container(
                                     content=ft.Text(
                                         str(len(tasks)),
-                                        color=ft.Colors.WHITE,
+                                        color=get_on_primary_color(),
                                         size=12,
                                         weight=ft.FontWeight.BOLD,
                                     ),
-                                    bgcolor=_get_status_color(status),
+                                    bgcolor=get_status_color(status),
                                     border_radius=ft.border_radius.all(12),
                                     padding=ft.padding.symmetric(horizontal=8, vertical=4),
                                 ),
@@ -169,9 +189,9 @@ def create_kanban_board(
                 spacing=0,
                 expand=True,
             ),
-            bgcolor=ft.Colors.GREY_50,
+            bgcolor=get_surface_variant_color(),
             border_radius=ft.border_radius.all(8),
-            border=ft.border.all(1, ft.Colors.GREY_300),
+            border=ft.border.all(1, get_outline_color()),
             width=350,
             expand=True,
         )
@@ -216,9 +236,9 @@ def create_task_card(
                 content=ft.Text(
                     tag,
                     size=10,
-                    color=ft.Colors.BLUE_700,
+                    color=get_primary_color("dark"),
                 ),
-                bgcolor=ft.Colors.BLUE_50,
+                bgcolor=get_surface_variant_color(),
                 border_radius=ft.border_radius.all(4),
                 padding=ft.padding.symmetric(horizontal=6, vertical=2),
             )
@@ -249,8 +269,8 @@ def create_task_card(
                                 # タイトル
                                 ft.Text(
                                     task.get("title", "無題"),
-                                    style=ft.TextThemeStyle.TITLE_SMALL,
-                                    color=ft.Colors.GREY_900,
+                                    theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                                    color=get_on_surface_color(),
                                     weight=ft.FontWeight.W_600,
                                     max_lines=2,
                                     overflow=ft.TextOverflow.ELLIPSIS,
@@ -258,8 +278,8 @@ def create_task_card(
                                 # 説明（最初の50文字）
                                 ft.Text(
                                     truncated_description,
-                                    style=ft.TextThemeStyle.BODY_SMALL,
-                                    color=ft.Colors.GREY_600,
+                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                    color=get_text_secondary_color(),
                                     max_lines=2,
                                     overflow=ft.TextOverflow.ELLIPSIS,
                                 )
@@ -279,23 +299,23 @@ def create_task_card(
                                         ft.Icon(
                                             name=ft.Icons.PERSON,
                                             size=16,
-                                            color=ft.Colors.GREY_500,
+                                            color=get_grey_color(500),
                                         ),
                                         ft.Text(
                                             task.get("assignee", "未割当"),
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.Colors.GREY_600,
+                                            theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                            color=get_text_secondary_color(),
                                             expand=True,
                                         ),
                                         ft.Icon(
                                             name=ft.Icons.SCHEDULE,
                                             size=16,
-                                            color=ft.Colors.GREY_500,
+                                            color=get_grey_color(500),
                                         ),
                                         ft.Text(
                                             task.get("due_date", "未設定"),
-                                            style=ft.TextThemeStyle.BODY_SMALL,
-                                            color=ft.Colors.GREY_600,
+                                            theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                            color=get_text_secondary_color(),
                                         ),
                                     ],
                                     spacing=4,
@@ -313,9 +333,9 @@ def create_task_card(
             spacing=0,
             tight=True,
         ),
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=get_surface_color(),
         border_radius=ft.border_radius.all(8),
-        border=ft.border.all(1, ft.Colors.GREY_200),
+        border=ft.border.all(1, get_outline_color()),
         on_click=on_click,
         ink=True,
         animate=ft.animation.Animation(300, ft.AnimationCurve.EASE_OUT),
@@ -330,17 +350,11 @@ def _get_status_color(status: str) -> str:
 
     Returns:
         カラーコード
-    """
-    import flet as ft
 
-    color_map = {
-        "計画中": ft.Colors.BLUE_500,
-        "進行中": ft.Colors.ORANGE_500,
-        "完了": ft.Colors.GREEN_500,
-        "保留": ft.Colors.GREY_500,
-        "キャンセル": ft.Colors.RED_500,
-    }
-    return color_map.get(status, ft.Colors.GREY_500)
+    Note:
+        theme.py の get_status_color() を使用して統一的な色管理を実現
+    """
+    return get_status_color(status)
 
 
 def _get_priority_color(priority: str) -> str:
@@ -351,12 +365,15 @@ def _get_priority_color(priority: str) -> str:
 
     Returns:
         カラーコード
+
+    Note:
+        将来的には theme.py に priority 色定義を追加することを推奨
     """
-    import flet as ft
+    from views.theme import get_error_color, get_grey_color, get_success_color, get_warning_color
 
     color_map = {
-        "high": ft.Colors.RED_500,
-        "medium": ft.Colors.ORANGE_500,
-        "low": ft.Colors.GREEN_500,
+        "high": get_error_color(),
+        "medium": get_warning_color(),
+        "low": get_success_color(),
     }
-    return color_map.get(priority.lower(), ft.Colors.GREY_500)
+    return color_map.get(priority.lower(), get_grey_color(500))

@@ -2,13 +2,23 @@
 
 プロジェクト情報を表示するカードUIコンポーネント。
 ステータスバッジ、説明、統計情報、アクションボタンを含む。
+
+共通カードコンポーネント（views.shared.components.card）を使用。
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from views.theme import get_status_color
+from views.shared.components import Card, CardActionData, CardBadgeData, CardData, CardMetadataData
+from views.theme import (
+    get_error_color,
+    get_on_primary_color,
+    get_outline_color,
+    get_primary_color,
+    get_status_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,7 +33,7 @@ def create_project_card(
     on_edit: Callable[[ft.ControlEvent, dict[str, Any]], None],
     on_delete: Callable[[ft.ControlEvent, dict[str, Any]], None],
 ) -> ft.Control:
-    """プロジェクトカードを作成する。
+    """プロジェクトカードを作成する（共通Cardコンポーネント使用）。
 
     Args:
         project: プロジェクトデータ（id, name, description, status, task_id, created_at）
@@ -38,125 +48,40 @@ def create_project_card(
     # ステータス色はテーマに集約
     status_color = get_status_color(project["status"])
 
-    return ft.Card(
-        content=ft.Container(
-            content=ft.Column(
-                controls=[
-                    # Header row with title, description and status badge
-                    ft.Row(
-                        controls=[
-                            ft.Column(
-                                controls=[
-                                    # TODO: name/title の正規化
-                                    # - ドメイン層 → Presenter で title に統一する想定です。
-                                    ft.Text(
-                                        project.get("title", project.get("name", "")),
-                                        style=ft.TextThemeStyle.TITLE_MEDIUM,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                    ft.Text(
-                                        project["description"],
-                                        style=ft.TextThemeStyle.BODY_MEDIUM,
-                                        color=ft.Colors.GREY_600,
-                                        max_lines=2,
-                                        overflow=ft.TextOverflow.ELLIPSIS,
-                                    ),
-                                ],
-                                spacing=8,
-                                expand=True,
-                            ),
-                            ft.Container(
-                                content=ft.Text(
-                                    project["status"],
-                                    style=ft.TextThemeStyle.LABEL_SMALL,
-                                    color=ft.Colors.WHITE,
-                                    weight=ft.FontWeight.W_500,
-                                ),
-                                bgcolor=status_color,
-                                padding=ft.padding.symmetric(
-                                    horizontal=8,
-                                    vertical=4,
-                                ),
-                                border_radius=ft.border_radius.all(12),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.START,
-                    ),
-                    # Divider
-                    ft.Divider(
-                        height=1,
-                        color=ft.Colors.GREY_300,
-                    ),
-                    # Footer with metadata and actions
-                    ft.Row(
-                        controls=[
-                            # Task count
-                            ft.Row(
-                                controls=[
-                                    ft.Icon(
-                                        ft.Icons.TASK_ALT,
-                                        size=16,
-                                        color=ft.Colors.GREY_600,
-                                    ),
-                                    ft.Text(
-                                        f"{len(project.get('task_id', []))} タスク",
-                                        style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
-                                    ),
-                                ],
-                                spacing=4,
-                            ),
-                            # Created date
-                            ft.Row(
-                                controls=[
-                                    ft.Icon(
-                                        ft.Icons.CALENDAR_TODAY,
-                                        size=16,
-                                        color=ft.Colors.GREY_600,
-                                    ),
-                                    # TODO: created_at の表示整形
-                                    # - ドメイン/Presenter 側で表示用フォーマットにして渡すと再利用性が高まります。
-                                    ft.Text(
-                                        project["created_at"],
-                                        style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
-                                    ),
-                                ],
-                                spacing=4,
-                            ),
-                            ft.Container(expand=True),  # Spacer
-                            # Action buttons
-                            ft.Row(
-                                controls=[
-                                    ft.IconButton(
-                                        icon=ft.Icons.EDIT_OUTLINED,
-                                        tooltip="編集",
-                                        icon_size=20,
-                                        on_click=lambda e, p=project: on_edit(e, p),
-                                        icon_color=ft.Colors.GREY_600,
-                                    ),
-                                    ft.IconButton(
-                                        icon=ft.Icons.DELETE_OUTLINE,
-                                        tooltip="削除",
-                                        icon_size=20,
-                                        on_click=lambda e, p=project: on_delete(e, p),
-                                        icon_color=ft.Colors.RED,
-                                    ),
-                                ],
-                                spacing=0,
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                ],
-                spacing=16,
-            ),
-            padding=20,
+    # CardDataを構築
+    card_data = CardData(
+        title=project.get("title", project.get("name", "")),
+        description=project["description"],
+        badge=CardBadgeData(
+            text=project["status"],
+            color=status_color,
         ),
-        elevation=2,
+        metadata=[
+            CardMetadataData(
+                icon=ft.Icons.TASK_ALT,
+                text=f"{len(project.get('task_id', []))} タスク",
+            ),
+            CardMetadataData(
+                icon=ft.Icons.CALENDAR_TODAY,
+                text=project["created_at"],
+            ),
+        ],
+        actions=[
+            CardActionData(
+                icon=ft.Icons.EDIT_OUTLINED,
+                tooltip="編集",
+                on_click=lambda e, p=project: on_edit(e, p),
+            ),
+            CardActionData(
+                icon=ft.Icons.DELETE_OUTLINE,
+                tooltip="削除",
+                on_click=lambda e, p=project: on_delete(e, p),
+                icon_color=get_error_color(),
+            ),
+        ],
     )
+
+    return Card(data=card_data)
 
 
 def create_project_card_from_vm(
@@ -187,15 +112,15 @@ def create_project_card_from_vm(
                         controls=[
                             ft.Text(
                                 vm.title,
-                                style=ft.TextThemeStyle.TITLE_SMALL,
+                                theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                 weight=ft.FontWeight.W_500,
                                 expand=True,
                             ),
                             ft.Container(
                                 content=ft.Text(
                                     vm.status,
-                                    style=ft.TextThemeStyle.LABEL_SMALL,
-                                    color=ft.Colors.WHITE,
+                                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                                    color=get_on_primary_color(),
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 padding=ft.padding.symmetric(horizontal=8, vertical=4),
@@ -206,13 +131,13 @@ def create_project_card_from_vm(
                     ),
                     ft.Text(
                         vm.subtitle,
-                        style=ft.TextThemeStyle.BODY_SMALL,
-                        color=ft.Colors.GREY_600,
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=get_text_secondary_color(),
                     ),
                     ft.Text(
                         vm.description,
-                        style=ft.TextThemeStyle.BODY_SMALL,
-                        color=ft.Colors.GREY_700,
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                        color=get_text_secondary_color(),
                         max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
@@ -222,15 +147,15 @@ def create_project_card_from_vm(
                                 controls=[
                                     ft.Text(
                                         vm.progress_text,
-                                        style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=ft.Colors.GREY_600,
+                                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                        color=get_text_secondary_color(),
                                     ),
                                 ],
                             ),
                             ft.ProgressBar(
                                 value=vm.progress_value,
-                                color=ft.Colors.BLUE,
-                                bgcolor=ft.Colors.GREY_300,
+                                color=get_primary_color(),
+                                bgcolor=get_outline_color(),
                                 height=6,
                             ),
                         ],
@@ -244,6 +169,4 @@ def create_project_card_from_vm(
             on_click=lambda _: on_select(vm.id),
         ),
         elevation=1 if not is_selected else 3,
-        color=ft.Colors.WHITE if not is_selected else ft.Colors.BLUE_50,
-        surface_tint_color=ft.Colors.BLUE if is_selected else None,
     )

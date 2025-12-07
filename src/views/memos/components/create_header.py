@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
+from views.theme import get_outline_color, get_surface_color, get_text_secondary_color
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -40,8 +42,8 @@ class CreateHeader(ft.Container):
         super().__init__(
             content=self._build_content(),
             padding=ft.padding.symmetric(horizontal=16, vertical=10),
-            bgcolor=ft.Colors.SURFACE,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+            bgcolor=get_surface_color(),
+            border=ft.border.only(bottom=ft.BorderSide(1, get_outline_color())),
         )
         if can_save:
             # 初期状態で保存可能なら能動的にボタンを有効化
@@ -69,7 +71,7 @@ class CreateHeader(ft.Container):
                                 ft.Text(
                                     "マークダウン形式で記述できます",
                                     size=12,
-                                    color=ft.Colors.ON_SURFACE_VARIANT,
+                                    color=get_text_secondary_color(),
                                 ),
                             ],
                             spacing=2,

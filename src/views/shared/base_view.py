@@ -27,6 +27,13 @@ import flet as ft
 from loguru import logger
 
 from views.shared.components import Header, HeaderButtonData, HeaderData
+from views.theme import (
+    get_error_color,
+    get_grey_color,
+    get_primary_color,
+    get_success_color,
+    get_text_secondary_color,
+)
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -63,25 +70,25 @@ class ErrorHandlingMixin:
 
     def show_error_snackbar(self, page: ft.Page, message: str = "エラーが発生しました") -> None:
         """エラースナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.ERROR)
+        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=get_error_color())
         page.open(snack_bar)
         page.update()
 
     def show_info_snackbar(self, message: str = "情報") -> None:
         """情報スナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.BLUE)
+        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=get_primary_color())
         self.page.open(snack_bar)
         self.page.update()
 
     def show_success_snackbar(self, message: str = "成功しました") -> None:
         """成功スナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREEN)
+        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=get_success_color())
         self.page.open(snack_bar)
         self.page.update()
 
     def show_snack_bar(self, message: str, bgcolor: str | None = None) -> None:
         """汎用スナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=bgcolor or ft.Colors.PRIMARY)
+        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=bgcolor or get_primary_color())
         self.page.open(snack_bar)
         self.page.update()
 
@@ -197,16 +204,16 @@ class BaseView(ft.Container, ErrorHandlingMixin):
             return ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR, size=48),
+                        ft.Icon(ft.Icons.ERROR, color=get_error_color(), size=48),
                         ft.Text(
                             "ビューの読み込み中にエラーが発生しました",
                             size=16,
-                            color=ft.Colors.ERROR,
+                            color=get_error_color(),
                         ),
                         ft.Text(
                             str(e),
                             size=12,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            color=get_text_secondary_color(),
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -257,7 +264,7 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         self.state = replace(self.state, error_message=message)
         logger.error(details or message)
         # SnackBar で通知 (ダイアログ等への差し替えは将来拡張)
-        self.show_snack_bar(message=message, bgcolor=ft.Colors.ERROR)
+        self.show_snack_bar(message=message, bgcolor=get_error_color())
         self.safe_update()
 
     # ---------------------------------------------------------------------
@@ -388,7 +395,7 @@ class LoadingMixin:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             alignment=ft.alignment.center,
-            bgcolor=ft.Colors.with_opacity(0.7, ft.Colors.BLACK),
+            bgcolor=ft.Colors.with_opacity(0.7, get_grey_color(900)),
             expand=True,
         )
 

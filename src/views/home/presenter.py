@@ -83,14 +83,15 @@ from views.theme import (
     BORDER_WIDTH,
     OPACITY,
     SPACING,
-    UI_COLORS,
     create_medium_shadow,
     create_subtle_shadow,
     get_accent_background_color,
     get_accent_border_color,
     get_on_surface_color,
     get_outline_color,
+    get_primary_color,
     get_surface_color,
+    get_surface_variant_color,
     get_text_secondary_color,
 )
 
@@ -204,12 +205,12 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None])
                 "AI提案あり",
                 size=11,
                 weight=ft.FontWeight.W_500,
-                color=UI_COLORS.primary_dark,
+                color=get_primary_color("dark"),
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
-            bgcolor=ft.Colors.BLUE_50,
+            bgcolor=get_surface_variant_color(),
             border_radius=BORDER_RADIUS.sm,
-            border=ft.border.all(BORDER_WIDTH.thin, ft.Colors.BLUE_300),
+            border=ft.border.all(BORDER_WIDTH.thin, get_primary_color()),
         )
     elif ai_status == "pending":
         status_badge = ft.Container(
@@ -220,7 +221,7 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None])
                 color=ft.Colors.with_opacity(OPACITY.high, get_text_secondary_color()),
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
-            bgcolor=ft.Colors.with_opacity(OPACITY.light, ft.Colors.BLUE_GREY_100),
+            bgcolor=ft.Colors.with_opacity(OPACITY.light, get_surface_variant_color()),
             border_radius=BORDER_RADIUS.sm,
             border=ft.border.all(
                 BORDER_WIDTH.thin,
@@ -236,7 +237,7 @@ def build_inbox_memo_item(memo: dict[str, Any], on_click: Callable[[str], None])
                 color=ft.Colors.with_opacity(OPACITY.medium, get_text_secondary_color()),
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.sm, vertical=SPACING.xs),
-            bgcolor=ft.Colors.TRANSPARENT,
+            bgcolor="transparent",
             border_radius=BORDER_RADIUS.sm,
             border=ft.border.all(
                 BORDER_WIDTH.thin,

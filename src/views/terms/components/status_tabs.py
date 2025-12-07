@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import contextlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import flet as ft
-
 from models import TermStatus
+from views.shared.components import StatusTabs, TabDefinition
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -16,16 +14,27 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class StatusTabsProps:
-    """StatusTabs用のプロパティ。"""
+    """StatusTabs用のプロパティ（後方互換性のため保持）。"""
 
     approved_count: int = 0
     draft_count: int = 0
     deprecated_count: int = 0
-    on_status_change: Callable[[TermStatus], None] | None = None
+    on_status_change: Callable[[TermStatus | None], None] | None = None
 
 
-class TermStatusTabs(ft.Tabs):
-    """Status tabs for filtering terms by their approval status."""
+# タブ定義
+_TERM_TAB_DEFINITIONS: tuple[TabDefinition[TermStatus], ...] = (
+    TabDefinition(status=TermStatus.APPROVED, label="承認済み"),
+    TabDefinition(status=TermStatus.DRAFT, label="草案"),
+    TabDefinition(status=TermStatus.DEPRECATED, label="非推奨"),
+)
+
+
+class TermStatusTabs(StatusTabs[TermStatus]):
+    """Status tabs for filtering terms by their approval status.
+
+    共通StatusTabsコンポーネントを継承し、用語固有のタブ定義を適用。
+    """
 
     def __init__(self, props: StatusTabsProps) -> None:
         """Initialize term status tabs.
@@ -33,48 +42,25 @@ class TermStatusTabs(ft.Tabs):
         Args:
             props: タブの設定プロパティ
         """
-        super().__init__()
         self.props = props
-        self.selected_status = TermStatus.APPROVED
 
-        self._build_tabs()
-        self.on_change = self._on_tab_change
-        self.selected_index = 0
-
-    def _build_tabs(self) -> None:
-        """タブを構築する。"""
-        self.tabs = [
-            ft.Tab(text=f"承認済み ({self.props.approved_count})"),
-            ft.Tab(text=f"草案 ({self.props.draft_count})"),
-            ft.Tab(text=f"非推奨 ({self.props.deprecated_count})"),
-        ]
-
-    def _on_tab_change(self, e: ft.ControlEvent) -> None:
-        """タブ変更イベントをハンドリングする。"""
-        tab_index = e.control.selected_index
-
-        status_map = {
-            0: TermStatus.APPROVED,
-            1: TermStatus.DRAFT,
-            2: TermStatus.DEPRECATED,
+        # StatusTabsカウント形式に変換
+        tab_counts = {
+            TermStatus.APPROVED: props.approved_count,
+            TermStatus.DRAFT: props.draft_count,
+            TermStatus.DEPRECATED: props.deprecated_count,
         }
 
-        self.selected_status = status_map.get(tab_index, TermStatus.APPROVED)
-
-        if self.props.on_status_change:
-            self.props.on_status_change(self.selected_status)
+        super().__init__(
+            tab_definitions=_TERM_TAB_DEFINITIONS,
+            on_tab_change=props.on_status_change,
+            active_status=TermStatus.APPROVED,
+            tab_counts=tab_counts,
+        )
 
     def set_active_status(self, status: TermStatus) -> None:
         """外部からステータスを指定してタブ選択を変更する。"""
-        status_to_index = {
-            TermStatus.APPROVED: 0,
-            TermStatus.DRAFT: 1,
-            TermStatus.DEPRECATED: 2,
-        }
-        self.selected_status = status
-        self.selected_index = status_to_index.get(status, 0)
-        with contextlib.suppress(AssertionError):
-            self.update()
+        self.set_active(status)
 
     def set_props(self, props: StatusTabsProps) -> None:
         """新しいプロパティを設定する。
@@ -83,9 +69,11 @@ class TermStatusTabs(ft.Tabs):
             props: 新しいプロパティ
         """
         self.props = props
-        if self.tabs:
-            self.tabs[0].text = f"承認済み ({props.approved_count})"
-            self.tabs[1].text = f"草案 ({props.draft_count})"
-            self.tabs[2].text = f"非推奨 ({props.deprecated_count})"
-        with contextlib.suppress(AssertionError):
-            self.update()
+
+        # カウントを更新
+        tab_counts = {
+            TermStatus.APPROVED: props.approved_count,
+            TermStatus.DRAFT: props.draft_count,
+            TermStatus.DEPRECATED: props.deprecated_count,
+        }
+        self.update_counts(tab_counts)

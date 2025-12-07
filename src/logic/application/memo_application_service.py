@@ -8,32 +8,39 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, override
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from loguru import logger
 
 from agents.agent_conf import LLMProvider, OpenVINODevice
 from errors import ApplicationError, ValidationError
 from logic.application.base import BaseApplicationService
-from logic.application.memo_ai_job_queue import (
-    MemoAiJobSnapshot,
-    MemoAiJobStatus,
-    get_memo_ai_job_queue,
-)
+from logic.application.memo_ai_job_queue import MemoAiJobSnapshot, MemoAiJobStatus, get_memo_ai_job_queue
 from logic.application.settings_application_service import SettingsApplicationService
 from logic.services.memo_service import MemoService
 from logic.services.tag_service import TagService
 from logic.unit_of_work import SqlModelUnitOfWork
-from models import AiSuggestionStatus, MemoCreate, MemoRead, MemoStatus, MemoUpdate
+from models import (
+    AiSuggestionStatus,
+    MemoCreate,
+    MemoRead,
+    MemoStatus,
+    MemoUpdate,
+    TaskRead,
+    TaskStatus,
+    TaskUpdate,
+)
 
 if TYPE_CHECKING:
     import uuid
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from agents.base import AgentError
     from agents.task_agents.memo_to_task.agent import MemoToTaskAgent
     from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
     from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
+    from logic.application.apps import ApplicationServices
+    from logic.application.task_application_service import TaskApplicationService
 
 logger_msg = "{msg} - (ID={memo_id})"
 
@@ -80,6 +87,9 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         else:
             self._device = str(raw_device or OpenVINODevice.CPU.value).upper()
         self._memo_to_task_agent: MemoToTaskAgent | None = memo_to_task_agent
+        from logic.application.apps import ApplicationServices
+
+        self._apps: ApplicationServices = ApplicationServices.create()
 
     @classmethod
     @override
@@ -359,25 +369,187 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
     def _persist_ai_snapshot(self, snapshot: MemoAiJobSnapshot) -> None:
         tasks_payload = [
             {
-                "task_id": task.task_id,
+                "task_id": str(task.task_id),
                 "title": task.title,
                 "description": task.description,
                 "tags": list(task.tags),
                 "route": task.route,
                 "due_date": task.due_date,
                 "project_title": task.project_title,
+                "status": task.status.value,
+            }
+            for task in snapshot.tasks
+        ]
+        draft_refs = [
+            {
+                "task_id": str(task.task_id),
+                "route": task.route,
+                "project_title": task.project_title,
+                "status": task.status.value,
             }
             for task in snapshot.tasks
         ]
         log_payload = {
-            "version": 1,
+            "version": 2,
             "job_id": str(snapshot.job_id),
             "generated_at": datetime.now(UTC).isoformat(),
             "suggested_memo_status": snapshot.suggested_memo_status,
             "tasks": tasks_payload,
+            "draft_task_refs": draft_refs,
         }
         serialized = json.dumps(log_payload, ensure_ascii=False)
         self.update(snapshot.memo_id, MemoUpdate(ai_analysis_log=serialized))
+
+    def approve_ai_tasks(self, memo_id: uuid.UUID, task_ids: list[uuid.UUID]) -> list[TaskRead]:
+        """Draft タスクを承認し、TaskStatus を route に応じて更新する。"""
+        if not task_ids:
+            return []
+
+        route_map = self._load_route_map(memo_id)
+        task_service = self._get_task_service()
+        approved: list[TaskRead] = []
+        for task_id in task_ids:
+            status = self._route_to_status(route_map.get(str(task_id)))
+            updated = task_service.update(task_id, TaskUpdate(status=status))
+            approved.append(updated)
+
+        self._remove_tasks_from_ai_log(memo_id, task_ids)
+        return approved
+
+    def delete_ai_task(self, memo_id: uuid.UUID, task_id: uuid.UUID) -> None:
+        """Draft タスクを削除する。"""
+        task_service = self._get_task_service()
+        task_service.delete(task_id)
+        self._remove_tasks_from_ai_log(memo_id, [task_id])
+
+    def create_ai_task(
+        self,
+        memo_id: uuid.UUID,
+        *,
+        title: str,
+        description: str | None = None,
+        route: str | None = None,
+        project_title: str | None = None,
+    ) -> TaskRead:
+        """ユーザー起点の Draft タスクを作成する。"""
+        task_service = self._get_task_service()
+        created = task_service.create(
+            title=title,
+            description=description or "",
+            status=TaskStatus.DRAFT,
+            memo_id=memo_id,
+        )
+        self._append_draft_task_ref(
+            memo_id,
+            task_id=created.id,
+            route=route or "next_action",
+            project_title=project_title,
+            status=created.status,
+        )
+        return created
+
+    def update_ai_task(
+        self,
+        task_id: uuid.UUID,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> TaskRead:
+        """Draft タスクの内容を更新する。"""
+        task_service = self._get_task_service()
+        update_payload = TaskUpdate(title=title, description=description)
+        return task_service.update(task_id, update_payload)
+
+    def _get_task_service(self) -> TaskApplicationService:
+        from logic.application.task_application_service import TaskApplicationService
+
+        return self._apps.get_service(TaskApplicationService)
+
+    def _load_route_map(self, memo_id: uuid.UUID) -> dict[str, str | None]:
+        memo = self.get_by_id(memo_id, with_details=True)
+        data = self._ensure_ai_log_dict(memo.ai_analysis_log)
+        route_map: dict[str, str | None] = {}
+        refs = data.get("draft_task_refs")
+        if not isinstance(refs, list):
+            return route_map
+        for entry in refs:
+            if not isinstance(entry, dict):
+                continue
+            key = str(entry.get("task_id"))
+            route_map[key] = entry.get("route")
+        return route_map
+
+    def _route_to_status(self, route: str | None) -> TaskStatus:
+        if route == "progress":
+            return TaskStatus.PROGRESS
+        if route == "waiting":
+            return TaskStatus.WAITING
+        if route == "calendar":
+            return TaskStatus.TODAYS
+        return TaskStatus.TODO
+
+    def _remove_tasks_from_ai_log(self, memo_id: uuid.UUID, task_ids: list[uuid.UUID]) -> None:
+        targets = {str(task_id) for task_id in task_ids}
+
+        def _mutator(payload: dict[str, object]) -> None:
+            tasks = payload.get("tasks")
+            if isinstance(tasks, list):
+                filtered: list[object] = []
+                for task in tasks:
+                    if isinstance(task, dict) and str(task.get("task_id")) in targets:
+                        continue
+                    filtered.append(task)
+                payload["tasks"] = filtered
+            refs = payload.get("draft_task_refs")
+            if isinstance(refs, list):
+                payload["draft_task_refs"] = [
+                    ref for ref in refs if not (isinstance(ref, dict) and str(ref.get("task_id")) in targets)
+                ]
+
+        self._mutate_ai_log(memo_id, _mutator)
+
+    def _append_draft_task_ref(
+        self,
+        memo_id: uuid.UUID,
+        *,
+        task_id: UUID,
+        route: str | None,
+        project_title: str | None,
+        status: TaskStatus,
+    ) -> None:
+        def _mutator(payload: dict[str, object]) -> None:
+            refs = payload.setdefault("draft_task_refs", [])
+            if isinstance(refs, list):
+                refs.append(
+                    {
+                        "task_id": str(task_id),
+                        "route": route,
+                        "project_title": project_title,
+                        "status": status.value,
+                    }
+                )
+
+        self._mutate_ai_log(memo_id, _mutator)
+
+    def _mutate_ai_log(self, memo_id: uuid.UUID, mutator: Callable[[dict[str, object]], None]) -> None:
+        memo = self.get_by_id(memo_id, with_details=True)
+        payload = self._ensure_ai_log_dict(memo.ai_analysis_log)
+        mutator(payload)
+        serialized = json.dumps(payload, ensure_ascii=False)
+        self.update(memo_id, MemoUpdate(ai_analysis_log=serialized))
+
+    def _ensure_ai_log_dict(self, raw: str | None) -> dict[str, object]:
+        if raw:
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                payload = {}
+        else:
+            payload = {}
+        payload.setdefault("version", 2)
+        payload.setdefault("tasks", [])
+        payload.setdefault("draft_task_refs", [])
+        return payload
 
     def search(
         self,

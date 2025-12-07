@@ -436,8 +436,8 @@ class MemosView(BaseView):
             return
         try:
             self.controller.update_ai_task(
-                memo_id,
                 UUID(task_id),
+                memo_id=memo_id,
                 title=target.title,
                 description=target.description,
             )
@@ -493,8 +493,6 @@ class MemosView(BaseView):
         except Exception as exc:
             self.notify_error("Draftタスクの承認に失敗しました", details=f"{type(exc).__name__}: {exc}")
             return
-        ai_state.status_override = AiSuggestionStatus.REVIEWED
-        ai_state.is_generating = False
 
         def _archive() -> None:
             self.controller.mark_memo_archived(memo.id)

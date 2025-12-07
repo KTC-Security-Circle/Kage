@@ -264,9 +264,9 @@ class MemosController:
 
     def update_ai_task(
         self,
-        memo_id: UUID,
         task_id: UUID,
         *,
+        memo_id: UUID,
         title: str | None = None,
         description: str | None = None,
     ) -> TaskRead:

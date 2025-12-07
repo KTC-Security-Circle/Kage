@@ -23,6 +23,8 @@ class HighlightsState(BaseAgentState):
     completed_task_summaries: list[str]
     tone_hint: str
     intro: NotRequired[str]
+    detail_hint: NotRequired[str]
+    custom_instructions: NotRequired[str]
 
 
 class HighlightBullet(BaseModel):
@@ -78,9 +80,12 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
             [
                 (
                     "system",
-                    """あなたはポジティブなエグゼクティブアシスタントです。\n"
-"完了タスクのブリーフを読み取り、励ますトーンの導入文と3件の箇条書きを生成してください。\n"
-"各箇条書きは30文字以内のタイトルと、質的な成果を表す説明文を含めます。""",
+                    "あなたはポジティブなエグゼクティブアシスタントです。\n"
+                    "完了タスクのブリーフを読み取り、励ますトーンの導入文と3件の箇条書きを生成してください。\n"
+                    "各箇条書きは30文字以内のタイトルと、質的な成果を表す説明文を含めます。\n"
+                    "出力粒度ヒント: {detail_hint}\n"
+                    "追加指示:\n"
+                    "{custom_instructions}\n",
                 ),
                 (
                     "human",
@@ -96,7 +101,14 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
         debug_msg = f"Generating highlights for summaries: {state['completed_task_summaries']} with tone hint: {state['tone_hint']}"  # noqa: E501
         self._logger.debug(debug_msg)
         summary_text = "\n".join(f"- {line}" for line in state["completed_task_summaries"])
-        response = chain.invoke({"task_summaries": summary_text, "tone_hint": state["tone_hint"]})
+        overrides = self._prompt_overrides(state)
+        response = chain.invoke(
+            {
+                "task_summaries": summary_text,
+                "tone_hint": state["tone_hint"],
+                **overrides,
+            }
+        )
         debug_msg = f"HighlightsAgent raw response: {response}"
         self._logger.debug(debug_msg)
         output = self.validate_output(response, HighlightsAgentOutput)
@@ -130,3 +142,11 @@ class ReviewHighlightsAgent(BaseAgent[HighlightsState, HighlightsAgentResult]):
         if isinstance(final_response, AgentError):
             return final_response
         return AgentError("Invalid highlights response")
+
+    def _prompt_overrides(self, state: HighlightsState) -> dict[str, str]:
+        detail_hint = str(state.get("detail_hint", "") or "").strip()
+        custom_text = str(state.get("custom_instructions", "") or "").strip()
+        return {
+            "detail_hint": detail_hint or "バランスよくポジティブにまとめてください。",
+            "custom_instructions": custom_text or "追加指示はありません。",
+        }

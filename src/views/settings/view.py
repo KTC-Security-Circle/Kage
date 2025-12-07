@@ -12,7 +12,7 @@ from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.dialogs import ConfirmDialog
 from views.theme import SPACING, get_light_color, get_text_secondary_color
 
-from .components.agent_section import AgentSection
+from .components.agent_section import AgentSection, LLMRuntimeFormValues, PromptFormValues
 from .components.appearance_section import AppearanceSection
 from .components.database_section import DatabaseSection
 from .components.window_section import WindowSection
@@ -293,6 +293,22 @@ class SettingsView(BaseView):
         if device_value != snapshot.agent.device.value:
             self.controller.update_agent_device(device_value)
 
+        memo_instructions = self.agent_section.memo_prompt_field.value or ""
+        if memo_instructions != snapshot.memo_to_task_prompt.custom_instructions:
+            self.controller.update_memo_prompt_instructions(memo_instructions)
+
+        memo_detail = self.agent_section.memo_detail_dropdown.value or snapshot.memo_to_task_prompt.detail_level.value
+        if memo_detail != snapshot.memo_to_task_prompt.detail_level.value:
+            self.controller.update_memo_prompt_detail_level(memo_detail)
+
+        review_instructions = self.agent_section.review_prompt_field.value or ""
+        if review_instructions != snapshot.review_prompt.custom_instructions:
+            self.controller.update_review_prompt_instructions(review_instructions)
+
+        review_detail = self.agent_section.review_detail_dropdown.value or snapshot.review_prompt.detail_level.value
+        if review_detail != snapshot.review_prompt.detail_level.value:
+            self.controller.update_review_prompt_detail_level(review_detail)
+
     def _on_save_settings(self, _: ft.ControlEvent) -> None:
         """設定保存ボタンがクリックされた時の処理。"""
 
@@ -363,12 +379,25 @@ class SettingsView(BaseView):
             self.database_section.url_field.value = snapshot.database_url
 
             # エージェント設定セクション
-            self.agent_section.set_values(
-                provider=snapshot.agent_provider.value,
-                model=snapshot.agent.model,
+            runtime_values = LLMRuntimeFormValues(
                 temperature=snapshot.agent.temperature,
                 debug_mode=snapshot.agent.debug_mode,
                 device=snapshot.agent.device.value,
+            )
+            memo_prompt = PromptFormValues(
+                instructions=snapshot.memo_to_task_prompt.custom_instructions,
+                detail_level=snapshot.memo_to_task_prompt.detail_level.value,
+            )
+            review_prompt = PromptFormValues(
+                instructions=snapshot.review_prompt.custom_instructions,
+                detail_level=snapshot.review_prompt.detail_level.value,
+            )
+            self.agent_section.set_values(
+                provider=snapshot.agent_provider.value,
+                model=snapshot.agent.model,
+                runtime=runtime_values,
+                memo_prompt=memo_prompt,
+                review_prompt=review_prompt,
             )
 
             # UIを更新

@@ -547,6 +547,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
                 **memo_meta,
                 "existing_tags": state["existing_tags"],
                 "current_datetime_iso": state["current_datetime_iso"],
+                **self._prompt_overrides(state),
                 "retry_hint": "",
             }
         )
@@ -605,6 +606,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             "current_datetime_iso": state["current_datetime_iso"],
             "project_title_hint": classification.project_title or classification.reason,
         }
+        base_params.update(self._prompt_overrides(state))
         runner = self._get_structured_runner("_project_plan_runner", project_plan_prompt, ProjectPlanSuggestion)
         first = runner.invoke({**base_params, "retry_hint": ""})
         suggestion = self.validate_output(first, ProjectPlanSuggestion)
@@ -715,6 +717,15 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             new_item = new_item.model_copy(update={"route": None})
         return new_item
 
+    def _prompt_overrides(self, state: MemoToTaskState) -> dict[str, str]:
+        """状態に格納されたプロンプト上書き値を抽出する。"""
+        custom_text = str(state.get("custom_instructions", "") or "").strip()
+        detail_hint = str(state.get("detail_hint", "") or "").strip()
+        return {
+            "custom_instructions": custom_text or "追加指示はありません。",
+            "detail_hint": detail_hint or "標準的な詳細度で回答してください。",
+        }
+
     def _generate_task_seed(self, state: MemoToTaskState) -> dict[str, object]:
         """メモからタスク素案 `TaskDraftSeed` を生成する。
 
@@ -733,6 +744,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             **memo_meta,
             "existing_tags": state["existing_tags"],
             "current_datetime_iso": state["current_datetime_iso"],
+            **self._prompt_overrides(state),
         }
         hint = (
             "JSON 出力は title(string), description(string|null), "
@@ -851,6 +863,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             "task_description": task.description or "",
             "memo_text": memo_text,
             **memo_meta,
+            **self._prompt_overrides(state),
         }
 
     def _build_task_from_seed(self, state: MemoToTaskState, overrides: dict[str, object] | None = None) -> TaskDraft:

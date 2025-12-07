@@ -82,6 +82,12 @@ class MemoToTaskState(BaseAgentState):
     error: NotRequired[AgentError]
     """エラーが発生した場合の例外インスタンス。"""
 
+    custom_instructions: NotRequired[str]
+    """設定から渡されるカスタム指示文。"""
+
+    detail_hint: NotRequired[str]
+    """応答の詳細度を指示するテキスト。"""
+
     # 最終応答は最終ノードで構築され、BaseAgent/_create_return_response で取り出されるため、
     # State での final_response は不要（互換フィールドを削除）。
 

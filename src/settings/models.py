@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar, Final, Literal
 
@@ -27,6 +28,14 @@ REVIEW_DEFAULT_ZOMBIE_THRESHOLD_DAYS: Final[int] = 14
 REVIEW_DEFAULT_MAX_COMPLETED: Final[int] = 30
 REVIEW_DEFAULT_MAX_ZOMBIE: Final[int] = 20
 REVIEW_DEFAULT_MAX_MEMOS: Final[int] = 20
+
+
+class AgentDetailLevel(str, Enum):
+    """LLM 応答の粒度レベル。"""
+
+    BRIEF = "brief"
+    BALANCED = "balanced"
+    DETAILED = "detailed"
 
 
 class WindowSettings(BaseModel):
@@ -152,6 +161,54 @@ class EditableReviewSettings(BaseModel):
     max_unprocessed_memos: int = Field(default=REVIEW_DEFAULT_MAX_MEMOS, ge=1, le=200)
 
 
+class MemoToTaskPromptSettings(BaseModel):
+    """MemoToTask エージェント向けのカスタムプロンプト設定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    custom_instructions: str = Field(
+        default="",
+        description="エージェントへ追記するカスタム指示。空文字列なら既定のまま。",
+    )
+    detail_level: AgentDetailLevel = Field(
+        default=AgentDetailLevel.BALANCED,
+        description="タスク生成時の出力粒度。brief/balanced/detailed から選択。",
+    )
+
+
+class EditableMemoToTaskPromptSettings(BaseModel):
+    """編集可能な MemoToTask プロンプト設定。"""
+
+    model_config = ConfigDict(frozen=False)
+
+    custom_instructions: str = Field(default="")
+    detail_level: AgentDetailLevel = Field(default=AgentDetailLevel.BALANCED)
+
+
+class ReviewPromptSettings(BaseModel):
+    """週次レビュー向けエージェントのプロンプト設定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    custom_instructions: str = Field(
+        default="",
+        description="レビュー生成エージェントに追加する指示文。",
+    )
+    detail_level: AgentDetailLevel = Field(
+        default=AgentDetailLevel.BALANCED,
+        description="レビュー出力の詳細度。brief/balanced/detailed から選択。",
+    )
+
+
+class EditableReviewPromptSettings(BaseModel):
+    """編集可能なレビューエージェント設定。"""
+
+    model_config = ConfigDict(frozen=False)
+
+    custom_instructions: str = Field(default="")
+    detail_level: AgentDetailLevel = Field(default=AgentDetailLevel.BALANCED)
+
+
 class HuggingFaceAgentModels(BaseModel):
     """HuggingFace/OPENVINO 系で利用するエージェント別モデル名設定。"""
 
@@ -204,6 +261,14 @@ class AgentsSettings(BaseModel):
     gemini: GeminiAgentModels | EditableGeminiAgentModels = Field(
         default_factory=GeminiAgentModels, description="Gemini モデル設定"
     )
+    memo_to_task_prompt: MemoToTaskPromptSettings | EditableMemoToTaskPromptSettings = Field(
+        default_factory=MemoToTaskPromptSettings,
+        description="MemoToTask エージェント向けのプロンプト設定。",
+    )
+    review_prompt: ReviewPromptSettings | EditableReviewPromptSettings = Field(
+        default_factory=ReviewPromptSettings,
+        description="週次レビューエージェント向けプロンプト設定。",
+    )
 
     def get_model_name(self, agent_key: str) -> HuggingFaceModel | str | None:  # [AI GENERATED]
         """現在の provider に応じて該当エージェントのモデル名 (Enum/str/None) を返す。
@@ -248,6 +313,24 @@ class AgentsSettings(BaseModel):
             return AgentRuntimeSettings.model_validate(v.model_dump())
         return v
 
+    @field_validator("memo_to_task_prompt", mode="before")
+    @classmethod
+    def _from_editable_memo_prompt(
+        cls, v: MemoToTaskPromptSettings | EditableMemoToTaskPromptSettings | dict[str, Any] | None
+    ) -> MemoToTaskPromptSettings | dict[str, Any] | None:
+        if isinstance(v, EditableMemoToTaskPromptSettings) and not isinstance(v, MemoToTaskPromptSettings):
+            return MemoToTaskPromptSettings.model_validate(v.model_dump())
+        return v
+
+    @field_validator("review_prompt", mode="before")
+    @classmethod
+    def _from_editable_review_prompt(
+        cls, v: ReviewPromptSettings | EditableReviewPromptSettings | dict[str, Any] | None
+    ) -> ReviewPromptSettings | dict[str, Any] | None:
+        if isinstance(v, EditableReviewPromptSettings) and not isinstance(v, ReviewPromptSettings):
+            return ReviewPromptSettings.model_validate(v.model_dump())
+        return v
+
 
 class EditableHuggingFaceAgentModels(BaseModel):
     model_config = ConfigDict(frozen=False)
@@ -279,6 +362,12 @@ class EditableAgentsSettings(BaseModel):
         default_factory=EditableHuggingFaceAgentModels
     )
     gemini: EditableGeminiAgentModels | GeminiAgentModels = Field(default_factory=EditableGeminiAgentModels)
+    memo_to_task_prompt: EditableMemoToTaskPromptSettings | MemoToTaskPromptSettings = Field(
+        default_factory=EditableMemoToTaskPromptSettings
+    )
+    review_prompt: EditableReviewPromptSettings | ReviewPromptSettings = Field(
+        default_factory=EditableReviewPromptSettings
+    )
 
     def get_model_name(self, agent_key: str) -> HuggingFaceModel | str | None:  # [AI GENERATED]
         if self.provider in (LLMProvider.OPENVINO,):
@@ -316,6 +405,24 @@ class EditableAgentsSettings(BaseModel):
     ) -> EditableAgentRuntimeSettings | dict[str, Any] | None:
         if isinstance(v, AgentRuntimeSettings) and not isinstance(v, EditableAgentRuntimeSettings):
             return EditableAgentRuntimeSettings.model_validate(v.model_dump())
+        return v
+
+    @field_validator("memo_to_task_prompt", mode="before")
+    @classmethod
+    def _convert_memo_prompt(
+        cls, v: EditableMemoToTaskPromptSettings | MemoToTaskPromptSettings | dict[str, Any] | None
+    ) -> EditableMemoToTaskPromptSettings | dict[str, Any] | None:
+        if isinstance(v, MemoToTaskPromptSettings) and not isinstance(v, EditableMemoToTaskPromptSettings):
+            return EditableMemoToTaskPromptSettings.model_validate(v.model_dump())
+        return v
+
+    @field_validator("review_prompt", mode="before")
+    @classmethod
+    def _convert_review_prompt(
+        cls, v: EditableReviewPromptSettings | ReviewPromptSettings | dict[str, Any] | None
+    ) -> EditableReviewPromptSettings | dict[str, Any] | None:
+        if isinstance(v, ReviewPromptSettings) and not isinstance(v, EditableReviewPromptSettings):
+            return EditableReviewPromptSettings.model_validate(v.model_dump())
         return v
 
 

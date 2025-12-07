@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import cast
 
 import flet as ft
@@ -71,9 +72,14 @@ class HomeView(BaseView):
 
         self.controller = HomeController(state=self.home_state, query=query)
 
-        # 初期データ読み込み
+        # デイリーレビューカードへの参照（更新用）
+        self._daily_review_card: DailyReviewCard | None = None
+
+        # 初期データ読み込み(AI一言生成は除く)
         try:
+            logger.info("[HomeView] 初期データ読み込み開始")
             self.controller.load_initial_data()
+            logger.info("[HomeView] 初期データ読み込み完了")
         except ApplicationServicesError as e:
             # サービスが未登録 (テスト/軽量環境) の場合は Home を空の状態で表示する。
             # これは異常ではなく、INFOレベルで記録する。
@@ -84,6 +90,11 @@ class HomeView(BaseView):
         except Exception:
             # 予期せぬエラーは従来通り再送出してUIに表示されるようにする
             raise
+
+        # AI一言生成をバックグラウンドで開始(起動をブロックしない)
+        logger.info("[HomeView] AI一言生成をバックグラウンドで開始")
+        self._start_one_liner_generation_async()
+        logger.info("[HomeView] __init__完了（UI操作可能）")
 
     def _create_application_query(self) -> ApplicationHomeQuery:
         """ApplicationServicesを利用したHomeQueryを生成する。"""
@@ -166,9 +177,26 @@ class HomeView(BaseView):
         Returns:
             デイリーレビューコントロール
         """
-        return DailyReviewCard(
-            review=self.home_state.daily_review,
-            on_action_click=self._handle_action_click,
+        if self._daily_review_card is None:
+            self._daily_review_card = DailyReviewCard(
+                review=self.home_state.daily_review,
+                on_action_click=self._handle_action_click,
+                is_loading=self.home_state.is_loading_one_liner,
+            )
+        return self._daily_review_card
+
+    def _rebuild_daily_review_card(self) -> None:
+        """デイリーレビューカードを最新の状態で再構築する。
+
+        State から最新のデータとローディング状態を取得し、カードを更新する。
+        """
+        if self._daily_review_card is None:
+            logger.warning("[UI更新] デイリーレビューカード参照が未初期化です")
+            return
+
+        self._daily_review_card.update_review(
+            self.home_state.daily_review,
+            is_loading=self.home_state.is_loading_one_liner,
         )
 
     def _build_inbox_memos_section(self) -> ft.Control:
@@ -226,6 +254,75 @@ class HomeView(BaseView):
 
         logger.info(f"Memo clicked: {memo_id}")
         self._handle_action_click("/memos")
+
+    def _start_one_liner_generation_async(self) -> None:
+        """AI一言生成をバックグラウンドで開始する。
+
+        別スレッドで実行し、完了時にUI更新を行う。
+        """
+        logger.info("[非同期] AI一言生成ローディング状態に設定")
+        self.controller.start_loading_one_liner()
+
+        def generate_and_update() -> None:
+            import time
+
+            start_time = time.time()
+            logger.info("[非同期スレッド] AI一言生成開始")
+            try:
+                message = self.controller.generate_one_liner_sync()
+                elapsed = time.time() - start_time
+                msg_preview = message[:50] if message else "None"
+                logger.info(f"[非同期スレッド] AI一言生成完了（{elapsed:.2f}秒）: {msg_preview}...")
+                self.controller.set_one_liner_message(message)
+                # [AI GENERATED] Flet のUI更新はメインスレッドで行う必要があるため、
+                # バックグラウンドスレッドから直接UIを更新するのは推奨されません。
+                # Flet公式のasyncパターン（page.run_task等）の利用を推奨します。
+                logger.info("[非同期スレッド] UI更新開始")
+                self._update_one_liner_display()
+                logger.info("[非同期スレッド] UI更新完了")
+            except Exception as e:
+                elapsed = time.time() - start_time
+                logger.error(f"[非同期スレッド] AI一言生成失敗（{elapsed:.2f}秒）: {e}")
+                self.controller.set_one_liner_message(None)
+
+        thread = threading.Thread(target=generate_and_update, daemon=True)
+        thread.start()
+        logger.info(f"[非同期] バックグラウンドスレッド起動完了（Thread ID: {thread.ident}）")
+
+    def _update_one_liner_display(self) -> None:
+        """AI一言生成完了時にデイリーレビューカードを更新する。
+
+        Stateから最新の状態を取得し、既存のCardを再構築して内容を置き換える。
+        build()実行前の場合は状態のみ更新し、カード作成時に反映される。
+        """
+        try:
+            logger.info(f"[UI更新] デイリーレビューカード更新開始（loading={self.home_state.is_loading_one_liner}）")
+
+            # カード参照がまだない場合（build()実行前）は状態のみ更新して終了
+            if self._daily_review_card is None:
+                logger.info("[UI更新] カードが未作成のため状態のみ更新（build時に反映されます）")
+                return
+
+            # カード再構築を共通メソッドに委譲
+            self._rebuild_daily_review_card()
+
+            # UI更新を実行
+            try:
+                if getattr(self._daily_review_card, "page", None) is not None:
+                    self._daily_review_card.update()
+                    logger.info("[UI更新] デイリーレビューカード更新完了 (control.update)")
+                elif self.page is not None:
+                    self.page.update()
+                    logger.info("[UI更新] デイリーレビューカード更新完了 (page.update fallback)")
+                else:
+                    logger.warning("[UI更新] page が見つからないため更新をスキップ")
+            except Exception as ex:
+                logger.error(f"[UI更新] 個別更新に失敗したため page.update にフォールバックします: {ex}")
+                if self.page is not None:
+                    self.page.update()
+                    logger.info("[UI更新] page.update による再描画完了")
+        except Exception as e:
+            logger.error(f"[UI更新] AI一言表示の更新に失敗しました: {e}")
 
     def _handle_action_click(self, route: str) -> None:
         """アクションクリック時の処理。

@@ -28,19 +28,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, TypeVar
 
 from loguru import logger
 
 from errors import NotFoundError
 from logic.application.apps import ApplicationServices
+from logic.unit_of_work import SqlModelUnitOfWork
 from models import (
     MemoStatus,
     MemoUpdate,
     ProjectStatus,
     ProjectUpdate,
     TagUpdate,
+    Task,
     TaskStatus,
     TaskUpdate,
     TermStatus,
@@ -97,6 +99,7 @@ class TaskSeed:
     memo_key: str | None = None
     due_in_days: int | None = None
     completed_offset_days: int | None = None
+    created_offset_days: int | None = None
 
 
 @dataclass(slots=True)
@@ -229,6 +232,18 @@ MEMO_SEEDS: tuple[MemoSeed, ...] = (
         content="今日やるべきタスクカードと進捗タスクを一目で見たい。",
         status=MemoStatus.ACTIVE,
     ),
+    MemoSeed(
+        key="weekly_support_inbox",
+        title="週次レビュー: サポート依頼の整理",
+        content="サポート部門から届いた定性フィードバック。次週の優先度づけが必要。",
+        status=MemoStatus.INBOX,
+    ),
+    MemoSeed(
+        key="weekly_focus_brain_dump",
+        title="フォーカスブロック候補のメモ",
+        content="集中セッションで片づけたい細かな改善アイデアをラフに列挙。",
+        status=MemoStatus.IDEA,
+    ),
 )
 
 TASK_SEEDS: tuple[TaskSeed, ...] = (
@@ -258,6 +273,7 @@ TASK_SEEDS: tuple[TaskSeed, ...] = (
         project_key="desktop_revamp",
         memo_key="ux_feedback",
         due_in_days=5,
+        created_offset_days=18,
     ),
     TaskSeed(
         key="automation_cron",
@@ -267,6 +283,7 @@ TASK_SEEDS: tuple[TaskSeed, ...] = (
         project_key="agent_tooling",
         memo_key="automation_notes",
         due_in_days=14,
+        created_offset_days=35,
     ),
     TaskSeed(
         key="overdue_docs",
@@ -308,6 +325,7 @@ TASK_SEEDS: tuple[TaskSeed, ...] = (
         status=TaskStatus.TODO,
         memo_key="quick_fixes",
         due_in_days=7,
+        created_offset_days=16,
     ),
     TaskSeed(
         key="idea_spikes",
@@ -336,6 +354,16 @@ TASK_SEEDS: tuple[TaskSeed, ...] = (
         completed_offset_days=2,
     ),
     TaskSeed(
+        key="weekly_playbook",
+        title="週次レビューガイドのアップデート",
+        description="AI提案のテンプレートとチェックリストを見直して最新化する。",
+        status=TaskStatus.COMPLETED,
+        project_key="desktop_revamp",
+        memo_key="ux_feedback",
+        due_in_days=-1,
+        completed_offset_days=3,
+    ),
+    TaskSeed(
         key="ops_dashboard",
         title="運用ダッシュボードの整理",
         description="エラー種別別のトレンドチャートを差し込み。",
@@ -343,6 +371,7 @@ TASK_SEEDS: tuple[TaskSeed, ...] = (
         project_key="ops_cleanup",
         memo_key="ops_watch",
         due_in_days=6,
+        created_offset_days=21,
     ),
     TaskSeed(
         key="urgent_patch",
@@ -436,7 +465,7 @@ def _calculate_due_date(offset_days: int | None) -> date | None:
     """
     if offset_days is None:
         return None
-    return datetime.now(UTC).date() + timedelta(days=offset_days)
+    return datetime.now().date() + timedelta(days=offset_days)
 
 
 def _calculate_completed_at(offset_days: int | None) -> datetime | None:
@@ -450,7 +479,32 @@ def _calculate_completed_at(offset_days: int | None) -> datetime | None:
     """
     if offset_days is None:
         return None
-    return datetime.now(UTC) - timedelta(days=offset_days)
+    return datetime.now() - timedelta(days=offset_days)
+
+
+def _apply_task_created_offsets(offset_mapping: dict[uuid.UUID, int]) -> None:
+    """Task.created_at を過去日にずらして停滞タスクを用意する。
+
+    Args:
+        offset_mapping: タスクIDと過去に遡る日数の対応。
+    """
+    valid_offsets = {task_id: days for task_id, days in offset_mapping.items() if days > 0}
+    if not valid_offsets:
+        return
+
+    with SqlModelUnitOfWork() as uow:
+        for task_id, days in valid_offsets.items():
+            task = uow.session.get(Task, task_id)
+            if task is None:
+                logger.warning(f"created_at を更新できませんでした: task_id={task_id}")
+                continue
+            target_created_at = datetime.now() - timedelta(days=days)
+            task.created_at = target_created_at
+            if task.updated_at is None or task.updated_at < target_created_at:
+                task.updated_at = target_created_at
+            uow.session.add(task)
+        uow.commit()
+    logger.info("停滞タスク用の created_at を {} 件更新しました。", len(valid_offsets))
 
 
 def seed_tags(apps: ApplicationServices) -> dict[str, uuid.UUID]:
@@ -561,14 +615,24 @@ def seed_tasks(
     """
     existing = {task.title: task for task in _safe_list(apps.task.get_all_tasks)}
     results: dict[str, uuid.UUID] = {}
+    created_offsets: dict[uuid.UUID, int] = {}
 
     for seed in TASK_SEEDS:
         task = existing.get(seed.title)
+        due_date = _calculate_due_date(seed.due_in_days)
+        completed_at = _calculate_completed_at(seed.completed_offset_days)
+        project_id = _resolve_reference(project_ids, seed.project_key, "プロジェクト")
+        memo_id = _resolve_reference(memo_ids, seed.memo_key, "メモ")
+
         if task is None:
             task = apps.task.create(
                 title=seed.title,
                 description=seed.description,
                 status=seed.status,
+                due_date=due_date,
+                completed_at=completed_at,
+                project_id=project_id,
+                memo_id=memo_id,
             )
             logger.info(f"[TASK] 作成: {seed.title}")
         else:
@@ -576,14 +640,19 @@ def seed_tasks(
                 title=seed.title,
                 description=seed.description,
                 status=seed.status,
-                due_date=_calculate_due_date(seed.due_in_days),
-                completed_at=_calculate_completed_at(seed.completed_offset_days),
-                project_id=_resolve_reference(project_ids, seed.project_key, "プロジェクト"),
-                memo_id=_resolve_reference(memo_ids, seed.memo_key, "メモ"),
+                due_date=due_date,
+                completed_at=completed_at,
+                project_id=project_id,
+                memo_id=memo_id,
             )
             task = apps.task.update(task.id, update_payload)
             logger.info(f"[TASK] 更新: {seed.title}")
+
+        if seed.created_offset_days:
+            created_offsets[task.id] = seed.created_offset_days
         results[seed.key] = task.id
+
+    _apply_task_created_offsets(created_offsets)
     return results
 
 

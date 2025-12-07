@@ -58,8 +58,10 @@ class FakeOneLinerService(OneLinerServicePort):
     def __init__(self, message: str = "AIメッセージ", *, should_raise: bool = False) -> None:
         self._message = message
         self._should_raise = should_raise
+        self.call_count = 0
 
     def generate_one_liner(self, query: object | None = None) -> str:
+        self.call_count += 1
         if self._should_raise:
             error_message = "one liner generation failed"
             raise RuntimeError(error_message)
@@ -162,7 +164,7 @@ def test_get_stats_counts_tasks_and_projects() -> None:
 
 
 def test_daily_review_prefers_overdue_tasks() -> None:
-    """期限超過タスクがある場合でもメッセージはOneLinerを使用し、アイコンはシナリオに従う。"""
+    """期限超過タスクのシナリオは即時描画用メッセージを返し、OneLinerは呼ばれない。"""
     tasks = [
         _task(title="Overdue", status=TaskStatus.OVERDUE),
         _task(title="Todo", status=TaskStatus.TODO),
@@ -174,8 +176,20 @@ def test_daily_review_prefers_overdue_tasks() -> None:
     review = query.get_daily_review()
 
     assert review["icon"] == "error"
-    assert review["message"] == "AIの一言"
+    assert "期限超過タスク" in review["message"]
     assert review["action_route"] == "/tasks"
+    assert one_liner.call_count == 0
+
+
+def test_get_one_liner_message_returns_ai_text() -> None:
+    """OneLiner生成APIは専用メソッド経由で呼び出される。"""
+    one_liner = FakeOneLinerService(message="AIの一言")
+    query = _create_query(memos=[], tasks=[], projects=[], one_liner_service=one_liner)
+
+    message = query.get_one_liner_message()
+
+    assert message == "AIの一言"
+    assert one_liner.call_count == 1
 
 
 def test_daily_review_fallback_when_one_liner_fails() -> None:

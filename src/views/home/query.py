@@ -108,6 +108,14 @@ class HomeQuery(Protocol):
         """
         ...
 
+    def get_one_liner_message(self) -> str | None:
+        """AI一言メッセージのみを生成する。
+
+        Returns:
+            生成されたメッセージ（失敗時はNone）
+        """
+        ...
+
 
 class InMemoryHomeQuery:
     """軽量なデフォルト実装。テスト・プロトタイピング用。"""
@@ -153,6 +161,14 @@ class InMemoryHomeQuery:
         """
         return self._stats
 
+    def get_one_liner_message(self) -> str | None:
+        """AI一言メッセージのみを生成する（InMemory実装では常にNone）。
+
+        Returns:
+            None（テスト用実装のため）
+        """
+        return None
+
 
 @dataclass(slots=True)
 class ApplicationHomeQuery(HomeQuery):
@@ -180,8 +196,25 @@ class ApplicationHomeQuery(HomeQuery):
     _project_cache: list[ProjectRead] | None = field(default=None, init=False, repr=False)
 
     def get_daily_review(self) -> dict[str, Any]:
-        """タスクとメモの状況を基にデイリーレビューを生成する。"""
+        """タスクとメモの状況を基にデイリーレビューを生成する。
+
+        AI一言メッセージが生成可能な場合は、シナリオのメッセージを置き換える。
+        アイコンや優先度などの他のフィールドはシナリオから取得する。
+
+        Returns:
+            デイリーレビュー情報を含む辞書
+        """
+        # HomeView 側での非同期AI生成に備え、ここではシナリオのみを構築する。
+        # LLM呼び出しは UI スレッドをブロックしないようバックグラウンドで実行する。
         return self._build_daily_review(self._get_tasks(), self._get_memos())
+
+    def get_one_liner_message(self) -> str | None:
+        """AI一言メッセージのみを生成する。
+
+        Returns:
+            生成されたメッセージ（失敗時はNone）
+        """
+        return self._generate_one_liner_message()
 
     def get_inbox_memos(self) -> list[dict[str, Any]]:
         """Inboxステータスのメモを最新順で返す。"""
@@ -247,6 +280,17 @@ class ApplicationHomeQuery(HomeQuery):
         return created_at.timestamp()
 
     def _build_daily_review(self, tasks: list[TaskRead], memos: list[MemoRead]) -> dict[str, Any]:
+        """タスクとメモの状況からシナリオベースのレビューを構築する。
+
+        AI一言メッセージは含まれない（呼び出し側で付与する）。
+
+        Args:
+            tasks: 全タスクのリスト
+            memos: 全メモのリスト
+
+        Returns:
+            シナリオベースのレビュー情報（icon, color, message, action_text, action_route, priority）
+        """
         # タスクリストを複数回走査するのではなく、単一パスで分類する。
         # 理由: 大きなタスクリストでの効率化（O(n)）と可読性向上のため。
         todays_tasks: list[TaskRead] = []
@@ -383,16 +427,13 @@ class ApplicationHomeQuery(HomeQuery):
             selected = {
                 "icon": "wb_sunny",
                 "color": "primary",
-                "message": "今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか？",
+                "message": "今日も良い一日にしましょう。まずはメモを書いて、やるべきことを整理しませんか?",
                 "action_text": "メモを作成する",
                 "action_route": "/memos",
                 "priority": "low",
             }
 
-        one_liner_message = self._generate_one_liner_message()
-        if one_liner_message:
-            selected["message"] = one_liner_message
-
+        # AI一言メッセージはget_daily_review()で付与される
         return selected
 
     def _generate_one_liner_message(self) -> str | None:

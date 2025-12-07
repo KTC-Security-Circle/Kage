@@ -44,6 +44,8 @@ class HomeViewState(BaseViewState):
     daily_review: dict[str, Any] = field(default_factory=dict)
     inbox_memos: list[dict[str, Any]] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
+    is_loading_one_liner: bool = False
+    one_liner_message: str | None = None
 
     def set_daily_review(self, review: dict[str, Any]) -> None:
         """デイリーレビュー情報を設定する。
@@ -68,6 +70,31 @@ class HomeViewState(BaseViewState):
             stats: 統計情報を含む辞書
         """
         self.stats = dict(stats)
+
+    def set_loading_one_liner(self, *, is_loading: bool) -> None:
+        """AI一言生成中のローディング状態を設定する。
+
+        Args:
+            is_loading: ローディング中の場合True
+        """
+        self.is_loading_one_liner = is_loading
+
+    def set_one_liner_message(self, message: str | None) -> None:
+        """AI一言メッセージを設定する。
+
+        Args:
+            message: AI生成メッセージ（生成失敗時はNone）
+        """
+        self.one_liner_message = message
+        self.is_loading_one_liner = False
+
+    def update_daily_review_message(self, message: str) -> None:
+        """デイリーレビューのメッセージフィールドを更新する。
+
+        Args:
+            message: 更新するメッセージ
+        """
+        self.daily_review["message"] = message
 
     def has_inbox_memos(self) -> bool:
         """Inboxメモが存在するか判定する。

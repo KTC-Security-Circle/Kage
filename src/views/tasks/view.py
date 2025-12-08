@@ -25,9 +25,11 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.shared.components import HeaderButtonData
+from views.shared.components import HeaderButtonData, TagBadgeData
+from views.theme import get_grey_color
 
 from .components import TaskEmptyState, TaskNoSelection, TaskStatusTabs
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
@@ -60,6 +62,7 @@ class TasksView(BaseView):
         # データ取得: ApplicationService を優先して利用する
         # - 例外時のユーザー通知は BaseView の snackbar を利用
         service = self.apps.get_service(TaskApplicationService)
+        tag_service = self.apps.get_service(TagApplicationService)
 
         # コントローラー初期化
         self._controller = TasksController(
@@ -67,6 +70,7 @@ class TasksView(BaseView):
             on_change=self._on_view_model_change,
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
             apps=self.apps,
+            tag_service=tag_service,
         )
 
         self._current_vm: list[TaskCardVM] = []
@@ -223,10 +227,24 @@ class TasksView(BaseView):
         # TaskCardDataへ変換し子コンポーネントへ渡す（MemoCardパターン踏襲）
         cards: list[TaskCardData] = []
         selected = self._controller.state.selected_id
+
+        # タグ一覧を取得（カード表示用）
+        all_tags = self._controller.get_all_tags()
+        tag_map = {tag.name: tag for tag in all_tags}
+
         for vm in items:
 
             def _on_click_vm(vm: TaskCardVM = vm) -> None:
                 self._show_detail(vm)
+
+            # タグバッジデータ生成
+            tag_badges: list[TagBadgeData] = []
+            if hasattr(vm, "tags") and vm.tags:
+                for tag_name in vm.tags:
+                    tag = tag_map.get(tag_name)
+                    if tag:
+                        tag_color = getattr(tag, "color", None) or get_grey_color(600)
+                        tag_badges.append(TagBadgeData(name=tag_name, color=tag_color))
 
             cards.append(
                 TaskCardData(
@@ -235,6 +253,7 @@ class TasksView(BaseView):
                     subtitle=vm.subtitle,
                     status=vm.status,
                     status_label=TASK_STATUS_LABELS.get(vm.status, vm.status),
+                    tag_badges=tuple(tag_badges),
                     is_selected=(selected == vm.id) if selected else False,
                     on_click=_on_click_vm,
                 )
@@ -342,16 +361,37 @@ class TasksView(BaseView):
 
     def _open_create_dialog(self) -> None:
         """タスク作成ダイアログを開く。"""
+        # タグ一覧を取得
+        all_tags = self._controller.get_all_tags()
+
+        # タスクID用のプレースホルダー（作成後に設定される）
+        created_task_id: list[str] = []
+
+        def _on_tags_change(tag_ids: list[str]) -> None:
+            """タグ変更時の処理"""
+            if not created_task_id:
+                logger.warning("タスクIDが設定されていません")
+                return
+            try:
+                self._controller.sync_tags(created_task_id[0], tag_ids)
+                logger.info(f"タスク {created_task_id[0]} のタグを同期しました")
+            except Exception as e:
+                logger.error(f"タグ同期エラー: {e}")
+                self.show_error_snackbar(self.page, "タグの同期に失敗しました")
+
         show_create_task_dialog(
             page=self.page,
-            on_save=self._handle_create_task,
+            on_save=lambda task_data: self._handle_create_task(task_data, created_task_id),
+            all_tags=all_tags,
+            on_tags_change=_on_tags_change,
         )
 
-    def _handle_create_task(self, task_data: dict[str, str]) -> None:
+    def _handle_create_task(self, task_data: dict[str, str], created_task_id: list[str]) -> None:
         """タスク作成処理を実行する。
 
         Args:
             task_data: タスクデータ(title, description, status など)
+            created_task_id: 作成されたタスクIDを格納するリスト
         """
         title = task_data.get("title", "").strip()
         description = task_data.get("description", "").strip() or None
@@ -363,11 +403,14 @@ class TasksView(BaseView):
 
         # Controllerにタスク作成を委譲（ローディング表示付き）
         def _create() -> None:
-            self._controller.create_task(
+            result = self._controller.create_task(
                 title=title,
                 description=description,
                 status=status,
             )
+            # 作成されたタスクIDを保存
+            if result and hasattr(result, "id"):
+                created_task_id.append(str(result.id))
 
         try:
             self.with_loading(_create)
@@ -397,19 +440,40 @@ class TasksView(BaseView):
             self.show_error_snackbar(self.page, "タスクが見つかりませんでした。")
             return
 
+        # 詳細情報を取得してタグ情報と期限日を含める
+        task_detail = self._controller.get_detail(task_id)
+        task_tags = task_detail.get("tags", []) if task_detail else []
+        task_due_date = task_detail.get("due_date", "") if task_detail else ""
+
         # VMからダイアログ用データを作成
         task_data = {
             "id": str(vm.id),
             "title": vm.title,
-            "description": getattr(vm, "description", ""),
+            "description": getattr(vm, "description", "")
+            or (task_detail.get("description", "") if task_detail else ""),
             "status": vm.status,
-            "due_date": str(getattr(vm, "due_date", "") or ""),
+            "due_date": task_due_date,
+            "tags": task_tags,
         }
+
+        # タグ一覧を取得
+        all_tags = self._controller.get_all_tags()
+
+        def _on_tags_change(tag_ids: list[str]) -> None:
+            """タグ変更時の処理"""
+            try:
+                self._controller.sync_tags(task_id, tag_ids)
+                logger.info(f"タスク {task_id} のタグを同期しました")
+            except Exception as e:
+                logger.error(f"タグ同期エラー: {e}")
+                self.show_error_snackbar(self.page, "タグの同期に失敗しました")
 
         show_edit_task_dialog(
             page=self.page,
             task_data=task_data,
             on_save=self._handle_edit_task,
+            all_tags=all_tags,
+            on_tags_change=_on_tags_change,
         )
 
     def _handle_edit_task(self, task_data: dict[str, str]) -> None:
@@ -418,30 +482,50 @@ class TasksView(BaseView):
         Args:
             task_data: 更新後のタスクデータ
         """
-        task_id = task_data.get("id", "").strip()
-        title = task_data.get("title", "").strip()
-        description = task_data.get("description", "").strip() or None
-        status = task_data.get("status", "").strip()
-        due_date = task_data.get("due_date", "").strip() or None
+        task_id = task_data.get("id", "")
+        if task_id:
+            task_id = task_id.strip()
+
+        title = task_data.get("title", "")
+        if title:
+            title = title.strip()
+
+        description = task_data.get("description")
+        description = description.strip() or None if description else None
+
+        status = task_data.get("status", "")
+        if status:
+            status = status.strip()
+
+        due_date_val = task_data.get("due_date")
+        # Noneまたは空文字列の場合はNoneに統一
+        if due_date_val is None or (isinstance(due_date_val, str) and not due_date_val.strip()):
+            due_date = None
+        else:
+            due_date = str(due_date_val).strip()
 
         if not task_id or not title:
+            logger.warning(f"タスクIDまたはタイトルが空: task_id={task_id}, title={title}")
             self.show_error_snackbar(self.page, "タスクIDとタイトルは必須です。")
             return
 
         # Controllerにタスク更新を委譲
         def _update() -> None:
-            self._controller.update_task(
-                task_id=task_id,
-                title=title,
-                description=description,
-                status=status,
-                due_date=due_date,
-            )
+            try:
+                self._controller.update_task(
+                    task_id=task_id,
+                    title=title,
+                    description=description,
+                    status=status,
+                    due_date=due_date,
+                )
+            except Exception as e:
+                logger.error(f"タスク更新エラー: {e}")
+                raise
 
         try:
             self.with_loading(_update)
             self.show_success_snackbar(f"タスク「{title}」を更新しました。")
-            logger.info(f"タスク更新成功: {task_id}")
             self.safe_update()
         except Exception as e:
             logger.exception(f"タスク更新中にエラー: {e}")

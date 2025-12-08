@@ -886,9 +886,13 @@ class TermRead(TermBase):
         source_url: 出典や参照先のURL。
         created_at: 用語の作成日時。
         updated_at: 用語の最終更新日時。
+        tags: この用語に付けられたタグのリスト。
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
+    tags: List["TagRead"] = Field(default_factory=list)
 
 
 class TermUpdate(SQLModel):
@@ -995,20 +999,36 @@ class SynonymUpdate(SQLModel):
 # Review DTO modules
 # ==============================================================================
 
-# ruff: noqa: I001
 from .review import (  # noqa: E402  # pylint: disable=wrong-import-position
-    CompletedTaskDigest as CompletedTaskDigest,
-    MemoAuditDigest as MemoAuditDigest,
-    MemoAuditInsight as MemoAuditInsight,
-    ReviewPeriod as ReviewPeriod,
-    WeeklyReviewHighlightsItem as WeeklyReviewHighlightsItem,
-    WeeklyReviewHighlightsPayload as WeeklyReviewHighlightsPayload,
-    WeeklyReviewInsights as WeeklyReviewInsights,
-    WeeklyReviewInsightsQuery as WeeklyReviewInsightsQuery,
-    WeeklyReviewMemoAuditPayload as WeeklyReviewMemoAuditPayload,
-    WeeklyReviewMetadata as WeeklyReviewMetadata,
-    WeeklyReviewZombiePayload as WeeklyReviewZombiePayload,
-    ZombieTaskDigest as ZombieTaskDigest,
-    ZombieTaskInsight as ZombieTaskInsight,
-    ZombieTaskSuggestion as ZombieTaskSuggestion,
+    CompletedTaskDigest,
+    MemoAuditDigest,
+    MemoAuditInsight,
+    ReviewPeriod,
+    WeeklyReviewHighlightsItem,
+    WeeklyReviewHighlightsPayload,
+    WeeklyReviewInsights,
+    WeeklyReviewInsightsQuery,
+    WeeklyReviewMemoAuditPayload,
+    WeeklyReviewMetadata,
+    WeeklyReviewZombiePayload,
+    ZombieTaskDigest,
+    ZombieTaskInsight,
+    ZombieTaskSuggestion,
 )
+
+__all__ = [
+    "CompletedTaskDigest",
+    "MemoAuditDigest",
+    "MemoAuditInsight",
+    "ReviewPeriod",
+    "WeeklyReviewHighlightsItem",
+    "WeeklyReviewHighlightsPayload",
+    "WeeklyReviewInsights",
+    "WeeklyReviewInsightsQuery",
+    "WeeklyReviewMemoAuditPayload",
+    "WeeklyReviewMetadata",
+    "WeeklyReviewZombiePayload",
+    "ZombieTaskDigest",
+    "ZombieTaskInsight",
+    "ZombieTaskSuggestion",
+]

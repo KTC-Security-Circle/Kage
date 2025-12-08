@@ -21,20 +21,14 @@ import flet as ft
 from loguru import logger
 
 from logic.application.memo_application_service import MemoApplicationService
+from logic.application.tag_application_service import TagApplicationService
 from models import MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import Header, HeaderButtonData
-from views.theme import get_error_color, get_outline_color, get_text_secondary_color
+from views.theme import get_error_color, get_outline_color
 
 from .components.create_form import CreateForm, FormCallbacks
-
-# TODO: [Logic] メモ永続化の統合（ロジック担当）
-# - ApplicationService 統合: MemoApplicationService.create(...) を用意し DI 経由で取得
-# - Command 定義: CreateMemoCommand(title: str, content: str, status: MemoStatus, tags: list[str])
-# - 成功時の戻り値: MemoRead(id: UUID, title, content, status, tags, created_at, ...)
-# - 失敗時の例外: ValidationError, RepositoryError, Timeout 等を想定し UI 側で通知
-# - UI 制御: 保存中は保存ボタンとショートカットを無効化し、連打防止
-# - 画面遷移: 成功後は /memos に戻り、新規メモを選択 or 先頭に反映（MemosView 側で upsert）
+from .components.tag_selector import TagSelector, TagSelectorProps
 
 
 @dataclass(slots=True)
@@ -45,7 +39,8 @@ class CreateMemoState:
         title: メモのタイトル
         content: 本文
         status: メモのステータス
-        tags: 選択されたタグ名のリスト（暫定）
+        tags: 選択されたタグ名のリスト
+        all_tags: 全タグリスト（タグ名からUUIDへの変換に使用）
         active_tab: 編集/プレビュー切替
     """
 
@@ -53,6 +48,7 @@ class CreateMemoState:
     content: str = ""
     status: MemoStatus = MemoStatus.INBOX
     tags: list[str] = field(default_factory=list)
+    all_tags: list = field(default_factory=list)
     active_tab: Literal["edit", "preview"] = "edit"
 
 
@@ -64,16 +60,20 @@ class CreateMemoView(BaseView):
         props: BaseViewProps,
         *,
         memo_app: MemoApplicationService | None = None,
+        tag_app: TagApplicationService | None = None,
     ) -> None:
         super().__init__(props)
         self._memo_app = memo_app or self.apps.get_service(MemoApplicationService)
+        self._tag_app = tag_app or self.apps.get_service(TagApplicationService)
         self.state_local = CreateMemoState()
 
         # UI controls (late init)
         self._header: Header | None = None
         self._form: CreateForm | None = None
+        self._tag_selector: TagSelector | None = None
 
         self.did_mount()
+        self._load_tags()
 
     # BaseView hook
     def build_content(self) -> ft.Control:
@@ -156,7 +156,7 @@ class CreateMemoView(BaseView):
         return self._form
 
     def _build_right_sidebar(self) -> ft.Control:
-        """右カラム: タグ選択(暫定)とヒント。"""
+        """右カラム: タグ選択とヒント。"""
         hint = ft.Card(
             content=ft.Container(
                 content=ft.Column(
@@ -172,20 +172,24 @@ class CreateMemoView(BaseView):
             )
         )
 
-        # タグ選択 (後続で ApplicationService と統合)
-        # TODO: タグ一覧を ApplicationService から取得し、選択UIへ反映する。
-        #       - 取得: tag_app.get_all() 等（未統合）
-        #       - 状態: self.state_local.tags に保持
-        #       - 保存: _handle_save() で tags を一緒に渡す
+        # タグ選択UI
+        try:
+            all_tags = self._tag_app.get_all_tags()
+        except Exception:
+            logger.warning("Failed to load tags for CreateMemoView")
+            all_tags = []
+
+        self._tag_selector = TagSelector(
+            TagSelectorProps(
+                all_tags=all_tags,
+                selected_tag_names=self.state_local.tags,
+                on_tag_toggle=self._handle_tag_toggle,
+            )
+        )
+
         tags_card = ft.Card(
             content=ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text("タグ", weight=ft.FontWeight.BOLD),
-                        ft.Text("タグ機能は後続で統合予定", size=12, color=get_text_secondary_color()),
-                    ],
-                    spacing=6,
-                ),
+                content=self._tag_selector,
                 padding=ft.padding.all(12),
             )
         )
@@ -212,12 +216,9 @@ class CreateMemoView(BaseView):
         self._update_save_button()
 
     def _update_content(self, value: str) -> None:
+        """コンテンツ更新時のハンドラ。"""
         self.state_local.content = value
-        # TODO: Ctrl+Enter で保存のキーハンドリングを追加（TextField.on_keyboard_event）
-        #       - 重複送信防止のため、保存中は無効化
         self._update_save_button()
-        # プレビュー更新は CreateForm 側が担当
-        self.safe_update()
 
     def _can_save(self) -> bool:
         return bool(self.state_local.content.strip())
@@ -237,6 +238,40 @@ class CreateMemoView(BaseView):
         # 入力がある場合の確認は後続で実装
         self.page.go("/memos")
 
+    def _handle_tag_toggle(self, tag_name: str) -> None:
+        """タグのトグル処理。
+
+        Args:
+            tag_name: トグルするタグ名
+        """
+        if tag_name in self.state_local.tags:
+            self.state_local.tags.remove(tag_name)
+        else:
+            self.state_local.tags.append(tag_name)
+
+        # タグセレクターを更新
+        if self._tag_selector is not None:
+            try:
+                all_tags = self._tag_app.get_all_tags()
+                self._tag_selector.set_props(
+                    TagSelectorProps(
+                        all_tags=all_tags,
+                        selected_tag_names=self.state_local.tags,
+                        on_tag_toggle=self._handle_tag_toggle,
+                    )
+                )
+            except Exception:
+                logger.warning("Failed to update tag selector")
+
+    def _load_tags(self) -> None:
+        """タグ一覧を読み込む。"""
+        try:
+            all_tags = self._tag_app.get_all_tags()
+            self.state_local.all_tags = all_tags
+            logger.debug(f"Loaded {len(all_tags)} tags for CreateMemoView")
+        except Exception:
+            logger.warning("Failed to load tags in CreateMemoView")
+
     def _handle_save(self) -> None:
         if not self._can_save():
             self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
@@ -244,18 +279,32 @@ class CreateMemoView(BaseView):
         title = self.state_local.title.strip() or "無題のメモ"
         content = self.state_local.content.strip()
         status = self.state_local.status
+        selected_tag_names = self.state_local.tags
+
+        # タグ名からUUIDに変換
+        tag_ids = [tag.id for tag in self.state_local.all_tags if tag.name in selected_tag_names]
 
         def _save() -> None:
             if self._header is not None:
                 self._header.disable_button("save_button")
             try:
-                created = self._memo_app.create(title=title, content=content, status=status)
+                created = self._memo_app.create(
+                    title=title,
+                    content=content,
+                    status=status,
+                    tag_ids=tag_ids,
+                )
+                logger.info(
+                    "Memo created via CreateMemoView: id=%s, status=%s, tags=%s",
+                    created.id,
+                    created.status,
+                    selected_tag_names,
+                )
             except Exception:
                 if self._header is not None:
                     self._header.enable_button("save_button")
                 raise
 
-            logger.info("Memo created via CreateMemoView: id=%s, status=%s", created.id, created.status)
             self.show_success_snackbar("メモを作成しました")
             self.page.go("/memos")
 

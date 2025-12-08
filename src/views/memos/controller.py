@@ -47,7 +47,7 @@ from loguru import logger
 
 from errors import NotFoundError
 from logic.application.memo_ai_job_queue import MemoAiJobSnapshot  # noqa: TC001 - runtime dependency
-from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate, TaskRead
+from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate, TagRead, TaskRead
 
 from .ordering import sort_memos
 from .query import SearchQueryNormalizer
@@ -56,6 +56,14 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from .state import MemosViewState
+
+
+class TagApplicationPort(Protocol):
+    """TagApplicationService の利用に必要なメソッドを限定したポート。"""
+
+    def get_all_tags(self) -> list[TagRead]:
+        """全タグ取得"""
+        ...
 
 
 class MemoApplicationPort(Protocol):
@@ -105,6 +113,10 @@ class MemoApplicationPort(Protocol):
         """AIジョブの状態を取得する。"""
         ...
 
+    def sync_tags(self, memo_id: UUID, tag_ids: list[UUID]) -> MemoRead:
+        """メモのタグを同期する。"""
+        ...
+
     def approve_ai_tasks(self, memo_id: UUID, task_ids: list[UUID]) -> list[TaskRead]:
         """Draftタスクを承認する。"""
         ...
@@ -142,6 +154,7 @@ class MemosController:
 
     memo_app: MemoApplicationPort
     state: MemosViewState
+    tag_app: TagApplicationPort | None = None
     query_normalizer: SearchQueryNormalizer = field(default_factory=SearchQueryNormalizer)
 
     def load_initial_memos(self) -> None:
@@ -342,6 +355,24 @@ class MemosController:
 
         self.state.reconcile()
 
+    def sync_tags(self, memo_id: UUID, tag_ids: list[UUID]) -> MemoRead:
+        """メモにタグを同期する。
+
+        Args:
+            memo_id: メモID
+            tag_ids: 設定するタグIDのリスト
+
+        Returns:
+            MemoRead: 更新されたメモ
+        """
+        updated = self.memo_app.sync_tags(memo_id, tag_ids)
+        self.state.upsert_memo(updated)
+        self.state.set_all_memos(sort_memos(self.state.all_memos))
+        if self.state.search_query:
+            self._refresh_search_results()
+        self.state.reconcile()
+        return updated
+
     def _refresh_search_results(self) -> None:
         """現在のクエリに基づいて検索結果を再取得する。"""
         query = self.state.search_query
@@ -358,3 +389,17 @@ class MemosController:
             results = []
 
         self.state.set_search_result(query, results)
+
+    # --- Tag operations ---
+
+    def load_tags(self) -> None:
+        """全タグを読み込む。"""
+        if self.tag_app is None:
+            logger.warning("TagApplicationPort not provided, skipping tag loading")
+            return
+        tags = self.tag_app.get_all_tags()
+        self.state.set_all_tags(tags)
+
+    def get_all_tags(self) -> list[TagRead]:
+        """現在の全タグを返す。"""
+        return self.state.all_tags

@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Final
 import flet as ft
 
 from models import TermStatus
-from views.shared.components.card import Card, CardBadgeData, CardData, CardMetadataData
+from views.shared.components.card import Card, CardBadgeData, CardData, CardMetadataData, TagBadgeData
 from views.theme import get_primary_color
 
 from .shared.constants import MAX_SYNONYMS_DISPLAY
@@ -54,6 +54,7 @@ class TermCardData:
         synonyms: 同義語タプル（不変）
         status: 内部ステータス
         status_text: 表示用ステータステキスト
+        tag_badges: タグバッジデータのタプル（不変）
         is_selected: 選択状態
         on_click: クリック時のコールバック
     """
@@ -65,6 +66,7 @@ class TermCardData:
     synonyms: tuple[str, ...]
     status: TermStatus
     status_text: str
+    tag_badges: tuple[TagBadgeData, ...] = ()
     is_selected: bool = False
     on_click: Callable[[], None] | None = None
 
@@ -108,6 +110,7 @@ class TermCard(Card):
             description=data.description,
             badge=badge,
             metadata=metadata_items,
+            tag_badges=data.tag_badges,
             actions=[],
             is_selected=data.is_selected,
             on_click=data.on_click,

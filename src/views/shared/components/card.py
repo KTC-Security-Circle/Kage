@@ -68,6 +68,7 @@ import flet as ft
 from views.theme import (
     get_on_primary_color,
     get_outline_color,
+    get_surface_color,
     get_text_secondary_color,
 )
 
@@ -138,6 +139,22 @@ class CardBadgeData:
 
 
 @dataclass(frozen=True, slots=True)
+class TagBadgeData:
+    """タグバッジの表示データ
+
+    タグの名前と色を表示するための共通データクラス。
+    メモ、タスク、プロジェクトなどで使用される。
+
+    Attributes:
+        name: タグ名
+        color: タグの背景色（Fletカラー文字列）
+    """
+
+    name: str
+    color: str
+
+
+@dataclass(frozen=True, slots=True)
 class CardMetadataData:
     """カードメタデータの表示データ
 
@@ -175,6 +192,7 @@ class CardData:
         title: カードタイトル
         description: 説明文
         badge: バッジデータ（省略可）
+        tag_badges: タグバッジのリスト（省略可）
         metadata: メタデータリスト
         actions: アクションボタンリスト
         on_click: カードクリック時のコールバック（省略可）
@@ -184,6 +202,7 @@ class CardData:
     title: str
     description: str
     badge: CardBadgeData | None = None
+    tag_badges: tuple[TagBadgeData, ...] = ()
     metadata: list[CardMetadataData] = field(default_factory=list)
     actions: list[CardActionData] = field(default_factory=list)
     on_click: Callable[[], None] | None = None
@@ -233,6 +252,7 @@ class Card(ft.Container):
                 padding=CARD_PADDING,
             ),
             elevation=CARD_ELEVATION_SELECTED if self._data.is_selected else CARD_ELEVATION_DEFAULT,
+            color=get_surface_color(),
         )
         self.margin = ft.margin.symmetric(vertical=4, horizontal=8)
         self.border_radius = CARD_BORDER_RADIUS
@@ -291,13 +311,44 @@ class Card(ft.Container):
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
+    def _build_tag_badges(self) -> list[ft.Control]:
+        """タグバッジのリストを構築する
+
+        Returns:
+            タグバッジコントロールのリスト
+        """
+        if not self._data.tag_badges:
+            return []
+
+        return [
+            ft.Container(
+                content=ft.Text(
+                    tag.name,
+                    size=11,
+                    color=get_on_primary_color(),
+                    weight=ft.FontWeight.W_400,
+                ),
+                padding=ft.padding.symmetric(
+                    horizontal=BADGE_HORIZONTAL_PADDING,
+                    vertical=BADGE_VERTICAL_PADDING,
+                ),
+                bgcolor=tag.color,
+                border_radius=BADGE_BORDER_RADIUS,
+            )
+            for tag in self._data.tag_badges
+        ]
+
     def _build_footer(self) -> ft.Control:
-        """フッター（メタデータ + アクション）を構築する
+        """フッター（タグバッジ + メタデータ + アクション）を構築する
 
         Returns:
             フッターコントロール
         """
         footer_controls: list[ft.Control] = []
+
+        # タグバッジ
+        tag_badges = self._build_tag_badges()
+        footer_controls.extend(tag_badges)
 
         # メタデータ
         footer_controls.extend(

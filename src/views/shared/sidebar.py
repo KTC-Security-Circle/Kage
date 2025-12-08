@@ -43,7 +43,7 @@ NAVIGATION_ITEMS = [
     NavigationItem("プロジェクト", "/projects", ft.Icons.FOLDER_OUTLINED, ft.Icons.FOLDER),
     NavigationItem("タグ", "/tags", ft.Icons.LOCAL_OFFER_OUTLINED, ft.Icons.LOCAL_OFFER),
     NavigationItem("用語集", "/terms", ft.Icons.MENU_BOOK_OUTLINED, ft.Icons.MENU_BOOK),
-    NavigationItem("週間レビュー", "/weekly-review", ft.Icons.ASSESSMENT_OUTLINED, ft.Icons.ASSESSMENT),
+    NavigationItem("週次レビュー", "/weekly-review", ft.Icons.ASSESSMENT_OUTLINED, ft.Icons.ASSESSMENT),
     NavigationItem("設定", "/settings", ft.Icons.SETTINGS_OUTLINED, ft.Icons.SETTINGS),
 ]
 

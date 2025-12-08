@@ -36,7 +36,11 @@ if TYPE_CHECKING:
 
 
 def create_term_card_data(
-    term: TermRead, *, is_selected: bool = False, on_click: Callable[[], None] | None = None
+    term: TermRead,
+    *,
+    is_selected: bool = False,
+    on_click: Callable[[], None] | None = None,
+    tag_badges: tuple[Any, ...] = (),
 ) -> TermCardData:
     """用語カード表示用のデータを生成する。
 
@@ -44,6 +48,7 @@ def create_term_card_data(
         term: ソース用語データ
         is_selected: 選択状態
         on_click: クリック時のコールバック
+        tag_badges: タグバッジデータ
 
     Returns:
         カード表示用データ
@@ -56,6 +61,7 @@ def create_term_card_data(
         synonyms=_extract_synonyms(term),
         status=term.status,
         status_text=format_status_text(term.status),
+        tag_badges=tag_badges,
         is_selected=is_selected,
         on_click=on_click,
     )

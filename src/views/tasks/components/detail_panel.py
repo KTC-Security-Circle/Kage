@@ -14,7 +14,9 @@ import flet as ft
 from views.tasks.components.shared.constants import STATUS_ORDER, TASK_STATUS_LABELS
 from views.theme import (
     get_grey_color,
+    get_on_primary_color,
     get_outline_color,
+    get_primary_color,
     get_success_color,
     get_text_secondary_color,
 )
@@ -97,6 +99,12 @@ class TaskDetailPanel:
             # ステータス
             self._build_section("ステータス", self._status_dd),
         ]
+
+        # タグ表示（タグがある場合）
+        tags = getattr(vm, "tags", [])
+        if tags:
+            tag_badges = self._build_tag_badges(tags)
+            details_sections.append(self._build_section("タグ", tag_badges))
 
         # 期限（設定されている場合）
         due_date = getattr(vm, "due_date", None)
@@ -230,6 +238,38 @@ class TaskDetailPanel:
                 content,
             ],
             spacing=4,
+        )
+
+    def _build_tag_badges(self, tags: list) -> ft.Row:
+        """タグバッジのリストを構築する。
+
+        Args:
+            tags: タグのリスト
+
+        Returns:
+            タグバッジを含むRow
+        """
+        tag_controls = []
+        for tag in tags:
+            tag_name = getattr(tag, "name", str(tag))
+            tag_color = getattr(tag, "color", None) or get_primary_color()
+            badge = ft.Container(
+                content=ft.Text(
+                    tag_name,
+                    size=12,
+                    color=get_on_primary_color(),
+                    weight=ft.FontWeight.W_500,
+                ),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                bgcolor=tag_color,
+                border_radius=12,
+            )
+            tag_controls.append(badge)
+
+        return ft.Row(
+            controls=tag_controls,
+            spacing=8,
+            wrap=True,
         )
 
     def _build_project_info(self, vm: TaskDetailVM | TaskCardVM) -> ft.Column:

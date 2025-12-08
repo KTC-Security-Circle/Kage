@@ -50,7 +50,7 @@ from uuid import UUID, uuid4
 
 from loguru import logger
 
-from models import AiSuggestionStatus, MemoRead, MemoStatus, TaskStatus
+from models import AiSuggestionStatus, MemoRead, MemoStatus, TagRead, TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -101,6 +101,7 @@ class MemosViewState:
     all_memos: list[MemoRead] = field(default_factory=list)
     search_results: list[MemoRead] | None = None
     selected_memo_id: UUID | None = None
+    all_tags: list[TagRead] = field(default_factory=list)
     # id -> MemoRead のインデックス。全メモ(all_memos)に対して構築する。
     _by_id: dict[UUID, MemoRead] = field(default_factory=dict, repr=False)
     _ai_flow: dict[UUID, MemoAiFlowState] = field(default_factory=dict, repr=False)
@@ -144,6 +145,14 @@ class MemosViewState:
             memo_id: 選択したメモのUUID
         """
         self.selected_memo_id = memo_id
+
+    def set_all_tags(self, tags: list[TagRead]) -> None:
+        """全タグ一覧を更新する。
+
+        Args:
+            tags: タグのシーケンス
+        """
+        self.all_tags = list(tags)
 
     def derived_memos(self) -> list[MemoRead]:
         """現在のタブと検索条件に基づくメモ一覧を返す。

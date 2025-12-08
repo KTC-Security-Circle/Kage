@@ -170,16 +170,19 @@ class TasksController:
 
     def _ensure_cache_valid(self) -> None:
         """キャッシュが有効であることを確認し、無効な場合は更新する。"""
-        if self._cached_tasks is None or self._cached_keyword != self._state.keyword:
+        keyword = self._state.keyword or ""
+        if self._cached_tasks is None or self._cached_keyword != keyword:
             try:
                 self._cached_tasks = self._service.search(
                     self._state.keyword,
                     with_details=False,
                     status=None,
                 )
-                self._cached_keyword = self._state.keyword
-            except Exception:
+                self._cached_keyword = keyword
+            except Exception as e:
+                logger.warning(f"タスクキャッシュの更新に失敗しました: {e}")
                 self._cached_tasks = []
+                self._cached_keyword = keyword
 
     def set_selected(self, task_id: str | None) -> None:
         """選択中のタスクIDを更新する。"""
@@ -276,16 +279,19 @@ class TasksController:
         # キャッシュを更新（必要な場合のみ）
         self._ensure_cache_valid()
 
+        # 安全性チェック: キャッシュがNoneの場合は空リストとして扱う
+        cached_tasks = self._cached_tasks if self._cached_tasks is not None else []
+
         # キャッシュからステータス別に集計
         counts: dict[str, int] = {}
         for status in STATUS_ORDER:
             try:
                 status_enum = TaskStatus(status) if status else None
                 if status_enum:
-                    counts[status] = sum(1 for task in self._cached_tasks if task.status == status_enum)
+                    counts[status] = sum(1 for task in cached_tasks if task.status == status_enum)
                 else:
                     # status が None の場合は全タスク数を返す
-                    counts[status] = len(self._cached_tasks)
+                    counts[status] = len(cached_tasks)
             except Exception:
                 counts[status] = 0
         return counts
@@ -298,7 +304,8 @@ class TasksController:
         # キャッシュを更新（必要な場合のみ）
         self._ensure_cache_valid()
 
-        return len(self._cached_tasks)
+        # 安全性チェック: キャッシュがNoneの場合は0を返す
+        return len(self._cached_tasks) if self._cached_tasks is not None else 0
 
     def get_detail(self, task_id: str) -> dict | None:
         """タスクIDから詳細データを取得する。
@@ -332,7 +339,8 @@ class TasksController:
         self._state = new_state
         try:
             # キャッシュの更新判定
-            keyword_changed = self._cached_keyword != new_state.keyword
+            keyword = new_state.keyword or ""
+            keyword_changed = self._cached_keyword != keyword
 
             # キーワードが変わった場合のみDBから取得し、キャッシュを更新
             if keyword_changed or self._cached_tasks is None:
@@ -341,14 +349,14 @@ class TasksController:
                     with_details=False,
                     status=None,
                 )
-                self._cached_keyword = new_state.keyword
+                self._cached_keyword = keyword
+
+            # 安全性チェック: キャッシュがNoneの場合は空リストとして扱う
+            cached_tasks = self._cached_tasks if self._cached_tasks is not None else []
 
             # キャッシュからステータスフィルタを適用
             status_enum = TaskStatus(new_state.status) if new_state.status else None
-            if status_enum:
-                items = [task for task in self._cached_tasks if task.status == status_enum]
-            else:
-                items = self._cached_tasks
+            items = [task for task in cached_tasks if task.status == status_enum] if status_enum else cached_tasks
 
             # 辞書化してPresenterへ
             items_dict = [self._task_read_to_dict(item) for item in items]

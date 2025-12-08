@@ -240,8 +240,34 @@ class MemosView(BaseView):
             self._refresh()
             memo_count = len(self.controller.current_memos())
             logger.info(f"Loaded {memo_count} memos from DB")
+            # 一時保存されたメモIDを取得して選択（初回のみ）
+            if not hasattr(self, "_pending_handled"):
+                self._handle_pending_memo()
+                self._pending_handled = True
         except Exception as e:
             self.notify_error("メモの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
+
+    def _handle_pending_memo(self) -> None:
+        """一時保存されたメモIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            memo_id_str = self.page.client_storage.get("pending_memo_id")
+            if memo_id_str:
+                logger.info(f"一時保存されたメモIDを検出: {memo_id_str}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_memo_id")
+                # メモIDをUUIDに変換して選択
+                try:
+                    from uuid import UUID
+
+                    memo_id = UUID(memo_id_str)
+                    self.controller.select_memo_by_id(memo_id)
+                    self._refresh()
+                    logger.debug(f"メモを選択しました: {memo_id_str}")
+                except ValueError as e:
+                    logger.warning(f"不正なメモID形式: {memo_id_str}, エラー: {e}")
+        except Exception as e:
+            logger.warning(f"一時保存メモIDの処理に失敗: {e}")
 
     def _update_memo_list(self) -> None:
         """メモリストを更新。"""

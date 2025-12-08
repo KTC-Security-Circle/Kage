@@ -285,19 +285,30 @@ class TagsView(BaseView):
 
     def _on_memo_click(self, _e: ft.ControlEvent, memo_id: str) -> None:  # type: ignore[name-defined]
         """関連メモクリックハンドラ"""
-        # TODO: メモ詳細画面の実装待ち
-        # 理由: メモ詳細画面（/memos/:id）がまだ存在しない
-        # 実装: MemosViewで詳細表示機能を実装後、ここで遷移を有効化
-        # 置換先: src/views/memos/ 内に詳細表示機能を追加
-        # 暫定: メモ一覧画面へ遷移してユーザーに選択させる
-        if self.page:
+        from loguru import logger
+
+        logger.info(f"メモ画面への遷移を開始: memo_id={memo_id}")
+        try:
+            # メモIDをページのクライアントストレージに一時保存
+            self.page.client_storage.set("pending_memo_id", memo_id)
+            # メモ画面に遷移
             self.page.go("/memos")
-            self.show_info_snackbar(f"メモ {memo_id} を一覧から選択してください")
+            logger.debug(f"メモ画面への遷移が完了: /memos (pending_memo_id={memo_id})")
+        except Exception as e:
+            logger.error(f"メモ画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
 
     def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:  # type: ignore[name-defined]
         """関連タスククリックハンドラ"""
-        # タスク管理画面へ遷移
-        # 注意: TasksViewで特定タスクの選択・フォーカス機能があれば連携できる
-        if self.page:
+        from loguru import logger
+
+        logger.info(f"タスク画面への遷移を開始: task_id={task_id}")
+        try:
+            # タスクIDをページのクライアントストレージに一時保存
+            self.page.client_storage.set("pending_task_id", task_id)
+            # タスク画面に遷移
             self.page.go("/tasks")
-            self.show_info_snackbar(f"タスク {task_id} を一覧から確認してください")
+            logger.debug(f"タスク画面への遷移が完了: /tasks (pending_task_id={task_id})")
+        except Exception as e:
+            logger.error(f"タスク画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")

@@ -36,10 +36,9 @@ from __future__ import annotations
 
 import asyncio
 import threading
-
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import flet as ft
 from loguru import logger

@@ -47,8 +47,7 @@ from loguru import logger
 
 from errors import NotFoundError
 from logic.application.memo_ai_job_queue import MemoAiJobSnapshot  # noqa: TC001 - runtime dependency
-
-from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate, TagRead
+from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate, TagRead, TaskRead
 
 from .ordering import sort_memos
 from .query import SearchQueryNormalizer

@@ -50,7 +50,7 @@ from uuid import UUID, uuid4
 
 from loguru import logger
 
-from models import AiSuggestionStatus, MemoRead, MemoStatus, TagRead
+from models import AiSuggestionStatus, MemoRead, MemoStatus, TagRead, TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

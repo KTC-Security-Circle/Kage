@@ -15,6 +15,7 @@ from models import (
     WeeklyReviewActionResult,
     WeeklyReviewInsights,
     WeeklyReviewInsightsQuery,
+    WeeklyReviewMemoDecision,
     WeeklyReviewTaskDecision,
 )
 
@@ -73,12 +74,16 @@ class WeeklyReviewApplicationService(BaseApplicationService[type[SqlModelUnitOfW
         )
         return self.generate_insights(query)
 
-    def apply_actions(self, decisions: list[WeeklyReviewTaskDecision]) -> WeeklyReviewActionResult:
-        """ゾンビタスクに対するアクションを適用する。"""
+    def apply_actions(
+        self,
+        task_decisions: list[WeeklyReviewTaskDecision],
+        memo_decisions: list[WeeklyReviewMemoDecision] | None = None,
+    ) -> WeeklyReviewActionResult:
+        """選択されたタスク/メモアクションを適用する。"""
         try:
             with self._unit_of_work_factory() as uow:
                 action_service = uow.service_factory.get_service(WeeklyReviewActionService)
-                result = action_service.apply_actions(decisions)
+                result = action_service.apply_actions(task_decisions, memo_decisions)
                 uow.commit()
                 return result
         except Exception as exc:  # pragma: no cover - エラー経路

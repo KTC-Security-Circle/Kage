@@ -92,4 +92,4 @@ def test_apply_actions_delegates_to_action_service() -> None:
     result = app_service.apply_actions([decision])
 
     assert result is fake_result
-    action_service.apply_actions.assert_called_once_with([decision])
+    action_service.apply_actions.assert_called_once_with([decision], None)

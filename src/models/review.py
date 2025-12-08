@@ -240,6 +240,24 @@ class WeeklyReviewTaskDecision(BaseModel):
     action: Literal["split", "someday", "delete"] = Field(description="実行するアクション。")
 
 
+class WeeklyReviewMemoDecision(BaseModel):
+    """未処理メモに対するアクションの決定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    memo_id: UUID = Field(description="対象メモID。")
+    action: Literal["create_task", "archive", "skip"] = Field(description="実行するアクション。")
+
+
+class WeeklyReviewMemoTaskInfo(BaseModel):
+    """メモ起点で生成されたドラフトタスクの親子関係。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    memo_id: UUID
+    task_id: UUID
+
+
 class WeeklyReviewActionResult(BaseModel):
     """週次レビュー整理アクションの集計結果。"""
 
@@ -252,5 +270,12 @@ class WeeklyReviewActionResult(BaseModel):
     someday_task_ids: list[UUID] = Field(default_factory=list, description="Somedayへ移動したタスクID。")
     deleted_tasks: int = Field(default=0, ge=0, description="削除されたタスク数。")
     deleted_task_ids: list[UUID] = Field(default_factory=list, description="削除に成功したタスクID。")
+    memo_tasks_created: int = Field(default=0, ge=0, description="メモから生成されたタスク数。")
+    memo_task_infos: list[WeeklyReviewMemoTaskInfo] = Field(default_factory=list, description="メモ起点タスクの詳細。")
+    memo_task_ids: list[UUID] = Field(default_factory=list, description="メモ起点で生成されたタスクID。")
+    memos_archived: int = Field(default=0, ge=0, description="資料化(IDEA遷移)したメモ数。")
+    archived_memo_ids: list[UUID] = Field(default_factory=list, description="資料化されたメモID。")
+    memos_skipped: int = Field(default=0, ge=0, description="アーカイブに移動したメモ数。")
+    skipped_memo_ids: list[UUID] = Field(default_factory=list, description="アーカイブしたメモID。")
     errors: list[str] = Field(default_factory=list, description="個別エラーの一覧。")
     message: str = Field(default="", description="ユーザーへ表示する要約メッセージ。")

@@ -1013,6 +1013,8 @@ from .review import (  # noqa: E402  # pylint: disable=wrong-import-position
     WeeklyReviewSplitTarget as WeeklyReviewSplitTarget,
     WeeklyReviewSplitTaskInfo as WeeklyReviewSplitTaskInfo,
     WeeklyReviewTaskDecision as WeeklyReviewTaskDecision,
+    WeeklyReviewMemoDecision as WeeklyReviewMemoDecision,
+    WeeklyReviewMemoTaskInfo as WeeklyReviewMemoTaskInfo,
     WeeklyReviewZombiePayload as WeeklyReviewZombiePayload,
     ZombieTaskDigest as ZombieTaskDigest,
     ZombieTaskInsight as ZombieTaskInsight,

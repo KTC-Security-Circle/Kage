@@ -327,6 +327,7 @@ class UnprocessedMemoData:
     content: str
     suggestion: str
     selected_action: MemoAction = None
+    completed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -358,7 +359,7 @@ class UnprocessedMemoCard(ft.Card):
         self.props = props
         self.content = self._build_content()
         self.elevation = 2
-        self.color = ft.Colors.BLUE_50
+        self._apply_surface_style()
 
     def _build_header(self) -> ft.Container:
         """ヘッダーを構築
@@ -420,6 +421,8 @@ class UnprocessedMemoCard(ft.Card):
         Returns:
             コンテンツコンテナ
         """
+        if self.props.memo_data.completed:
+            return self._build_completed_content()
         header = self._build_header()
         content_preview = self._build_content_preview()
         action_buttons = self._build_action_buttons()
@@ -472,15 +475,46 @@ class UnprocessedMemoCard(ft.Card):
             ),
         )
 
+        question_text = ft.Text("どうしますか?", size=14, color=ft.Colors.GREY_700)
+
         return ft.Container(
-            content=ft.ResponsiveRow(
+            content=ft.Column(
                 controls=[
-                    ft.Container(create_task_button, col={"sm": 12, "md": 4}),
-                    ft.Container(archive_button, col={"sm": 12, "md": 4}),
-                    ft.Container(skip_button, col={"sm": 12, "md": 4}),
+                    question_text,
+                    ft.Container(
+                        content=ft.ResponsiveRow(
+                            controls=[
+                                ft.Container(create_task_button, col={"sm": 12, "md": 4}),
+                                ft.Container(archive_button, col={"sm": 12, "md": 4}),
+                                ft.Container(skip_button, col={"sm": 12, "md": 4}),
+                            ],
+                            spacing=8,
+                        ),
+                    ),
                 ],
+                spacing=6,
+            ),
+        )
+
+    def _build_completed_content(self) -> ft.Container:
+        status_row = ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN_600, size=20),
+                ft.Text("処理済み", size=16, weight=ft.FontWeight.W_600, color=ft.Colors.GREEN_700),
+            ],
+            spacing=8,
+        )
+        message = ft.Text(
+            "このメモは整理済みです。必要に応じて他の項目を確認してください。",
+            size=13,
+            color=ft.Colors.GREY_700,
+        )
+        return ft.Container(
+            content=ft.Column(
+                controls=[status_row, message],
                 spacing=8,
             ),
+            padding=ft.padding.all(16),
         )
 
     def _handle_action(self, action: MemoAction) -> None:
@@ -489,6 +523,9 @@ class UnprocessedMemoCard(ft.Card):
         Args:
             action: 選択されたアクション
         """
+        if self.props.memo_data.completed:
+            return
+        self.set_selected_action(action)
         if self.props.on_action_selected:
             try:
                 self.props.on_action_selected(self.props.memo_data.memo_id, action)
@@ -508,6 +545,7 @@ class UnprocessedMemoCard(ft.Card):
             content=self.props.memo_data.content,
             suggestion=self.props.memo_data.suggestion,
             selected_action=action,
+            completed=self.props.memo_data.completed,
         )
         self.props = UnprocessedMemoCardProps(
             memo_data=new_data,
@@ -519,7 +557,17 @@ class UnprocessedMemoCard(ft.Card):
         """コンポーネントを再構築"""
         self.content = self._build_content()
 
+        self._apply_surface_style()
+
         try:
             self.update()
         except AssertionError:
             logger.debug("未処理メモカードが未マウント: update()をスキップ")
+
+    def _apply_surface_style(self) -> None:
+        if self.props.memo_data.completed:
+            self.color = ft.Colors.GREY_100
+            self.elevation = 0
+        else:
+            self.color = ft.Colors.BLUE_50
+            self.elevation = 2

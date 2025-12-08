@@ -252,10 +252,10 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
 
     def list_unprocessed_memos(
         self,
-        created_after: datetime,
+        created_after: datetime | None,
         *,
         statuses: Iterable[MemoStatus] | None = None,
-        limit: int = 20,
+        limit: int | None = 20,
         with_details: bool = True,
     ) -> list[Memo]:
         """タスク化されていない未処理メモを抽出する。"""
@@ -264,14 +264,14 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
         status_col = cast("Any", Memo.status)
         tasks_rel = cast("Any", Memo.tasks)
 
-        stmt = (
-            select(Memo)
-            .where(created_col >= created_after)
-            .where(status_col.in_(status_values))
-            .where(~tasks_rel.any())
-            .order_by(created_col.desc())
-            .limit(limit)
-        )
+        stmt = select(Memo)
+        if created_after is not None:
+            stmt = stmt.where(created_col >= created_after)
+
+        stmt = stmt.where(status_col.in_(status_values)).where(~tasks_rel.any()).order_by(created_col.desc())
+
+        if limit is not None and limit > 0:
+            stmt = stmt.limit(limit)
 
         if with_details:
             stmt = self._apply_eager_loading(stmt)

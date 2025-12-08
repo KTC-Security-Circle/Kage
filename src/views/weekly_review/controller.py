@@ -28,6 +28,8 @@ from models import (
     WeeklyReviewHighlightsItem,
     WeeklyReviewInsights,
     WeeklyReviewMemoAuditPayload,
+    WeeklyReviewMemoDecision,
+    WeeklyReviewMemoTaskInfo,
     WeeklyReviewSplitTaskInfo,
     WeeklyReviewTaskDecision,
     WeeklyReviewZombiePayload,
@@ -94,6 +96,9 @@ class WeeklyReviewController:
         current_zombie_ids = {entry.id for entry in zombie_entries}
         self.state.clear_completed_zombie_flags(current_zombie_ids)
         self.state.zombie_task_decisions.clear()
+        current_memo_ids = {entry.id for entry in memo_entries}
+        self.state.clear_completed_memo_flags(current_memo_ids)
+        self.state.memo_decisions.clear()
 
         completed_count = len(completed_tasks)
         inbox_count = len(memo_entries)
@@ -106,6 +111,7 @@ class WeeklyReviewController:
             active_projects=len(insights.metadata.project_filters) or len(self.state.recommendations),
             completed_last_week=completed_count,
         )
+        self.state.applying_actions = False
         self.state.data_loaded = True
 
     def _format_highlights(self, items: list[WeeklyReviewHighlightsItem]) -> list[str]:
@@ -292,15 +298,19 @@ class WeeklyReviewController:
         logger.debug(f"メモ決定: {memo_id} -> {action}")
 
     def execute_task_actions(self) -> WeeklyReviewActionResult:
-        """選択されたゾンビタスクアクションを実行する。"""
-        decisions = self._collect_task_decisions()
-        if not decisions:
+        """選択されたタスク/メモアクションを実行する。"""
+        task_decisions = self._collect_task_decisions()
+        memo_decisions = self._collect_memo_decisions()
+        if not task_decisions and not memo_decisions:
             msg = "アクションが選択されていません"
             raise ValueError(msg)
-        result = self.review_app_service.apply_actions(decisions)
+        result = self.review_app_service.apply_actions(task_decisions, memo_decisions)
         self._store_split_draft_tasks(result.split_tasks)
+        self._store_memo_draft_tasks(result.memo_task_infos)
         self._mark_zombie_tasks_completed([*result.someday_task_ids, *result.deleted_task_ids])
+        self._mark_memos_completed([*result.archived_memo_ids, *result.skipped_memo_ids])
         self.state.zombie_task_decisions.clear()
+        self.state.memo_decisions.clear()
         return result
 
     def _collect_task_decisions(self) -> list[WeeklyReviewTaskDecision]:
@@ -325,6 +335,19 @@ class WeeklyReviewController:
             decisions.append(WeeklyReviewTaskDecision(task_id=parsed_id, action=literal_action))
         return decisions
 
+    def _collect_memo_decisions(self) -> list[WeeklyReviewMemoDecision]:
+        decisions: list[WeeklyReviewMemoDecision] = []
+        for memo_id, action in self.state.memo_decisions.items():
+            if not action:
+                continue
+            try:
+                parsed_id = UUID(memo_id)
+            except ValueError:
+                logger.warning("不正なメモIDのためアクションをスキップしました: %s", memo_id)
+                continue
+            decisions.append(WeeklyReviewMemoDecision(memo_id=parsed_id, action=action))
+        return decisions
+
     def _store_split_draft_tasks(self, split_tasks: list[WeeklyReviewSplitTaskInfo]) -> None:
         if not split_tasks:
             return
@@ -335,11 +358,25 @@ class WeeklyReviewController:
                 continue
             self.state.add_split_draft_tasks(str(parent.id), parent.title, [child])
 
+    def _store_memo_draft_tasks(self, memo_tasks: list[WeeklyReviewMemoTaskInfo]) -> None:
+        if not memo_tasks:
+            return
+        for info in memo_tasks:
+            child = self._safe_get_task(info.task_id)
+            memo = self._safe_get_memo(info.memo_id)
+            if child is None or memo is None:
+                continue
+            self.state.add_memo_draft_tasks(str(memo.id), memo.title, [child])
+
     def _mark_zombie_tasks_completed(self, task_ids: list[UUID]) -> None:
         if not task_ids:
             return
         for task_id in task_ids:
             self.state.mark_zombie_task_completed(str(task_id))
+
+    def _mark_memos_completed(self, memo_ids: list[UUID]) -> None:
+        for memo_id in memo_ids:
+            self.state.mark_memo_completed(str(memo_id))
 
     def approve_split_task(self, task_id: str) -> TaskRead:
         parsed_id = UUID(task_id)
@@ -356,6 +393,23 @@ class WeeklyReviewController:
             parent_id = self.state.remove_split_draft_task(task_id)
             if parent_id and not self.state.get_split_drafts(parent_id):
                 self.state.mark_zombie_task_completed(parent_id)
+        return success
+
+    def approve_memo_task(self, task_id: str) -> TaskRead:
+        parsed_id = UUID(task_id)
+        updated = self.task_app_service.update(parsed_id, TaskUpdate(status=TaskStatus.TODO))
+        memo_id = self.state.remove_memo_draft_task(task_id)
+        if memo_id and not self.state.get_memo_drafts(memo_id):
+            self.state.mark_memo_completed(memo_id)
+        return updated
+
+    def discard_memo_task(self, task_id: str) -> bool:
+        parsed_id = UUID(task_id)
+        success = self.task_app_service.delete(parsed_id)
+        if success:
+            memo_id = self.state.remove_memo_draft_task(task_id)
+            if memo_id and not self.state.get_memo_drafts(memo_id):
+                self.state.mark_memo_completed(memo_id)
         return success
 
     def get_tasks_by_status(self, status: str) -> list:

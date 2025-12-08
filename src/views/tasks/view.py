@@ -28,7 +28,8 @@ from loguru import logger
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
-from views.shared.components import HeaderButtonData
+from views.shared.components import HeaderButtonData, TagBadgeData
+from views.theme import get_grey_color
 
 from .components import TaskEmptyState, TaskNoSelection, TaskStatusTabs
 from .components.detail_panel import DetailPanelProps, TaskDetailPanel
@@ -226,10 +227,24 @@ class TasksView(BaseView):
         # TaskCardDataへ変換し子コンポーネントへ渡す（MemoCardパターン踏襲）
         cards: list[TaskCardData] = []
         selected = self._controller.state.selected_id
+
+        # タグ一覧を取得（カード表示用）
+        all_tags = self._controller.get_all_tags()
+        tag_map = {tag.name: tag for tag in all_tags}
+
         for vm in items:
 
             def _on_click_vm(vm: TaskCardVM = vm) -> None:
                 self._show_detail(vm)
+
+            # タグバッジデータ生成
+            tag_badges: list[TagBadgeData] = []
+            if hasattr(vm, "tags") and vm.tags:
+                for tag_name in vm.tags:
+                    tag = tag_map.get(tag_name)
+                    if tag:
+                        tag_color = getattr(tag, "color", None) or get_grey_color(600)
+                        tag_badges.append(TagBadgeData(name=tag_name, color=tag_color))
 
             cards.append(
                 TaskCardData(
@@ -238,6 +253,7 @@ class TasksView(BaseView):
                     subtitle=vm.subtitle,
                     status=vm.status,
                     status_label=TASK_STATUS_LABELS.get(vm.status, vm.status),
+                    tag_badges=tuple(tag_badges),
                     is_selected=(selected == vm.id) if selected else False,
                     on_click=_on_click_vm,
                 )
@@ -424,17 +440,19 @@ class TasksView(BaseView):
             self.show_error_snackbar(self.page, "タスクが見つかりませんでした。")
             return
 
-        # 詳細情報を取得してタグ情報を含める
+        # 詳細情報を取得してタグ情報と期限日を含める
         task_detail = self._controller.get_detail(task_id)
         task_tags = task_detail.get("tags", []) if task_detail else []
+        task_due_date = task_detail.get("due_date", "") if task_detail else ""
 
         # VMからダイアログ用データを作成
         task_data = {
             "id": str(vm.id),
             "title": vm.title,
-            "description": getattr(vm, "description", ""),
+            "description": getattr(vm, "description", "")
+            or (task_detail.get("description", "") if task_detail else ""),
             "status": vm.status,
-            "due_date": str(getattr(vm, "due_date", "") or ""),
+            "due_date": task_due_date,
             "tags": task_tags,
         }
 
@@ -464,28 +482,57 @@ class TasksView(BaseView):
         Args:
             task_data: 更新後のタスクデータ
         """
-        task_id = task_data.get("id", "").strip()
-        title = task_data.get("title", "").strip()
-        description = task_data.get("description", "").strip() or None
-        status = task_data.get("status", "").strip()
-        due_date = task_data.get("due_date", "").strip() or None
+        logger.info(f"_handle_edit_taskが呼び出されました: {task_data}")
+
+        task_id = task_data.get("id", "")
+        if task_id:
+            task_id = task_id.strip()
+
+        title = task_data.get("title", "")
+        if title:
+            title = title.strip()
+
+        description = task_data.get("description")
+        description = description.strip() or None if description else None
+
+        status = task_data.get("status", "")
+        if status:
+            status = status.strip()
+
+        due_date_val = task_data.get("due_date")
+        # Noneまたは空文字列の場合はNoneに統一
+        if due_date_val is None or (isinstance(due_date_val, str) and not due_date_val.strip()):
+            due_date = None
+        else:
+            due_date = str(due_date_val).strip()
+
+        logger.debug(f"処理データ: task_id={task_id}, title={title}, due_date={due_date}")
 
         if not task_id or not title:
+            logger.warning(f"タスクIDまたはタイトルが空: task_id={task_id}, title={title}")
             self.show_error_snackbar(self.page, "タスクIDとタイトルは必須です。")
             return
 
         # Controllerにタスク更新を委譲
         def _update() -> None:
-            self._controller.update_task(
-                task_id=task_id,
-                title=title,
-                description=description,
-                status=status,
-                due_date=due_date,
-            )
+            logger.info(f"タスク更新開始: task_id={task_id}")
+            try:
+                self._controller.update_task(
+                    task_id=task_id,
+                    title=title,
+                    description=description,
+                    status=status,
+                    due_date=due_date,
+                )
+                logger.info(f"タスク更新完了: task_id={task_id}")
+            except Exception as e:
+                logger.error(f"update_task内でエラー: {e}")
+                raise
 
         try:
+            logger.info("with_loading開始")
             self.with_loading(_update)
+            logger.info("with_loading完了")
             self.show_success_snackbar(f"タスク「{title}」を更新しました。")
             logger.info(f"タスク更新成功: {task_id}")
             self.safe_update()

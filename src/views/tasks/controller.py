@@ -331,7 +331,7 @@ class TasksController:
             status_enum = TaskStatus(new_state.status) if new_state.status else None
             items = self._service.search(
                 new_state.keyword,
-                with_details=False,
+                with_details=True,  # タグ情報を取得するためTrueに変更
                 status=status_enum,
             )
 
@@ -450,6 +450,11 @@ class TasksController:
             except Exception as e:
                 logger.warning(f"タスク {task.id} のプロジェクト情報取得エラー: {e}")
 
+        # タグ情報を抽出
+        tags: list[str] = []
+        if hasattr(task, "tags") and task.tags:
+            tags = [tag.name for tag in task.tags]
+
         return {
             "id": _s(task.id),
             "title": _s(task.title),
@@ -463,6 +468,7 @@ class TasksController:
             "project_name": project_name or "",
             "project_status": project_status or "",
             "project_tasks": project_tasks,  # type: ignore[dict-item]
+            "tags": tags,
         }
         # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。
 

@@ -185,6 +185,9 @@ def show_create_task_dialog(  # noqa: C901, PLR0915
 
     tag_dropdown.on_change = _on_tag_select
 
+    # 初期表示時にタグバッジを更新
+    _update_selected_tags_display()
+
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """ダイアログを閉じる"""
         dialog.open = False
@@ -372,6 +375,12 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
 
     # DatePicker を用いた期限入力
     due_date_raw = task_data.get("due_date", "")
+    # 期限日の初期値を処理（None, 空文字列、または日付文字列）
+    if due_date_raw and due_date_raw not in ("None", "null", ""):
+        # 日付文字列の場合、YYYY-MM-DD形式に正規化
+        due_date_initial = str(due_date_raw)[:DATE_SLICE_LENGTH]
+    else:
+        due_date_initial = ""
 
     date_picker = ft.DatePicker(
         on_change=lambda e: (
@@ -394,7 +403,7 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
     due_date_text = ft.TextField(
         label="期限日",
         hint_text="YYYY-MM-DD 形式で入力",
-        value=due_date_raw[:DATE_SLICE_LENGTH] if due_date_raw else "",
+        value=due_date_initial,
         border_color=get_outline_color(),
         focused_border_color=get_primary_color(),
         label_style=ft.TextStyle(color=get_primary_color()),
@@ -403,7 +412,8 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
 
     # タグ選択機能
     task_tags = task_data.get("tags", []) or []
-    selected_tag_ids: set[str] = {str(tag.get("name") if isinstance(tag, dict) else tag) for tag in task_tags}
+    # task_tagsは文字列のリスト（タグ名）
+    selected_tag_ids: set[str] = {str(tag) for tag in task_tags if isinstance(tag, str)}
 
     tag_options = [ft.dropdown.Option(key=tag.name, text=tag.name) for tag in all_tags] if all_tags else []
     tag_dropdown = ft.Dropdown(
@@ -479,6 +489,9 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
 
     tag_dropdown.on_change = _on_tag_select
 
+    # 初期表示時にタグバッジを更新
+    _update_selected_tags_display()
+
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """ダイアログを閉じる"""
         dialog.open = False
@@ -486,10 +499,15 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
 
     def save_task(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """タスク保存処理"""
+        from loguru import logger
+
+        logger.info(f"編集ダイアログの保存ボタンがクリックされました: task_id={task_data.get('id')}")
+
         # タイトル必須バリデーション
         if not (title_field.value and title_field.value.strip()):
             title_field.error_text = "タスクタイトルは必須です"
             title_field.update()
+            logger.warning("タイトルが空のため保存をキャンセルしました")
             return
         title_field.error_text = None
 
@@ -504,6 +522,7 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
             if not valid:
                 due_date_text.error_text = error
                 due_date_text.update()
+                logger.warning(f"期限日のバリデーションエラー: {error}")
                 return
             due_date_text.error_text = None
 
@@ -516,14 +535,21 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
             "due_date": due_date_val,
         }
 
+        logger.debug(f"保存データ: {updated_data}")
+
         if on_save:
+            logger.info("on_saveコールバックを呼び出します")
             on_save(updated_data)
+        else:
+            logger.warning("on_saveコールバックが設定されていません")
 
         # タグ変更を通知
         if on_tags_change and all_tags:
             tag_ids = [str(tag.id) for tag in all_tags if tag.name in selected_tag_ids]
+            logger.info(f"タグ変更を通知: {len(tag_ids)}個のタグ")
             on_tags_change(tag_ids)
 
+        logger.info("ダイアログを閉じます")
         close_dialog(_)
 
     # ダイアログを作成

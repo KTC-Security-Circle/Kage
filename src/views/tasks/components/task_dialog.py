@@ -26,17 +26,23 @@ from .shared.constants import TASK_STATUS_LABELS
 DATE_SLICE_LENGTH = 10  # YYYY-MM-DD 長さ
 
 
-def show_create_task_dialog(
+def show_create_task_dialog(  # noqa: C901, PLR0915
     page: ft.Page,  # type: ignore[name-defined]
     on_save: Callable[[dict[str, str]], None] | None = None,
+    all_tags: list | None = None,
+    on_tags_change: Callable[[list[str]], None] | None = None,
 ) -> None:
     """新規タスク作成ダイアログを表示する。
 
     Args:
         page: Fletページインスタンス
         on_save: 保存時のコールバック関数
+        all_tags: 全タグのリスト
+        on_tags_change: タグ変更時のコールバック関数
     """
     import flet as ft
+
+    from views.theme import get_grey_color
 
     # フォームフィールドを作成
     title_field = ft.TextField(
@@ -102,6 +108,83 @@ def show_create_task_dialog(
         suffix=calendar_button,
     )
 
+    # タグ選択機能
+    selected_tag_ids: set[str] = set()
+
+    tag_options = [ft.dropdown.Option(key=tag.name, text=tag.name) for tag in all_tags] if all_tags else []
+    tag_dropdown = ft.Dropdown(
+        label="タグを追加",
+        hint_text="タグを選択...",
+        options=tag_options,
+        width=300,
+    )
+
+    selected_tags_container = ft.Row(wrap=True, spacing=8, run_spacing=8)
+
+    def _update_selected_tags_display() -> None:
+        """選択中タグのバッジ表示を更新"""
+        selected_tags_container.controls.clear()
+        if not all_tags:
+            return
+
+        for tag_name in sorted(selected_tag_ids):
+            tag = next((t for t in all_tags if t.name == tag_name), None)
+            if tag is None:
+                continue
+
+            color = tag.color or get_grey_color(600)
+
+            def make_remove_handler(name: str) -> Callable[[ft.ControlEvent], None]:
+                def handler(_: ft.ControlEvent) -> None:
+                    selected_tag_ids.discard(name)
+                    _update_selected_tags_display()
+
+                return handler
+
+            badge = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Text(tag_name, size=12, color=get_on_primary_color()),
+                        ft.IconButton(
+                            icon=ft.Icons.CLOSE,
+                            icon_size=14,
+                            icon_color=get_on_primary_color(),
+                            on_click=make_remove_handler(tag_name),
+                            tooltip=f"{tag_name}を削除",
+                        ),
+                    ],
+                    spacing=4,
+                    tight=True,
+                ),
+                bgcolor=color,
+                border_radius=12,
+                padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+            )
+            selected_tags_container.controls.append(badge)
+
+        if hasattr(selected_tags_container, "page") and selected_tags_container.page:
+            try:
+                selected_tags_container.update()
+            except Exception as e:
+                from loguru import logger
+
+                logger.debug(f"Failed to update selected tags display: {e}")
+
+    def _on_tag_select(e: ft.ControlEvent) -> None:
+        """タグ選択時のハンドラ"""
+        if e.control.value and e.control.value not in selected_tag_ids:
+            selected_tag_ids.add(e.control.value)
+            _update_selected_tags_display()
+            tag_dropdown.value = None
+            try:
+                tag_dropdown.update()
+            except Exception as ex:
+                from loguru import logger
+
+                logger.debug(f"Failed to update tag dropdown: {ex}")
+
+    tag_dropdown.on_change = _on_tag_select
+
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """ダイアログを閉じる"""
         dialog.open = False
@@ -140,6 +223,11 @@ def show_create_task_dialog(
 
         if on_save:
             on_save(task_data)
+
+        # タグ変更を通知
+        if on_tags_change and all_tags:
+            tag_ids = [str(tag.id) for tag in all_tags if tag.name in selected_tag_ids]
+            on_tags_change(tag_ids)
 
         close_dialog(_)
 
@@ -181,6 +269,17 @@ def show_create_task_dialog(
                         ],
                         spacing=16,
                     ),
+                    # タグ選択
+                    *(
+                        [
+                            ft.Divider(height=1),
+                            ft.Text("タグ", weight=ft.FontWeight.BOLD, size=14),
+                            tag_dropdown,
+                            selected_tags_container,
+                        ]
+                        if all_tags
+                        else []
+                    ),
                 ],
                 spacing=20,
                 tight=True,
@@ -213,10 +312,12 @@ def show_create_task_dialog(
     page.update()
 
 
-def show_edit_task_dialog(
+def show_edit_task_dialog(  # noqa: C901, PLR0915
     page: ft.Page,  # type: ignore[name-defined]
     task_data: dict[str, str],
     on_save: Callable[[dict[str, str]], None] | None = None,
+    all_tags: list | None = None,
+    on_tags_change: Callable[[list[str]], None] | None = None,
 ) -> None:
     """タスク編集ダイアログを表示する。
 
@@ -224,8 +325,12 @@ def show_edit_task_dialog(
         page: Fletページインスタンス
         task_data: 既存のタスクデータ
         on_save: 保存時のコールバック関数
+        all_tags: 全タグのリスト
+        on_tags_change: タグ変更時のコールバック関数
     """
     import flet as ft
+
+    from views.theme import get_grey_color
 
     # フォームフィールドを作成（既存データで初期化）
     title_field = ft.TextField(
@@ -296,6 +401,84 @@ def show_edit_task_dialog(
         suffix=calendar_button,
     )
 
+    # タグ選択機能
+    task_tags = task_data.get("tags", []) or []
+    selected_tag_ids: set[str] = {str(tag.get("name") if isinstance(tag, dict) else tag) for tag in task_tags}
+
+    tag_options = [ft.dropdown.Option(key=tag.name, text=tag.name) for tag in all_tags] if all_tags else []
+    tag_dropdown = ft.Dropdown(
+        label="タグを追加",
+        hint_text="タグを選択...",
+        options=tag_options,
+        width=300,
+    )
+
+    selected_tags_container = ft.Row(wrap=True, spacing=8, run_spacing=8)
+
+    def _update_selected_tags_display() -> None:
+        """選択中タグのバッジ表示を更新"""
+        selected_tags_container.controls.clear()
+        if not all_tags:
+            return
+
+        for tag_name in sorted(selected_tag_ids):
+            tag = next((t for t in all_tags if t.name == tag_name), None)
+            if tag is None:
+                continue
+
+            color = tag.color or get_grey_color(600)
+
+            def make_remove_handler(name: str) -> Callable[[ft.ControlEvent], None]:
+                def handler(_: ft.ControlEvent) -> None:
+                    selected_tag_ids.discard(name)
+                    _update_selected_tags_display()
+
+                return handler
+
+            badge = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Text(tag_name, size=12, color=get_on_primary_color()),
+                        ft.IconButton(
+                            icon=ft.Icons.CLOSE,
+                            icon_size=14,
+                            icon_color=get_on_primary_color(),
+                            on_click=make_remove_handler(tag_name),
+                            tooltip=f"{tag_name}を削除",
+                        ),
+                    ],
+                    spacing=4,
+                    tight=True,
+                ),
+                bgcolor=color,
+                border_radius=12,
+                padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+            )
+            selected_tags_container.controls.append(badge)
+
+        if hasattr(selected_tags_container, "page") and selected_tags_container.page:
+            try:
+                selected_tags_container.update()
+            except Exception as e:
+                from loguru import logger
+
+                logger.debug(f"Failed to update selected tags display: {e}")
+
+    def _on_tag_select(e: ft.ControlEvent) -> None:
+        """タグ選択時のハンドラ"""
+        if e.control.value and e.control.value not in selected_tag_ids:
+            selected_tag_ids.add(e.control.value)
+            _update_selected_tags_display()
+            tag_dropdown.value = None
+            try:
+                tag_dropdown.update()
+            except Exception as ex:
+                from loguru import logger
+
+                logger.debug(f"Failed to update tag dropdown: {ex}")
+
+    tag_dropdown.on_change = _on_tag_select
+
     def close_dialog(_: ft.ControlEvent) -> None:  # type: ignore[name-defined]
         """ダイアログを閉じる"""
         dialog.open = False
@@ -336,6 +519,11 @@ def show_edit_task_dialog(
         if on_save:
             on_save(updated_data)
 
+        # タグ変更を通知
+        if on_tags_change and all_tags:
+            tag_ids = [str(tag.id) for tag in all_tags if tag.name in selected_tag_ids]
+            on_tags_change(tag_ids)
+
         close_dialog(_)
 
     # ダイアログを作成
@@ -375,6 +563,17 @@ def show_edit_task_dialog(
                             ft.Container(content=due_date_text, expand=1),
                         ],
                         spacing=16,
+                    ),
+                    # タグ選択
+                    *(
+                        [
+                            ft.Divider(height=1),
+                            ft.Text("タグ", weight=ft.FontWeight.BOLD, size=14),
+                            tag_dropdown,
+                            selected_tags_container,
+                        ]
+                        if all_tags
+                        else []
                     ),
                 ],
                 spacing=20,

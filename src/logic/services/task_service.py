@@ -220,6 +220,26 @@ class TaskService(ServiceBase):
         logger.debug(f"タグ({tag_id})に紐づくタスクを {len(tasks)} 件取得しました。")
         return tasks
 
+    @handle_service_errors(SERVICE_NAME, "タグ追加", TaskServiceError)
+    @convert_read_model(TaskRead)
+    def add_tag(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> Task:
+        """タスクにタグを追加する
+
+        Args:
+            task_id: タスクのID
+            tag_id: 追加するタグのID
+
+        Returns:
+            TaskRead: 更新されたタスク
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+            TaskServiceError: タグ追加に失敗した場合
+        """
+        task = self.task_repo.add_tag(task_id, tag_id)
+        logger.debug(f"タスク({task_id})にタグ({tag_id})を追加しました。")
+        return task
+
     @handle_service_errors(SERVICE_NAME, "検索", TaskServiceError)
     @convert_read_model(TaskRead, is_list=True)
     def search_tasks(self, query: str, *, with_details: bool = False) -> list[Task]:

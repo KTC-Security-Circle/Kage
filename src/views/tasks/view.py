@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 import flet as ft
 from loguru import logger
 
+from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
@@ -60,6 +61,7 @@ class TasksView(BaseView):
         # データ取得: ApplicationService を優先して利用する
         # - 例外時のユーザー通知は BaseView の snackbar を利用
         service = self.apps.get_service(TaskApplicationService)
+        tag_service = self.apps.get_service(TagApplicationService)
 
         # コントローラー初期化
         self._controller = TasksController(
@@ -67,6 +69,7 @@ class TasksView(BaseView):
             on_change=self._on_view_model_change,
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
             apps=self.apps,
+            tag_service=tag_service,
         )
 
         self._current_vm: list[TaskCardVM] = []
@@ -342,16 +345,37 @@ class TasksView(BaseView):
 
     def _open_create_dialog(self) -> None:
         """タスク作成ダイアログを開く。"""
+        # タグ一覧を取得
+        all_tags = self._controller.get_all_tags()
+
+        # タスクID用のプレースホルダー（作成後に設定される）
+        created_task_id: list[str] = []
+
+        def _on_tags_change(tag_ids: list[str]) -> None:
+            """タグ変更時の処理"""
+            if not created_task_id:
+                logger.warning("タスクIDが設定されていません")
+                return
+            try:
+                self._controller.sync_tags(created_task_id[0], tag_ids)
+                logger.info(f"タスク {created_task_id[0]} のタグを同期しました")
+            except Exception as e:
+                logger.error(f"タグ同期エラー: {e}")
+                self.show_error_snackbar(self.page, "タグの同期に失敗しました")
+
         show_create_task_dialog(
             page=self.page,
-            on_save=self._handle_create_task,
+            on_save=lambda task_data: self._handle_create_task(task_data, created_task_id),
+            all_tags=all_tags,
+            on_tags_change=_on_tags_change,
         )
 
-    def _handle_create_task(self, task_data: dict[str, str]) -> None:
+    def _handle_create_task(self, task_data: dict[str, str], created_task_id: list[str]) -> None:
         """タスク作成処理を実行する。
 
         Args:
             task_data: タスクデータ(title, description, status など)
+            created_task_id: 作成されたタスクIDを格納するリスト
         """
         title = task_data.get("title", "").strip()
         description = task_data.get("description", "").strip() or None
@@ -363,11 +387,14 @@ class TasksView(BaseView):
 
         # Controllerにタスク作成を委譲（ローディング表示付き）
         def _create() -> None:
-            self._controller.create_task(
+            result = self._controller.create_task(
                 title=title,
                 description=description,
                 status=status,
             )
+            # 作成されたタスクIDを保存
+            if result and hasattr(result, "id"):
+                created_task_id.append(str(result.id))
 
         try:
             self.with_loading(_create)
@@ -397,6 +424,10 @@ class TasksView(BaseView):
             self.show_error_snackbar(self.page, "タスクが見つかりませんでした。")
             return
 
+        # 詳細情報を取得してタグ情報を含める
+        task_detail = self._controller.get_detail(task_id)
+        task_tags = task_detail.get("tags", []) if task_detail else []
+
         # VMからダイアログ用データを作成
         task_data = {
             "id": str(vm.id),
@@ -404,12 +435,27 @@ class TasksView(BaseView):
             "description": getattr(vm, "description", ""),
             "status": vm.status,
             "due_date": str(getattr(vm, "due_date", "") or ""),
+            "tags": task_tags,
         }
+
+        # タグ一覧を取得
+        all_tags = self._controller.get_all_tags()
+
+        def _on_tags_change(tag_ids: list[str]) -> None:
+            """タグ変更時の処理"""
+            try:
+                self._controller.sync_tags(task_id, tag_ids)
+                logger.info(f"タスク {task_id} のタグを同期しました")
+            except Exception as e:
+                logger.error(f"タグ同期エラー: {e}")
+                self.show_error_snackbar(self.page, "タグの同期に失敗しました")
 
         show_edit_task_dialog(
             page=self.page,
             task_data=task_data,
             on_save=self._handle_edit_task,
+            all_tags=all_tags,
+            on_tags_change=_on_tags_change,
         )
 
     def _handle_edit_task(self, task_data: dict[str, str]) -> None:

@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 if TYPE_CHECKING:
     import flet as ft
 
@@ -283,6 +285,27 @@ class TagsView(BaseView):
 
         show_tag_edit_dialog(self.page, selected_tag, on_submit)
 
+    def _navigate_with_pending_id(self, storage_key: str, item_id: str, route: str, item_type: str) -> None:
+        """client_storageにIDを保存してページ遷移する共通処理
+
+        Args:
+            storage_key: client_storageのキー名（例: "pending_memo_id"）
+            item_id: 保存するID
+            route: 遷移先のルート（例: "/memos"）
+            item_type: アイテムの種類（ログ/エラーメッセージ用、例: "メモ"）
+        """
+        if not self.page:
+            return
+
+        logger.info(f"{item_type}画面への遷移を開始: {item_id}")
+        try:
+            self.page.client_storage.set(storage_key, item_id)
+            self.page.go(route)
+            logger.debug(f"{item_type}画面への遷移が完了: {route} ({storage_key}={item_id})")
+        except Exception as e:
+            logger.error(f"{item_type}画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"{item_type}画面への遷移に失敗しました")
+
     def _on_memo_click(self, _e: ft.ControlEvent, memo_id: str) -> None:  # type: ignore[name-defined]
         """関連メモクリックハンドラ
 
@@ -293,19 +316,7 @@ class TagsView(BaseView):
             _e: イベント（未使用）
             memo_id: 選択されたメモのID
         """
-        from loguru import logger
-
-        if not self.page:
-            return
-
-        logger.info(f"メモ画面への遷移を開始: memo_id={memo_id}")
-        try:
-            self.page.client_storage.set("pending_memo_id", memo_id)
-            self.page.go("/memos")
-            logger.debug(f"メモ画面への遷移が完了: /memos (pending_memo_id={memo_id})")
-        except Exception as e:
-            logger.error(f"メモ画面への遷移に失敗: {e}", exc_info=True)
-            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
+        self._navigate_with_pending_id("pending_memo_id", memo_id, "/memos", "メモ")
 
     def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:  # type: ignore[name-defined]
         """関連タスククリックハンドラ
@@ -317,16 +328,4 @@ class TagsView(BaseView):
             _e: イベント（未使用）
             task_id: 選択されたタスクのID
         """
-        from loguru import logger
-
-        if not self.page:
-            return
-
-        logger.info(f"タスク画面への遷移を開始: task_id={task_id}")
-        try:
-            self.page.client_storage.set("pending_task_id", task_id)
-            self.page.go("/tasks")
-            logger.debug(f"タスク画面への遷移が完了: /tasks (pending_task_id={task_id})")
-        except Exception as e:
-            logger.error(f"タスク画面への遷移に失敗: {e}", exc_info=True)
-            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
+        self._navigate_with_pending_id("pending_task_id", task_id, "/tasks", "タスク")

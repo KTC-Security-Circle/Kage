@@ -44,13 +44,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from loguru import logger
 
-from models import AiSuggestionStatus, MemoRead, MemoStatus
+from models import AiSuggestionStatus, MemoRead, MemoStatus, TaskStatus
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -65,6 +65,8 @@ class AiSuggestedTask:
     description: str
     tags: tuple[str, ...] = field(default_factory=tuple)
     due_date: datetime | None = None
+    route: str | None = None
+    status: TaskStatus | None = None
 
 
 @dataclass(slots=True)
@@ -228,6 +230,8 @@ class MemosViewState:
         state.generated_tasks = list(tasks)
         state.selected_task_ids = {task.task_id for task in tasks}
         state.is_generating = False
+        if state.editing_task_id and state.editing_task_id not in state.selected_task_ids:
+            state.editing_task_id = None
 
     def toggle_task_selection(self, memo_id: UUID, task_id: str) -> None:
         """タスクの選択状態をトグルする。"""
@@ -263,7 +267,7 @@ class MemosViewState:
             self._restore_ai_flow_from_memo(memo)
 
     def _restore_ai_flow_from_memo(self, memo: MemoRead) -> None:
-        tasks = self._parse_ai_analysis_log(getattr(memo, "ai_analysis_log", None))
+        tasks = self._parse_ai_analysis_log(memo)
         if not tasks:
             state = self._ai_flow.pop(memo.id, None)
             if state is not None:
@@ -276,13 +280,15 @@ class MemosViewState:
         state.generated_tasks = tasks
         state.selected_task_ids = {task.task_id for task in tasks}
         state.is_generating = False
-        state.editing_task_id = None
+        if state.editing_task_id and state.editing_task_id not in state.selected_task_ids:
+            state.editing_task_id = None
         if memo.ai_suggestion_status in (AiSuggestionStatus.AVAILABLE, AiSuggestionStatus.PENDING):
             state.status_override = memo.ai_suggestion_status
         else:
             state.status_override = None
 
-    def _parse_ai_analysis_log(self, log: str | None) -> list[AiSuggestedTask]:
+    def _parse_ai_analysis_log(self, memo: MemoRead) -> list[AiSuggestedTask]:
+        log = getattr(memo, "ai_analysis_log", None)
         if not log:
             return []
         try:
@@ -290,10 +296,42 @@ class MemosViewState:
         except json.JSONDecodeError:
             logger.warning("Failed to decode ai_analysis_log: %s", log)
             return []
+
+        refs = data.get("draft_task_refs")
+        if isinstance(refs, list) and getattr(memo, "tasks", None):
+            ref_map: dict[str, dict[str, object]] = {}
+            for entry in refs:
+                if isinstance(entry, dict):
+                    ref_map[str(entry.get("task_id"))] = entry
+            parsed: list[AiSuggestedTask] = []
+            for task in getattr(memo, "tasks", []):
+                task_id = str(getattr(task, "id", uuid4()))
+                meta = ref_map.get(task_id)
+                if meta is None:
+                    continue
+                due_value = self._coerce_due_date(getattr(task, "due_date", None))
+                tags = tuple(
+                    str(getattr(tag, "name", "")) for tag in getattr(task, "tags", []) if getattr(tag, "name", "")
+                )
+                parsed.append(
+                    AiSuggestedTask(
+                        task_id=task_id,
+                        title=getattr(task, "title", ""),
+                        description=getattr(task, "description", "") or "",
+                        tags=tags,
+                        due_date=due_value,
+                        route=str(meta.get("route")) if meta.get("route") else None,
+                        status=getattr(task, "status", None),
+                    )
+                )
+            if parsed:
+                return parsed
+        return self._parse_legacy_tasks(data)
+
+    def _parse_legacy_tasks(self, data: dict[str, object]) -> list[AiSuggestedTask]:
         tasks_data = data.get("tasks")
         if not isinstance(tasks_data, list):
             return []
-
         parsed: list[AiSuggestedTask] = []
         for entry in tasks_data:
             if not isinstance(entry, dict):
@@ -325,6 +363,16 @@ class MemosViewState:
             return datetime.fromisoformat(raw)
         except ValueError:
             return None
+
+    @staticmethod
+    def _coerce_due_date(value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, date):
+            return datetime.combine(value, time.min)
+        return None
 
     # --- Priority C: optional helper for single-memo updates ---
     def upsert_memo(self, memo: MemoRead) -> None:

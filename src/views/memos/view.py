@@ -36,8 +36,8 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from datetime import datetime, timedelta
-from uuid import UUID, uuid4
+from datetime import datetime
+from uuid import UUID
 
 import flet as ft
 from loguru import logger
@@ -419,6 +419,20 @@ class MemosView(BaseView):
     def _handle_save_ai_task_edit(self, memo_id: UUID, task_id: str) -> None:
         """AI提案タスクの編集結果を確定する。"""
         ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        target = next((task for task in ai_state.generated_tasks if task.task_id == task_id), None)
+        if target is None:
+            self.notify_error("タスクが見つかりません")
+            return
+        try:
+            self.controller.update_ai_task(
+                UUID(task_id),
+                memo_id=memo_id,
+                title=target.title,
+                description=target.description,
+            )
+        except Exception as exc:
+            self.notify_error("Draftタスクの更新に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
         if ai_state.editing_task_id == task_id:
             ai_state.editing_task_id = None
         self.show_success_snackbar("タスク内容を更新しました")
@@ -426,8 +440,12 @@ class MemosView(BaseView):
 
     def _handle_delete_ai_task(self, memo_id: UUID, task_id: str) -> None:
         """AI提案タスクを削除する。"""
+        try:
+            self.controller.delete_ai_task(memo_id, UUID(task_id))
+        except Exception as exc:
+            self.notify_error("Draftタスクの削除に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
         ai_state = self.memos_state.ai_flow_state_for(memo_id)
-        ai_state.generated_tasks = [task for task in ai_state.generated_tasks if task.task_id != task_id]
         ai_state.selected_task_ids.discard(task_id)
         if ai_state.editing_task_id == task_id:
             ai_state.editing_task_id = None
@@ -435,17 +453,21 @@ class MemosView(BaseView):
 
     def _handle_add_ai_task(self, memo_id: UUID) -> None:
         """AI提案リストに空のタスクを追加する。"""
+        try:
+            created = self.controller.create_ai_task(
+                memo_id,
+                title="新しいタスク",
+                description="",
+                route="next_action",
+            )
+        except Exception as exc:
+            self.notify_error("Draftタスクの追加に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
+
+        task_id = str(created.id)
         ai_state = self.memos_state.ai_flow_state_for(memo_id)
-        task = AiSuggestedTask(
-            task_id=f"temp-{uuid4().hex}",
-            title="新しいタスク",
-            description="",
-            tags=(),
-            due_date=datetime.now() + timedelta(days=7),
-        )
-        ai_state.generated_tasks.append(task)
-        ai_state.editing_task_id = task.task_id
-        ai_state.selected_task_ids.add(task.task_id)
+        ai_state.editing_task_id = task_id
+        ai_state.selected_task_ids.add(task_id)
         self._refresh()
 
     def _handle_approve_ai_tasks(self, memo: MemoRead) -> None:
@@ -454,8 +476,12 @@ class MemosView(BaseView):
         if not ai_state.selected_task_ids:
             self.show_snack_bar("承認するタスクを選択してください", bgcolor=get_error_color())
             return
-        ai_state.status_override = AiSuggestionStatus.REVIEWED
-        ai_state.is_generating = False
+        try:
+            task_ids = [UUID(task_id) for task_id in ai_state.selected_task_ids]
+            self.controller.approve_ai_tasks(memo.id, task_ids)
+        except Exception as exc:
+            self.notify_error("Draftタスクの承認に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
 
         def _archive() -> None:
             self.controller.mark_memo_archived(memo.id)
@@ -522,11 +548,13 @@ class MemosView(BaseView):
             except ValueError:
                 due = None
         return AiSuggestedTask(
-            task_id=payload.task_id,
+            task_id=str(payload.task_id),
             title=payload.title,
             description=payload.description or "",
             tags=payload.tags,
             due_date=due,
+            route=payload.route,
+            status=payload.status,
         )
 
     def _get_memo_by_id(self, memo_id: UUID) -> MemoRead | None:

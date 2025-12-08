@@ -39,7 +39,8 @@ class CreateMemoState:
         title: メモのタイトル
         content: 本文
         status: メモのステータス
-        tags: 選択されたタグ名のリスト（暫定）
+        tags: 選択されたタグ名のリスト
+        all_tags: 全タグリスト（タグ名からUUIDへの変換に使用）
         active_tab: 編集/プレビュー切替
     """
 
@@ -47,6 +48,7 @@ class CreateMemoState:
     content: str = ""
     status: MemoStatus = MemoStatus.INBOX
     tags: list[str] = field(default_factory=list)
+    all_tags: list = field(default_factory=list)
     active_tab: Literal["edit", "preview"] = "edit"
 
 
@@ -265,6 +267,7 @@ class CreateMemoView(BaseView):
         """タグ一覧を読み込む。"""
         try:
             all_tags = self._tag_app.get_all_tags()
+            self.state_local.all_tags = all_tags
             logger.debug(f"Loaded {len(all_tags)} tags for CreateMemoView")
         except Exception:
             logger.warning("Failed to load tags in CreateMemoView")
@@ -276,18 +279,26 @@ class CreateMemoView(BaseView):
         title = self.state_local.title.strip() or "無題のメモ"
         content = self.state_local.content.strip()
         status = self.state_local.status
-        tags = self.state_local.tags
+        selected_tag_names = self.state_local.tags
+
+        # タグ名からUUIDに変換
+        tag_ids = [tag.id for tag in self.state_local.all_tags if tag.name in selected_tag_names]
 
         def _save() -> None:
             if self._header is not None:
                 self._header.disable_button("save_button")
             try:
-                # TODO: メモにタグを関連付けるロジックを実装
-                # 現時点では tags を渡すが、MemoApplicationService.create が tags を受け取らない
-                # ため、後続で MemoCreate モデルと ApplicationService の拡張が必要
-                created = self._memo_app.create(title=title, content=content, status=status)
+                created = self._memo_app.create(
+                    title=title,
+                    content=content,
+                    status=status,
+                    tag_ids=tag_ids,
+                )
                 logger.info(
-                    "Memo created via CreateMemoView: id=%s, status=%s, tags=%s", created.id, created.status, tags
+                    "Memo created via CreateMemoView: id=%s, status=%s, tags=%s",
+                    created.id,
+                    created.status,
+                    selected_tag_names,
                 )
             except Exception:
                 if self._header is not None:

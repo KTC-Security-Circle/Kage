@@ -37,6 +37,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import flet as ft
@@ -49,6 +50,9 @@ from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
 from views.theme import get_error_color, get_grey_color, get_on_primary_color
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from . import presenter
 from .components import MemoCardList, MemoFilters, MemoStatusTabs
@@ -551,14 +555,19 @@ class MemosView(BaseView):
         Args:
             _: ft.ControlEvent (未使用)
         """
+        logger.debug("Edit memo button clicked")
         selected_memo = self.controller.current_selection()
         if selected_memo is None:
+            logger.warning("No memo selected for editing")
             return
+        logger.info(f"Editing memo: id={selected_memo.id}, title={selected_memo.title}")
 
         # タグ一覧を取得
         all_tags = self.controller.get_all_tags()
-        memo_tag_names = getattr(selected_memo, "tags", []) or []
+        memo_tags = getattr(selected_memo, "tags", []) or []
+        memo_tag_names = [tag.name for tag in memo_tags]
         selected_tag_ids: set[str] = set(memo_tag_names)
+        logger.debug(f"Memo has {len(memo_tag_names)} tags: {memo_tag_names}")
 
         # ダイアログの入力コントロールを構築
         title_field = ft.TextField(value=selected_memo.title or "", label="タイトル", expand=True)
@@ -587,6 +596,15 @@ class MemosView(BaseView):
                     continue
 
                 color = tag.color or get_grey_color(600)
+
+                def make_remove_handler(name: str) -> Callable[[ft.ControlEvent], None]:
+                    """タグ削除ハンドラを生成（クロージャ問題回避）"""
+
+                    def handler(_: ft.ControlEvent) -> None:
+                        _remove_tag(name)
+
+                    return handler
+
                 badge = ft.Container(
                     content=ft.Row(
                         [
@@ -595,7 +613,7 @@ class MemosView(BaseView):
                                 icon=ft.Icons.CLOSE,
                                 icon_size=14,
                                 icon_color=get_on_primary_color(),
-                                on_click=lambda _, tn=tag_name: _remove_tag(tn),
+                                on_click=make_remove_handler(tag_name),
                                 tooltip=f"{tag_name}を削除",
                             ),
                         ],
@@ -608,10 +626,12 @@ class MemosView(BaseView):
                 )
                 selected_tags_container.controls.append(badge)
 
-            try:
-                selected_tags_container.update()
-            except Exception as e:
-                logger.debug(f"Failed to update selected tags display: {e}")
+            # ダイアログがまだページに追加されていない場合はupdateをスキップ
+            if hasattr(selected_tags_container, "page") and selected_tags_container.page:
+                try:
+                    selected_tags_container.update()
+                except Exception as e:
+                    logger.debug(f"Failed to update selected tags display: {e}")
 
         def _on_tag_select(e: ft.ControlEvent) -> None:
             """タグ選択時のハンドラ"""
@@ -630,7 +650,6 @@ class MemosView(BaseView):
             _update_selected_tags_display()
 
         tag_dropdown.on_change = _on_tag_select
-        _update_selected_tags_display()
 
         def _on_save(_: ft.ControlEvent | None = None) -> None:
             title = (title_field.value or "").strip() or "無題のメモ"
@@ -642,23 +661,24 @@ class MemosView(BaseView):
 
             def _save() -> None:
                 try:
-                    # TODO: タグの保存機能を実装
-                    # MemoUpdate モデルと MemoApplicationService.update が tags をサポートする必要がある
-                    # 現時点では tags を渡すが、バックエンドが対応していない場合は無視される
                     updated = self.controller.update_memo(
                         selected_memo.id,
                         title=title,
                         content=content,
                         status=selected_memo.status,
                     )
-                    logger.info(f"Memo updated via edit dialog: id={updated.id}, tags={tags}")
+
+                    # タグが変更されている場合は同期
+                    if set(tags) != set(memo_tag_names):
+                        tag_ids = [tag.id for tag in all_tags if tag.name in tags]
+                        updated = self.controller.sync_tags(selected_memo.id, tag_ids)
+                        logger.info(f"Tags synced for memo {updated.id}: {memo_tag_names} -> {tags}")
+
+                    logger.info(f"Memo updated via edit dialog: id={updated.id}")
                 except Exception as exc:  # Application層の例外をUIに伝える
                     self.notify_error("メモの更新に失敗しました", details=f"{type(exc).__name__}: {exc}")
                     raise
 
-                if tags != memo_tag_names:
-                    logger.info(f"Tags changed: {memo_tag_names} -> {tags}")
-                    # TODO: タグの関連付けを更新するロジックをここに追加
                 self.show_success_snackbar("メモを更新しました")
                 # ダイアログを閉じて表示を更新
                 try:
@@ -700,12 +720,19 @@ class MemosView(BaseView):
             except Exception:
                 logger.exception("Failed to close edit dialog")
 
-        # 表示
+        # 表示（初期表示のためにここでタグを更新）
+        _update_selected_tags_display()
         try:
             self.page.open(dlg)
-        except Exception:
-            dlg.open = True
-            dlg.update()
+            logger.debug("Edit dialog opened successfully")
+        except Exception as e:
+            logger.exception(f"Failed to open edit dialog with page.open: {e}")
+            try:
+                dlg.open = True
+                self.page.update()
+                logger.debug("Edit dialog opened with fallback method")
+            except Exception as ex:
+                logger.exception(f"Failed to open edit dialog with fallback: {ex}")
 
     def _handle_delete_memo(self, _: ft.ControlEvent) -> None:
         """メモ削除ハンドラー。確認ダイアログ表示のうえ Controller 経由で削除する。"""

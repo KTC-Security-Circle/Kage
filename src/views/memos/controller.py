@@ -110,7 +110,11 @@ class MemoApplicationPort(Protocol):
         ...
 
     def get_ai_job_snapshot(self, job_id: UUID) -> MemoAiJobSnapshot:
-        """AIジョブの状態を取得する。"""
+        """痆Ｉジョブの状態を取得する。"""
+        ...
+
+    def sync_tags(self, memo_id: UUID, tag_ids: list[UUID]) -> MemoRead:
+        """メモのタグを同期する。"""
         ...
 
 
@@ -276,6 +280,24 @@ class MemosController:
             self._refresh_search_results()
 
         self.state.reconcile()
+
+    def sync_tags(self, memo_id: UUID, tag_ids: list[UUID]) -> MemoRead:
+        """メモにタグを同期する。
+
+        Args:
+            memo_id: メモID
+            tag_ids: 設定するタグIDのリスト
+
+        Returns:
+            MemoRead: 更新されたメモ
+        """
+        updated = self.memo_app.sync_tags(memo_id, tag_ids)
+        self.state.upsert_memo(updated)
+        self.state.set_all_memos(sort_memos(self.state.all_memos))
+        if self.state.search_query:
+            self._refresh_search_results()
+        self.state.reconcile()
+        return updated
 
     def _refresh_search_results(self) -> None:
         """現在のクエリに基づいて検索結果を再取得する。"""

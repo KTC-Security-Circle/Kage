@@ -73,7 +73,7 @@ import flet as ft
 from loguru import logger
 
 from models import AiSuggestionStatus, MemoStatus
-from views.shared.components import HeaderButtonData, HeaderData
+from views.shared.components import HeaderButtonData, HeaderData, TagBadgeData
 from views.theme import (
     get_error_color,
     get_on_primary_color,
@@ -87,7 +87,12 @@ from views.theme import (
 )
 
 from .components.filters import FilterConfig, FilterData
-from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
+from .components.memo_card import (
+    DEFAULT_MEMO_TITLE,
+    MAX_CONTENT_PREVIEW_LENGTH,
+    MemoCardData,
+    StatusBadgeData,
+)
 from .components.shared.constants import DEFAULT_DATE_TEXT, DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH
 from .components.types import MemoListData
 
@@ -137,12 +142,21 @@ def create_memo_card_data(
     # バッジデータ生成
     badge_data = _create_status_badge_data(memo.status) if show_badge else None
 
+    # タグバッジデータ生成
+    tag_badges: list[TagBadgeData] = []
+    if hasattr(memo, "tags") and memo.tags:
+        for tag in memo.tags:
+            tag_name = getattr(tag, "name", str(tag))
+            tag_color = getattr(tag, "color", None) or get_primary_color()
+            tag_badges.append(TagBadgeData(name=tag_name, color=tag_color))
+
     return MemoCardData(
         memo_id=memo.id,
         title=title,
         content_preview=content_preview,
         formatted_date=formatted_date,
         badge_data=badge_data,
+        tag_badges=tuple(tag_badges),
         is_selected=is_selected,
         on_click=on_click,
     )
@@ -425,8 +439,8 @@ def build_detail_metadata(created_text: str, updated_text: str) -> ft.Control:
 
 def build_detail_actions(
     *,
-    on_edit: Callable,
-    on_delete: Callable,
+    on_edit: Callable[[ft.ControlEvent], None],
+    on_delete: Callable[[ft.ControlEvent], None],
 ) -> ft.Control:
     """詳細パネルのアクションボタンを構築する。
 
@@ -462,8 +476,8 @@ def build_detail_actions(
 def build_detail_panel(
     memo: MemoRead,
     *,
-    on_edit: Callable,
-    on_delete: Callable,
+    on_edit: Callable[[ft.ControlEvent], None],
+    on_delete: Callable[[ft.ControlEvent], None],
     extra_sections: tuple[ft.Control, ...] | None = None,
 ) -> ft.Container:
     """メモ詳細パネルを構築する。
@@ -482,23 +496,55 @@ def build_detail_panel(
     created_text = format_datetime(getattr(memo, "created_at", None))
     updated_text = format_datetime(getattr(memo, "updated_at", None))
 
+    # タグバッジを構築
+    tag_badges = []
+    if hasattr(memo, "tags") and memo.tags:
+        for tag in memo.tags:
+            tag_name = getattr(tag, "name", str(tag))
+            tag_color = getattr(tag, "color", None) or get_primary_color()
+            tag_badge = ft.Container(
+                content=ft.Text(
+                    tag_name,
+                    size=12,
+                    color=get_on_primary_color(),
+                    weight=ft.FontWeight.W_500,
+                ),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                bgcolor=tag_color,
+                border_radius=12,
+            )
+            tag_badges.append(tag_badge)
+
+    # ヘッダーのバッジ行
+    header_badges = [build_status_badge(memo.status)]
+    if tag_badges:
+        header_badges.extend(tag_badges)
+
     # メモ詳細カード
     detail_card = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 controls=[
                     # ヘッダー
-                    ft.Row(
+                    ft.Column(
                         controls=[
-                            ft.Text(
-                                memo.title or "無題のメモ",
-                                theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                                weight=ft.FontWeight.BOLD,
-                                expand=True,
+                            ft.Row(
+                                controls=[
+                                    ft.Text(
+                                        memo.title or "無題のメモ",
+                                        theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
+                                        weight=ft.FontWeight.BOLD,
+                                        expand=True,
+                                    ),
+                                ],
                             ),
-                            build_status_badge(memo.status),
+                            ft.Row(
+                                controls=header_badges,
+                                spacing=8,
+                                wrap=True,
+                            ),
                         ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        spacing=12,
                     ),
                     # 内容（Markdownレンダリング、コンテンツ量に応じた高さ）
                     ft.Container(

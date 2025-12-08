@@ -334,7 +334,7 @@ class AgentsSettings(BaseModel):
 
 class EditableHuggingFaceAgentModels(BaseModel):
     model_config = ConfigDict(frozen=False)
-    one_liner: HuggingFaceModel | None = Field(default=None)
+    one_liner: HuggingFaceModel = Field(default=HuggingFaceModel.QWEN_3_8B_INT4)
 
 
 class EditableGeminiAgentModels(BaseModel):

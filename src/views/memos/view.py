@@ -248,7 +248,14 @@ class MemosView(BaseView):
             self.notify_error("メモの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
 
     def _handle_pending_memo(self) -> None:
-        """一時保存されたメモIDを取得して選択する。"""
+        """一時保存されたメモIDを取得して選択する。
+
+        クライアントストレージに保存された pending_memo_id を取得し、
+        該当するメモを選択状態にする。他のビュー（例: タグビュー）からの
+        遷移時にメモを自動選択するために使用される。
+
+        取得後、ストレージから即座に削除することで無限ループを防止する。
+        """
         try:
             # クライアントストレージから一時保存されたIDを取得
             memo_id_str = self.page.client_storage.get("pending_memo_id")

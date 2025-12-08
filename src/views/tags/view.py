@@ -284,7 +284,15 @@ class TagsView(BaseView):
         show_tag_edit_dialog(self.page, selected_tag, on_submit)
 
     def _on_memo_click(self, _e: ft.ControlEvent, memo_id: str) -> None:  # type: ignore[name-defined]
-        """関連メモクリックハンドラ"""
+        """関連メモクリックハンドラ
+
+        メモIDをクライアントストレージに保存し、メモ画面へ遷移する。
+        遷移先のメモビューで保存されたIDを使用してメモを自動選択する。
+
+        Args:
+            _e: クリックイベント（使用しない）
+            memo_id: 遷移先で選択するメモのID
+        """
         from loguru import logger
 
         logger.info(f"メモ画面への遷移を開始: memo_id={memo_id}")
@@ -299,7 +307,15 @@ class TagsView(BaseView):
             self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
 
     def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:  # type: ignore[name-defined]
-        """関連タスククリックハンドラ"""
+        """関連タスククリックハンドラ
+
+        タスクIDをクライアントストレージに保存し、タスク画面へ遷移する。
+        遷移先のタスクビューで保存されたIDを使用してタスクを自動選択する。
+
+        Args:
+            _e: クリックイベント（使用しない）
+            task_id: 遷移先で選択するタスクのID
+        """
         from loguru import logger
 
         logger.info(f"タスク画面への遷移を開始: task_id={task_id}")

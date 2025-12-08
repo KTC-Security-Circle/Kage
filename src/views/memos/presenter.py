@@ -585,6 +585,11 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
     selected_task_ids: set[str],
     editing_task_id: str | None,
     error_message: str | None = None,
+    project_id: str | None = None,
+    project_title: str | None = None,
+    project_description: str | None = None,
+    project_status: str | None = None,
+    project_error: str | None = None,
     on_request_ai: Callable[[ft.ControlEvent], None] | None = None,
     on_retry_ai: Callable[[ft.ControlEvent], None] | None = None,
     on_mark_as_idea: Callable[[ft.ControlEvent], None] | None = None,
@@ -596,12 +601,23 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
     on_delete_task: Callable[[str], None] | None = None,
     on_add_task: Callable[[ft.ControlEvent | None], None] | None = None,
     on_approve_tasks: Callable[[ft.ControlEvent | None], None] | None = None,
+    on_open_project: Callable[[str], None] | None = None,
 ) -> ft.Control:
     """AI提案→タスク承認フローのカードを構築する。"""
     header_title, header_description = _ai_flow_header_copy(memo.status)
     status_badge = _build_ai_status_badge(ai_status)
 
     body_controls: list[ft.Control] = []
+    project_section = _build_project_summary_section(
+        project_id=project_id,
+        project_title=project_title,
+        project_description=project_description,
+        project_status=project_status,
+        project_error=project_error,
+        on_open_project=on_open_project,
+    )
+    if project_section is not None:
+        body_controls.append(project_section)
     match ai_status:
         case AiSuggestionStatus.NOT_REQUESTED:
             body_controls.append(
@@ -811,6 +827,91 @@ def _build_ai_status_badge(status: AiSuggestionStatus) -> ft.Control:
         padding=ft.padding.symmetric(horizontal=12, vertical=6),
         bgcolor=color,
         border_radius=16,
+    )
+
+
+def _build_project_summary_section(
+    *,
+    project_id: str | None,
+    project_title: str | None,
+    project_description: str | None,
+    project_status: str | None,
+    project_error: str | None,
+    on_open_project: Callable[[str], None] | None,
+) -> ft.Control | None:
+    if not any([project_id, project_title, project_description, project_error]):
+        return None
+    if project_error:
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR),
+                    ft.Text(
+                        f"プロジェクト作成に失敗しました: {project_error}",
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                        color=ft.Colors.ERROR,
+                    ),
+                ],
+                spacing=8,
+            ),
+            bgcolor=ft.Colors.ERROR_CONTAINER,
+            border_radius=12,
+            padding=ft.padding.all(16),
+        )
+    title_text = project_title or "AI作成プロジェクト"
+    status_chip = (
+        ft.Container(
+            content=ft.Text(project_status, theme_style=ft.TextThemeStyle.BODY_SMALL),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            bgcolor=ft.Colors.SECONDARY_CONTAINER,
+            border_radius=12,
+        )
+        if project_status
+        else None
+    )
+    open_button: ft.Control | None = None
+    if on_open_project and project_id:
+        open_button = ft.OutlinedButton(
+            "プロジェクトを開く",
+            icon=ft.Icons.OPEN_IN_NEW,
+            on_click=lambda _e, pid=project_id: on_open_project(pid),
+        )
+    description_text = (
+        ft.Text(
+            project_description,
+            theme_style=ft.TextThemeStyle.BODY_SMALL,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            max_lines=2,
+            overflow=ft.TextOverflow.ELLIPSIS,
+        )
+        if project_description
+        else None
+    )
+    header_controls: list[ft.Control] = [
+        ft.Icon(ft.Icons.TASK_ALT, color=ft.Colors.PRIMARY),
+        ft.Text(
+            f"AIがプロジェクトを作成しました: {title_text}",
+            theme_style=ft.TextThemeStyle.TITLE_SMALL,
+        ),
+    ]
+    if status_chip:
+        header_controls.append(status_chip)
+    controls: list[ft.Control] = [
+        ft.Row(
+            controls=header_controls,
+            spacing=8,
+            alignment=ft.MainAxisAlignment.START,
+        )
+    ]
+    if description_text:
+        controls.append(description_text)
+    if open_button:
+        controls.append(open_button)
+    return ft.Container(
+        content=ft.Column(controls=controls, spacing=8),
+        bgcolor=ft.Colors.SECONDARY_CONTAINER,
+        border_radius=12,
+        padding=ft.padding.all(16),
     )
 
 

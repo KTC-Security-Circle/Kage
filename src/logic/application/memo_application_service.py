@@ -26,6 +26,8 @@ from models import (
     MemoRead,
     MemoStatus,
     MemoUpdate,
+    ProjectStatus,
+    ProjectUpdate,
     TaskRead,
     TaskStatus,
     TaskUpdate,
@@ -265,7 +267,12 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             msg = f"memo_to_taskエージェントがエラーを返しました: {response}"
             raise MemoApplicationError(msg)
         if isinstance(response, MemoToTaskResult):
-            return OutputModel(tasks=response.tasks, suggested_memo_status=response.suggested_memo_status)
+            return OutputModel(
+                tasks=response.tasks,
+                suggested_memo_status=response.suggested_memo_status,
+                requires_project=response.requires_project,
+                project_plan=response.project_plan,
+            )
         # 互換: テストが直接 OutputModel を返すようにモンキーパッチする場合を許容
         if isinstance(response, OutputModel):
             return response
@@ -376,6 +383,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
                 "route": task.route,
                 "due_date": task.due_date,
                 "project_title": task.project_title,
+                "project_id": str(task.project_id) if task.project_id else None,
                 "status": task.status.value,
             }
             for task in snapshot.tasks
@@ -385,17 +393,28 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
                 "task_id": str(task.task_id),
                 "route": task.route,
                 "project_title": task.project_title,
+                "project_id": str(task.project_id) if task.project_id else None,
                 "status": task.status.value,
             }
             for task in snapshot.tasks
         ]
+        project_info = None
+        if snapshot.project is not None:
+            project_info = {
+                "project_id": str(snapshot.project.project_id) if snapshot.project.project_id else None,
+                "title": snapshot.project.title,
+                "description": snapshot.project.description,
+                "status": snapshot.project.status,
+                "error": snapshot.project.error,
+            }
         log_payload = {
-            "version": 2,
+            "version": 3,
             "job_id": str(snapshot.job_id),
             "generated_at": datetime.now(UTC).isoformat(),
             "suggested_memo_status": snapshot.suggested_memo_status,
             "tasks": tasks_payload,
             "draft_task_refs": draft_refs,
+            "project_info": project_info,
         }
         serialized = json.dumps(log_payload, ensure_ascii=False)
         self.update(snapshot.memo_id, MemoUpdate(ai_analysis_log=serialized))
@@ -413,6 +432,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             updated = task_service.update(task_id, TaskUpdate(status=status))
             approved.append(updated)
 
+        self._activate_project_from_ai_log(memo_id)
         self._remove_tasks_from_ai_log(memo_id, task_ids)
         return approved
 
@@ -445,6 +465,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             route=route or "next_action",
             project_title=project_title,
             status=created.status,
+            project_id=created.project_id,
         )
         return created
 
@@ -488,6 +509,32 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
             return TaskStatus.TODAYS
         return TaskStatus.TODO
 
+    def _activate_project_from_ai_log(self, memo_id: uuid.UUID) -> None:
+        """AIログに紐づくプロジェクトをACTIVEへ更新する。"""
+        memo = self.get_by_id(memo_id, with_details=True)
+        data = self._ensure_ai_log_dict(memo.ai_analysis_log)
+        info = data.get("project_info")
+        if not isinstance(info, dict):
+            return
+        project_id_str = info.get("project_id")
+        if not project_id_str or info.get("status") == ProjectStatus.ACTIVE.value:
+            return
+        try:
+            project_uuid = UUID(str(project_id_str))
+        except ValueError:
+            return
+        from logic.application.project_application_service import ProjectApplicationService
+
+        project_service = self._apps.get_service(ProjectApplicationService)
+        project_service.update(project_uuid, ProjectUpdate(status=ProjectStatus.ACTIVE))
+
+        def _mutator(payload: dict[str, object]) -> None:
+            project_info = payload.get("project_info")
+            if isinstance(project_info, dict):
+                project_info["status"] = ProjectStatus.ACTIVE.value
+
+        self._mutate_ai_log(memo_id, _mutator)
+
     def _remove_tasks_from_ai_log(self, memo_id: uuid.UUID, task_ids: list[uuid.UUID]) -> None:
         targets = {str(task_id) for task_id in task_ids}
 
@@ -516,6 +563,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         route: str | None,
         project_title: str | None,
         status: TaskStatus,
+        project_id: UUID | None = None,
     ) -> None:
         def _mutator(payload: dict[str, object]) -> None:
             refs = payload.setdefault("draft_task_refs", [])
@@ -525,6 +573,7 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
                         "task_id": str(task_id),
                         "route": route,
                         "project_title": project_title,
+                        "project_id": str(project_id) if project_id else None,
                         "status": status.value,
                     }
                 )
@@ -546,9 +595,10 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
                 payload = {}
         else:
             payload = {}
-        payload.setdefault("version", 2)
+        payload.setdefault("version", 3)
         payload.setdefault("tasks", [])
         payload.setdefault("draft_task_refs", [])
+        payload.setdefault("project_info", None)
         return payload
 
     def search(

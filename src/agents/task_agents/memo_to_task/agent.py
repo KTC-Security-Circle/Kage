@@ -83,6 +83,29 @@ _DEFAULT_FAKE_RESPONSES: list[MemoToTaskAgentOutput] = [
         ],
         suggested_memo_status="active",
     ),
+    MemoToTaskAgentOutput(
+        tasks=[
+            TaskDraft(
+                title="新製品リリース企画をまとめる",
+                description="主要マイルストーンを洗い出す",
+                route="next_action",
+                project_title="新製品リリース計画",
+            )
+        ],
+        suggested_memo_status="active",
+        requires_project=True,
+        project_plan=ProjectPlanSuggestion(
+            project_title="新製品リリース計画",
+            next_actions=[
+                TaskDraft(
+                    title="発売日案と逆算スケジュールを決める",
+                    description="主要マイルストーンを30分で下書きする",
+                    route="next_action",
+                    project_title="新製品リリース計画",
+                )
+            ],
+        ),
+    ),
     MemoToTaskAgentOutput(tasks=[], suggested_memo_status="idea"),
 ]
 
@@ -256,6 +279,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
                 return MemoToTaskResult(
                     tasks=list(fake_output.tasks),
                     suggested_memo_status=fake_output.suggested_memo_status,
+                    requires_project=fake_output.requires_project,
+                    project_plan=fake_output.project_plan,
                     processed_data=self._state,
                 )
         return super().invoke(state, thread_id)
@@ -273,6 +298,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         return MemoToTaskAgentOutput(
             tasks=list(raw.tasks),
             suggested_memo_status=raw.suggested_memo_status,
+            requires_project=raw.requires_project,
+            project_plan=raw.project_plan,
         )
 
     def _create_return_response(
@@ -295,8 +322,20 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             # フォールバック: 状態辞書から最終出力を再構築する
             tasks = final_response.get("routed_tasks") or []
             suggested = final_response.get("suggested_status") or ("idea" if not tasks else "active")
+            requires_project = bool(final_response.get("requires_project"))
+            project_plan = final_response.get("project_plan")
+            if project_plan is not None and not isinstance(project_plan, ProjectPlanSuggestion):
+                try:
+                    project_plan = ProjectPlanSuggestion.model_validate(project_plan)
+                except Exception:
+                    project_plan = None
             try:
-                rebuilt = MemoToTaskAgentOutput(tasks=tasks, suggested_memo_status=suggested)
+                rebuilt = MemoToTaskAgentOutput(
+                    tasks=tasks,
+                    suggested_memo_status=suggested,
+                    requires_project=requires_project,
+                    project_plan=project_plan,
+                )
             except Exception:
                 rebuilt = None
             if rebuilt is not None:
@@ -305,6 +344,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             return MemoToTaskResult(
                 tasks=final_response.tasks,
                 suggested_memo_status=final_response.suggested_memo_status,
+                requires_project=final_response.requires_project,
+                project_plan=final_response.project_plan,
                 processed_data=self._state,
             )
         if isinstance(final_response, AgentError):
@@ -998,8 +1039,18 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
                 agents_logger.info("Persisted tasks via Tool: {}", created_ids)
         except Exception as _exc:  # pragma: no cover - safety guard for local runs
             agents_logger.exception("Persisting tasks failed: {}", str(_exc))
+        requires_project = bool(state.get("requires_project"))
+        project_plan = state.get("project_plan")
+        if project_plan is not None and not isinstance(project_plan, ProjectPlanSuggestion):
+            project_plan = None
+
         # final_response を廃止し、最終的に必要なキーだけ返す
-        return {"routed_tasks": cleaned_tasks, "suggested_status": suggested_status}
+        return {
+            "routed_tasks": cleaned_tasks,
+            "suggested_status": suggested_status,
+            "requires_project": requires_project,
+            "project_plan": project_plan,
+        }
 
     def _persist_tasks_via_app(self, tasks: list[TaskDraft]) -> list[str]:
         """Application Service 経由でタスクを永続化する（簡易版）。

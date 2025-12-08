@@ -389,7 +389,6 @@ class TasksController:
         except Exception as e:
             logger.error(f"タグ同期エラー: task_id={task_id}, error={e}")
             self._notify_error("タグの同期に失敗しました")
-            self._notify_error("タスク一覧の取得に失敗しました。詳細はログを参照してください。")
 
     def _task_read_to_dict(self, task: TaskRead) -> dict:
         """TaskRead を辞書形式に変換する。

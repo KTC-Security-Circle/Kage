@@ -5,7 +5,7 @@ View層からSession管理を分離し、ビジネスロジックを調整する
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 from loguru import logger
 
@@ -44,7 +44,9 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
 
     @classmethod
     @override
-    def get_instance(cls, *args: Any, **kwargs: Any) -> TaskApplicationService: ...
+    def get_instance(cls, *args: Any, **kwargs: Any) -> TaskApplicationService:
+        instance = super().get_instance(*args, **kwargs)
+        return cast("TaskApplicationService", instance)
 
     def create(  # noqa: PLR0913
         self,

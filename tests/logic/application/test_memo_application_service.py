@@ -3,6 +3,7 @@
 Unit of Work のモックを用い、MemoApplicationService の公開APIを検証する。
 """
 
+import json
 import uuid
 from unittest.mock import Mock, call
 
@@ -12,12 +13,18 @@ from agents.agent_conf import LLMProvider, OpenVINODevice
 from agents.base import AgentError
 from agents.task_agents.memo_to_task.schema import MemoToTaskAgentOutput, TaskDraft
 from agents.task_agents.memo_to_task.state import MemoToTaskState
+from logic.application.memo_ai_job_queue import (
+    GeneratedProjectPayload,
+    GeneratedTaskPayload,
+    MemoAiJobSnapshot,
+    MemoAiJobStatus,
+)
 from logic.application.memo_application_service import (
     ContentValidationError,
     MemoApplicationError,
     MemoApplicationService,
 )
-from models import MemoRead, MemoStatus, MemoUpdate
+from models import MemoRead, MemoStatus, MemoUpdate, ProjectStatus, ProjectUpdate, TaskStatus, TaskUpdate
 
 # テスト用定数
 EXPECTED_PAIR_COUNT = 2
@@ -198,6 +205,202 @@ class TestMemoApplicationService:
         assert result == memos
         assert len(result) == EXPECTED_PAIR_COUNT
         mock_memo_service.get_all.assert_called_once_with(with_details=False)
+
+    def test_approve_ai_tasks_updates_status(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+        sample_memo_read: MemoRead,
+    ) -> None:
+        """Draftタスク承認時にTaskService.updateが呼ばれる。"""
+
+        task_id = uuid.uuid4()
+        project_id = uuid.uuid4()
+        log_payload = {
+            "draft_task_refs": [
+                {
+                    "task_id": str(task_id),
+                    "route": "progress",
+                    "project_id": str(project_id),
+                }
+            ],
+            "tasks": [],
+            "project_info": {
+                "project_id": str(project_id),
+                "status": ProjectStatus.DRAFT.value,
+            },
+        }
+        sample_memo_read.ai_analysis_log = json.dumps(log_payload)
+
+        memo_app_service.update = Mock()
+
+        def _fake_get_by_id(*_args: object, **_kwargs: object) -> MemoRead:
+            return sample_memo_read
+
+        monkeypatch.setattr(memo_app_service, "get_by_id", _fake_get_by_id)
+
+        class DummyTaskApp:
+            def __init__(self) -> None:
+                self.updated: list[tuple[uuid.UUID, TaskStatus | None]] = []
+
+            def update(self, task_id: uuid.UUID, update_data: TaskUpdate) -> Mock:
+                self.updated.append((task_id, update_data.status))
+                mock_task = Mock()
+                mock_task.id = task_id
+                mock_task.status = update_data.status or TaskStatus.TODO
+                return mock_task
+
+        dummy_service = DummyTaskApp()
+
+        class DummyProjectApp:
+            def __init__(self) -> None:
+                self.updated: list[tuple[uuid.UUID, ProjectStatus | None]] = []
+
+            def update(self, project_id: uuid.UUID, update_data: ProjectUpdate) -> Mock:
+                self.updated.append((project_id, update_data.status))
+                return Mock()
+
+        dummy_project = DummyProjectApp()
+
+        def _get_service(service_cls: type) -> object:
+            if service_cls.__name__ == "TaskApplicationService":
+                return dummy_service
+            if service_cls.__name__ == "ProjectApplicationService":
+                return dummy_project
+            message = f"Unexpected service {service_cls}"
+            raise AssertionError(message)
+
+        monkeypatch.setattr(memo_app_service._apps, "get_service", _get_service)
+
+        memo_app_service.approve_ai_tasks(sample_memo_read.id, [task_id])
+
+        assert dummy_service.updated == [(task_id, TaskStatus.PROGRESS)]
+        assert dummy_project.updated == [(project_id, ProjectStatus.ACTIVE)]
+        memo_app_service.update.assert_called()
+
+    def test_delete_ai_task_removes_log(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+        sample_memo_read: MemoRead,
+    ) -> None:
+        """Draftタスク削除時に TaskService.delete が呼ばれる。"""
+
+        task_id = uuid.uuid4()
+        sample_memo_read.ai_analysis_log = json.dumps(
+            {
+                "draft_task_refs": [{"task_id": str(task_id), "route": "next_action"}],
+                "tasks": [{"task_id": str(task_id)}],
+            }
+        )
+
+        memo_app_service.update = Mock()
+
+        def _fake_get_by_id(*_args: object, **_kwargs: object) -> MemoRead:
+            return sample_memo_read
+
+        monkeypatch.setattr(memo_app_service, "get_by_id", _fake_get_by_id)
+
+        class DummyTaskApp:
+            def __init__(self) -> None:
+                self.deleted: list[uuid.UUID] = []
+
+            def delete(self, task_id: uuid.UUID) -> bool:
+                self.deleted.append(task_id)
+                return True
+
+        dummy_service = DummyTaskApp()
+        monkeypatch.setattr(memo_app_service._apps, "get_service", lambda _type: dummy_service)
+
+        memo_app_service.delete_ai_task(sample_memo_read.id, task_id)
+
+        assert dummy_service.deleted == [task_id]
+        memo_app_service.update.assert_called()
+
+    def test_create_ai_task_persists_draft(
+        self,
+        memo_app_service: MemoApplicationService,
+        monkeypatch: pytest.MonkeyPatch,
+        sample_memo_read: MemoRead,
+    ) -> None:
+        """Draft タスク追加時に TaskService.create が DRAFT で呼ばれる。"""
+
+        sample_memo_read.ai_analysis_log = None
+        memo_app_service.update = Mock()
+
+        def _fake_get_by_id(*_args: object, **_kwargs: object) -> MemoRead:
+            return sample_memo_read
+
+        monkeypatch.setattr(memo_app_service, "get_by_id", _fake_get_by_id)
+
+        class DummyTaskApp:
+            def __init__(self) -> None:
+                self.created_payloads: list[dict[str, object]] = []
+
+            def create(self, **kwargs: object) -> Mock:
+                self.created_payloads.append(kwargs)
+                mock_task = Mock()
+                mock_task.id = uuid.uuid4()
+                mock_task.title = kwargs.get("title", "")
+                mock_task.description = kwargs.get("description")
+                mock_task.status = kwargs.get("status", TaskStatus.DRAFT)
+                mock_task.tags = []
+                return mock_task
+
+        dummy_service = DummyTaskApp()
+        monkeypatch.setattr(memo_app_service._apps, "get_service", lambda _type: dummy_service)
+
+        memo_app_service.create_ai_task(sample_memo_read.id, title="新しいタスク")
+
+        assert dummy_service.created_payloads
+        assert dummy_service.created_payloads[0]["status"] == TaskStatus.DRAFT
+        memo_app_service.update.assert_called()
+
+    def test_persist_ai_snapshot_writes_project_info(
+        self,
+        memo_app_service: MemoApplicationService,
+        sample_memo_read: MemoRead,
+    ) -> None:
+        """AIログ保存時に project_info と project_id が含まれる。"""
+        memo_app_service.update = Mock()
+        project_id = uuid.uuid4()
+        task_id = uuid.uuid4()
+        snapshot = MemoAiJobSnapshot(
+            job_id=uuid.uuid4(),
+            memo_id=sample_memo_read.id,
+            status=MemoAiJobStatus.SUCCEEDED,
+            tasks=(
+                GeneratedTaskPayload(
+                    task_id=task_id,
+                    title="kickoff",
+                    description="desc",
+                    tags=(),
+                    route="next_action",
+                    due_date=None,
+                    project_title="LLM計画",
+                    project_id=project_id,
+                    status=TaskStatus.DRAFT,
+                ),
+            ),
+            suggested_memo_status="active",
+            project=GeneratedProjectPayload(
+                project_id=project_id,
+                title="LLM計画",
+                description="memo summary",
+                status="active",
+                error=None,
+            ),
+        )
+
+        memo_app_service._persist_ai_snapshot(snapshot)
+
+        memo_app_service.update.assert_called_once()
+        _, payload = memo_app_service.update.call_args.args
+        assert isinstance(payload, MemoUpdate)
+        assert payload.ai_analysis_log is not None
+        serialized = json.loads(payload.ai_analysis_log)
+        assert serialized["project_info"]["project_id"] == str(project_id)
+        assert serialized["draft_task_refs"][0]["project_id"] == str(project_id)
 
     def test_list_by_tag(self, memo_app_service: MemoApplicationService, mock_unit_of_work: Mock) -> None:
         """正常系: タグIDでメモ取得"""

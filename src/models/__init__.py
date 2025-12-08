@@ -112,6 +112,7 @@ class ProjectStatus(str, Enum):
         CANCELLED: プロジェクトがキャンセルされたことを示します。
     """
 
+    DRAFT = "draft"
     ACTIVE = "active"
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
@@ -138,6 +139,7 @@ class ProjectStatus(str, Enum):
 
         # 英語コードマッピング
         code_map = {
+            "draft": cls.DRAFT,
             "active": cls.ACTIVE,
             "on_hold": cls.ON_HOLD,
             "completed": cls.COMPLETED,
@@ -146,6 +148,7 @@ class ProjectStatus(str, Enum):
 
         # 日本語→英語コードマッピング
         jp_to_code = {
+            "下書き": "draft",
             "進行中": "active",
             "計画中": "active",  # 計画中も進行中扱い
             "保留": "on_hold",
@@ -179,6 +182,7 @@ class ProjectStatus(str, Enum):
             対応する日本語表示ラベル
         """
         label_map = {
+            cls.DRAFT: "下書き",
             cls.ACTIVE: "進行中",
             cls.ON_HOLD: "保留",
             cls.COMPLETED: "完了",
@@ -199,6 +203,7 @@ class ProjectStatus(str, Enum):
         import flet as ft
 
         color_map = {
+            cls.DRAFT: ft.Colors.SECONDARY_CONTAINER,
             cls.ACTIVE: ft.Colors.BLUE,
             cls.ON_HOLD: ft.Colors.ORANGE,
             cls.COMPLETED: ft.Colors.GREEN,

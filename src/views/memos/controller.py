@@ -47,6 +47,7 @@ from loguru import logger
 
 from errors import NotFoundError
 from logic.application.memo_ai_job_queue import MemoAiJobSnapshot  # noqa: TC001 - runtime dependency
+
 from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate, TagRead
 
 from .ordering import sort_memos
@@ -115,6 +116,36 @@ class MemoApplicationPort(Protocol):
 
     def sync_tags(self, memo_id: UUID, tag_ids: list[UUID]) -> MemoRead:
         """メモのタグを同期する。"""
+        ...
+
+    def approve_ai_tasks(self, memo_id: UUID, task_ids: list[UUID]) -> list[TaskRead]:
+        """Draftタスクを承認する。"""
+        ...
+
+    def delete_ai_task(self, memo_id: UUID, task_id: UUID) -> None:
+        """Draftタスクを削除する。"""
+        ...
+
+    def create_ai_task(
+        self,
+        memo_id: UUID,
+        *,
+        title: str,
+        description: str | None = None,
+        route: str | None = None,
+        project_title: str | None = None,
+    ) -> TaskRead:
+        """Draftタスクを新規作成する。"""
+        ...
+
+    def update_ai_task(
+        self,
+        task_id: UUID,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> TaskRead:
+        """Draftタスクを更新する。"""
         ...
 
 
@@ -212,6 +243,50 @@ class MemosController:
         )
         self.state.upsert_memo(updated)
         self.state.reconcile()
+        return updated
+
+    def approve_ai_tasks(self, memo_id: UUID, task_ids: list[UUID]) -> list[TaskRead]:
+        """Draftタスクを承認する。"""
+        approved = self.memo_app.approve_ai_tasks(memo_id, task_ids)
+        self.refresh_memo(memo_id)
+        return approved
+
+    def delete_ai_task(self, memo_id: UUID, task_id: UUID) -> None:
+        """Draftタスクを削除する。"""
+        self.memo_app.delete_ai_task(memo_id, task_id)
+        self.refresh_memo(memo_id)
+
+    def create_ai_task(
+        self,
+        memo_id: UUID,
+        *,
+        title: str,
+        description: str | None = None,
+        route: str | None = None,
+        project_title: str | None = None,
+    ) -> TaskRead:
+        """Draftタスクを新規作成しStateへ反映する。"""
+        created = self.memo_app.create_ai_task(
+            memo_id,
+            title=title,
+            description=description,
+            route=route,
+            project_title=project_title,
+        )
+        self.refresh_memo(memo_id)
+        return created
+
+    def update_ai_task(
+        self,
+        task_id: UUID,
+        *,
+        memo_id: UUID,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> TaskRead:
+        """Draftタスクを更新してStateを再同期する。"""
+        updated = self.memo_app.update_ai_task(task_id, title=title, description=description)
+        self.refresh_memo(memo_id)
         return updated
 
     # --- CRUD operations ---

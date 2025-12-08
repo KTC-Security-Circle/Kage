@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 # タブ定義（None = すべて）
 _PROJECT_TAB_DEFINITIONS: tuple[TabDefinition[ProjectStatus], ...] = (
     TabDefinition(status=None, label="すべて"),
+    TabDefinition(status=ProjectStatus.DRAFT, label=ProjectStatus.display_label(ProjectStatus.DRAFT)),
     TabDefinition(status=ProjectStatus.ACTIVE, label=ProjectStatus.display_label(ProjectStatus.ACTIVE)),
     TabDefinition(status=ProjectStatus.ON_HOLD, label=ProjectStatus.display_label(ProjectStatus.ON_HOLD)),
     TabDefinition(status=ProjectStatus.COMPLETED, label=ProjectStatus.display_label(ProjectStatus.COMPLETED)),

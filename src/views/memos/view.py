@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
@@ -218,6 +219,11 @@ class MemosView(BaseView):
             selected_task_ids=set(ai_state.selected_task_ids),
             editing_task_id=ai_state.editing_task_id,
             error_message=ai_state.error_message,
+            project_id=ai_state.project_id,
+            project_title=ai_state.project_title,
+            project_description=ai_state.project_description,
+            project_status=ai_state.project_status,
+            project_error=ai_state.project_error,
             on_request_ai=lambda _e, target=memo: self._handle_request_ai_generation(target),
             on_retry_ai=lambda _e, memo_id=memo.id: self._handle_retry_ai_generation(memo_id),
             on_mark_as_idea=lambda _e, memo_id=memo.id: self._handle_mark_memo_as_idea(memo_id),
@@ -231,6 +237,7 @@ class MemosView(BaseView):
             on_delete_task=lambda task_id, memo_id=memo.id: self._handle_delete_ai_task(memo_id, task_id),
             on_add_task=lambda _=None, memo_id=memo.id: self._handle_add_ai_task(memo_id),
             on_approve_tasks=lambda _=None, target=memo: self._handle_approve_ai_tasks(target),
+            on_open_project=self._handle_open_project if ai_state.project_id else None,
         )
 
     def _get_tab_counts(self) -> dict[MemoStatus, int]:
@@ -373,6 +380,7 @@ class MemosView(BaseView):
             ai_state.generated_tasks.clear()
             ai_state.selected_task_ids.clear()
             ai_state.editing_task_id = None
+            self.memos_state.set_project_info(memo.id, None)
             self._refresh()
             logger.debug(f"Polling scheduled for job_id={snapshot.job_id} memo_id={memo.id}")
             self._start_ai_job_polling(snapshot.job_id, memo.id)
@@ -435,6 +443,20 @@ class MemosView(BaseView):
     def _handle_save_ai_task_edit(self, memo_id: UUID, task_id: str) -> None:
         """AI提案タスクの編集結果を確定する。"""
         ai_state = self.memos_state.ai_flow_state_for(memo_id)
+        target = next((task for task in ai_state.generated_tasks if task.task_id == task_id), None)
+        if target is None:
+            self.notify_error("タスクが見つかりません")
+            return
+        try:
+            self.controller.update_ai_task(
+                UUID(task_id),
+                memo_id=memo_id,
+                title=target.title,
+                description=target.description,
+            )
+        except Exception as exc:
+            self.notify_error("Draftタスクの更新に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
         if ai_state.editing_task_id == task_id:
             ai_state.editing_task_id = None
         self.show_success_snackbar("タスク内容を更新しました")
@@ -442,8 +464,12 @@ class MemosView(BaseView):
 
     def _handle_delete_ai_task(self, memo_id: UUID, task_id: str) -> None:
         """AI提案タスクを削除する。"""
+        try:
+            self.controller.delete_ai_task(memo_id, UUID(task_id))
+        except Exception as exc:
+            self.notify_error("Draftタスクの削除に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
         ai_state = self.memos_state.ai_flow_state_for(memo_id)
-        ai_state.generated_tasks = [task for task in ai_state.generated_tasks if task.task_id != task_id]
         ai_state.selected_task_ids.discard(task_id)
         if ai_state.editing_task_id == task_id:
             ai_state.editing_task_id = None
@@ -451,17 +477,21 @@ class MemosView(BaseView):
 
     def _handle_add_ai_task(self, memo_id: UUID) -> None:
         """AI提案リストに空のタスクを追加する。"""
+        try:
+            created = self.controller.create_ai_task(
+                memo_id,
+                title="新しいタスク",
+                description="",
+                route="next_action",
+            )
+        except Exception as exc:
+            self.notify_error("Draftタスクの追加に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
+
+        task_id = str(created.id)
         ai_state = self.memos_state.ai_flow_state_for(memo_id)
-        task = AiSuggestedTask(
-            task_id=f"temp-{uuid4().hex}",
-            title="新しいタスク",
-            description="",
-            tags=(),
-            due_date=datetime.now() + timedelta(days=7),
-        )
-        ai_state.generated_tasks.append(task)
-        ai_state.editing_task_id = task.task_id
-        ai_state.selected_task_ids.add(task.task_id)
+        ai_state.editing_task_id = task_id
+        ai_state.selected_task_ids.add(task_id)
         self._refresh()
 
     def _handle_approve_ai_tasks(self, memo: MemoRead) -> None:
@@ -470,8 +500,12 @@ class MemosView(BaseView):
         if not ai_state.selected_task_ids:
             self.show_snack_bar("承認するタスクを選択してください", bgcolor=get_error_color())
             return
-        ai_state.status_override = AiSuggestionStatus.REVIEWED
-        ai_state.is_generating = False
+        try:
+            task_ids = [UUID(task_id) for task_id in ai_state.selected_task_ids]
+            self.controller.approve_ai_tasks(memo.id, task_ids)
+        except Exception as exc:
+            self.notify_error("Draftタスクの承認に失敗しました", details=f"{type(exc).__name__}: {exc}")
+            return
 
         def _archive() -> None:
             self.controller.mark_memo_archived(memo.id)
@@ -479,6 +513,19 @@ class MemosView(BaseView):
         self.with_loading(_archive, user_error_message="メモのアーカイブに失敗しました")
         self.show_success_snackbar("タスクを承認し、メモをアーカイブしました")
         self._refresh()
+
+    def _handle_open_project(self, project_id: str | None) -> None:
+        """生成済みプロジェクトを ProjectsView で開く。"""
+        if not project_id:
+            self.notify_error("プロジェクトIDが無効です")
+            return
+        try:
+            self.page.client_storage.set("pending_project_id", project_id)
+            self.page.go("/projects")
+            logger.info(f"プロジェクト画面へ遷移: project_id={project_id}")
+        except Exception as exc:
+            logger.error(f"プロジェクト画面への遷移に失敗: {exc}", exc_info=True)
+            self.notify_error("プロジェクト画面への遷移に失敗しました", details=str(exc))
 
     def _start_ai_job_polling(self, job_id: UUID, memo_id: UUID) -> None:
         async def _poll() -> None:
@@ -513,6 +560,16 @@ class MemosView(BaseView):
 
     def _process_ai_job_snapshot(self, memo_id: UUID, snapshot: MemoAiJobSnapshot) -> None:
         self.memos_state.update_job_status(memo_id, status=snapshot.status.value, error=snapshot.error_message)
+        project_info: dict[str, object] | None = None
+        if snapshot.project is not None:
+            project_info = {
+                "project_id": str(snapshot.project.project_id) if snapshot.project.project_id else None,
+                "title": snapshot.project.title,
+                "description": snapshot.project.description,
+                "status": snapshot.project.status,
+                "error": snapshot.project.error,
+            }
+        self.memos_state.set_project_info(memo_id, project_info)
         if snapshot.status == MemoAiJobStatus.SUCCEEDED:
             tasks = [self._convert_payload_to_ai_task(payload) for payload in snapshot.tasks]
             self.memos_state.set_generated_tasks(memo_id, tasks)
@@ -538,11 +595,14 @@ class MemosView(BaseView):
             except ValueError:
                 due = None
         return AiSuggestedTask(
-            task_id=payload.task_id,
+            task_id=str(payload.task_id),
             title=payload.title,
             description=payload.description or "",
             tags=payload.tags,
             due_date=due,
+            route=payload.route,
+            status=payload.status,
+            project_id=str(payload.project_id) if payload.project_id else None,
         )
 
     def _get_memo_by_id(self, memo_id: UUID) -> MemoRead | None:

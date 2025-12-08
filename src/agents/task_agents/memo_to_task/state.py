@@ -98,3 +98,5 @@ class MemoToTaskResult(BaseAgentResponse[MemoToTaskState]):
 
     tasks: list[TaskDraft]
     suggested_memo_status: MemoStatusSuggestion
+    requires_project: bool = False
+    project_plan: ProjectPlanSuggestion | None = None

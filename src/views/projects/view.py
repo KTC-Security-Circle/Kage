@@ -340,6 +340,7 @@ class ProjectsView(BaseView):
             return self._controller.get_counts()
         except Exception:
             return {
+                ProjectStatus.DRAFT: 0,
                 ProjectStatus.ACTIVE: 0,
                 ProjectStatus.ON_HOLD: 0,
                 ProjectStatus.COMPLETED: 0,

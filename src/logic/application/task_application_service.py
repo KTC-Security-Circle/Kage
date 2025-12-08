@@ -228,6 +228,7 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         """タスクのタグを同期する
 
         現在のタグを削除し、指定されたタグIDのセットで置き換える。
+        N+1問題を回避するため、バッチ操作を使用します。
 
         Args:
             task_id: タスクID
@@ -238,23 +239,10 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         """
         with self._unit_of_work_factory() as uow:
             task_service = uow.get_service(TaskService)
-            task = task_service.get_by_id(task_id, with_details=True)
-
-            # 既存のタグIDを取得
-            current_tag_ids = {tag.id for tag in task.tags}
             desired_tag_ids = set(tag_ids)
 
-            # 削除するタグと追加するタグを計算
-            tags_to_remove = current_tag_ids - desired_tag_ids
-            tags_to_add = desired_tag_ids - current_tag_ids
+            # バッチ操作で一括同期（1回のDB操作で完了）
+            task = task_service.sync_tags(task_id, desired_tag_ids)
 
-            # タグを削除
-            for tag_id in tags_to_remove:
-                task = task_service.remove_tag(task_id, tag_id)
-
-            # タグを追加
-            for tag_id in tags_to_add:
-                task = task_service.add_tag(task_id, tag_id)
-
-        logger.info(f"タグ同期完了: タスクID={task_id}, 追加={len(tags_to_add)}, 削除={len(tags_to_remove)}")
+        logger.info(f"タグ同期完了: タスクID={task_id}, タグ数={len(desired_tag_ids)}")
         return task

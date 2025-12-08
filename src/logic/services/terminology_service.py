@@ -308,6 +308,28 @@ class TerminologyService(ServiceBase):
         logger.info(f"用語({term_id})からタグ({tag_id})を削除しました。")
         return term
 
+    @handle_service_errors(SERVICE_NAME, "タグ同期", TerminologyServiceError)
+    @convert_read_model(TermRead)
+    def sync_tags(self, term_id: uuid.UUID, tag_ids: set[uuid.UUID]) -> Term:
+        """用語のタグを一括同期する
+
+        既存のループ操作を1回のDB操作に最適化し、N+1問題を回避します。
+
+        Args:
+            term_id: 用語のID
+            tag_ids: 設定するタグIDのセット
+
+        Returns:
+            TermRead: 更新された用語
+
+        Raises:
+            NotFoundError: 用語またはタグが存在しない場合
+            TerminologyServiceError: タグ同期に失敗した場合
+        """
+        term = self.term_repo.sync_tags(term_id, tag_ids)
+        logger.info(f"用語({term_id})のタグを同期しました: {len(tag_ids)}個")
+        return term
+
     # ==============================================================================
     # Synonym operations
     # ==============================================================================

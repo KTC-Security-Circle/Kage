@@ -110,7 +110,7 @@ class MemoApplicationPort(Protocol):
         ...
 
     def get_ai_job_snapshot(self, job_id: UUID) -> MemoAiJobSnapshot:
-        """痆Ｉジョブの状態を取得する。"""
+        """AＩジョブの状態を取得する。"""
         ...
 
     def sync_tags(self, memo_id: UUID, tag_ids: list[UUID]) -> MemoRead:

@@ -156,6 +156,29 @@ class MemoService(ServiceBase):
 
         return memo
 
+    @handle_service_errors(SERVICE_NAME, "タグ同期", MemoServiceError)
+    @convert_read_model(MemoRead)
+    def sync_tags(self, memo_id: uuid.UUID, tag_ids: set[uuid.UUID]) -> Memo:
+        """メモのタグを一括同期する
+
+        既存のループ操作を1回のDB操作に最適化し、N+1問題を回避します。
+
+        Args:
+            memo_id: メモID
+            tag_ids: 設定するタグIDのセット
+
+        Returns:
+            MemoRead: 更新されたメモ
+
+        Raises:
+            NotFoundError: メモまたはタグが存在しない場合
+            MemoServiceError: メモの更新に失敗した場合
+        """
+        memo = self.memo_repo.sync_tags(memo_id, tag_ids)
+        logger.debug(f"メモ({memo_id})のタグを同期しました: {len(tag_ids)}個")
+
+        return memo
+
     @handle_service_errors(SERVICE_NAME, "タスク追加", MemoServiceError)
     @convert_read_model(MemoRead)
     def add_task(self, memo_id: uuid.UUID, task_id: uuid.UUID) -> Memo:

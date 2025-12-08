@@ -1,6 +1,7 @@
 """用語リポジトリの実装"""
 
 import uuid
+from typing import Any, cast
 
 from loguru import logger
 from sqlmodel import Session, func, or_, select
@@ -115,6 +116,43 @@ class TermRepository(BaseRepository[Term, TermCreate, TermUpdate]):
             logger.debug(f"用語({term_id})からタグ({tag_id})を削除しました。")
         else:
             logger.warning(f"用語({term_id})にタグ({tag_id})は存在しません。")
+
+        return term
+
+    def sync_tags(self, term_id: uuid.UUID, tag_ids: set[uuid.UUID]) -> Term:
+        """用語のタグを一括同期する（N+1問題を回避）
+
+        Args:
+            term_id: 用語のID
+            tag_ids: 設定するタグIDのセット
+
+        Returns:
+            Term: 更新された用語
+
+        Raises:
+            NotFoundError: 用語またはタグが存在しない場合
+        """
+        term = self.get_by_id(term_id, with_details=True)
+
+        # 存在確認: 指定されたタグIDが全て存在するか確認
+        if tag_ids:
+            tag_id_col = cast("Any", Tag.id)
+            existing_tags = self.session.exec(select(Tag).where(tag_id_col.in_(tag_ids))).all()
+            existing_tag_ids = {tag.id for tag in existing_tags}
+            missing_ids = tag_ids - existing_tag_ids
+            if missing_ids:
+                msg = f"タグが見つかりません: {missing_ids}"
+                logger.warning(msg)
+                raise NotFoundError(msg)
+
+            # タグを一括設定
+            term.tags = list(existing_tags)
+        else:
+            # 空セットの場合は全タグをクリア
+            term.tags = []
+
+        self._commit_and_refresh(term)
+        logger.info(f"用語({term_id})のタグを同期しました: {len(tag_ids)}個")
 
         return term
 

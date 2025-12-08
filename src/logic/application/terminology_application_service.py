@@ -300,8 +300,7 @@ class TerminologyApplicationService(BaseApplicationService[type[SqlModelUnitOfWo
         """用語のタグを同期する
 
         既存のタグと指定されたタグを比較し、差分を反映します。
-        - 指定されていない既存タグは削除
-        - 新しく指定されたタグは追加
+        N+1問題を回避するため、バッチ操作を使用します。
 
         Args:
             term_id: 用語のID
@@ -315,23 +314,10 @@ class TerminologyApplicationService(BaseApplicationService[type[SqlModelUnitOfWo
         """
         with self._unit_of_work_factory() as uow:
             term_service = uow.service_factory.get_service(TerminologyService)
-
-            # 現在のタグIDを取得
-            term = term_service.get_by_id(term_id)
-            current_tag_ids = {tag.id for tag in term.tags}
             desired_tag_ids = set(tag_ids)
 
-            # 削除するタグと追加するタグを計算
-            tags_to_remove = current_tag_ids - desired_tag_ids
-            tags_to_add = desired_tag_ids - current_tag_ids
+            # バッチ操作で一括同期（1回のDB操作で完了）
+            term = term_service.sync_tags(term_id, desired_tag_ids)
 
-            # タグを削除
-            for tag_id in tags_to_remove:
-                term = term_service.remove_tag(term_id, tag_id)
-
-            # タグを追加
-            for tag_id in tags_to_add:
-                term = term_service.add_tag(term_id, tag_id)
-
-        logger.info(f"タグ同期完了: 用語ID={term_id}, 追加={len(tags_to_add)}, 削除={len(tags_to_remove)}")
+        logger.info(f"タグ同期完了: 用語ID={term_id}, タグ数={len(desired_tag_ids)}")
         return term

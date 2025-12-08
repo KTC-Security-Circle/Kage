@@ -101,6 +101,9 @@ class TasksController:
         self._on_change = on_change
         self._on_error = on_error
         self._apps = apps
+        # キャッシュ: 現在のキーワードでフィルタされた全タスクを保持
+        self._cached_tasks: list[TaskRead] | None = None
+        self._cached_keyword: str = ""
 
     def _notify_error(self, message: str) -> None:
         """UI 層へエラー通知(存在すれば)。"""
@@ -155,9 +158,31 @@ class TasksController:
         self._update_and_render(self._state.update(sort_key=key, sort_desc=descending))
 
     def refresh(self) -> None:
-        """外部からの再読み込み要求。"""
-        logger.debug("データ再読み込み: 一覧を再描画")
+        """外部からの再読み込み要求。キャッシュを無効化して最新データを取得する。"""
+        logger.debug("データ再読み込み: キャッシュをクリアして一覧を再描画")
+        self._invalidate_cache()
         self._update_and_render(self._state)
+
+    def _invalidate_cache(self) -> None:
+        """キャッシュを無効化する。タスクの作成・更新・削除時に呼び出す。"""
+        self._cached_tasks = None
+        self._cached_keyword = ""
+
+    def _ensure_cache_valid(self) -> None:
+        """キャッシュが有効であることを確認し、無効な場合は更新する。"""
+        keyword = self._state.keyword or ""
+        if self._cached_tasks is None or self._cached_keyword != keyword:
+            try:
+                self._cached_tasks = self._service.search(
+                    self._state.keyword,
+                    with_details=False,
+                    status=None,
+                )
+                self._cached_keyword = keyword
+            except Exception as e:
+                logger.warning(f"タスクキャッシュの更新に失敗しました: {e}")
+                self._cached_tasks = []
+                self._cached_keyword = keyword
 
     def set_selected(self, task_id: str | None) -> None:
         """選択中のタスクIDを更新する。"""
@@ -181,6 +206,8 @@ class TasksController:
             update_data = TaskUpdate(status=status_enum)
             self._service.update(tid, update_data)
             logger.debug("Changed task status id={} -> {}", task_id, new_status)
+            # ステータス変更後はキャッシュを無効化
+            self._invalidate_cache()
         except (ValueError, Exception) as e:
             logger.error(f"Failed to change task status: {e}")
             self._notify_error("タスクのステータス変更に失敗しました。")
@@ -228,7 +255,8 @@ class TasksController:
             )
             logger.info(f"タスク作成完了: {created.title}")
 
-            # 一覧を更新
+            # キャッシュを無効化して一覧を更新
+            self._invalidate_cache()
             self._update_and_render(self._state)
 
         except Exception as e:
@@ -242,37 +270,42 @@ class TasksController:
 
     # --- Query helpers for View ---
     def get_counts(self) -> dict[str, int]:
-        """現在のキーワードフィルタでのステータス別件数を返す。"""
+        """現在のキーワードフィルタでのステータス別件数を返す。
+
+        キャッシュされたタスク一覧から集計するため、追加のDB クエリは発生しない。
+        """
         from models import TaskStatus
 
+        # キャッシュを更新（必要な場合のみ）
+        self._ensure_cache_valid()
+
+        # 安全性チェック: キャッシュがNoneの場合は空リストとして扱う
+        cached_tasks = self._cached_tasks if self._cached_tasks is not None else []
+
+        # キャッシュからステータス別に集計
         counts: dict[str, int] = {}
         for status in STATUS_ORDER:
             try:
                 status_enum = TaskStatus(status) if status else None
-                items = self._service.search(
-                    self._state.keyword,
-                    with_details=False,
-                    status=status_enum,
-                )
-                counts[status] = len(items)
+                if status_enum:
+                    counts[status] = sum(1 for task in cached_tasks if task.status == status_enum)
+                else:
+                    # status が None の場合は全タスク数を返す
+                    counts[status] = len(cached_tasks)
             except Exception:
                 counts[status] = 0
         return counts
-        # TODO: counts は Query 側で集約できるようにするとクエリ回数を削減可能。
-        #       例: get_counts(keyword) -> dict[status, count]
 
     def get_total_count(self) -> int:
-        """現在のキーワードでの総件数。"""
-        try:
-            return len(
-                self._service.search(
-                    self._state.keyword,
-                    with_details=False,
-                    status=None,
-                )
-            )
-        except Exception:
-            return 0
+        """現在のキーワードでの総件数。
+
+        キャッシュされたタスク一覧から件数を返すため、追加のDB クエリは発生しない。
+        """
+        # キャッシュを更新（必要な場合のみ）
+        self._ensure_cache_valid()
+
+        # 安全性チェック: キャッシュがNoneの場合は0を返す
+        return len(self._cached_tasks) if self._cached_tasks is not None else 0
 
     def get_detail(self, task_id: str) -> dict | None:
         """タスクIDから詳細データを取得する。
@@ -301,17 +334,29 @@ class TasksController:
         Args:
             new_state: 新しいUI状態
         """
+        from models import TaskStatus
+
         self._state = new_state
         try:
-            # データ取得
-            from models import TaskStatus
+            # キャッシュの更新判定
+            keyword = new_state.keyword or ""
+            keyword_changed = self._cached_keyword != keyword
 
+            # キーワードが変わった場合のみDBから取得し、キャッシュを更新
+            if keyword_changed or self._cached_tasks is None:
+                self._cached_tasks = self._service.search(
+                    new_state.keyword,
+                    with_details=False,
+                    status=None,
+                )
+                self._cached_keyword = keyword
+
+            # 安全性チェック: キャッシュがNoneの場合は空リストとして扱う
+            cached_tasks = self._cached_tasks if self._cached_tasks is not None else []
+
+            # キャッシュからステータスフィルタを適用
             status_enum = TaskStatus(new_state.status) if new_state.status else None
-            items = self._service.search(
-                new_state.keyword,
-                with_details=False,
-                status=status_enum,
-            )
+            items = [task for task in cached_tasks if task.status == status_enum] if status_enum else cached_tasks
 
             # 辞書化してPresenterへ
             items_dict = [self._task_read_to_dict(item) for item in items]

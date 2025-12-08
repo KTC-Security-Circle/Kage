@@ -5,7 +5,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast
+from uuid import UUID
 
 from loguru import logger
 
@@ -14,21 +15,24 @@ from views.weekly_review.components import MemoAction, PlanTaskData, Recommendat
 from .state import MemoReviewItem, WeeklyReviewState, WeeklyStats, ZombieTaskReviewItem
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from uuid import UUID
-
     from logic.application.memo_application_service import MemoApplicationService
     from logic.application.review_application_service import WeeklyReviewApplicationService
     from logic.application.task_application_service import TaskApplicationService
-    from models import (
-        MemoAuditInsight,
-        MemoRead,
-        TaskRead,
-        WeeklyReviewHighlightsItem,
-        WeeklyReviewInsights,
-        WeeklyReviewMemoAuditPayload,
-        WeeklyReviewZombiePayload,
-        ZombieTaskInsight,
-    )
+from models import (
+    MemoAuditInsight,
+    MemoRead,
+    TaskRead,
+    TaskStatus,
+    TaskUpdate,
+    WeeklyReviewActionResult,
+    WeeklyReviewHighlightsItem,
+    WeeklyReviewInsights,
+    WeeklyReviewMemoAuditPayload,
+    WeeklyReviewSplitTaskInfo,
+    WeeklyReviewTaskDecision,
+    WeeklyReviewZombiePayload,
+    ZombieTaskInsight,
+)
 
 
 class WeeklyReviewController:
@@ -87,6 +91,9 @@ class WeeklyReviewController:
         self.state.zombie_tasks = zombie_entries
         self.state.unprocessed_memos = memo_entries
         self.state.recommendations = self._build_recommendations(zombie_entries, memo_entries)
+        current_zombie_ids = {entry.id for entry in zombie_entries}
+        self.state.clear_completed_zombie_flags(current_zombie_ids)
+        self.state.zombie_task_decisions.clear()
 
         completed_count = len(completed_tasks)
         inbox_count = len(memo_entries)
@@ -283,6 +290,73 @@ class WeeklyReviewController:
         """
         self.state.set_memo_decision(memo_id, action)
         logger.debug(f"メモ決定: {memo_id} -> {action}")
+
+    def execute_task_actions(self) -> WeeklyReviewActionResult:
+        """選択されたゾンビタスクアクションを実行する。"""
+        decisions = self._collect_task_decisions()
+        if not decisions:
+            msg = "アクションが選択されていません"
+            raise ValueError(msg)
+        result = self.review_app_service.apply_actions(decisions)
+        self._store_split_draft_tasks(result.split_tasks)
+        self._mark_zombie_tasks_completed([*result.someday_task_ids, *result.deleted_task_ids])
+        self.state.zombie_task_decisions.clear()
+        return result
+
+    def _collect_task_decisions(self) -> list[WeeklyReviewTaskDecision]:
+        decisions: list[WeeklyReviewTaskDecision] = []
+        action_mapping = {
+            "subdivide": "split",
+            "someday": "someday",
+            "delete": "delete",
+        }
+        for task_id, action in self.state.zombie_task_decisions.items():
+            if not action:
+                continue
+            mapped = action_mapping.get(action)
+            if mapped is None:
+                continue
+            try:
+                parsed_id = UUID(task_id)
+            except ValueError:
+                logger.warning("不正なタスクIDのためアクションをスキップしました: %s", task_id)
+                continue
+            literal_action = cast("Literal['split', 'someday', 'delete']", mapped)
+            decisions.append(WeeklyReviewTaskDecision(task_id=parsed_id, action=literal_action))
+        return decisions
+
+    def _store_split_draft_tasks(self, split_tasks: list[WeeklyReviewSplitTaskInfo]) -> None:
+        if not split_tasks:
+            return
+        for info in split_tasks:
+            child = self._safe_get_task(info.task_id)
+            parent = self._safe_get_task(info.parent_task_id)
+            if child is None or parent is None:
+                continue
+            self.state.add_split_draft_tasks(str(parent.id), parent.title, [child])
+
+    def _mark_zombie_tasks_completed(self, task_ids: list[UUID]) -> None:
+        if not task_ids:
+            return
+        for task_id in task_ids:
+            self.state.mark_zombie_task_completed(str(task_id))
+
+    def approve_split_task(self, task_id: str) -> TaskRead:
+        parsed_id = UUID(task_id)
+        updated = self.task_app_service.update(parsed_id, TaskUpdate(status=TaskStatus.TODO))
+        parent_id = self.state.remove_split_draft_task(task_id)
+        if parent_id and not self.state.get_split_drafts(parent_id):
+            self.state.mark_zombie_task_completed(parent_id)
+        return updated
+
+    def discard_split_task(self, task_id: str) -> bool:
+        parsed_id = UUID(task_id)
+        success = self.task_app_service.delete(parsed_id)
+        if success:
+            parent_id = self.state.remove_split_draft_task(task_id)
+            if parent_id and not self.state.get_split_drafts(parent_id):
+                self.state.mark_zombie_task_completed(parent_id)
+        return success
 
     def get_tasks_by_status(self, status: str) -> list:
         """指定ステータスのタスクを取得

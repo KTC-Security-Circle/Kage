@@ -30,6 +30,7 @@ from .components import (
     MemoAction,
     RecommendationCard,
     RecommendationCardProps,
+    RecommendationData,
     StepIndicator,
     StepIndicatorProps,
     UnprocessedMemoCard,
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from logic.application.memo_application_service import MemoApplicationService
     from logic.application.review_application_service import WeeklyReviewApplicationService
     from logic.application.task_application_service import TaskApplicationService
+    from models import TaskRead
 
 # View step constants
 STEP_ACHIEVEMENT = 1
@@ -89,6 +91,7 @@ class WeeklyReviewView(BaseView):
         # UIコンポーネント
         self.step_indicator: StepIndicator | None = None
         self.wizard_navigation: WizardNavigation | None = None
+        self.cleanup_action_button: ft.FilledButton | None = None
         self.step_content_container: ft.Container | None = None
         self.body_container: ft.Container | None = None
 
@@ -241,6 +244,7 @@ class WeeklyReviewView(BaseView):
                 on_next=self._handle_next_step,
             )
         )
+        action_panel = self._build_cleanup_action_panel()
 
         return ft.Column(
             controls=[
@@ -251,9 +255,24 @@ class WeeklyReviewView(BaseView):
                 ft.Container(height=8),
                 ft.Divider(),
                 self.wizard_navigation,
+                action_panel,
             ],
             spacing=0,
             expand=True,
+        )
+
+    def _build_cleanup_action_panel(self) -> ft.Control:
+        button = ft.FilledButton(
+            text="選択したアクションを実行",
+            icon=ft.Icons.PLAY_ARROW,
+            on_click=self._handle_execute_actions,
+            disabled=not self.review_state.has_pending_task_actions(),
+            visible=self.review_state.current_step == STEP_CLEANUP,
+        )
+        self.cleanup_action_button = button
+        return ft.Container(
+            content=ft.Row(controls=[button], alignment=ft.MainAxisAlignment.CENTER),
+            padding=ft.padding.symmetric(vertical=8),
         )
 
     def _render_current_step(self) -> ft.Control:
@@ -402,8 +421,9 @@ class WeeklyReviewView(BaseView):
         controls: list[ft.Control] = [header_container, ft.Container(height=24)]
 
         total_items = len(self.review_state.zombie_tasks) + len(self.review_state.unprocessed_memos)
+        has_split_drafts = any(self.review_state.split_draft_tasks.values())
 
-        if total_items == 0:
+        if total_items == 0 and not has_split_drafts:
             # 整理項目なし
             empty_card = EmptyStateCard(
                 props=EmptyStateCardProps(
@@ -415,8 +435,10 @@ class WeeklyReviewView(BaseView):
             )
             controls.append(empty_card)
         else:
+            zombie_ids: set[str] = set()
             # ゾンビタスクセクション
             if self.review_state.zombie_tasks:
+                zombie_ids = {task.id for task in self.review_state.zombie_tasks}
                 zombie_header = ft.Row(
                     controls=[
                         ft.Icon(
@@ -442,6 +464,7 @@ class WeeklyReviewView(BaseView):
                         title=task.title,
                         reason=reason_text,
                         selected_action=self.review_state.get_zombie_task_decision(task.id),
+                        completed=self.review_state.is_zombie_task_completed(task.id),
                     )
                     zombie_card = ZombieTaskCard(
                         props=ZombieTaskCardProps(
@@ -450,6 +473,9 @@ class WeeklyReviewView(BaseView):
                         )
                     )
                     controls.append(zombie_card)
+                    drafts = self.review_state.get_split_drafts(task.id)
+                    if drafts:
+                        controls.append(self._build_split_draft_group(task.id, drafts))
                     controls.append(ft.Container(height=12))
 
             # 未処理メモセクション
@@ -493,11 +519,99 @@ class WeeklyReviewView(BaseView):
                     controls.append(memo_card)
                     controls.append(ft.Container(height=12))
 
+            self._append_orphan_split_groups(zombie_ids, controls)
+
         return ft.Column(
             controls=controls,
             spacing=16,
             scroll=ft.ScrollMode.AUTO,
         )
+
+    def _build_split_draft_group(self, parent_task_id: str, drafts: list[TaskRead]) -> ft.Control:
+        parent_title = self.review_state.get_split_parent_title(parent_task_id) or "細分化結果"
+        header = ft.Row(
+            controls=[
+                ft.Icon(name=ft.Icons.TASK_ALT, color=ft.Colors.BLUE_600, size=18),
+                ft.Text(f"{parent_title} のサブタスク", size=16, weight=ft.FontWeight.W_500),
+            ],
+            spacing=6,
+        )
+        description = ft.Text(
+            "AIが提案したドラフトです。承認するとTODOに移動します。",
+            size=12,
+            color=ft.Colors.GREY_700,
+        )
+        cards = [header, description, ft.Container(height=4)]
+        cards.extend(self._build_split_draft_card(task, parent_task_id) for task in drafts)
+        return ft.Container(
+            content=ft.Column(controls=cards, spacing=8),
+            padding=ft.padding.all(12),
+            bgcolor=ft.Colors.BLUE_50,
+            border_radius=8,
+        )
+
+    def _build_split_draft_card(self, task: TaskRead, parent_task_id: str) -> ft.Control:
+        description = task.description or "AI が提案したサブタスク"
+        parent_title = self.review_state.get_split_parent_title(parent_task_id) or "親タスク"
+        status_chip = ft.Chip(
+            label=ft.Text("Draft", color=ft.Colors.WHITE, size=12),
+            bgcolor=ft.Colors.DEEP_ORANGE_400,
+            padding=ft.padding.symmetric(horizontal=8, vertical=0),
+        )
+        approve_button = ft.FilledButton(
+            text="承認",
+            icon=ft.Icons.CHECK,
+            on_click=lambda _: self._handle_approve_split_task(str(task.id)),
+        )
+        discard_button = ft.OutlinedButton(
+            text="破棄",
+            icon=ft.Icons.DELETE_OUTLINE,
+            on_click=lambda _: self._handle_discard_split_task(str(task.id)),
+        )
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Text(task.title or "サブタスク", size=16, weight=ft.FontWeight.W_600),
+                        ft.Row(
+                            controls=[
+                                status_chip,
+                                ft.Text(f"親: {parent_title}", size=12, color=ft.Colors.GREY_600, expand=True),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        ft.Text(description, size=14, color=ft.Colors.GREY_700),
+                        ft.Row(
+                            controls=[approve_button, discard_button],
+                            spacing=12,
+                        ),
+                    ],
+                    spacing=12,
+                ),
+                padding=ft.padding.all(16),
+            ),
+            elevation=2,
+        )
+
+    def _append_orphan_split_groups(self, zombie_ids: set[str], controls: list[ft.Control]) -> None:
+        orphan_parent_ids = [pid for pid in self.review_state.split_draft_tasks if pid not in zombie_ids]
+        if not orphan_parent_ids:
+            return
+        info_header = ft.Row(
+            controls=[
+                ft.Icon(name=ft.Icons.TASK_ALT, color=ft.Colors.BLUE_600, size=18),
+                ft.Text("承認待ちのサブタスク (親タスクカード外)", size=15, weight=ft.FontWeight.W_500),
+            ],
+            spacing=8,
+        )
+        controls.append(info_header)
+        controls.append(ft.Container(height=8))
+        for parent_id in orphan_parent_ids:
+            drafts = self.review_state.get_split_drafts(parent_id)
+            if not drafts:
+                continue
+            controls.append(self._build_split_draft_group(parent_id, drafts))
+            controls.append(ft.Container(height=12))
 
     def _render_step3_planning(self) -> ft.Control:
         """Step3: 来週の計画をレンダリング
@@ -515,7 +629,8 @@ class WeeklyReviewView(BaseView):
 
         controls: list[ft.Control] = [header_container, ft.Container(height=24)]
 
-        if not self.review_state.recommendations:
+        active_recommendations = self._get_active_recommendations()
+        if not active_recommendations:
             # 推奨事項なし
             empty_card = EmptyStateCard(
                 props=EmptyStateCardProps(
@@ -528,7 +643,7 @@ class WeeklyReviewView(BaseView):
             controls.append(empty_card)
         else:
             # 推奨事項カード
-            for recommendation in self.review_state.recommendations:
+            for recommendation in active_recommendations:
                 rec_card = RecommendationCard(
                     props=RecommendationCardProps(
                         recommendation=recommendation,
@@ -554,6 +669,27 @@ class WeeklyReviewView(BaseView):
             spacing=16,
             scroll=ft.ScrollMode.AUTO,
         )
+
+    def _get_active_recommendations(self) -> list[RecommendationData]:
+        if not self.review_state.recommendations:
+            return []
+        completed_ids = self.review_state.completed_zombie_task_ids
+        filtered: list[RecommendationData] = []
+        for recommendation in self.review_state.recommendations:
+            visible_tasks = [task for task in recommendation.tasks if task.task_id not in completed_ids]
+            removed_count = len(recommendation.tasks) - len(visible_tasks)
+            updated_count = max(recommendation.count - removed_count, 0)
+            if updated_count == 0 and not visible_tasks:
+                continue
+            filtered.append(
+                RecommendationData(
+                    title=recommendation.title,
+                    count=updated_count,
+                    description=recommendation.description,
+                    tasks=visible_tasks,
+                )
+            )
+        return filtered
 
     def _handle_start_button(self, _: ft.ControlEvent) -> None:
         """スタートボタン押下時の処理。"""
@@ -616,6 +752,7 @@ class WeeklyReviewView(BaseView):
         try:
             self.controller.set_zombie_task_decision(task_id, action)
             logger.info(f"ゾンビタスクアクション選択: {task_id} -> {action}")
+            self._refresh_action_button()
         except Exception as e:
             logger.exception("ゾンビタスクアクション選択に失敗")
             self.notify_error(f"エラーが発生しました: {type(e).__name__}")
@@ -633,6 +770,54 @@ class WeeklyReviewView(BaseView):
         except Exception as e:
             logger.exception("メモアクション選択に失敗")
             self.notify_error(f"エラーが発生しました: {type(e).__name__}")
+
+    def _handle_approve_split_task(self, task_id: str) -> None:
+        try:
+            self.controller.approve_split_task(task_id)
+            self.show_success_snackbar("サブタスクを承認しました")
+            self._refresh_wizard()
+        except Exception as exc:  # pragma: no cover - UI操作ログ
+            logger.exception("サブタスク承認に失敗")
+            self.notify_error("承認に失敗しました", details=f"{type(exc).__name__}: {exc}")
+
+    def _handle_discard_split_task(self, task_id: str) -> None:
+        try:
+            success = self.controller.discard_split_task(task_id)
+            if not success:
+                self.notify_error("サブタスクの削除に失敗しました")
+                return
+            self.show_info_snackbar("サブタスクを破棄しました")
+            self._refresh_wizard()
+        except Exception as exc:  # pragma: no cover - UI操作ログ
+            logger.exception("サブタスク破棄に失敗")
+            self.notify_error("サブタスクの破棄に失敗しました", details=f"{type(exc).__name__}: {exc}")
+
+    def _handle_execute_actions(self, _: ft.ControlEvent) -> None:
+        """Step2で選択したアクションをまとめて実行する。"""
+        if self.review_state.current_step != STEP_CLEANUP:
+            return
+        if not self.review_state.has_pending_task_actions():
+            self.show_info_snackbar("実行する項目を選択してください")
+            return
+
+        def _run() -> None:
+            result = self.controller.execute_task_actions()
+            self.controller.load_initial_data()
+            self._refresh_wizard()
+            message = result.message or "選択したアクションを実行しました"
+            self.show_info_snackbar(message)
+            if result.errors:
+                details = "\n".join(result.errors)
+                self.notify_error("一部のアクションで失敗しました", details=details)
+
+        def _wrapped() -> None:
+            try:
+                self._set_action_button_enabled(enabled=False)
+                _run()
+            finally:
+                self._set_action_button_enabled(enabled=True)
+
+        self.with_loading(_wrapped, user_error_message="週次レビューアクションの実行に失敗しました")
 
     def _handle_task_click(self, task_id: str) -> None:
         """タスククリック処理
@@ -681,9 +866,30 @@ class WeeklyReviewView(BaseView):
                 )
             )
 
+        self._refresh_action_button()
+
         # ページ更新
         if self.page:
             self.page.update()
+
+    def _refresh_action_button(self) -> None:
+        if not self.cleanup_action_button:
+            return
+        self.cleanup_action_button.visible = self.review_state.current_step == STEP_CLEANUP
+        self.cleanup_action_button.disabled = not self.review_state.has_pending_task_actions()
+        try:
+            self.cleanup_action_button.update()
+        except AssertionError:
+            logger.debug("実行ボタンが未マウントのため update をスキップ")
+
+    def _set_action_button_enabled(self, *, enabled: bool) -> None:
+        if not self.cleanup_action_button:
+            return
+        self.cleanup_action_button.disabled = not enabled
+        try:
+            self.cleanup_action_button.update()
+        except AssertionError:
+            logger.debug("実行ボタンが未マウントのため update をスキップ")
 
     def did_mount(self) -> None:
         """マウント時の初期化"""

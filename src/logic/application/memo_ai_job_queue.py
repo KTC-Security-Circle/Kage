@@ -12,6 +12,8 @@ from uuid import UUID, uuid4
 
 from loguru import logger
 
+from models import ProjectStatus
+
 if TYPE_CHECKING:  # pragma: no cover - 型チェック用
     from collections.abc import Callable
 
@@ -40,7 +42,19 @@ class GeneratedTaskPayload:
     route: str | None
     due_date: str | None
     project_title: str | None
+    project_id: UUID | None
     status: TaskStatus
+
+
+@dataclass(slots=True)
+class GeneratedProjectPayload:
+    """AI生成ジョブで検出されたプロジェクト情報。"""
+
+    project_id: UUID | None
+    title: str
+    description: str | None
+    status: str | None
+    error: str | None = None
 
 
 @dataclass(slots=True)
@@ -52,6 +66,7 @@ class MemoAiJobSnapshot:
     status: MemoAiJobStatus
     tasks: tuple[GeneratedTaskPayload, ...] = field(default_factory=tuple)
     suggested_memo_status: str | None = None
+    project: GeneratedProjectPayload | None = None
     error_message: str | None = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -63,6 +78,7 @@ class _MemoAiJobRecord:
     status: MemoAiJobStatus = MemoAiJobStatus.QUEUED
     tasks: list[GeneratedTaskPayload] = field(default_factory=list)
     suggested_memo_status: str | None = None
+    project: GeneratedProjectPayload | None = None
     error_message: str | None = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     callback: Callable[[MemoAiJobSnapshot], None] | None = None
@@ -74,6 +90,7 @@ class _MemoAiJobRecord:
             status=self.status,
             tasks=tuple(self.tasks),
             suggested_memo_status=self.suggested_memo_status,
+            project=self.project,
             error_message=self.error_message,
             updated_at=self.updated_at,
         )
@@ -220,7 +237,10 @@ class MemoAiJobQueue:
         try:
             logger.debug(f"MemoAIジョブ処理開始: job_id={record.job_id} memo_id={record.memo.id}")
             output = self._run_agent(record.memo)
-            record.tasks = self._create_draft_tasks(record.memo, output.tasks)
+            project_payload = self._create_project_if_required(record.memo, output)
+            record.project = project_payload
+            project_id = project_payload.project_id if project_payload else None
+            record.tasks = self._create_draft_tasks(record.memo, output.tasks, project_id)
             record.suggested_memo_status = output.suggested_memo_status
             self._update_status(record, MemoAiJobStatus.SUCCEEDED)
             logger.debug(
@@ -245,7 +265,9 @@ class MemoAiJobQueue:
         service = self._apps.get_service(MemoToTaskApplicationService)
         return service.clarify_memo(memo)
 
-    def _create_draft_tasks(self, memo: MemoRead, drafts: list[TaskDraft]) -> list[GeneratedTaskPayload]:
+    def _create_draft_tasks(
+        self, memo: MemoRead, drafts: list[TaskDraft], project_id: UUID | None
+    ) -> list[GeneratedTaskPayload]:
         from logic.application.task_application_service import TaskApplicationService
         from models import TaskStatus
 
@@ -258,6 +280,7 @@ class MemoAiJobQueue:
                 description=draft.description or "",
                 status=TaskStatus.DRAFT,
                 memo_id=memo.id,
+                project_id=project_id,
                 due_date=due_date_value,
             )
             payloads.append(
@@ -269,6 +292,7 @@ class MemoAiJobQueue:
                     route=draft.route,
                     due_date=draft.due_date,
                     project_title=draft.project_title,
+                    project_id=created_task.project_id,
                     status=created_task.status,
                 )
             )
@@ -293,6 +317,65 @@ class MemoAiJobQueue:
             record.status = status
             record.updated_at = datetime.now(UTC)
 
+    def _create_project_if_required(
+        self, memo: MemoRead, output: MemoToTaskAgentOutput
+    ) -> GeneratedProjectPayload | None:
+        if not getattr(output, "requires_project", False):
+            return None
+
+        project_title = self._resolve_project_title(memo, output)
+        description = self._build_project_description(memo)
+        from logic.application.project_application_service import ProjectApplicationService
+
+        payload = GeneratedProjectPayload(
+            project_id=None,
+            title=project_title,
+            description=description,
+            status=ProjectStatus.DRAFT.value,
+        )
+        try:
+            project_service = self._apps.get_service(ProjectApplicationService)
+            created = project_service.create(
+                title=project_title,
+                description=description,
+                status=ProjectStatus.DRAFT,
+            )
+            payload.project_id = created.id
+            status_value = getattr(created, "status", None)
+            if isinstance(status_value, ProjectStatus):
+                payload.status = status_value.value
+            elif status_value is not None:
+                payload.status = str(status_value)
+        except Exception as exc:
+            payload.error = str(exc)
+            logger.exception(
+                "プロジェクト作成に失敗しました: memo_id=%s title=%s error=%s",
+                getattr(memo, "id", None),
+                project_title,
+                exc,
+            )
+        return payload
+
+    @staticmethod
+    def _resolve_project_title(memo: MemoRead, output: MemoToTaskAgentOutput) -> str:
+        plan = getattr(output, "project_plan", None)
+        if plan and getattr(plan, "project_title", None):
+            return str(plan.project_title)
+        memo_title = getattr(memo, "title", "") or ""
+        memo_title = memo_title.strip()
+        if memo_title:
+            return memo_title
+        return "AI生成プロジェクト"
+
+    @staticmethod
+    def _build_project_description(memo: MemoRead) -> str:
+        content = str(getattr(memo, "content", "") or "").strip()
+        if not content:
+            return "MemoToTaskAgent によって自動生成されたプロジェクトです。"
+        normalized_lines = [line.strip() for line in content.splitlines() if line.strip()]
+        summary = " ".join(normalized_lines) or content
+        return summary[:400]
+
 
 _queue_instance: MemoAiJobQueue | None = None
 _queue_lock = Lock()
@@ -312,6 +395,7 @@ def get_memo_ai_job_queue() -> MemoAiJobQueue:
 
 __all__ = [
     "GeneratedTaskPayload",
+    "GeneratedProjectPayload",
     "MemoAiJobQueue",
     "MemoAiJobSnapshot",
     "MemoAiJobStatus",

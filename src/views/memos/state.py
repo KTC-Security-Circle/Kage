@@ -67,6 +67,7 @@ class AiSuggestedTask:
     due_date: datetime | None = None
     route: str | None = None
     status: TaskStatus | None = None
+    project_id: str | None = None
 
 
 @dataclass(slots=True)
@@ -81,6 +82,11 @@ class MemoAiFlowState:
     job_id: UUID | None = None
     job_status: str | None = None
     error_message: str | None = None
+    project_id: str | None = None
+    project_title: str | None = None
+    project_description: str | None = None
+    project_status: str | None = None
+    project_error: str | None = None
 
 
 @dataclass(slots=True)
@@ -233,6 +239,30 @@ class MemosViewState:
         if state.editing_task_id and state.editing_task_id not in state.selected_task_ids:
             state.editing_task_id = None
 
+    def set_project_info(self, memo_id: UUID, info: dict[str, object] | None) -> None:
+        """AI提案に紐づくプロジェクト情報を設定する。"""
+        state = self.ai_flow_state_for(memo_id)
+        if not info:
+            state.project_id = None
+            state.project_title = None
+            state.project_description = None
+            state.project_status = None
+            state.project_error = None
+            return
+        project_id = info.get("project_id")
+        state.project_id = self._normalize_optional_text(project_id)
+        state.project_title = self._normalize_optional_text(info.get("title"))
+        state.project_description = self._normalize_optional_text(info.get("description"))
+        state.project_status = self._normalize_optional_text(info.get("status"))
+        state.project_error = self._normalize_optional_text(info.get("error"))
+
+    @staticmethod
+    def _normalize_optional_text(value: object | None) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
     def toggle_task_selection(self, memo_id: UUID, task_id: str) -> None:
         """タスクの選択状態をトグルする。"""
         state = self.ai_flow_state_for(memo_id)
@@ -267,13 +297,18 @@ class MemosViewState:
             self._restore_ai_flow_from_memo(memo)
 
     def _restore_ai_flow_from_memo(self, memo: MemoRead) -> None:
-        tasks = self._parse_ai_analysis_log(memo)
+        tasks, project_info = self._parse_ai_analysis_log(memo)
         if not tasks:
             state = self._ai_flow.pop(memo.id, None)
             if state is not None:
                 state.generated_tasks.clear()
                 state.selected_task_ids.clear()
                 state.editing_task_id = None
+                state.project_id = None
+                state.project_title = None
+                state.project_description = None
+                state.project_status = None
+                state.project_error = None
             return
 
         state = self.ai_flow_state_for(memo.id)
@@ -286,16 +321,17 @@ class MemosViewState:
             state.status_override = memo.ai_suggestion_status
         else:
             state.status_override = None
+        self.set_project_info(memo.id, project_info)
 
-    def _parse_ai_analysis_log(self, memo: MemoRead) -> list[AiSuggestedTask]:
+    def _parse_ai_analysis_log(self, memo: MemoRead) -> tuple[list[AiSuggestedTask], dict[str, object] | None]:
         log = getattr(memo, "ai_analysis_log", None)
         if not log:
-            return []
+            return [], None
         try:
             data = json.loads(log)
         except json.JSONDecodeError:
             logger.warning("Failed to decode ai_analysis_log: %s", log)
-            return []
+            return [], None
 
         refs = data.get("draft_task_refs")
         if isinstance(refs, list) and getattr(memo, "tasks", None):
@@ -322,11 +358,13 @@ class MemosViewState:
                         due_date=due_value,
                         route=str(meta.get("route")) if meta.get("route") else None,
                         status=getattr(task, "status", None),
+                        project_id=self._normalize_optional_text(meta.get("project_id")),
                     )
                 )
             if parsed:
-                return parsed
-        return self._parse_legacy_tasks(data)
+                return parsed, self._normalize_project_info(data.get("project_info"))
+        legacy_tasks = self._parse_legacy_tasks(data)
+        return legacy_tasks, self._normalize_project_info(data.get("project_info"))
 
     def _parse_legacy_tasks(self, data: dict[str, object]) -> list[AiSuggestedTask]:
         tasks_data = data.get("tasks")
@@ -351,6 +389,22 @@ class MemosViewState:
                 )
             )
         return parsed
+
+    def _normalize_project_info(self, raw: object | None) -> dict[str, object] | None:
+        if not isinstance(raw, dict):
+            return None
+        info: dict[str, object] = {}
+        if "project_id" in raw:
+            info["project_id"] = raw.get("project_id")
+        if "title" in raw:
+            info["title"] = raw.get("title")
+        if "description" in raw:
+            info["description"] = raw.get("description")
+        if "status" in raw:
+            info["status"] = raw.get("status")
+        if "error" in raw:
+            info["error"] = raw.get("error")
+        return info if info else None
 
     @staticmethod
     def _parse_due_date(value: str | None) -> datetime | None:

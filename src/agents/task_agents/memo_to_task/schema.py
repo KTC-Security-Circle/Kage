@@ -54,6 +54,14 @@ class MemoToTaskAgentOutput(BaseModel):
     suggested_memo_status: MemoStatusSuggestion = Field(
         description="Clarify結果に基づくメモステータス提案。",
     )
+    requires_project: bool = Field(
+        default=False,
+        description="プロジェクト作成が必要な場合に True。",
+    )
+    project_plan: ProjectPlanSuggestion | None = Field(
+        default=None,
+        description="project 判定時の初期プラン。",
+    )
 
 
 class MemoClassification(BaseModel):

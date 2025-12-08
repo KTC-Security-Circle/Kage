@@ -204,6 +204,11 @@ class MemosView(BaseView):
             selected_task_ids=set(ai_state.selected_task_ids),
             editing_task_id=ai_state.editing_task_id,
             error_message=ai_state.error_message,
+            project_id=ai_state.project_id,
+            project_title=ai_state.project_title,
+            project_description=ai_state.project_description,
+            project_status=ai_state.project_status,
+            project_error=ai_state.project_error,
             on_request_ai=lambda _e, target=memo: self._handle_request_ai_generation(target),
             on_retry_ai=lambda _e, memo_id=memo.id: self._handle_retry_ai_generation(memo_id),
             on_mark_as_idea=lambda _e, memo_id=memo.id: self._handle_mark_memo_as_idea(memo_id),
@@ -217,6 +222,7 @@ class MemosView(BaseView):
             on_delete_task=lambda task_id, memo_id=memo.id: self._handle_delete_ai_task(memo_id, task_id),
             on_add_task=lambda _=None, memo_id=memo.id: self._handle_add_ai_task(memo_id),
             on_approve_tasks=lambda _=None, target=memo: self._handle_approve_ai_tasks(target),
+            on_open_project=self._handle_open_project if ai_state.project_id else None,
         )
 
     def _get_tab_counts(self) -> dict[MemoStatus, int]:
@@ -357,6 +363,7 @@ class MemosView(BaseView):
             ai_state.generated_tasks.clear()
             ai_state.selected_task_ids.clear()
             ai_state.editing_task_id = None
+            self.memos_state.set_project_info(memo.id, None)
             self._refresh()
             logger.debug(f"Polling scheduled for job_id={snapshot.job_id} memo_id={memo.id}")
             self._start_ai_job_polling(snapshot.job_id, memo.id)
@@ -490,6 +497,19 @@ class MemosView(BaseView):
         self.show_success_snackbar("タスクを承認し、メモをアーカイブしました")
         self._refresh()
 
+    def _handle_open_project(self, project_id: str | None) -> None:
+        """生成済みプロジェクトを ProjectsView で開く。"""
+        if not project_id:
+            self.notify_error("プロジェクトIDが無効です")
+            return
+        try:
+            self.page.client_storage.set("pending_project_id", project_id)
+            self.page.go("/projects")
+            logger.info(f"プロジェクト画面へ遷移: project_id={project_id}")
+        except Exception as exc:
+            logger.error(f"プロジェクト画面への遷移に失敗: {exc}", exc_info=True)
+            self.notify_error("プロジェクト画面への遷移に失敗しました", details=str(exc))
+
     def _start_ai_job_polling(self, job_id: UUID, memo_id: UUID) -> None:
         async def _poll() -> None:
             while True:
@@ -523,6 +543,16 @@ class MemosView(BaseView):
 
     def _process_ai_job_snapshot(self, memo_id: UUID, snapshot: MemoAiJobSnapshot) -> None:
         self.memos_state.update_job_status(memo_id, status=snapshot.status.value, error=snapshot.error_message)
+        project_info: dict[str, object] | None = None
+        if snapshot.project is not None:
+            project_info = {
+                "project_id": str(snapshot.project.project_id) if snapshot.project.project_id else None,
+                "title": snapshot.project.title,
+                "description": snapshot.project.description,
+                "status": snapshot.project.status,
+                "error": snapshot.project.error,
+            }
+        self.memos_state.set_project_info(memo_id, project_info)
         if snapshot.status == MemoAiJobStatus.SUCCEEDED:
             tasks = [self._convert_payload_to_ai_task(payload) for payload in snapshot.tasks]
             self.memos_state.set_generated_tasks(memo_id, tasks)
@@ -555,6 +585,7 @@ class MemosView(BaseView):
             due_date=due,
             route=payload.route,
             status=payload.status,
+            project_id=str(payload.project_id) if payload.project_id else None,
         )
 
     def _get_memo_by_id(self, memo_id: UUID) -> MemoRead | None:

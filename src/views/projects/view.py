@@ -63,6 +63,7 @@ class ProjectsView(BaseView):
             on_detail_change=self._render_detail,
             # BaseView.show_error_snackbar は (page, message) 署名のためアダプタで統一
             on_error=lambda msg: self.show_error_snackbar(self.page, msg),
+            apps=self.apps,
         )
 
         # UI コンポーネント
@@ -114,33 +115,18 @@ class ProjectsView(BaseView):
         # 詳細パネル用のコンテナを保持
         self._detail_container = ft.Container(
             content=self._detail_panel,
-            col={"xs": 12, "lg": 7},
         )
 
         # 2カラムレイアウト
-        layout = ft.Container(
-            content=ft.Column(
-                controls=[
-                    header,
-                    self._status_tabs,
-                    ft.Divider(),
-                    ft.ResponsiveRow(
-                        controls=[
-                            ft.Container(
-                                content=self._project_list,
-                                col={"xs": 12, "lg": 5},
-                                padding=ft.padding.only(right=12),
-                            ),
-                            self._detail_container,
-                        ],
-                        expand=True,
-                    ),
-                ],
-                spacing=16,
-                expand=True,
-            ),
-            padding=24,
-            expand=True,
+        two_column = self.create_two_column_layout(
+            left_content=self._project_list,
+            right_content=self._detail_container,
+        )
+
+        layout = self.create_standard_layout(
+            header=header,
+            status_tabs=self._status_tabs,
+            content=two_column,
         )
 
         # UIコンポーネントが構築された後に初期データを読み込む
@@ -171,6 +157,43 @@ class ProjectsView(BaseView):
         if self._status_tabs:
             self._status_tabs.update_counts(self._safe_get_counts())
 
+        # 一時保存されたプロジェクトIDを取得して選択（初回のみ）
+        if not hasattr(self, "_pending_handled"):
+            self._handle_pending_project()
+            self._pending_handled = True
+
+    def _handle_pending_project(self) -> None:
+        """一時保存されたプロジェクトIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            project_id = self.page.client_storage.get("pending_project_id")
+            if project_id:
+                logger.info(f"一時保存されたプロジェクトIDを検出: {project_id}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_project_id")
+                # プロジェクトを選択
+                self._controller.select_project(project_id)
+                logger.debug(f"プロジェクトを選択しました: {project_id}")
+        except Exception as e:
+            logger.warning(f"一時保存プロジェクトIDの処理に失敗: {e}")
+
+    def _on_task_clicked(self, task_id: str) -> None:
+        """タスク詳細画面へ遷移する。
+
+        Args:
+            task_id: タスクID
+        """
+        logger.info(f"タスク画面への遷移を開始: task_id={task_id}")
+        try:
+            # タスクIDをページのクライアントストレージに一時保存
+            self.page.client_storage.set("pending_task_id", task_id)
+            # タスク画面に遷移
+            self.page.go("/tasks")
+            logger.debug(f"タスク画面への遷移が完了: /tasks (pending_task_id={task_id})")
+        except Exception as e:
+            logger.error(f"タスク画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
+
     def _render_detail(self, project: ProjectDetailVM | None) -> None:
         """プロジェクト詳細を描画する。
 
@@ -190,6 +213,7 @@ class ProjectsView(BaseView):
                 project=project,
                 on_edit=self._open_edit_dialog,
                 on_delete=self._confirm_delete,
+                on_task_select=self._on_task_clicked,
             )
 
         # コンテナの内容を更新
@@ -206,6 +230,7 @@ class ProjectsView(BaseView):
     # ------------------------------------------------------------------
     def _open_edit_dialog(self, vm: ProjectDetailVM) -> None:
         """編集ダイアログを開いて保存時に更新処理を呼び出す。"""
+        logger.debug(f"編集ダイアログを開きます: project_id={vm.id}, title={vm.title}")
         # VMのステータスを内部コードへ逆変換
         try:
             status_code = ProjectStatus.parse(vm.status).value
@@ -221,6 +246,7 @@ class ProjectsView(BaseView):
             "tasks_count": str(vm.task_count),
             "completed_tasks": str(vm.completed_count),
         }
+        logger.debug(f"プロジェクト辞書作成完了: {project_dict}")
 
         def _on_save(updated: dict[str, str]) -> None:
             changes = {
@@ -229,10 +255,27 @@ class ProjectsView(BaseView):
                 "status": updated.get("status", ""),
                 "due_date": updated.get("due_date"),
             }
+            # task_idsが含まれていればタスクのproject_idを更新
+            if "task_ids" in updated:
+                task_ids_value = updated["task_ids"]
+                logger.debug(f"プロジェクト編集: task_ids={task_ids_value}, type={type(task_ids_value)}")
+                if isinstance(task_ids_value, list):
+                    logger.debug(f"タスクをプロジェクトに更新: project_id={vm.id}, task_ids={task_ids_value}")
+                    self._controller.update_project_tasks(vm.id, task_ids_value)
+            else:
+                logger.debug("プロジェクト編集: task_idsは含まれていません")
             self.with_loading(lambda: self._controller.update_project(vm.id, changes))
             self.show_success_snackbar("プロジェクトを更新しました")
 
-        show_edit_project_dialog(self.page, project_dict, on_save=_on_save)
+        # 利用可能なタスクを取得
+        available_tasks = self._get_available_tasks()
+        logger.debug(f"利用可能なタスク数: {len(available_tasks)}")
+        try:
+            show_edit_project_dialog(self.page, project_dict, on_save=_on_save, available_tasks=available_tasks)
+            logger.debug("編集ダイアログ表示完了")
+        except Exception as e:
+            logger.exception(f"編集ダイアログ表示エラー: {e}")
+            self.notify_error(f"ダイアログの表示に失敗しました: {e}")
 
     def _confirm_delete(self, vm: ProjectDetailVM) -> None:
         """削除確認を表示し、確定時に削除処理を実行する。"""
@@ -303,6 +346,29 @@ class ProjectsView(BaseView):
                 ProjectStatus.CANCELLED: 0,
             }
 
+    def _get_available_tasks(self) -> list[dict[str, str | None]]:
+        """利用可能なタスクを取得する
+
+        Returns:
+            タスクのリスト（id, title, project_idを含む辞書）
+        """
+        try:
+            from logic.application.task_application_service import TaskApplicationService
+
+            task_service = self.apps.get_service(TaskApplicationService)
+            tasks = task_service.get_all_tasks()
+            return [
+                {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "project_id": str(task.project_id) if task.project_id else None,
+                }
+                for task in tasks
+            ]
+        except Exception as e:
+            logger.warning(f"タスクの取得に失敗しました: {e}")
+            return []
+
     def _handle_create_click(self) -> None:
         """Header作成ボタンのクリック処理。"""
         self._create_project()
@@ -347,8 +413,23 @@ class ProjectsView(BaseView):
                 "task_count": "0",
                 "completed_count": "0",
             }
+            # task_idsが含まれていればタスクのproject_idを設定
+            task_ids = data.get("task_ids", [])
+            logger.debug(f"プロジェクト作成: task_ids={task_ids}, type={type(task_ids)}")
             # 作成処理もローディング表示で包み、更新/削除と挙動を統一
-            self.with_loading(lambda: self._controller.create_project(new_project, select=True))
+            project_id = self.with_loading(lambda: self._controller.create_project(new_project, select=True))
+            logger.debug(f"プロジェクト作成完了: project_id={project_id}")
+            # タスクをプロジェクトに割り当て
+            if task_ids and project_id and isinstance(task_ids, list) and isinstance(project_id, str):
+                logger.debug(f"タスクをプロジェクトに割り当て: project_id={project_id}, task_ids={task_ids}")
+                self._controller.update_project_tasks(project_id, task_ids)
+            else:
+                logger.debug(
+                    f"タスク割り当てスキップ: task_ids={task_ids}, "
+                    f"project_id={project_id}, is_list={isinstance(task_ids, list)}"
+                )
             self.show_success_snackbar("プロジェクトを追加しました")
 
-        show_create_project_dialog(self.page, on_save=_on_save)
+        # 利用可能なタスクを取得
+        available_tasks = self._get_available_tasks()
+        show_create_project_dialog(self.page, on_save=_on_save, available_tasks=available_tasks)

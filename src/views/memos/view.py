@@ -47,7 +47,7 @@ from logic.application.memo_application_service import MemoApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import get_error_color, get_outline_color
+from views.theme import get_error_color
 
 from . import presenter
 from .components import MemoCardList, MemoFilters, MemoStatusTabs
@@ -132,15 +132,20 @@ class MemosView(BaseView):
         # メインコンテンツエリア
         main_content = self._build_main_content()
 
-        return ft.Column(
+        # フィルタを含むコンテンツ
+        content_with_filters = ft.Column(
             controls=[
-                self._header,
-                self._status_tabs,
                 self._memo_filters,
                 main_content,
             ],
             spacing=0,
             expand=True,
+        )
+
+        return self.create_standard_layout(
+            header=self._header,
+            status_tabs=self._status_tabs,
+            content=content_with_filters,
         )
 
     def _build_main_content(self) -> ft.Control:
@@ -162,26 +167,10 @@ class MemosView(BaseView):
         # 詳細パネル
         self._detail_panel = self._build_detail_panel()
 
-        # レスポンシブレイアウト
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    # 左側：メモリスト
-                    ft.Container(
-                        content=self._memo_list,
-                        width=400,
-                        padding=ft.padding.all(8),
-                        border=ft.border.only(right=ft.BorderSide(width=1, color=get_outline_color())),
-                    ),
-                    # 右側：詳細パネル
-                    ft.Container(
-                        content=self._detail_panel,
-                        expand=True,
-                        padding=ft.padding.all(16),
-                    ),
-                ],
-            ),
-            expand=True,
+        # 2カラムレイアウト
+        return self.create_two_column_layout(
+            left_content=self._memo_list,
+            right_content=self._detail_panel,
         )
 
     def _build_detail_panel(self) -> ft.Container:

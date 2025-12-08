@@ -63,15 +63,22 @@ class StatusTabs[TStatus](ft.Container):
         self._count_badges: dict[TStatus | None, ft.Text] = {}
 
         super().__init__(
-            content=self._build_tabs(),
-            padding=ft.padding.symmetric(horizontal=16, vertical=8),
+            content=ft.Container(
+                content=ft.Row(
+                    controls=[self._build_tabs()],
+                    scroll=ft.ScrollMode.AUTO,
+                    expand=True,
+                ),
+                padding=ft.padding.symmetric(horizontal=20),
+            ),
+            padding=ft.padding.symmetric(vertical=8),
             bgcolor=ft.Colors.SURFACE,
             border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
         )
 
     def _build_tabs(self) -> ft.Control:
         """タブの行全体を構築する。"""
-        row = ft.Row(spacing=4, expand=True)
+        row = ft.Row(spacing=8, wrap=False, expand=True)
         for definition in self.tab_definitions:
             tab_button = self._create_tab_button(definition)
             self._tab_containers[definition.status] = tab_button
@@ -94,13 +101,21 @@ class StatusTabs[TStatus](ft.Container):
 
         # アイコンがあれば追加
         if definition.icon:
-            controls.append(ft.Icon(definition.icon, size=18))
+            controls.append(
+                ft.Icon(
+                    definition.icon,
+                    size=18,
+                    color=ft.Colors.ON_SECONDARY_CONTAINER if is_active else ft.Colors.ON_SURFACE_VARIANT,
+                )
+            )
 
         # ラベルテキスト
         label = ft.Text(
             definition.label,
             weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL,
             size=14,
+            color=ft.Colors.ON_SECONDARY_CONTAINER if is_active else ft.Colors.ON_SURFACE,
+            no_wrap=True,
         )
         controls.append(label)
 
@@ -112,8 +127,9 @@ class StatusTabs[TStatus](ft.Container):
                 controls=controls,
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
+                tight=True,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
+            padding=ft.padding.symmetric(horizontal=12, vertical=10),
             bgcolor=ft.Colors.SECONDARY_CONTAINER if is_active else ft.Colors.TRANSPARENT,
             border_radius=8,
             ink=True,
@@ -135,16 +151,18 @@ class StatusTabs[TStatus](ft.Container):
 
         label = ft.Text(
             str(max(count, 0)),
-            size=12,
+            size=11,
             color=ft.Colors.ON_SECONDARY,
             weight=ft.FontWeight.BOLD,
+            no_wrap=True,
         )
         self._count_badges[status] = label
         return ft.Container(
             content=label,
             bgcolor=ft.Colors.SECONDARY,
-            padding=ft.padding.symmetric(horizontal=8, vertical=2),
+            padding=ft.padding.symmetric(horizontal=6, vertical=2),
             border_radius=10,
+            height=20,
         )
 
     def _handle_click_factory(self, status: TStatus | None) -> Callable[[ft.ControlEvent], None]:

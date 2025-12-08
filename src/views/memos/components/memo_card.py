@@ -2,7 +2,7 @@
 
 【責務】
 - 整形済みデータ（MemoCardData）を受け取り、UIを構築する
-- カード内のレイアウト、スタイリング、視覚的表現
+- 共通Cardコンポーネントを利用してメモ表示
 - クリックイベントをコールバックに委譲
 - 選択状態の視覚的フィードバック
 
@@ -12,7 +12,7 @@
 - 状態管理（Stateで管理）
 
 【設計上の特徴】
-- MemoCardDataを受け取る設計（データと表示の完全分離）
+- MemoCardDataを受け取り、CardDataに変換して共通Cardコンポーネントを使用
 - 共通TagBadgeData（views.shared.components.card）を使用
 - このファイル内でデータクラスと専用定数を定義（凝集度向上）
 - 純粋な表示コンポーネント（副作用なし）
@@ -36,6 +36,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 import flet as ft
+
+from views.shared.components.card import Card, CardBadgeData, CardData, CardMetadataData
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -117,11 +119,11 @@ class MemoCardData:
 # ========================================
 
 
-class MemoCard(ft.Container):
+class MemoCard(Card):
     """メモカード表示コンポーネント
 
-    整形済みのMemoCardDataを受け取り、視覚的なカードUIを構築する。
-    タグバッジを含む独自レイアウトを提供。
+    共通Cardコンポーネントを継承し、MemoCardDataをCardDataに変換して表示する。
+    タグバッジを含む統一されたレイアウトを提供。
     """
 
     def __init__(
@@ -133,105 +135,29 @@ class MemoCard(ft.Container):
         Args:
             data: 表示用データ（整形済み）
         """
-        from views.theme import (
-            get_on_primary_color,
-            get_outline_color,
-            get_primary_color,
-            get_surface_color,
-            get_text_secondary_color,
-        )
+        self._memo_data = data
 
-        # タイトルと説明
-        title_text = ft.Text(
-            data.title,
-            theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
-            weight=ft.FontWeight.W_500,
-            overflow=ft.TextOverflow.ELLIPSIS,
-            max_lines=1,
-        )
-
-        description_text = ft.Text(
-            data.content_preview,
-            theme_style=ft.TextThemeStyle.BODY_SMALL,
-            color=get_text_secondary_color(),
-            overflow=ft.TextOverflow.ELLIPSIS,
-            max_lines=2,
-        )
-
-        # バッジとタグの行
-        badges_row_controls = []
+        # ステータスバッジをCardBadgeDataに変換
+        badge = None
         if data.badge_data:
-            status_badge = ft.Container(
-                content=ft.Text(
-                    data.badge_data.text,
-                    size=11,
-                    color=get_on_primary_color(),
-                    weight=ft.FontWeight.W_500,
-                ),
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                bgcolor=data.badge_data.color,
-                border_radius=12,
-            )
-            badges_row_controls.append(status_badge)
+            badge = CardBadgeData(text=data.badge_data.text, color=data.badge_data.color)
 
-        for tag_badge in data.tag_badges:
-            tag_container = ft.Container(
-                content=ft.Text(
-                    tag_badge.name,
-                    size=11,
-                    color=get_on_primary_color(),
-                    weight=ft.FontWeight.W_400,
-                ),
-                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                bgcolor=tag_badge.color,
-                border_radius=12,
-            )
-            badges_row_controls.append(tag_container)
+        # メタデータ（更新日時）
+        metadata_items = [
+            CardMetadataData(icon=ft.Icons.UPDATE, text=data.formatted_date),
+        ]
 
-        # 日付
-        date_text = ft.Text(
-            data.formatted_date,
-            size=11,
-            color=get_text_secondary_color(),
+        # CardDataに変換
+        card_data = CardData(
+            title=data.title,
+            description=data.content_preview,
+            badge=badge,
+            tag_badges=data.tag_badges,
+            metadata=metadata_items,
+            actions=[],
+            is_selected=data.is_selected,
+            on_click=data.on_click,
         )
 
-        # メタデータ行（バッジとタグ + 日付）
-        metadata_row = ft.Row(
-            controls=[
-                *badges_row_controls,
-                ft.Container(expand=True),  # スペーサー
-                date_text,
-            ],
-            spacing=8,
-            wrap=False,
-            alignment=ft.MainAxisAlignment.START,
-        )
-
-        # カードの内容
-        card_content = ft.Container(
-            content=ft.Column(
-                controls=[
-                    title_text,
-                    description_text,
-                    metadata_row,
-                ],
-                spacing=8,
-                tight=True,
-            ),
-            padding=ft.padding.all(16),
-        )
-
-        # 選択状態に応じた境界線
-        border_color = get_primary_color() if data.is_selected else get_outline_color()
-        border_width = 2 if data.is_selected else 1
-
-        # コンテナ初期化
-        super().__init__(
-            content=card_content,
-            bgcolor=get_surface_color(),
-            border=ft.border.all(border_width, border_color),
-            border_radius=8,
-            on_click=lambda _: data.on_click() if data.on_click else None,
-            ink=True,
-        )
+        super().__init__(card_data)
         self.key = str(data.memo_id)

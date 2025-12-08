@@ -409,7 +409,7 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         controls = [header]
         if status_tabs is not None:
             controls.append(status_tabs)
-        controls.extend([ft.Divider(), content])
+        controls.extend([content])
 
         return ft.Container(
             content=ft.Column(

@@ -73,7 +73,6 @@ class StatusTabs[TStatus](ft.Container):
             ),
             padding=ft.padding.symmetric(vertical=8),
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.only(bottom=ft.BorderSide(width=1, color=ft.Colors.OUTLINE_VARIANT)),
         )
 
     def _build_tabs(self) -> ft.Control:

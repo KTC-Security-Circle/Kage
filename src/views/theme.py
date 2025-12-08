@@ -69,6 +69,11 @@ class Palette:
     DRY原則に基づき、色コードの定義を一箇所に集約します。
     """
 
+    zenn_ligth_sidebar = "#ECF5FF"
+    zenn_ligth_theme = "#FFFFFF"
+    zenn_dark_sidebar = "#081d35"
+    zenn_dark_theme = "#0d223a"
+
     # Red
     RED_400 = "#EF5350"
     RED_500 = "#F44336"
@@ -280,16 +285,16 @@ class FontTokens:
 
 # Light theme color tokens (Material Design 3)
 LIGHT_COLORS = ColorTokens(
-    primary=Palette.BLUE_500,  # Blue - アプリ全体の統一プライマリカラー
-    primary_variant=Palette.BLUE_700,
-    on_primary=Palette.WHITE,
-    secondary=Palette.SECONDARY_LIGHT,
-    secondary_variant=Palette.SECONDARY_VARIANT_LIGHT,
-    on_secondary=Palette.WHITE,
+    primary=Palette.BLUE_500,  # 文字の色
+    primary_variant=Palette.BLUE_GREY_500,  # サイドバーの縦線
+    on_primary=Palette.WHITE,  # ボタンの文字の色
+    secondary=Palette.GREY_500,  # ステータスバーの件数の背景色
+    secondary_variant=Palette.GREY_500,  # ???
+    on_secondary=Palette.WHITE,  # ステータスバーの件数の文字色
     background=Palette.GREY_50,  # Neutral grey background
     on_background=Palette.TEXT_PRIMARY_LIGHT,
-    surface=Palette.WHITE,  # Pure white for cards/panels
-    on_surface=Palette.TEXT_PRIMARY_LIGHT,
+    surface=Palette.zenn_ligth_theme,  # カードの背景色
+    on_surface=Palette.TEXT_PRIMARY_LIGHT,  # カード内の文字色 (現在なぜか背景にも適応されている)
     error=Palette.RED_700,  # Material Red 700
     on_error=Palette.WHITE,
     success=Palette.GREEN_700,  # Material Green 700

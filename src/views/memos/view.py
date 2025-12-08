@@ -44,14 +44,15 @@ from loguru import logger
 
 from logic.application.memo_ai_job_queue import GeneratedTaskPayload, MemoAiJobSnapshot, MemoAiJobStatus
 from logic.application.memo_application_service import MemoApplicationService
+from logic.application.tag_application_service import TagApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import get_error_color
+from views.theme import get_error_color, get_grey_color, get_on_primary_color
 
 from . import presenter
 from .components import MemoCardList, MemoFilters, MemoStatusTabs
-from .controller import MemoApplicationPort, MemosController
+from .controller import MemoApplicationPort, MemosController, TagApplicationPort
 from .state import AiSuggestedTask, MemosViewState
 
 
@@ -69,19 +70,28 @@ class MemosView(BaseView):
     - AI提案機能（将来実装）
     """
 
-    def __init__(self, props: BaseViewProps, *, memo_app: MemoApplicationPort | None = None) -> None:
+    def __init__(
+        self,
+        props: BaseViewProps,
+        *,
+        memo_app: MemoApplicationPort | None = None,
+        tag_app: TagApplicationPort | None = None,
+    ) -> None:
         """メモビューを初期化。
 
         Args:
             props: View共通プロパティ
             memo_app: テストやDI用に注入するメモアプリケーションサービス
+            tag_app: テストやDI用に注入するタグアプリケーションサービス
         """
         super().__init__(props)
 
         self.memos_state = MemosViewState()
         if memo_app is None:
             memo_app = self.apps.get_service(MemoApplicationService)
-        self.controller = MemosController(memo_app=memo_app, state=self.memos_state)
+        if tag_app is None:
+            tag_app = self.apps.get_service(TagApplicationService)
+        self.controller = MemosController(memo_app=memo_app, state=self.memos_state, tag_app=tag_app)
 
         # UIコンポーネント
         self._header: ft.Control | None = None
@@ -92,7 +102,7 @@ class MemosView(BaseView):
         self._pending_async_tasks: list[asyncio.Task[None]] = []
 
         self.did_mount()
-        self.with_loading(self._load_initial_memos, user_error_message="メモの読み込みに失敗しました")
+        self.with_loading(self._load_initial_memos, user_error_message="データの読み込みに失敗しました")
 
     def did_mount(self) -> None:
         """マウント時の初期化処理。"""
@@ -228,14 +238,16 @@ class MemosView(BaseView):
         return self.controller.status_counts()
 
     def _load_initial_memos(self) -> None:
-        """DB から初期メモ一覧を読み込む (Inbox を優先)。"""
+        """DB から初期データ（メモとタグ）を読み込む。"""
         try:
             self.controller.load_initial_memos()
+            self.controller.load_tags()
             self._refresh()
             memo_count = len(self.controller.current_memos())
-            logger.info(f"Loaded {memo_count} memos from DB")
+            tag_count = len(self.controller.get_all_tags())
+            logger.info(f"Loaded {memo_count} memos and {tag_count} tags from DB")
         except Exception as e:
-            self.notify_error("メモの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
+            self.notify_error("データの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
 
     def _update_memo_list(self) -> None:
         """メモリストを更新。"""
@@ -533,7 +545,7 @@ class MemosView(BaseView):
         """内部インデックスからメモを検索する。"""
         return self.memos_state.memo_by_id(memo_id)
 
-    def _handle_edit_memo(self, _: ft.ControlEvent) -> None:
+    def _handle_edit_memo(self, _: ft.ControlEvent) -> None:  # noqa: C901, PLR0915
         """メモ編集ハンドラー。編集ダイアログを表示し、保存時に Controller 経由で更新する。
 
         Args:
@@ -543,32 +555,110 @@ class MemosView(BaseView):
         if selected_memo is None:
             return
 
+        # タグ一覧を取得
+        all_tags = self.controller.get_all_tags()
+        memo_tag_names = getattr(selected_memo, "tags", []) or []
+        selected_tag_ids: set[str] = set(memo_tag_names)
+
         # ダイアログの入力コントロールを構築
         title_field = ft.TextField(value=selected_memo.title or "", label="タイトル", expand=True)
         content_field = ft.TextField(
             value=selected_memo.content or "", label="内容", multiline=True, min_lines=6, expand=True
         )
 
+        # タグ選択ドロップダウン（プロジェクト選択と同様の実装）
+        tag_options = [ft.dropdown.Option(key=tag.name, text=tag.name) for tag in all_tags]
+        tag_dropdown = ft.Dropdown(
+            label="タグを追加",
+            hint_text="タグを選択...",
+            options=tag_options,
+            width=300,
+        )
+
+        # 選択中タグのバッジ表示用コンテナ
+        selected_tags_container = ft.Row(wrap=True, spacing=8, run_spacing=8)
+
+        def _update_selected_tags_display() -> None:
+            """選択中タグのバッジ表示を更新"""
+            selected_tags_container.controls.clear()
+            for tag_name in sorted(selected_tag_ids):
+                tag = next((t for t in all_tags if t.name == tag_name), None)
+                if tag is None:
+                    continue
+
+                color = tag.color or get_grey_color(600)
+                badge = ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text(tag_name, size=12, color=get_on_primary_color()),
+                            ft.IconButton(
+                                icon=ft.Icons.CLOSE,
+                                icon_size=14,
+                                icon_color=get_on_primary_color(),
+                                on_click=lambda _, tn=tag_name: _remove_tag(tn),
+                                tooltip=f"{tag_name}を削除",
+                            ),
+                        ],
+                        spacing=4,
+                        tight=True,
+                    ),
+                    bgcolor=color,
+                    border_radius=12,
+                    padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+                )
+                selected_tags_container.controls.append(badge)
+
+            try:
+                selected_tags_container.update()
+            except Exception as e:
+                logger.debug(f"Failed to update selected tags display: {e}")
+
+        def _on_tag_select(e: ft.ControlEvent) -> None:
+            """タグ選択時のハンドラ"""
+            if e.control.value and e.control.value not in selected_tag_ids:
+                selected_tag_ids.add(e.control.value)
+                _update_selected_tags_display()
+                tag_dropdown.value = None
+                try:
+                    tag_dropdown.update()
+                except Exception as ex:
+                    logger.debug(f"Failed to update tag dropdown: {ex}")
+
+        def _remove_tag(tag_name: str) -> None:
+            """タグ削除時のハンドラ"""
+            selected_tag_ids.discard(tag_name)
+            _update_selected_tags_display()
+
+        tag_dropdown.on_change = _on_tag_select
+        _update_selected_tags_display()
+
         def _on_save(_: ft.ControlEvent | None = None) -> None:
             title = (title_field.value or "").strip() or "無題のメモ"
             content = (content_field.value or "").strip()
+            tags = list(selected_tag_ids)
             if not content:
                 self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
                 return
 
             def _save() -> None:
                 try:
+                    # TODO: タグの保存機能を実装
+                    # MemoUpdate モデルと MemoApplicationService.update が tags をサポートする必要がある
+                    # 現時点では tags を渡すが、バックエンドが対応していない場合は無視される
                     updated = self.controller.update_memo(
                         selected_memo.id,
                         title=title,
                         content=content,
                         status=selected_memo.status,
                     )
+                    logger.info(f"Memo updated via edit dialog: id={updated.id}, tags={tags}")
                 except Exception as exc:  # Application層の例外をUIに伝える
                     self.notify_error("メモの更新に失敗しました", details=f"{type(exc).__name__}: {exc}")
                     raise
 
-                logger.info(f"Memo updated via edit dialog: id={updated.id}")
+                if tags != memo_tag_names:
+                    logger.info(f"Tags changed: {memo_tag_names} -> {tags}")
+                    # TODO: タグの関連付けを更新するロジックをここに追加
                 self.show_success_snackbar("メモを更新しました")
                 # ダイアログを閉じて表示を更新
                 try:
@@ -584,7 +674,19 @@ class MemosView(BaseView):
         dlg = ft.AlertDialog(
             modal=True,
             title=ft.Text("メモを編集"),
-            content=ft.Column(controls=[title_field, content_field], spacing=12),
+            content=ft.Column(
+                controls=[
+                    title_field,
+                    content_field,
+                    ft.Divider(height=1),
+                    ft.Text("タグ", weight=ft.FontWeight.BOLD, size=14),
+                    tag_dropdown,
+                    selected_tags_container,
+                ],
+                spacing=12,
+                scroll=ft.ScrollMode.AUTO,
+                height=400,
+            ),
             actions=[
                 ft.TextButton("キャンセル", on_click=lambda _: _close()),
                 ft.ElevatedButton("保存", on_click=_on_save),

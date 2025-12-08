@@ -47,7 +47,7 @@ from loguru import logger
 
 from errors import NotFoundError
 from logic.application.memo_ai_job_queue import MemoAiJobSnapshot  # noqa: TC001 - runtime dependency
-from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate
+from models import AiSuggestionStatus, MemoRead, MemoStatus, MemoUpdate, TagRead
 
 from .ordering import sort_memos
 from .query import SearchQueryNormalizer
@@ -56,6 +56,14 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from .state import MemosViewState
+
+
+class TagApplicationPort(Protocol):
+    """TagApplicationService の利用に必要なメソッドを限定したポート。"""
+
+    def get_all_tags(self) -> list[TagRead]:
+        """全タグ取得"""
+        ...
 
 
 class MemoApplicationPort(Protocol):
@@ -112,6 +120,7 @@ class MemosController:
 
     memo_app: MemoApplicationPort
     state: MemosViewState
+    tag_app: TagApplicationPort | None = None
     query_normalizer: SearchQueryNormalizer = field(default_factory=SearchQueryNormalizer)
 
     def load_initial_memos(self) -> None:
@@ -284,3 +293,17 @@ class MemosController:
             results = []
 
         self.state.set_search_result(query, results)
+
+    # --- Tag operations ---
+
+    def load_tags(self) -> None:
+        """全タグを読み込む。"""
+        if self.tag_app is None:
+            logger.warning("TagApplicationPort not provided, skipping tag loading")
+            return
+        tags = self.tag_app.get_all_tags()
+        self.state.set_all_tags(tags)
+
+    def get_all_tags(self) -> list[TagRead]:
+        """現在の全タグを返す。"""
+        return self.state.all_tags

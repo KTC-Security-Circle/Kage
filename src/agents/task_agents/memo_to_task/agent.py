@@ -1251,7 +1251,7 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     ]
     # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）
     # 必要に応じて下記のラベル配列を書き換えて、1件ずつ確認してください。
-    selected_labels = ["quick_action"]
+    selected_labels = ["task_with_schedule"]
     sample_inputs = [item for item in all_samples if item[0] in selected_labels]
 
     for label, sample_state in sample_inputs:

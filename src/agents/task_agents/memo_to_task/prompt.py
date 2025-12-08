@@ -15,7 +15,7 @@ classification_prompt = ChatPromptTemplate.from_messages(
 - project: 数か月間にわたり複数ステップを要し他者協力や外部リソースが必要な場合や、継続的に管理が必要。
 分類理由は「背景→判断→次の動き」を 120 文字以内で記述し、project の場合は推奨プロジェクト名を
 project_title に入れてください。それ以外は null を指定します。
-必ず次の JSON スキーマで出力します: {{"decision":"idea|task|project","reason":"...","project_title":string|null}}。
+必ず次の JSON スキーマで出力します: {{"reason":"...","decision":"idea|task|project","project_title":string|null}}。
 出力粒度ヒント: {detail_hint}
 追加指示:
 {custom_instructions}
@@ -75,7 +75,7 @@ quick_action_prompt = ChatPromptTemplate.from_messages(
 準備物の取得・移動時間・外部待ち時間を含め、実行に 2 分を超える要素がある場合は quick action に
 してはいけません。判断では「時間見積もり」「阻害要因」を必ず確認してください。
 理由は 1 文で、どの作業が制約になったかを具体的に書きます。
-JSON 形式: {{"is_quick_action":true|false,"reason":string}}。
+JSON 形式: {{"reason":string,"is_quick_action":true|false}}。
 出力粒度ヒント: {detail_hint}
 追加指示:
 {custom_instructions}
@@ -108,7 +108,7 @@ responsibility_prompt = ChatPromptTemplate.from_messages(
 作業者に自身を含みそうな場合は should_delegate を false にしてください。
 他人に完全に委譲し自身はただ待つだけのタスクのみ should_delegate を true にします。
 理由文では、判断に寄与した資源・スキル・依存関係を 100 文字以内で説明してください。
-JSON 形式: {{"should_delegate":true|false,"reason":string}}。
+JSON 形式: {{"reason":string,"should_delegate":true|false}}。
 出力粒度ヒント: {detail_hint}
 追加指示:
 {custom_instructions}
@@ -142,7 +142,7 @@ schedule_prompt = ChatPromptTemplate.from_messages(
 もし明確な日付や時間、曜日などがわかる場合は due_date に provided_current_datetime から計算した時間を
 ISO8601 文字列で提案してください。
 reason には日付を付ける根拠または不要な理由を 120 文字以内で記述します。
-JSON 形式: {{"requires_specific_date":true|false,"due_date":string|null,"reason":string}}。
+JSON 形式: {{"reason":string,"requires_specific_date":true|false,"due_date":string|null}}。
 出力粒度ヒント: {detail_hint}
 追加指示:
 {custom_instructions}

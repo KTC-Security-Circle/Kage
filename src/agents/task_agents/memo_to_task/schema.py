@@ -67,8 +67,8 @@ class MemoToTaskAgentOutput(BaseModel):
 class MemoClassification(BaseModel):
     """メモの処理方針を判定した結果。"""
 
-    decision: MemoProcessingDecision = Field(description="メモを idea/task/project のどれで扱うか。")
     reason: str = Field(description="判断理由。")
+    decision: MemoProcessingDecision = Field(description="メモを idea/task/project のどれで扱うか。")
     project_title: str | None = Field(default=None, description="project の場合に推奨されるプロジェクト名。")
 
 
@@ -83,23 +83,23 @@ class TaskDraftSeed(BaseModel):
 class QuickActionAssessment(BaseModel):
     """2分以内に完了できるかの評価。"""
 
-    is_quick_action: bool = Field(description="2分以内で完了できる場合は True")
     reason: str = Field(description="判断理由")
+    is_quick_action: bool = Field(description="2分以内で完了できる場合は True")
 
 
 class ResponsibilityAssessment(BaseModel):
     """自分で実行すべきか、委譲すべきかの評価。"""
 
-    should_delegate: bool = Field(description="委譲が望ましい場合は True")
     reason: str = Field(description="判断理由")
+    should_delegate: bool = Field(description="委譲が望ましい場合は True")
 
 
 class ScheduleAssessment(BaseModel):
     """日付・時間に紐付くかの評価。"""
 
+    reason: str = Field(description="判断理由")
     requires_specific_date: bool = Field(description="特定日時が必要なら True")
     due_date: str | None = Field(default=None, description="推奨される期日 (必要な場合)")
-    reason: str = Field(description="判断理由")
 
 
 class ProjectPlanSuggestion(BaseModel):

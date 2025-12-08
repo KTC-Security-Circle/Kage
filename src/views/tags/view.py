@@ -284,20 +284,49 @@ class TagsView(BaseView):
         show_tag_edit_dialog(self.page, selected_tag, on_submit)
 
     def _on_memo_click(self, _e: ft.ControlEvent, memo_id: str) -> None:  # type: ignore[name-defined]
-        """関連メモクリックハンドラ"""
-        # TODO: メモ詳細画面の実装待ち
-        # 理由: メモ詳細画面（/memos/:id）がまだ存在しない
-        # 実装: MemosViewで詳細表示機能を実装後、ここで遷移を有効化
-        # 置換先: src/views/memos/ 内に詳細表示機能を追加
-        # 暫定: メモ一覧画面へ遷移してユーザーに選択させる
-        if self.page:
+        """関連メモクリックハンドラ
+
+        メモIDをclient_storageに一時保存し、メモ画面に遷移する。
+        遷移先でpending_memo_idを読み取り、該当メモを選択表示する。
+
+        Args:
+            _e: イベント（未使用）
+            memo_id: 選択されたメモのID
+        """
+        from loguru import logger
+
+        if not self.page:
+            return
+
+        logger.info(f"メモ画面への遷移を開始: memo_id={memo_id}")
+        try:
+            self.page.client_storage.set("pending_memo_id", memo_id)
             self.page.go("/memos")
-            self.show_info_snackbar(f"メモ {memo_id} を一覧から選択してください")
+            logger.debug(f"メモ画面への遷移が完了: /memos (pending_memo_id={memo_id})")
+        except Exception as e:
+            logger.error(f"メモ画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")
 
     def _on_task_click(self, _e: ft.ControlEvent, task_id: str) -> None:  # type: ignore[name-defined]
-        """関連タスククリックハンドラ"""
-        # タスク管理画面へ遷移
-        # 注意: TasksViewで特定タスクの選択・フォーカス機能があれば連携できる
-        if self.page:
+        """関連タスククリックハンドラ
+
+        タスクIDをclient_storageに一時保存し、タスク画面に遷移する。
+        遷移先でpending_task_idを読み取り、該当タスクを選択表示する。
+
+        Args:
+            _e: イベント（未使用）
+            task_id: 選択されたタスクのID
+        """
+        from loguru import logger
+
+        if not self.page:
+            return
+
+        logger.info(f"タスク画面への遷移を開始: task_id={task_id}")
+        try:
+            self.page.client_storage.set("pending_task_id", task_id)
             self.page.go("/tasks")
-            self.show_info_snackbar(f"タスク {task_id} を一覧から確認してください")
+            logger.debug(f"タスク画面への遷移が完了: /tasks (pending_task_id={task_id})")
+        except Exception as e:
+            logger.error(f"タスク画面への遷移に失敗: {e}", exc_info=True)
+            self.show_error_snackbar(self.page, f"画面遷移エラー: {e}")

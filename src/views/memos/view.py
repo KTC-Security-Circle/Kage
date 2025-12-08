@@ -256,6 +256,8 @@ class MemosView(BaseView):
             memo_count = len(self.controller.current_memos())
             tag_count = len(self.controller.get_all_tags())
             logger.info(f"Loaded {memo_count} memos and {tag_count} tags from DB")
+            # データ読み込み完了後に一時保存されたメモIDを処理
+            self._handle_pending_memo()
         except Exception as e:
             self.notify_error("データの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
 
@@ -358,6 +360,39 @@ class MemosView(BaseView):
                     raise
         self._update_detail_panel()
         logger.debug(f"Memo selected: {memo.id}")
+
+    def _handle_pending_memo(self) -> None:
+        """一時保存されたメモIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            memo_id = self.page.client_storage.get("pending_memo_id")
+            if memo_id:
+                logger.info(f"一時保存されたメモIDを検出: {memo_id}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_memo_id")
+                # 全メモから検索（UUIDに変換）
+                try:
+                    target_uuid = UUID(memo_id)
+                except ValueError:
+                    logger.warning(f"無効なメモID形式: {memo_id}")
+                    return
+
+                # State内のインデックスから検索
+                memo = self.memos_state.memo_by_id(target_uuid)
+                if memo:
+                    logger.debug(f"メモを発見: id={memo.id}, status={memo.status}")
+                    # メモのステータスに合わせてタブを切り替え
+                    if memo.status != self.memos_state.current_tab:
+                        logger.debug(f"タブを切り替え: {self.memos_state.current_tab} -> {memo.status}")
+                        self.controller.update_tab(memo.status)
+                        self._refresh()
+                    # メモを選択
+                    self._handle_memo_select(memo)
+                    logger.debug(f"メモを選択しました: {memo_id}")
+                else:
+                    logger.warning(f"指定されたメモが見つかりません: {memo_id}")
+        except Exception as e:
+            logger.warning(f"一時保存メモIDの処理に失敗: {e}")
 
     def _handle_ai_suggestion(self, _: ft.ControlEvent) -> None:
         """AI提案ハンドラー。"""

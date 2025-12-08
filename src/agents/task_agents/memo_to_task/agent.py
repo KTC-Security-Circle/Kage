@@ -50,6 +50,11 @@ QUICK_ACTION_THRESHOLD_MINUTES = 2
 
 VALID_TASK_ROUTES: set[TaskRoute] = {"progress", "waiting", "calendar", "next_action"}
 VALID_TASK_PRIORITIES: set[TaskPriority] = {"low", "normal", "high"}
+PROJECT_PLAN_RETRY_HINT = (
+    "出力は project_title と next_actions のみ。各 next_actions[i] の due_date は ISO8601 例: "
+    '"2025-10-25T10:00:00+09:00" または "2025-10-25"。不要なら null。route は '
+    '"next_action"|"progress"|"waiting"|"calendar" のいずれかのみ。JSON のみを出力。'
+)
 
 
 _DEFAULT_FAKE_RESPONSES: list[MemoToTaskAgentOutput] = [
@@ -622,89 +627,85 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         return {"routed_tasks": [], "suggested_status": "idea"}
 
     def _plan_project(self, state: MemoToTaskState) -> dict[str, object]:
-        """プロジェクト前提のメモに対し、最初のアクション群を提案する。
-
-        LLMから `ProjectPlanSuggestion` を取得・検証し、必要に応じて
-        - 出力のサニタイズ
-        - リトライ（`retry_hint`付き）
-        を行った上で、`next_actions` をタスク案にマッピングする。
-
-        Args:
-            state: 現在のメモ処理状態
-
-        Returns:
-            `project_plan` と `routed_tasks`、`suggested_status` を含む辞書。
-            検証失敗時は `error` を含む。
-        """
+        """プロジェクト前提メモの初期プランとタスクを組み立てる。"""
         classification = state.get("classification")
         if not isinstance(classification, MemoClassification):
             return {"routed_tasks": [], "suggested_status": "idea"}
+
+        params = self._build_project_plan_params(state, classification)
+        suggestion = self._generate_project_plan(params)
+        if isinstance(suggestion, AgentError):
+            return {"error": suggestion}
+
+        plan, tasks = self._build_project_plan_tasks(suggestion)
+        return {
+            "project_plan": plan,
+            "routed_tasks": tasks,
+            "suggested_status": "active",
+            "requires_project": True,
+        }
+
+    def _build_project_plan_params(
+        self,
+        state: MemoToTaskState,
+        classification: MemoClassification,
+    ) -> dict[str, object]:
+        """プロジェクト計画生成に使用するパラメータを構成する。"""
         _, memo_text, memo_meta = self._get_memo_context(state)
-        base_params = {
+        params: dict[str, object] = {
             "memo_text": memo_text,
             **memo_meta,
             "existing_tags": state["existing_tags"],
             "current_datetime_iso": state["current_datetime_iso"],
             "project_title_hint": classification.project_title or classification.reason,
         }
-        base_params.update(self._prompt_overrides(state))
+        params.update(self._prompt_overrides(state))
+        return params
+
+    def _generate_project_plan(self, params: dict[str, object]) -> ProjectPlanSuggestion | AgentError:
+        """LLM から `ProjectPlanSuggestion` を取得する。"""
         runner = self._get_structured_runner("_project_plan_runner", project_plan_prompt, ProjectPlanSuggestion)
-        first = runner.invoke({**base_params, "retry_hint": ""})
-        suggestion = self.validate_output(first, ProjectPlanSuggestion)
-        if not isinstance(suggestion, ProjectPlanSuggestion):
-            # 1. サニタイズで救済
-            if isinstance(first, dict):
-                cleaned = self._sanitize_project_plan_payload(first)
-                suggestion2 = self.validate_output(cleaned, ProjectPlanSuggestion)
-                if isinstance(suggestion2, ProjectPlanSuggestion):
-                    suggestion = suggestion2
-                else:
-                    # 2. LLM に修正指示を与えて1回だけ再試行
-                    retry_hint = (
-                        "出力は project_title と next_actions のみ。各 next_actions[i] の due_date は ISO8601 例: "
-                        '"2025-10-25T10:00:00+09:00" または "2025-10-25"。不要なら null。route は '
-                        '"next_action"|"progress"|"waiting"|"calendar" のいずれかのみ。JSON のみを出力。'
-                    )
-                    second = runner.invoke({**base_params, "retry_hint": retry_hint})
-                    suggestion3 = self.validate_output(second, ProjectPlanSuggestion)
-                    if not isinstance(suggestion3, ProjectPlanSuggestion):
-                        return {"error": suggestion3}
-                    suggestion = suggestion3
-            else:
-                # 直接リトライ
-                retry_hint = (
-                    "出力は project_title と next_actions のみ。各 next_actions[i] の due_date は ISO8601 例: "
-                    '"2025-10-25T10:00:00+09:00" または "2025-10-25"。不要なら null。route は '
-                    '"next_action"|"progress"|"waiting"|"calendar" のいずれかのみ。JSON のみを出力。'
-                )
-                second = runner.invoke({**base_params, "retry_hint": retry_hint})
-                suggestion2 = self.validate_output(second, ProjectPlanSuggestion)
-                if not isinstance(suggestion2, ProjectPlanSuggestion):
-                    return {"error": suggestion2}
-                suggestion = suggestion2
+        first = runner.invoke({**params, "retry_hint": ""})
+        validated = self.validate_output(first, ProjectPlanSuggestion)
+        if isinstance(validated, ProjectPlanSuggestion):
+            return validated
+
+        if isinstance(first, dict):
+            sanitized = self._sanitize_project_plan_payload(first)
+            validated = self.validate_output(sanitized, ProjectPlanSuggestion)
+            if isinstance(validated, ProjectPlanSuggestion):
+                return validated
+
+        second = runner.invoke({**params, "retry_hint": PROJECT_PLAN_RETRY_HINT})
+        retry_output = self.validate_output(second, ProjectPlanSuggestion)
+        if isinstance(retry_output, ProjectPlanSuggestion):
+            return retry_output
+        return cast("AgentError", retry_output)
+
+    def _build_project_plan_tasks(
+        self,
+        suggestion: ProjectPlanSuggestion,
+    ) -> tuple[ProjectPlanSuggestion, list[TaskDraft]]:
+        """プロジェクトプランからアクションを整形する。"""
+        actions = list(suggestion.next_actions or [])
 
         tasks: list[TaskDraft] = []
-        for index, task in enumerate(suggestion.next_actions or []):
+        for index, task in enumerate(actions):
             updates: dict[str, object] = {"project_title": suggestion.project_title}
             if not task.route:
                 updates["route"] = "next_action" if index == 0 else "progress"
             tasks.append(task.model_copy(update=updates) if updates else task)
-        if not tasks:
-            tasks.append(
-                TaskDraft(
-                    title=f"{suggestion.project_title}の開始準備",
-                    description="プロジェクトの開始に必要な最初のステップを決める",
-                    route="next_action",
-                    project_title=suggestion.project_title,
-                )
-            )
 
-        return {
-            "project_plan": suggestion,
-            "routed_tasks": tasks,
-            "suggested_status": "active",
-            "requires_project": True,
-        }
+        if not tasks:
+            fallback = TaskDraft(
+                title=f"{suggestion.project_title}の開始準備",
+                description="プロジェクトの開始に必要な最初のステップを決める",
+                route="next_action",
+                project_title=suggestion.project_title,
+            )
+            tasks.append(fallback)
+
+        return suggestion, tasks
 
     @staticmethod
     def _is_valid_iso8601(value: str) -> bool:
@@ -758,13 +759,18 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             new_item = new_item.model_copy(update={"route": None})
         return new_item
 
-    def _prompt_overrides(self, state: MemoToTaskState) -> dict[str, str]:
+    def _prompt_overrides(self, state: MemoToTaskState) -> dict[str, object]:
         """状態に格納されたプロンプト上書き値を抽出する。"""
         custom_text = str(state.get("custom_instructions", "") or "").strip()
         detail_hint = str(state.get("detail_hint", "") or "").strip()
+        task_count_hint = str(state.get("task_count_hint", "") or "").strip()
+        recommended_count = state.get("recommended_task_count")
+        resolved_count = recommended_count if isinstance(recommended_count, int) and recommended_count > 0 else None
         return {
             "custom_instructions": custom_text or "追加指示はありません。",
             "detail_hint": detail_hint or "標準的な詳細度で回答してください。",
+            "task_count_hint": task_count_hint or "タスク数は 2〜5 件を目安に選定してください。",
+            "recommended_task_count": resolved_count or 3,
         }
 
     def _generate_task_seed(self, state: MemoToTaskState) -> dict[str, object]:
@@ -1153,39 +1159,52 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
 if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     import json
     from copy import deepcopy
+    from datetime import datetime
     from uuid import uuid4
 
     from logging_conf import setup_logger
+    from logic.application.memo_to_task_application_service import MemoToTaskApplicationService
     from models import MemoRead, MemoStatus
     from settings.models import EnvSettings
 
     EnvSettings.init_environment()
     setup_logger()
 
-    # [AI GENERATED] 最終的な確認は HuggingFaceModel(OpenVINO) で実施。
-    # 実行環境に依存するため、失敗時は FAKE へフォールバックします。
+    service = MemoToTaskApplicationService()
+    prompt_overrides = service.get_prompt_overrides_snapshot()
+    provider = service.get_configured_provider()
+    device = service.get_configured_device()
+
     try:
+        agent = MemoToTaskAgent(
+            provider,
+            verbose=True,
+            error_response=False,
+            persist_on_finalize=True,
+            device=device,
+        )
+    except Exception as exc:
+        agents_logger.warning("Falling back to FAKE provider due to init error: {}", str(exc))
         agent = MemoToTaskAgent(
             LLMProvider.FAKE,
             verbose=True,
             error_response=False,
             persist_on_finalize=True,
-        )
-    except Exception as exc:
-        agents_logger.warning("Falling back to FAKE provider due to init error: {}", str(exc))
-        agent = MemoToTaskAgent(
-            LLMProvider.FAKE, verbose=True, error_response=False, persist_on_finalize=True, device="AUTO"
+            device="AUTO",
         )
 
-    current_datetime = "2025-10-25T10:00:00+09:00"
+    # current_datetime = "2025-10-25T10:00:00+09:00"
+    current_datetime = datetime.now()
 
     def _build_sample_state(content: str, tags: list[str], *, title: str | None = None) -> MemoToTaskState:
         memo_title = title if title is not None else (content.splitlines()[0].strip() or "サンプルメモ")
-        return {
+        payload: dict[str, object] = {
             "memo": MemoRead(id=uuid4(), title=memo_title, content=content, status=MemoStatus.INBOX),
             "existing_tags": tags,
             "current_datetime_iso": current_datetime,
         }
+        payload.update(prompt_overrides)
+        return cast("MemoToTaskState", payload)
 
     # [AI GENERATED] 少数シナリオで手動確認。
     all_samples: list[tuple[str, MemoToTaskState]] = [
@@ -1221,10 +1240,18 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
                 title="提案書作成",
             ),
         ),
+        (
+            "generation_multiple_tasks",
+            _build_sample_state(
+                "新製品の発売に向けて、マーケティング戦略を立てる。ターゲット市場の調査、広告キャンペーンの企画、販売チャネルの選定を行う。",
+                ["マーケティング", "新製品"],
+                title="新製品マーケティング戦略",
+            ),
+        ),
     ]
     # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）
     # 必要に応じて下記のラベル配列を書き換えて、1件ずつ確認してください。
-    selected_labels = ["task_with_schedule", "project_planning", "idea_handling"]
+    selected_labels = ["quick_action"]
     sample_inputs = [item for item in all_samples if item[0] in selected_labels]
 
     for label, sample_state in sample_inputs:

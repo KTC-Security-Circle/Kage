@@ -1,10 +1,10 @@
-"""用語作成ダイアログコンポーネント。
+"""用語編集ダイアログコンポーネント。
 
 【責務】
-    新しい用語を作成するためのダイアログUIを提供。
-    - フォーム入力（キー、タイトル、説明、ステータス、出典URL、同義語）
+    既存の用語を編集するためのダイアログUIを提供。
+    - フォーム入力（キー、タイトル、説明、ステータス、出典URL、同義語、タグ）
     - バリデーション
-    - 作成コールバックの呼び出し
+    - 更新コールバックの呼び出し
 
 【非責務】
     - データベース操作 → Controller/ApplicationService
@@ -33,16 +33,17 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
-class CreateTermDialogProps:
-    """用語作成ダイアログの初期化プロパティ。"""
+class EditTermDialogProps:
+    """用語編集ダイアログの初期化プロパティ。"""
 
-    on_create: Callable[[dict[str, object]], None]
+    term_data: dict[str, Any]
+    on_update: Callable[[dict[str, object]], None]
     on_cancel: Callable[[], None] | None = None
     all_tags: list[Any] | None = None
 
 
-class CreateTermDialog:
-    """用語作成ダイアログコンポーネント。"""
+class EditTermDialog:
+    """用語編集ダイアログコンポーネント。"""
 
     # フィールド長の制限（フォーム定義とバリデーションで共有）
     MAX_KEY_LENGTH = 100
@@ -50,8 +51,8 @@ class CreateTermDialog:
     MAX_DESCRIPTION_LENGTH = 2000
     MAX_URL_LENGTH = 500
 
-    def __init__(self, props: CreateTermDialogProps) -> None:
-        """Initialize create term dialog.
+    def __init__(self, props: EditTermDialogProps) -> None:
+        """Initialize edit term dialog.
 
         Args:
             props: ダイアログプロパティ
@@ -76,14 +77,32 @@ class CreateTermDialog:
         self._error_banner: ft.Container | None = None
         self._form_column: ft.Column | None = None
 
+        # 既存タグを初期化
+        self._initialize_tags()
+
         self._build_dialog()
+
+    def _initialize_tags(self) -> None:
+        """既存の用語のタグを初期化する。"""
+        if not self._props.all_tags:
+            return
+
+        # term_dataからタグを取得
+        term_tags = self._props.term_data.get("tags", [])
+        for tag in term_tags:
+            tag_name = tag.get("name") if isinstance(tag, dict) else getattr(tag, "name", None)
+            if tag_name:
+                self._selected_tag_ids.add(tag_name)
 
     def _build_dialog(self) -> None:
         """ダイアログを構築する。"""
+        term_data = self._props.term_data
+
         # キーフィールド（必須、ユニーク）
         self._key_field = ft.TextField(
             label="キー *",
             hint_text="例: LLM, RAG, SDLC",
+            value=term_data.get("key", ""),
             max_length=self.MAX_KEY_LENGTH,
             autofocus=True,
             helper_text="英数字とアンダースコアを推奨（一意である必要があります）",
@@ -93,6 +112,7 @@ class CreateTermDialog:
         self._title_field = ft.TextField(
             label="タイトル *",
             hint_text="例: Large Language Model",
+            value=term_data.get("title", ""),
             max_length=self.MAX_TITLE_LENGTH,
         )
 
@@ -100,6 +120,7 @@ class CreateTermDialog:
         self._description_field = ft.TextField(
             label="説明",
             hint_text="用語の定義や説明を入力してください",
+            value=term_data.get("description", "") or "",
             multiline=True,
             min_lines=3,
             max_lines=5,
@@ -107,6 +128,10 @@ class CreateTermDialog:
         )
 
         # ステータスドロップダウン
+        current_status = term_data.get("status", TermStatus.DRAFT.value)
+        if isinstance(current_status, TermStatus):
+            current_status = current_status.value
+
         self._status_dropdown = ft.Dropdown(
             label="ステータス",
             options=[
@@ -114,20 +139,24 @@ class CreateTermDialog:
                 ft.dropdown.Option(key=TermStatus.APPROVED.value, text="承認済み"),
                 ft.dropdown.Option(key=TermStatus.DEPRECATED.value, text="非推奨"),
             ],
-            value=TermStatus.DRAFT.value,
+            value=current_status,
         )
 
         # 出典URLフィールド
         self._source_url_field = ft.TextField(
             label="出典URL",
             hint_text="https://example.com/definition",
+            value=term_data.get("source_url", "") or "",
             max_length=self.MAX_URL_LENGTH,
         )
 
         # 同義語フィールド（カンマ区切り）
+        synonyms = term_data.get("synonyms", [])
+        synonyms_text = ", ".join(synonyms) if isinstance(synonyms, list) else ""
         self._synonyms_field = ft.TextField(
             label="同義語",
             hint_text="カンマ区切りで複数入力可能（例: LLM, 大規模言語モデル）",
+            value=synonyms_text,
             helper_text="別名や略称を入力してください",
         )
 
@@ -179,10 +208,13 @@ class CreateTermDialog:
             scroll=ft.ScrollMode.AUTO,
         )
 
+        # 初期タグバッジを表示
+        self._update_selected_tags_display()
+
         # ダイアログ本体
         self._dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("新しい用語を作成"),
+            title=ft.Text("用語を編集"),
             content=ft.Container(
                 content=self._form_column,
                 width=500,
@@ -194,9 +226,9 @@ class CreateTermDialog:
                     on_click=lambda _: self._handle_cancel(),
                 ),
                 ft.ElevatedButton(
-                    "作成",
-                    icon=ft.Icons.ADD,
-                    on_click=lambda _: self._handle_create(),
+                    "更新",
+                    icon=ft.Icons.SAVE,
+                    on_click=lambda _: self._handle_update(),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -283,8 +315,8 @@ class CreateTermDialog:
 
         return None
 
-    def _handle_create(self) -> None:
-        """作成ボタンのクリックをハンドリングする。"""
+    def _handle_update(self) -> None:
+        """更新ボタンのクリックをハンドリングする。"""
         # バリデーション
         is_valid, error_message = self._validate_form()
         if not is_valid:
@@ -327,7 +359,7 @@ class CreateTermDialog:
             form_data["tag_ids"] = []
 
         # コールバック呼び出し
-        self._props.on_create(form_data)
+        self._props.on_update(form_data)
 
     def _handle_cancel(self) -> None:
         """キャンセルボタンのクリックをハンドリングする。"""
@@ -426,27 +458,3 @@ class CreateTermDialog:
 
         with suppress(AssertionError):
             self._selected_tags_container.update()
-
-    def reset(self) -> None:
-        """フォームをリセットする。"""
-        if self._key_field:
-            self._key_field.value = ""
-        if self._title_field:
-            self._title_field.value = ""
-        if self._description_field:
-            self._description_field.value = ""
-        if self._status_dropdown:
-            self._status_dropdown.value = TermStatus.DRAFT.value
-        if self._source_url_field:
-            self._source_url_field.value = ""
-        if self._synonyms_field:
-            self._synonyms_field.value = ""
-
-        # タグ選択をリセット
-        self._selected_tag_ids.clear()
-        self._update_selected_tags_display()
-
-        # タイトルとコンテンツを元に戻す
-        if self._dialog:
-            self._dialog.title = ft.Text("新しい用語を作成")
-            self._build_dialog()

@@ -293,3 +293,45 @@ class TerminologyApplicationService(BaseApplicationService[type[SqlModelUnitOfWo
             count = term_service.export_to_json(path)
             logger.info(f"JSON エクスポート完了: {count}件 -> {file_path}")
             return count
+
+    # タグ操作
+
+    def sync_tags(self, term_id: uuid.UUID, tag_ids: list[uuid.UUID]) -> TermRead:
+        """用語のタグを同期する
+
+        既存のタグと指定されたタグを比較し、差分を反映します。
+        - 指定されていない既存タグは削除
+        - 新しく指定されたタグは追加
+
+        Args:
+            term_id: 用語のID
+            tag_ids: 同期後のタグIDリスト
+
+        Returns:
+            TermRead: 更新された用語
+
+        Raises:
+            TermNotFoundError: 用語が見つからない場合
+        """
+        with self._unit_of_work_factory() as uow:
+            term_service = uow.service_factory.get_service(TerminologyService)
+
+            # 現在のタグIDを取得
+            term = term_service.get_by_id(term_id)
+            current_tag_ids = {tag.id for tag in term.tags}
+            desired_tag_ids = set(tag_ids)
+
+            # 削除するタグと追加するタグを計算
+            tags_to_remove = current_tag_ids - desired_tag_ids
+            tags_to_add = desired_tag_ids - current_tag_ids
+
+            # タグを削除
+            for tag_id in tags_to_remove:
+                term = term_service.remove_tag(term_id, tag_id)
+
+            # タグを追加
+            for tag_id in tags_to_add:
+                term = term_service.add_tag(term_id, tag_id)
+
+        logger.info(f"タグ同期完了: 用語ID={term_id}, 追加={len(tags_to_add)}, 削除={len(tags_to_remove)}")
+        return term

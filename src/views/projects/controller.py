@@ -225,6 +225,7 @@ class ProjectController:
         try:
             all_projects = self._service.get_all_projects()
             counts: dict[ProjectStatus, int] = {
+                ProjectStatus.DRAFT: 0,
                 ProjectStatus.ACTIVE: 0,
                 ProjectStatus.ON_HOLD: 0,
                 ProjectStatus.COMPLETED: 0,
@@ -237,6 +238,7 @@ class ProjectController:
         except Exception as e:
             logger.warning(f"ステータス件数取得エラー: {e}")
             return {
+                ProjectStatus.DRAFT: 0,
                 ProjectStatus.ACTIVE: 0,
                 ProjectStatus.ON_HOLD: 0,
                 ProjectStatus.COMPLETED: 0,

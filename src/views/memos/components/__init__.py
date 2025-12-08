@@ -65,6 +65,7 @@ from .filters import MemoFilters
 from .memo_card import MemoCard
 from .memo_list import MemoCardList
 from .status_tabs import MemoStatusTabs
+from .tag_selector import TagSelector, TagSelectorProps
 
 __all__ = [
     "MemoCard",
@@ -74,4 +75,6 @@ __all__ = [
     "FormCallbacks",
     "MemoStatusTabs",
     "MemoFilters",
+    "TagSelector",
+    "TagSelectorProps",
 ]

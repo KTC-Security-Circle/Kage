@@ -29,6 +29,11 @@ class TaskCardVM:
     subtitle: str
     description: str = ""
     status: str = ""
+    tags: list[str] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.tags is None:
+            object.__setattr__(self, "tags", [])
 
 
 @dataclass(frozen=True)
@@ -70,6 +75,7 @@ class TaskDetailVM:
         recurrence_rule: RRULE形式などの繰り返しルール（未設定は None）
         created_at: 作成日（文字列、未設定は None）
         updated_at: 更新日（文字列、未設定は None）
+        tags: タグ名のリスト（未設定は空リスト）
     """
 
     id: str
@@ -88,10 +94,13 @@ class TaskDetailVM:
     recurrence_rule: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
+    tags: list[str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         if self.project_tasks is None:
             object.__setattr__(self, "project_tasks", [])
+        if self.tags is None:
+            object.__setattr__(self, "tags", [])
 
 
 # TODO: 日付/時刻の整形 (subtitle のローカライズ) を集中管理するヘルパーを導入する。
@@ -106,16 +115,24 @@ def to_card_vm(items: Iterable[dict]) -> list[TaskCardVM]:
     Returns:
         TaskCardVM リスト
     """
-    return [
-        TaskCardVM(
-            id=str(x.get("id")),
-            title=str(x.get("title", "(無題)")),
-            subtitle=str(x.get("updated_at", "")),
-            description=str(x.get("description", "")),
-            status=str(x.get("status", "")),
+    result = []
+    for x in items:
+        tags_data = x.get("tags", [])
+        if not isinstance(tags_data, list):
+            tags_data = []
+        tags = [str(tag) for tag in tags_data]
+
+        result.append(
+            TaskCardVM(
+                id=str(x.get("id")),
+                title=str(x.get("title", "(無題)")),
+                subtitle=str(x.get("updated_at", "")),
+                description=str(x.get("description", "")),
+                status=str(x.get("status", "")),
+                tags=tags,
+            )
         )
-        for x in items
-    ]
+    return result
 
 
 def to_detail_vm(item: dict) -> TaskDetailVM:
@@ -141,6 +158,12 @@ def to_detail_vm(item: dict) -> TaskDetailVM:
         for task in project_tasks_data
     ]
 
+    # タグを抽出
+    tags_data = item.get("tags", [])
+    if not isinstance(tags_data, list):
+        tags_data = []
+    tags = [str(tag) for tag in tags_data]
+
     return TaskDetailVM(
         id=str(item.get("id")),
         title=str(item.get("title", "(無題)")),
@@ -158,6 +181,7 @@ def to_detail_vm(item: dict) -> TaskDetailVM:
         recurrence_rule=str(item.get("recurrence_rule")) if item.get("recurrence_rule") is not None else None,
         created_at=str(item.get("created_at")) if item.get("created_at") is not None else None,
         updated_at=str(item.get("updated_at")) if item.get("updated_at") is not None else None,
+        tags=tags,
     )
 
 
@@ -188,6 +212,7 @@ def to_detail_from_card(vm: TaskCardVM) -> TaskDetailVM:
         recurrence_rule=None,
         created_at=None,
         updated_at=None,
+        tags=[],
     )
 
 

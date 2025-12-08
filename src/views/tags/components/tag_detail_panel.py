@@ -465,13 +465,19 @@ class TagDetailPanel(ft.Container):
                         spacing=4,
                         expand=True,
                     ),
+                    # 右側: 開くボタン
+                    ft.IconButton(
+                        icon=ft.Icons.OPEN_IN_NEW,
+                        icon_size=18,
+                        tooltip="詳細を表示",
+                        on_click=lambda e, item_id=item.id: on_click(e, item_id),
+                    ),
                 ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
             padding=12,
             border=ft.border.all(1, get_grey_color(300)),
             border_radius=ft.border_radius.all(8),
-            on_click=lambda e, item_id=item.id: on_click(e, item_id),
-            ink=True,
         )
 
     def set_props(self, props: TagDetailPanelProps) -> None:

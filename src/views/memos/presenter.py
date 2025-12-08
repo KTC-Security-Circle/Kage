@@ -73,7 +73,7 @@ import flet as ft
 from loguru import logger
 
 from models import AiSuggestionStatus, MemoStatus
-from views.shared.components import HeaderButtonData, HeaderData
+from views.shared.components import HeaderButtonData, HeaderData, TagBadgeData
 from views.theme import (
     get_error_color,
     get_on_primary_color,
@@ -87,7 +87,12 @@ from views.theme import (
 )
 
 from .components.filters import FilterConfig, FilterData
-from .components.memo_card import DEFAULT_MEMO_TITLE, MAX_CONTENT_PREVIEW_LENGTH, MemoCardData, StatusBadgeData
+from .components.memo_card import (
+    DEFAULT_MEMO_TITLE,
+    MAX_CONTENT_PREVIEW_LENGTH,
+    MemoCardData,
+    StatusBadgeData,
+)
 from .components.shared.constants import DEFAULT_DATE_TEXT, DEFAULT_SEARCH_PLACEHOLDER, MIN_SEARCH_LENGTH
 from .components.types import MemoListData
 
@@ -137,12 +142,21 @@ def create_memo_card_data(
     # バッジデータ生成
     badge_data = _create_status_badge_data(memo.status) if show_badge else None
 
+    # タグバッジデータ生成
+    tag_badges: list[TagBadgeData] = []
+    if hasattr(memo, "tags") and memo.tags:
+        for tag in memo.tags:
+            tag_name = getattr(tag, "name", str(tag))
+            tag_color = getattr(tag, "color", None) or get_primary_color()
+            tag_badges.append(TagBadgeData(name=tag_name, color=tag_color))
+
     return MemoCardData(
         memo_id=memo.id,
         title=title,
         content_preview=content_preview,
         formatted_date=formatted_date,
         badge_data=badge_data,
+        tag_badges=tuple(tag_badges),
         is_selected=is_selected,
         on_click=on_click,
     )
@@ -425,8 +439,8 @@ def build_detail_metadata(created_text: str, updated_text: str) -> ft.Control:
 
 def build_detail_actions(
     *,
-    on_edit: Callable,
-    on_delete: Callable,
+    on_edit: Callable[[ft.ControlEvent], None],
+    on_delete: Callable[[ft.ControlEvent], None],
 ) -> ft.Control:
     """詳細パネルのアクションボタンを構築する。
 
@@ -462,8 +476,8 @@ def build_detail_actions(
 def build_detail_panel(
     memo: MemoRead,
     *,
-    on_edit: Callable,
-    on_delete: Callable,
+    on_edit: Callable[[ft.ControlEvent], None],
+    on_delete: Callable[[ft.ControlEvent], None],
     extra_sections: tuple[ft.Control, ...] | None = None,
 ) -> ft.Container:
     """メモ詳細パネルを構築する。
@@ -482,23 +496,55 @@ def build_detail_panel(
     created_text = format_datetime(getattr(memo, "created_at", None))
     updated_text = format_datetime(getattr(memo, "updated_at", None))
 
+    # タグバッジを構築
+    tag_badges = []
+    if hasattr(memo, "tags") and memo.tags:
+        for tag in memo.tags:
+            tag_name = getattr(tag, "name", str(tag))
+            tag_color = getattr(tag, "color", None) or get_primary_color()
+            tag_badge = ft.Container(
+                content=ft.Text(
+                    tag_name,
+                    size=12,
+                    color=get_on_primary_color(),
+                    weight=ft.FontWeight.W_500,
+                ),
+                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                bgcolor=tag_color,
+                border_radius=12,
+            )
+            tag_badges.append(tag_badge)
+
+    # ヘッダーのバッジ行
+    header_badges = [build_status_badge(memo.status)]
+    if tag_badges:
+        header_badges.extend(tag_badges)
+
     # メモ詳細カード
     detail_card = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 controls=[
                     # ヘッダー
-                    ft.Row(
+                    ft.Column(
                         controls=[
-                            ft.Text(
-                                memo.title or "無題のメモ",
-                                theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                                weight=ft.FontWeight.BOLD,
-                                expand=True,
+                            ft.Row(
+                                controls=[
+                                    ft.Text(
+                                        memo.title or "無題のメモ",
+                                        theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
+                                        weight=ft.FontWeight.BOLD,
+                                        expand=True,
+                                    ),
+                                ],
                             ),
-                            build_status_badge(memo.status),
+                            ft.Row(
+                                controls=header_badges,
+                                spacing=8,
+                                wrap=True,
+                            ),
                         ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        spacing=12,
                     ),
                     # 内容（Markdownレンダリング、コンテンツ量に応じた高さ）
                     ft.Container(
@@ -585,6 +631,11 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
     selected_task_ids: set[str],
     editing_task_id: str | None,
     error_message: str | None = None,
+    project_id: str | None = None,
+    project_title: str | None = None,
+    project_description: str | None = None,
+    project_status: str | None = None,
+    project_error: str | None = None,
     on_request_ai: Callable[[ft.ControlEvent], None] | None = None,
     on_retry_ai: Callable[[ft.ControlEvent], None] | None = None,
     on_mark_as_idea: Callable[[ft.ControlEvent], None] | None = None,
@@ -596,12 +647,23 @@ def build_ai_task_flow_panel(  # noqa: PLR0913
     on_delete_task: Callable[[str], None] | None = None,
     on_add_task: Callable[[ft.ControlEvent | None], None] | None = None,
     on_approve_tasks: Callable[[ft.ControlEvent | None], None] | None = None,
+    on_open_project: Callable[[str], None] | None = None,
 ) -> ft.Control:
     """AI提案→タスク承認フローのカードを構築する。"""
     header_title, header_description = _ai_flow_header_copy(memo.status)
     status_badge = _build_ai_status_badge(ai_status)
 
     body_controls: list[ft.Control] = []
+    project_section = _build_project_summary_section(
+        project_id=project_id,
+        project_title=project_title,
+        project_description=project_description,
+        project_status=project_status,
+        project_error=project_error,
+        on_open_project=on_open_project,
+    )
+    if project_section is not None:
+        body_controls.append(project_section)
     match ai_status:
         case AiSuggestionStatus.NOT_REQUESTED:
             body_controls.append(
@@ -811,6 +873,91 @@ def _build_ai_status_badge(status: AiSuggestionStatus) -> ft.Control:
         padding=ft.padding.symmetric(horizontal=12, vertical=6),
         bgcolor=color,
         border_radius=16,
+    )
+
+
+def _build_project_summary_section(
+    *,
+    project_id: str | None,
+    project_title: str | None,
+    project_description: str | None,
+    project_status: str | None,
+    project_error: str | None,
+    on_open_project: Callable[[str], None] | None,
+) -> ft.Control | None:
+    if not any([project_id, project_title, project_description, project_error]):
+        return None
+    if project_error:
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.ERROR, color=ft.Colors.ERROR),
+                    ft.Text(
+                        f"プロジェクト作成に失敗しました: {project_error}",
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                        color=ft.Colors.ERROR,
+                    ),
+                ],
+                spacing=8,
+            ),
+            bgcolor=ft.Colors.ERROR_CONTAINER,
+            border_radius=12,
+            padding=ft.padding.all(16),
+        )
+    title_text = project_title or "AI作成プロジェクト"
+    status_chip = (
+        ft.Container(
+            content=ft.Text(project_status, theme_style=ft.TextThemeStyle.BODY_SMALL),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            bgcolor=ft.Colors.SECONDARY_CONTAINER,
+            border_radius=12,
+        )
+        if project_status
+        else None
+    )
+    open_button: ft.Control | None = None
+    if on_open_project and project_id:
+        open_button = ft.OutlinedButton(
+            "プロジェクトを開く",
+            icon=ft.Icons.OPEN_IN_NEW,
+            on_click=lambda _e, pid=project_id: on_open_project(pid),
+        )
+    description_text = (
+        ft.Text(
+            project_description,
+            theme_style=ft.TextThemeStyle.BODY_SMALL,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            max_lines=2,
+            overflow=ft.TextOverflow.ELLIPSIS,
+        )
+        if project_description
+        else None
+    )
+    header_controls: list[ft.Control] = [
+        ft.Icon(ft.Icons.TASK_ALT, color=ft.Colors.PRIMARY),
+        ft.Text(
+            f"AIがプロジェクトを作成しました: {title_text}",
+            theme_style=ft.TextThemeStyle.TITLE_SMALL,
+        ),
+    ]
+    if status_chip:
+        header_controls.append(status_chip)
+    controls: list[ft.Control] = [
+        ft.Row(
+            controls=header_controls,
+            spacing=8,
+            alignment=ft.MainAxisAlignment.START,
+        )
+    ]
+    if description_text:
+        controls.append(description_text)
+    if open_button:
+        controls.append(open_button)
+    return ft.Container(
+        content=ft.Column(controls=controls, spacing=8),
+        bgcolor=ft.Colors.SECONDARY_CONTAINER,
+        border_radius=12,
+        padding=ft.padding.all(16),
     )
 
 

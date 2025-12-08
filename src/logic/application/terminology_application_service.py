@@ -293,3 +293,31 @@ class TerminologyApplicationService(BaseApplicationService[type[SqlModelUnitOfWo
             count = term_service.export_to_json(path)
             logger.info(f"JSON エクスポート完了: {count}件 -> {file_path}")
             return count
+
+    # タグ操作
+
+    def sync_tags(self, term_id: uuid.UUID, tag_ids: list[uuid.UUID]) -> TermRead:
+        """用語のタグを同期する
+
+        既存のタグと指定されたタグを比較し、差分を反映します。
+        N+1問題を回避するため、バッチ操作を使用します。
+
+        Args:
+            term_id: 用語のID
+            tag_ids: 同期後のタグIDリスト
+
+        Returns:
+            TermRead: 更新された用語
+
+        Raises:
+            TermNotFoundError: 用語が見つからない場合
+        """
+        with self._unit_of_work_factory() as uow:
+            term_service = uow.service_factory.get_service(TerminologyService)
+            desired_tag_ids = set(tag_ids)
+
+            # バッチ操作で一括同期（1回のDB操作で完了）
+            term = term_service.sync_tags(term_id, desired_tag_ids)
+
+        logger.info(f"タグ同期完了: 用語ID={term_id}, タグ数={len(desired_tag_ids)}")
+        return term

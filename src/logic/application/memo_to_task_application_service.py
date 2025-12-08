@@ -100,7 +100,12 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
             self._log_error_and_raise(f"エージェントがエラーを返しました: {result}")
 
         if isinstance(result, MemoToTaskResult):
-            return OutputModel(tasks=list(result.tasks), suggested_memo_status=result.suggested_memo_status)
+            return OutputModel(
+                tasks=list(result.tasks),
+                suggested_memo_status=result.suggested_memo_status,
+                requires_project=result.requires_project,
+                project_plan=result.project_plan,
+            )
 
         # ここには通常到達しない（AgentError か MemoToTaskResult のどちらか）
         msg_invalid = "エージェント応答の型が不正です"

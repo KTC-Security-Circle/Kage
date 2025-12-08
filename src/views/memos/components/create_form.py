@@ -144,7 +144,6 @@ class CreateForm(ft.Container):
                     [
                         ft.Text("内容", weight=ft.FontWeight.BOLD),
                         self._tabs,
-                        ft.Text("ヒント: Ctrl+Enter で送信", size=11, color=ft.Colors.ON_SURFACE_VARIANT),
                     ],
                     spacing=10,
                 ),

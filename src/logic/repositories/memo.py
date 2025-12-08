@@ -119,6 +119,43 @@ class MemoRepository(BaseRepository[Memo, MemoCreate, MemoUpdate]):
 
         return memo
 
+    def sync_tags(self, memo_id: uuid.UUID, tag_ids: set[uuid.UUID]) -> Memo:
+        """メモのタグを一括同期する（N+1問題を回避）
+
+        Args:
+            memo_id: メモID
+            tag_ids: 設定するタグIDのセット
+
+        Returns:
+            Memo: 更新されたメモ
+
+        Raises:
+            NotFoundError: メモまたはタグが存在しない場合
+        """
+        memo = self.get_by_id(memo_id, with_details=True)
+
+        # 存在確認: 指定されたタグIDが全て存在するか確認
+        if tag_ids:
+            tag_id_col = cast("Any", Tag.id)
+            existing_tags = self.session.exec(select(Tag).where(tag_id_col.in_(tag_ids))).all()
+            existing_tag_ids = {tag.id for tag in existing_tags}
+            missing_ids = tag_ids - existing_tag_ids
+            if missing_ids:
+                msg = f"タグが見つかりません: {missing_ids}"
+                logger.warning(msg)
+                raise NotFoundError(msg)
+
+            # タグを一括設定
+            memo.tags = list(existing_tags)
+        else:
+            # 空セットの場合は全タグをクリア
+            memo.tags = []
+
+        self._commit_and_refresh(memo)
+        logger.info(f"メモ({memo_id})のタグを同期しました: {len(tag_ids)}個")
+
+        return memo
+
     def add_task(self, memo_id: uuid.UUID, task_id: uuid.UUID) -> Memo:
         """メモにタスクを追加する
 

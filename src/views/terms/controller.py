@@ -140,18 +140,29 @@ class TermsController:
             logger.error(f"Failed to get all tags: {e}")
             return []
 
-    async def sync_tags(self, term_id: UUID, tag_ids: list[UUID]) -> None:
-        """用語のタグを同期する。
+    async def sync_tags(self, term_id: UUID, tag_ids: list[UUID]) -> TermRead:
+        """用語のタグを同期し、更新された用語を返す。
 
         Args:
             term_id: 用語ID
             tag_ids: タグIDのリスト
+
+        Returns:
+            TermRead: タグが同期された用語
+
+        Raises:
+            Exception: タグ同期に失敗した場合
         """
         try:
-            await self._call_service(self.service.sync_tags, term_id, tag_ids)
-            logger.info(f"用語 {term_id} のタグを同期しました")
+            updated_term = await self._call_service(self.service.sync_tags, term_id, tag_ids)
         except Exception as e:
             logger.error(f"Failed to sync tags for term {term_id}: {e}")
+            raise
+        else:
+            # Stateを更新（タグ情報を含む最新データに更新）
+            self.state.upsert_term(updated_term)
+            logger.info(f"用語 {term_id} のタグを同期しました")
+            return updated_term
 
     async def load_initial_terms(self) -> None:
         """初期表示に使用する用語一覧を読み込む。"""

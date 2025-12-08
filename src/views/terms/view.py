@@ -401,6 +401,8 @@ class TermsView(BaseView):
         Args:
             form_data: フォームデータ
         """
+        from errors import AlreadyExistsError
+
         try:
             # 用語作成
             created_term = await self.controller.create_term(cast("TermFormData", form_data))
@@ -411,7 +413,8 @@ class TermsView(BaseView):
                 from uuid import UUID
 
                 tag_uuids = [UUID(tag_id) for tag_id in tag_ids]
-                await self.controller.sync_tags(created_term.id, tag_uuids)
+                # sync_tagsは更新された用語を返すので、それを使用
+                created_term = await self.controller.sync_tags(created_term.id, tag_uuids)
 
             self._close_create_dialog()
             self.show_snack_bar(f"用語 '{created_term.key}' を作成しました")
@@ -423,11 +426,17 @@ class TermsView(BaseView):
             self._set_active_status_tab(normalized_status)
             self._show_detail()
 
+        except AlreadyExistsError as e:
+            # 重複エラー（キーが既に存在）- ダイアログは開いたまま、ユーザーが修正できるようにする
+            logger.warning("Term key already exists", extra={"error": str(e)})
+            if self.create_dialog:
+                self.create_dialog.show_error("⚠️ この用語キーは既に使用されています。別のキーを入力してください。")
+
         except ValueError as e:
-            # バリデーションエラー
+            # バリデーションエラー - ダイアログは開いたまま
             logger.warning("Validation error during term creation", extra={"error": str(e)})
-            if self.page:
-                self.show_error_snackbar(self.page, f"バリデーションエラー: {e}")
+            if self.create_dialog:
+                self.create_dialog.show_error(f"バリデーションエラー: {e}")
 
         except Exception:
             # その他のエラー
@@ -457,6 +466,8 @@ class TermsView(BaseView):
             term_id: 用語ID
             form_data: フォームデータ
         """
+        from errors import AlreadyExistsError
+
         try:
             # 用語更新
             updated_term = await self.controller.update_term(term_id, cast("TermFormData", form_data))
@@ -465,10 +476,8 @@ class TermsView(BaseView):
             tag_ids = form_data.get("tag_ids", [])
             if isinstance(tag_ids, list):
                 tag_uuids = [UUID(tag_id) for tag_id in tag_ids]
-                await self.controller.sync_tags(term_id, tag_uuids)
-
-            # タグ同期後、最新データを再取得
-            await self.controller.load_initial_terms()
+                # sync_tagsは更新された用語を返すので、それを使用
+                updated_term = await self.controller.sync_tags(term_id, tag_uuids)
 
             self._close_edit_dialog()
             self.show_snack_bar(f"用語 '{updated_term.key}' を更新しました")
@@ -480,11 +489,17 @@ class TermsView(BaseView):
             self._set_active_status_tab(normalized_status)
             self._show_detail()
 
+        except AlreadyExistsError as e:
+            # 重複エラー（キーが既に存在）- ダイアログは開いたまま、ユーザーが修正できるようにする
+            logger.warning("Term key already exists during update", extra={"error": str(e)})
+            if self.edit_dialog:
+                self.edit_dialog.show_error("⚠️ この用語キーは既に使用されています。別のキーを入力してください。")
+
         except ValueError as e:
-            # バリデーションエラー
+            # バリデーションエラー - ダイアログは開いたまま
             logger.warning("Validation error during term update", extra={"error": str(e)})
-            if self.page:
-                self.show_error_snackbar(self.page, f"バリデーションエラー: {e}")
+            if self.edit_dialog:
+                self.edit_dialog.show_error(f"バリデーションエラー: {e}")
 
         except Exception:
             # その他のエラー

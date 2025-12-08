@@ -11,7 +11,7 @@ from typing import Any, Literal, ParamSpec, Self, TypeVar, overload
 
 from loguru import logger
 
-from errors import NotFoundError, RepositoryError
+from errors import AlreadyExistsError, NotFoundError, RepositoryError
 from models import BaseModel
 
 
@@ -52,7 +52,7 @@ def handle_service_errors(
             try:
                 return func(*args, **kwargs)
 
-            except NotFoundError:
+            except (NotFoundError, AlreadyExistsError):
                 # ドメイン相当の条件不一致はそのまま透過（UI/CLIで情報表示する想定）
                 raise
             except RepositoryError as e:

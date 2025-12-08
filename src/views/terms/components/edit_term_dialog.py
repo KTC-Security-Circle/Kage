@@ -20,11 +20,9 @@ from typing import TYPE_CHECKING, Any
 import flet as ft
 
 from models import TermStatus
+from views.terms.components.shared import TagSelectorMixin
 from views.theme import (
     get_error_color,
-    get_grey_color,
-    get_on_primary_color,
-    get_surface_variant_color,
     get_text_secondary_color,
 )
 
@@ -42,8 +40,11 @@ class EditTermDialogProps:
     all_tags: list[Any] | None = None
 
 
-class EditTermDialog:
-    """用語編集ダイアログコンポーネント。"""
+class EditTermDialog(TagSelectorMixin):
+    """用語編集ダイアログコンポーネント
+
+    TagSelectorMixinを使用してタグ選択UIの共通ロジックを継承。
+    """
 
     # フィールド長の制限（フォーム定義とバリデーションで共有）
     MAX_KEY_LENGTH = 100
@@ -181,7 +182,8 @@ class EditTermDialog:
         # エラーバナー（初期状態は非表示）
         self._error_banner = ft.Container(
             visible=False,
-            bgcolor=get_surface_variant_color(),
+            bgcolor=ft.Colors.with_opacity(0.1, get_error_color()),
+            border=ft.border.all(2, get_error_color()),
             padding=12,
             border_radius=8,
         )
@@ -375,17 +377,23 @@ class EditTermDialog:
         if self._error_banner:
             self._error_banner.content = ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=get_error_color()),
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=get_error_color(), size=24),
                     ft.Text(
                         error_message,
                         color=get_error_color(),
-                        weight=ft.FontWeight.W_500,
+                        weight=ft.FontWeight.BOLD,
+                        size=14,
                         expand=True,
                     ),
                 ],
                 spacing=8,
             )
             self._error_banner.visible = True
+
+            # 重複キーエラーの場合、キーフィールドにエラー表示を追加
+            if "用語キー" in error_message and self._key_field:
+                self._key_field.error_text = "このキーは既に使用されています"
+                self._key_field.border_color = get_error_color()
 
             if self._dialog:
                 with suppress(AssertionError):
@@ -396,65 +404,21 @@ class EditTermDialog:
         if self._error_banner:
             self._error_banner.visible = False
 
+            # キーフィールドのエラー表示をクリア
+            if self._key_field:
+                self._key_field.error_text = None
+                self._key_field.border_color = None
+
             if self._dialog:
                 with suppress(AssertionError):
                     self._dialog.update()
 
-    def _on_tag_select(self, e: ft.ControlEvent) -> None:
-        """タグ選択時のハンドラ。
+    def show_error(self, error_message: str) -> None:
+        """エラーメッセージを表示する（外部から呼び出し可能）。
 
         Args:
-            e: イベント
+            error_message: 表示するエラーメッセージ
         """
-        if e.control.value and e.control.value not in self._selected_tag_ids:
-            self._selected_tag_ids.add(e.control.value)
-            self._update_selected_tags_display()
-            if self._tag_dropdown:
-                self._tag_dropdown.value = None
-                with suppress(AssertionError):
-                    self._tag_dropdown.update()
+        self._show_error(error_message)
 
-    def _update_selected_tags_display(self) -> None:
-        """選択中タグのバッジ表示を更新。"""
-        if not self._selected_tags_container or not self._props.all_tags:
-            return
-
-        self._selected_tags_container.controls.clear()
-
-        for tag_name in sorted(self._selected_tag_ids):
-            tag = next((t for t in self._props.all_tags if t.name == tag_name), None)
-            if tag is None:
-                continue
-
-            color = tag.color or get_grey_color(600)
-
-            def make_remove_handler(name: str) -> Callable[[ft.ControlEvent], None]:
-                def handler(_: ft.ControlEvent) -> None:
-                    self._selected_tag_ids.discard(name)
-                    self._update_selected_tags_display()
-
-                return handler
-
-            badge = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Text(tag_name, size=12, color=get_on_primary_color()),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_size=14,
-                            icon_color=get_on_primary_color(),
-                            on_click=make_remove_handler(tag_name),
-                            tooltip=f"{tag_name}を削除",
-                        ),
-                    ],
-                    spacing=4,
-                    tight=True,
-                ),
-                bgcolor=color,
-                border_radius=12,
-                padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
-            )
-            self._selected_tags_container.controls.append(badge)
-
-        with suppress(AssertionError):
-            self._selected_tags_container.update()
+    # _on_tag_select と _update_selected_tags_display は TagSelectorMixin で提供

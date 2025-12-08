@@ -27,13 +27,7 @@ import flet as ft
 from loguru import logger
 
 from views.shared.components import Header, HeaderButtonData, HeaderData
-from views.theme import (
-    get_error_color,
-    get_grey_color,
-    get_primary_color,
-    get_success_color,
-    get_text_secondary_color,
-)
+from views.theme import get_dark_color, get_grey_color, get_light_color
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -70,25 +64,40 @@ class ErrorHandlingMixin:
 
     def show_error_snackbar(self, page: ft.Page, message: str = "エラーが発生しました") -> None:
         """エラースナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=get_error_color())
+        is_dark = getattr(page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=get_dark_color("error") if is_dark else get_light_color("error"),
+        )
         page.open(snack_bar)
         page.update()
 
     def show_info_snackbar(self, message: str = "情報") -> None:
         """情報スナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=get_primary_color())
+        is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=get_dark_color("primary") if is_dark else get_light_color("primary"),
+        )
         self.page.open(snack_bar)
         self.page.update()
 
     def show_success_snackbar(self, message: str = "成功しました") -> None:
         """成功スナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=get_success_color())
+        is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+        snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor=get_dark_color("success") if is_dark else get_light_color("success"),
+        )
         self.page.open(snack_bar)
         self.page.update()
 
     def show_snack_bar(self, message: str, bgcolor: str | None = None) -> None:
         """汎用スナックバーを表示する。"""
-        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=bgcolor or get_primary_color())
+        if bgcolor is None:
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            bgcolor = get_dark_color("primary") if is_dark else get_light_color("primary")
+        snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=bgcolor)
         self.page.open(snack_bar)
         self.page.update()
 
@@ -201,19 +210,22 @@ class BaseView(ft.Container, ErrorHandlingMixin):
             return self.build_content()
         except Exception as e:
             logger.error(f"Error building view {self.__class__.__name__}: {e}")
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            error_color = get_dark_color("error") if is_dark else get_light_color("error")
+            text_secondary_color = get_dark_color("text_secondary") if is_dark else get_light_color("text_secondary")
             return ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Icon(ft.Icons.ERROR, color=get_error_color(), size=48),
+                        ft.Icon(ft.Icons.ERROR, color=error_color, size=48),
                         ft.Text(
                             "ビューの読み込み中にエラーが発生しました",
                             size=16,
-                            color=get_error_color(),
+                            color=error_color,
                         ),
                         ft.Text(
                             str(e),
                             size=12,
-                            color=get_text_secondary_color(),
+                            color=text_secondary_color,
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -264,7 +276,9 @@ class BaseView(ft.Container, ErrorHandlingMixin):
         self.state = replace(self.state, error_message=message)
         logger.error(details or message)
         # SnackBar で通知 (ダイアログ等への差し替えは将来拡張)
-        self.show_snack_bar(message=message, bgcolor=get_error_color())
+        is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+        error_color = get_dark_color("error") if is_dark else get_light_color("error")
+        self.show_snack_bar(message=message, bgcolor=error_color)
         self.safe_update()
 
     # ---------------------------------------------------------------------

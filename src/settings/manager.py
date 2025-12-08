@@ -202,14 +202,14 @@ def apply_page_settings(page: ft.Page) -> None:
     try:
         import flet as ft  # ローカルインポート
 
-        from views.theme import get_background_color  # theme.py から背景色を取得
+        from views.theme import get_light_color  # theme.py から色を取得
 
         # テーマモード設定
         page.theme_mode = ft.ThemeMode.DARK if theme == "dark" else ft.ThemeMode.LIGHT
 
         # 背景色を theme.py から取得して適用
-        # TODO: ダークモード対応後は get_background_color() がテーマモードに応じた色を返す
-        page.bgcolor = get_background_color()
+        # TODO: ダークモード対応後は get_light_color("background") がテーマモードに応じた色を返す
+        page.bgcolor = get_light_color("background")
 
     except (ImportError, AttributeError) as exc:
         logger.warning(f"Flet ページへの設定適用に失敗しました: {exc}")

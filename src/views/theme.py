@@ -433,13 +433,45 @@ def get_light_color(color_name: str) -> str:
 
     Args:
         color_name: 取得したい色の名前
+            基本色: primary, secondary, surface, background, error, success, warning, info
+            on系色: on_primary, on_secondary, on_surface, on_background, on_error
+            派生色: outline, text_secondary, surface_variant
+            グレー: grey (デフォルト600), grey_50-900
 
     Returns:
         色コード（HEX形式）
 
     Raises:
         AttributeError: 指定された色名が存在しない場合
+
+    Examples:
+        >>> get_light_color("error")  # エラー色
+        >>> get_light_color("outline")  # アウトライン色
+        >>> get_light_color("grey_600")  # グレー600
     """
+    # 派生色の処理
+    if color_name == "outline":
+        return get_outline_color()
+    if color_name == "text_secondary":
+        return get_text_secondary_color()
+    if color_name == "surface_variant":
+        return get_surface_variant_color()
+
+    # グレー系の処理
+    grey_parts_count = 2  # "grey_600" -> ["grey", "600"]
+    if color_name.startswith("grey"):
+        if color_name == "grey":
+            return get_grey_color(600)
+        # grey_300, grey_600 などの形式
+        parts = color_name.split("_")
+        if len(parts) == grey_parts_count:
+            try:
+                shade = int(parts[1])
+                return get_grey_color(shade)
+            except ValueError:
+                pass
+
+    # トークンから直接取得
     return _get_color_from_tokens(LIGHT_COLORS, color_name)
 
 
@@ -448,13 +480,45 @@ def get_dark_color(color_name: str) -> str:
 
     Args:
         color_name: 取得したい色の名前
+            基本色: primary, secondary, surface, background, error, success, warning, info
+            on系色: on_primary, on_secondary, on_surface, on_background, on_error
+            派生色: outline, text_secondary, surface_variant
+            グレー: grey (デフォルト600), grey_50-900
 
     Returns:
         色コード（HEX形式）
 
     Raises:
         AttributeError: 指定された色名が存在しない場合
+
+    Examples:
+        >>> get_dark_color("error")  # ダークモード用エラー色
+        >>> get_dark_color("outline")  # ダークモード用アウトライン色
+        >>> get_dark_color("grey_600")  # グレー600
     """
+    # 派生色の処理
+    if color_name == "outline":
+        return get_outline_color()
+    if color_name == "text_secondary":
+        return get_text_secondary_color()
+    if color_name == "surface_variant":
+        return get_surface_variant_color()
+
+    # グレー系の処理
+    grey_parts_count = 2  # "grey_600" -> ["grey", "600"]
+    if color_name.startswith("grey"):
+        if color_name == "grey":
+            return get_grey_color(600)
+        # grey_300, grey_600 などの形式
+        parts = color_name.split("_")
+        if len(parts) == grey_parts_count:
+            try:
+                shade = int(parts[1])
+                return get_grey_color(shade)
+            except ValueError:
+                pass
+
+    # トークンから直接取得
     return _get_color_from_tokens(DARK_COLORS, color_name)
 
 

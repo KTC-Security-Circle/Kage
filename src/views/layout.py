@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import get_text_secondary_color
+from views.theme import get_light_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -144,13 +144,13 @@ def _create_placeholder_content(route: str) -> ft.Control:
             ft.Text(
                 f"ルート: {route}",
                 size=14,
-                color=get_text_secondary_color(),
+                color=get_light_color("text_secondary"),
             ),
             ft.Text(
                 "TODO: 実際のViewコンテンツで置換予定",
                 size=12,
                 italic=True,
-                color=get_text_secondary_color(),
+                color=get_light_color("text_secondary"),
             ),
         ],
         spacing=8,

@@ -5,26 +5,11 @@
 明暗テーマの両方に対応し、一貫性のあるUIを提供します。
 
 主要なカラー取得関数:
-    get_primary_color(variant="base") -> str:
-        プライマリカラーを取得（variant: "base", "light", "dark"）
+    get_light_color(color_name: str) -> str:
+        ライトテーマの色を取得（例: "primary", "error", "surface", "outline", "grey_600"）
 
-    get_surface_color() -> str:
-        サーフェス（カード・パネル）背景色を取得
-
-    get_on_surface_color() -> str:
-        サーフェス上のテキスト色を取得
-
-    get_background_color() -> str:
-        アプリ全体の背景色を取得
-
-    get_outline_color() -> str:
-        アウトライン（境界線・Divider）用の色を取得
-
-    get_text_secondary_color() -> str:
-        補助テキスト用の色を取得（キャプション、タイムスタンプなど）
-
-    get_surface_variant_color() -> str:
-        サーフェスバリアント（強調背景）色を取得（選択状態、ホバー状態など）
+    get_dark_color(color_name: str) -> str:
+        ダークテーマの色を取得（例: "primary", "error", "surface", "outline", "grey_600"）
 
     get_status_color(status: str) -> str:
         ステータス名から対応する色コードを取得
@@ -32,34 +17,43 @@
     get_tag_color_palette() -> list[dict[str, str]]:
         タグ用のカラーパレットを取得
 
-使用例:
+利用可能な色名（color_name）:
+    基本色: primary, secondary, surface, background, error, success, warning, info
+    on系色: on_primary, on_secondary, on_surface, on_background, on_error
+    派生色: outline, text_secondary, surface_variant
+    グレー: grey (デフォルト600), grey_50, grey_100, ..., grey_900
+
+使用例（ダークモード対応）:
     ```python
     import flet as ft
-    from views.theme import (
-        get_primary_color,
-        get_surface_color,
-        get_on_surface_color,
-        get_outline_color,
-        SPACING,
-        BORDER_RADIUS,
-    )
+    from views.theme import get_light_color, get_dark_color, SPACING, BORDER_RADIUS
 
-    # カード背景とテキスト色
+    # テーマモード判定
+    is_dark = getattr(page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+
+    # カード背景とテキスト色（ダークモード対応）
     card = ft.Container(
-        bgcolor=get_surface_color(),
-        border=ft.border.all(1, get_outline_color()),
+        bgcolor=get_dark_color("surface") if is_dark else get_light_color("surface"),
+        border=ft.border.all(1, get_dark_color("outline") if is_dark else get_light_color("outline")),
         border_radius=BORDER_RADIUS.md,
         padding=SPACING.md,
-        content=ft.Text("カード", color=get_on_surface_color()),
+        content=ft.Text(
+            "カード",
+            color=get_dark_color("on_surface") if is_dark else get_light_color("on_surface"),
+        ),
     )
 
-    # プライマリアクションボタン
-    button = ft.ElevatedButton(
-        text="保存",
-        bgcolor=get_primary_color(),
-        color=get_on_primary_color(),
+    # エラー表示（ダークモード対応）
+    error_color = get_dark_color("error") if is_dark else get_light_color("error")
+    error_snackbar = ft.SnackBar(
+        content=ft.Text("エラーが発生しました"),
+        bgcolor=error_color,
     )
     ```
+
+レガシー関数（後方互換性のため維持）:
+    get_primary_color(), get_surface_color(), get_error_color() など
+    注意: これらはライトテーマ固定です。新規実装では get_light_color()/get_dark_color() を使用してください。
 """
 
 from __future__ import annotations

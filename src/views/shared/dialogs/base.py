@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import flet as ft
 from loguru import logger
 
-from views.theme import BORDER_RADIUS, SPACING, get_dark_color, get_error_color, get_light_color
+from views.theme import BORDER_RADIUS, SPACING, get_dark_color, get_light_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -187,21 +187,18 @@ class BaseDialog(ft.AlertDialog, ABC):
             作成されたボタン
         """
         if style is None:
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            primary_color = get_dark_color("primary") if is_dark else get_light_color("primary")
+            on_primary_color = get_dark_color("on_primary") if is_dark else get_light_color("on_primary")
             if is_primary:
                 style = ft.ButtonStyle(
-                    color={
-                        ft.ControlState.DEFAULT: get_light_color("on_primary"),
-                    },
-                    bgcolor={
-                        ft.ControlState.DEFAULT: get_light_color("primary"),
-                    },
+                    color={ft.ControlState.DEFAULT: on_primary_color},
+                    bgcolor={ft.ControlState.DEFAULT: primary_color},
                     shape=ft.RoundedRectangleBorder(radius=BORDER_RADIUS.md),
                 )
             else:
                 style = ft.ButtonStyle(
-                    color={
-                        ft.ControlState.DEFAULT: get_light_color("primary"),
-                    },
+                    color={ft.ControlState.DEFAULT: primary_color},
                     shape=ft.RoundedRectangleBorder(radius=BORDER_RADIUS.md),
                 )
 
@@ -279,10 +276,12 @@ class BaseFormDialog(BaseDialog):
 
         error_messages = "\n".join(self._validation_errors.values())
         if self.page is not None and hasattr(self.page, "snack_bar"):
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            err_bg = get_dark_color("error") if is_dark else get_light_color("error")
             self.page.open(
                 ft.SnackBar(
                     content=ft.Text(error_messages),
-                    bgcolor=get_error_color(),
+                    bgcolor=err_bg,
                 )
             )
             if hasattr(self.page, "update"):

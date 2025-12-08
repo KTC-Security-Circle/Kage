@@ -58,10 +58,8 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
     Returns:
         構築されたサイドバーContainer
     """
-    # TODO: テーマモード取得を統合フェーズで実装
-    # 理由: page.theme_mode の動的取得機能が未確定のため
-    # 置換先: settings service から現在のテーマモードを取得
-    is_dark_mode = False  # ダミー値
+    # テーマモードを Page から取得して明暗を判定する
+    is_dark_mode = getattr(page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
 
     sidebar_items: list[ft.Container | ft.Divider] = []
 
@@ -91,26 +89,29 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
     for item in NAVIGATION_ITEMS:
         is_selected = current_route == item.route
 
+        selection_color = get_dark_color("primary") if is_dark_mode else get_light_color("primary")
+        bg_selected = get_dark_color("surface") if is_dark_mode else get_light_color("surface")
+
         item_container = ft.Container(
             content=ft.Row(
                 [
                     ft.Icon(
                         item.selected_icon if is_selected else item.icon,
                         size=20,
-                        color=get_light_color("primary") if is_selected else None,
+                        color=selection_color if is_selected else None,
                     ),
                     ft.Text(
                         item.label,
                         size=14,
                         weight=ft.FontWeight.BOLD if is_selected else ft.FontWeight.NORMAL,
-                        color=get_light_color("primary") if is_selected else None,
+                        color=selection_color if is_selected else None,
                     ),
                 ],
                 spacing=SPACING.sm,
             ),
             padding=ft.padding.symmetric(horizontal=SPACING.md, vertical=SPACING.sm),
             margin=ft.margin.symmetric(horizontal=SPACING.xs),
-            bgcolor=get_light_color("surface") if is_selected else None,
+            bgcolor=bg_selected if is_selected else None,
             border_radius=8,
             on_click=lambda _e, route=item.route: _handle_navigation(page, route),
             ink=True,
@@ -143,12 +144,12 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
         ),
         width=200,
         height=None,
-        bgcolor=get_light_color("surface") if not is_dark_mode else get_dark_color("surface"),
+        bgcolor=get_dark_color("surface") if is_dark_mode else get_light_color("surface"),
         padding=SPACING.sm,
         border=ft.border.only(
             right=ft.border.BorderSide(
                 width=1,
-                color=get_light_color("primary_variant"),
+                color=get_dark_color("primary_variant") if is_dark_mode else get_light_color("primary_variant"),
             )
         ),
     )

@@ -66,10 +66,7 @@ from typing import TYPE_CHECKING, Final
 import flet as ft
 
 from views.theme import (
-    get_on_primary_color,
-    get_outline_color,
-    get_surface_color,
-    get_text_secondary_color,
+    get_light_color,
 )
 
 if TYPE_CHECKING:
@@ -237,7 +234,7 @@ class Card(ft.Container):
         header = self._build_header()
 
         # Divider
-        divider = ft.Divider(height=1, color=get_outline_color())
+        divider = ft.Divider(height=1, color=get_light_color("outline"))
 
         # フッター（メタデータ + アクション）
         footer = self._build_footer()
@@ -252,7 +249,7 @@ class Card(ft.Container):
                 padding=CARD_PADDING,
             ),
             elevation=CARD_ELEVATION_SELECTED if self._data.is_selected else CARD_ELEVATION_DEFAULT,
-            color=get_surface_color(),
+            color=get_light_color("surface"),
         )
         self.margin = ft.margin.symmetric(vertical=4, horizontal=8)
         self.border_radius = CARD_BORDER_RADIUS
@@ -277,7 +274,7 @@ class Card(ft.Container):
                 ft.Text(
                     self._data.description,
                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=get_text_secondary_color(),
+                    color=get_light_color("text_secondary"),
                     max_lines=2,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
@@ -293,7 +290,7 @@ class Card(ft.Container):
                 content=ft.Text(
                     self._data.badge.text,
                     theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                    color=get_on_primary_color(),
+                    color=get_light_color("on_primary"),
                     weight=ft.FontWeight.W_500,
                 ),
                 bgcolor=self._data.badge.color,
@@ -325,7 +322,7 @@ class Card(ft.Container):
                 content=ft.Text(
                     tag.name,
                     size=11,
-                    color=get_on_primary_color(),
+                    color=get_light_color("on_primary"),
                     weight=ft.FontWeight.W_400,
                 ),
                 padding=ft.padding.symmetric(
@@ -372,12 +369,12 @@ class Card(ft.Container):
                         ft.Icon(
                             meta.icon,
                             size=METADATA_ICON_SIZE,
-                            color=get_text_secondary_color(),
+                            color=get_light_color("text_secondary"),
                         ),
                         ft.Text(
                             meta.text,
                             theme_style=ft.TextThemeStyle.BODY_SMALL,
-                            color=get_text_secondary_color(),
+                            color=get_light_color("text_secondary"),
                         ),
                     ],
                     spacing=METADATA_SPACING,
@@ -398,7 +395,7 @@ class Card(ft.Container):
                     tooltip=action.tooltip,
                     icon_size=ACTION_ICON_SIZE,
                     on_click=action.on_click,
-                    icon_color=action.icon_color or get_text_secondary_color(),
+                    icon_color=action.icon_color or get_light_color("text_secondary"),
                 )
                 for action in self._data.actions
             ]

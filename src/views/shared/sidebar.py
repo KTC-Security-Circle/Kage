@@ -82,9 +82,6 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
         )
     )
 
-    # Divider
-    sidebar_items.append(ft.Divider())
-
     # Navigation items
     for item in NAVIGATION_ITEMS:
         is_selected = current_route == item.route
@@ -144,7 +141,7 @@ def build_sidebar(page: ft.Page, current_route: str = "/") -> ft.Container:
         ),
         width=200,
         height=None,
-        bgcolor=get_dark_color("surface") if is_dark_mode else get_light_color("surface"),
+        bgcolor=get_dark_color("sidebar_bg") if is_dark_mode else get_light_color("sidebar_bg"),
         padding=SPACING.sm,
         border=ft.border.only(
             right=ft.border.BorderSide(

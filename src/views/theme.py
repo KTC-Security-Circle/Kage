@@ -69,7 +69,7 @@ class Palette:
     DRY原則に基づき、色コードの定義を一箇所に集約します。
     """
 
-    zenn_ligth_sidebar = "#ECF5FF"
+    zenn_ligth_sidebar = "#ECF5FAFF"
     zenn_ligth_theme = "#FFFFFF"
     zenn_dark_sidebar = "#081d35"
     zenn_dark_theme = "#0d223a"
@@ -90,6 +90,7 @@ class Palette:
     INDIGO_500 = "#3F51B5"
 
     # Blue
+    BLUE_50 = "#E3F2FD"
     BLUE_300 = "#64B5F6"
     BLUE_400 = "#42A5F5"
     BLUE_500 = "#2196F3"
@@ -172,6 +173,7 @@ class ColorTokens:
     on_background: str
     surface: str
     on_surface: str
+    sidebar_bg: str  # サイドバー背景色（必要に応じて使用）
 
     # Error colors
     error: str
@@ -286,7 +288,7 @@ class FontTokens:
 # Light theme color tokens (Material Design 3)
 LIGHT_COLORS = ColorTokens(
     primary=Palette.BLUE_500,  # 文字の色
-    primary_variant=Palette.BLUE_GREY_500,  # サイドバーの縦線
+    primary_variant=ft.Colors.with_opacity(0.5, ft.Colors.GREY_300),  # サイドバーの縦線
     on_primary=Palette.WHITE,  # ボタンの文字の色
     secondary=Palette.GREY_500,  # ステータスバーの件数の背景色
     secondary_variant=Palette.GREY_500,  # ???
@@ -295,6 +297,7 @@ LIGHT_COLORS = ColorTokens(
     on_background=Palette.TEXT_PRIMARY_LIGHT,
     surface=Palette.zenn_ligth_theme,  # カードの背景色
     on_surface=Palette.TEXT_PRIMARY_LIGHT,  # カード内の文字色 (現在なぜか背景にも適応されている)
+    sidebar_bg=ft.Colors.with_opacity(0.4, ft.Colors.BLUE_50),
     error=Palette.RED_700,  # Material Red 700
     on_error=Palette.WHITE,
     success=Palette.GREEN_700,  # Material Green 700
@@ -304,21 +307,22 @@ LIGHT_COLORS = ColorTokens(
 
 # Dark theme color tokens (Material Design 3)
 DARK_COLORS = ColorTokens(
-    primary=Palette.BLUE_300,  # Light Blue - ダークモード用の明るいブルー
+    primary=Palette.BLUE_300,  # ダーク上で目立つ明るめのブルー
     primary_variant=Palette.BLUE_400,
-    on_primary=Palette.DARK_ON_PRIMARY,
+    on_primary=Palette.BLACK,
     secondary=Palette.SECONDARY_DARK,
     secondary_variant=Palette.SECONDARY_VARIANT_DARK,
     on_secondary=Palette.ON_SECONDARY_DARK,
     background=Palette.DARK_BG,  # True dark background
     on_background=Palette.TEXT_PRIMARY_DARK,
-    surface=Palette.DARK_SURFACE,  # Elevated surface
+    surface=ft.Colors.with_opacity(0.7, Palette.zenn_dark_sidebar),  # Elevated surface (保持)
     on_surface=Palette.TEXT_PRIMARY_DARK,
-    error=Palette.RED_400,  # Light Red for dark mode
-    on_error=Palette.DARK_ON_ERROR,
-    success=Palette.GREEN_400,  # Light Green for dark mode
-    warning=Palette.ORANGE_400,  # Light Orange for dark mode
-    info=Palette.BLUE_400,  # Light Blue for dark mode
+    sidebar_bg=Palette.zenn_dark_sidebar,  # サイドバー背景は既定値を維持
+    error=Palette.RED_400,
+    on_error=Palette.WHITE,
+    success=Palette.GREEN_400,
+    warning=Palette.ORANGE_400,
+    info=Palette.BLUE_400,
 )
 
 # Common tokens

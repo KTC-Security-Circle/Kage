@@ -27,6 +27,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import flet as ft
 
+from loguru import logger
+
 from logic.application.memo_application_service import MemoApplicationService
 from logic.application.tag_application_service import TagApplicationService
 from logic.application.task_application_service import TaskApplicationService
@@ -293,8 +295,6 @@ class TagsView(BaseView):
             _e: クリックイベント（使用しない）
             memo_id: 遷移先で選択するメモのID
         """
-        from loguru import logger
-
         logger.info(f"メモ画面への遷移を開始: memo_id={memo_id}")
         try:
             # メモIDをページのクライアントストレージに一時保存
@@ -316,8 +316,6 @@ class TagsView(BaseView):
             _e: クリックイベント（使用しない）
             task_id: 遷移先で選択するタスクのID
         """
-        from loguru import logger
-
         logger.info(f"タスク画面への遷移を開始: task_id={task_id}")
         try:
             # タスクIDをページのクライアントストレージに一時保存

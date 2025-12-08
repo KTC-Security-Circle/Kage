@@ -265,8 +265,6 @@ class MemosView(BaseView):
                 self.page.client_storage.remove("pending_memo_id")
                 # メモIDをUUIDに変換して選択
                 try:
-                    from uuid import UUID
-
                     memo_id = UUID(memo_id_str)
                     self.controller.select_memo_by_id(memo_id)
                     self._refresh()

@@ -501,13 +501,10 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
         """タスク保存処理"""
         from loguru import logger
 
-        logger.info(f"編集ダイアログの保存ボタンがクリックされました: task_id={task_data.get('id')}")
-
         # タイトル必須バリデーション
         if not (title_field.value and title_field.value.strip()):
             title_field.error_text = "タスクタイトルは必須です"
             title_field.update()
-            logger.warning("タイトルが空のため保存をキャンセルしました")
             return
         title_field.error_text = None
 
@@ -535,10 +532,7 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
             "due_date": due_date_val,
         }
 
-        logger.debug(f"保存データ: {updated_data}")
-
         if on_save:
-            logger.info("on_saveコールバックを呼び出します")
             on_save(updated_data)
         else:
             logger.warning("on_saveコールバックが設定されていません")
@@ -546,7 +540,6 @@ def show_edit_task_dialog(  # noqa: C901, PLR0915
         # タグ変更を通知
         if on_tags_change and all_tags:
             tag_ids = [str(tag.id) for tag in all_tags if tag.name in selected_tag_ids]
-            logger.info(f"タグ変更を通知: {len(tag_ids)}個のタグ")
             on_tags_change(tag_ids)
 
         logger.info("ダイアログを閉じます")

@@ -482,8 +482,6 @@ class TasksView(BaseView):
         Args:
             task_data: 更新後のタスクデータ
         """
-        logger.info(f"_handle_edit_taskが呼び出されました: {task_data}")
-
         task_id = task_data.get("id", "")
         if task_id:
             task_id = task_id.strip()
@@ -506,8 +504,6 @@ class TasksView(BaseView):
         else:
             due_date = str(due_date_val).strip()
 
-        logger.debug(f"処理データ: task_id={task_id}, title={title}, due_date={due_date}")
-
         if not task_id or not title:
             logger.warning(f"タスクIDまたはタイトルが空: task_id={task_id}, title={title}")
             self.show_error_snackbar(self.page, "タスクIDとタイトルは必須です。")
@@ -515,7 +511,6 @@ class TasksView(BaseView):
 
         # Controllerにタスク更新を委譲
         def _update() -> None:
-            logger.info(f"タスク更新開始: task_id={task_id}")
             try:
                 self._controller.update_task(
                     task_id=task_id,
@@ -524,17 +519,13 @@ class TasksView(BaseView):
                     status=status,
                     due_date=due_date,
                 )
-                logger.info(f"タスク更新完了: task_id={task_id}")
             except Exception as e:
-                logger.error(f"update_task内でエラー: {e}")
+                logger.error(f"タスク更新エラー: {e}")
                 raise
 
         try:
-            logger.info("with_loading開始")
             self.with_loading(_update)
-            logger.info("with_loading完了")
             self.show_success_snackbar(f"タスク「{title}」を更新しました。")
-            logger.info(f"タスク更新成功: {task_id}")
             self.safe_update()
         except Exception as e:
             logger.exception(f"タスク更新中にエラー: {e}")

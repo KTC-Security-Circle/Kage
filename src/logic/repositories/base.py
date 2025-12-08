@@ -118,11 +118,11 @@ class BaseRepository[T: BaseModel, CreateT: SQLModel, UpdateT: SQLModel]:
 
         if not results:
             msg = f"{self.model_class.__name__} のエンティティが見つかりません。"
-            # 空の一覧は許容されることが多いためDEBUGログへ落とす
-            logger.debug(msg)
+            # 空の一覧は許容されることが多いためINFOログへ落とす
+            logger.info(msg)
             raise NotFoundError(msg)
 
-        logger.debug(f"{self.model_class.__name__} のエンティティが {len(results)} 件見つかりました。")
+        logger.info(f"{self.model_class.__name__} のエンティティが {len(results)} 件見つかりました。")
         return list(results)
 
     def check_exists(self, entity_id: uuid.UUID) -> T:

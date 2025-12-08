@@ -178,7 +178,7 @@ class TaskService(ServiceBase):
             TaskServiceError: 全タスクの取得に失敗した場合
         """
         tasks = self.task_repo.get_all()
-        logger.debug(f"全てのタスクを取得しました: {len(tasks)} 件")
+        logger.info(f"全てのタスクを取得しました: {len(tasks)} 件")
         return tasks
 
     @handle_service_errors(SERVICE_NAME, "ステータス取得", TaskServiceError)
@@ -198,7 +198,7 @@ class TaskService(ServiceBase):
             TaskServiceError: タスクの取得に失敗した場合
         """
         tasks = self.task_repo.list_by_status(status, with_details=with_details)
-        logger.debug(f"ステータス '{status}' のタスクを取得しました: {len(tasks)} 件")
+        logger.info(f"ステータス '{status}' のタスクを取得しました: {len(tasks)} 件")
         return tasks
 
     @handle_service_errors(SERVICE_NAME, "タグ取得", TaskServiceError)

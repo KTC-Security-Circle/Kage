@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import get_text_secondary_color
+from views.theme import get_light_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -27,6 +27,7 @@ from views.shared.sidebar import build_sidebar
 from views.tags import TagsView
 from views.tasks import TasksView
 from views.terms import TermsView
+from views.theme import get_dark_color
 from views.weekly_review import WeeklyReviewView
 
 
@@ -50,6 +51,8 @@ def build_layout(page: ft.Page, route: str, apps: ApplicationServices) -> ft.Vie
 
     # Build sidebar with current route
     sidebar = build_sidebar(page, route)
+    is_dark = page.theme_mode == ft.ThemeMode.DARK
+    bg_selected = get_dark_color("surface") if is_dark else get_light_color("surface")
 
     return ft.View(
         route=route,
@@ -59,16 +62,14 @@ def build_layout(page: ft.Page, route: str, apps: ApplicationServices) -> ft.Vie
                     # Sidebar
                     sidebar,
                     # Main content area
-                    ft.Container(
-                        content=content,
-                        expand=True,
-                        padding=16,
-                    ),
+                    ft.Container(content=content, expand=True, padding=0, bgcolor=bg_selected),
                 ],
                 expand=True,
                 vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ],
+        bgcolor=bg_selected,
+        padding=0,
         vertical_alignment=ft.MainAxisAlignment.START,
         horizontal_alignment=ft.CrossAxisAlignment.START,
     )
@@ -144,31 +145,14 @@ def _create_placeholder_content(route: str) -> ft.Control:
             ft.Text(
                 f"ルート: {route}",
                 size=14,
-                color=get_text_secondary_color(),
+                color=get_light_color("text_secondary"),
             ),
             ft.Text(
                 "TODO: 実際のViewコンテンツで置換予定",
                 size=12,
                 italic=True,
-                color=get_text_secondary_color(),
+                color=get_light_color("text_secondary"),
             ),
         ],
         spacing=8,
     )
-
-
-# Route to view mapping (populated after view implementations)
-# TODO: 各View実装完了後に以下の形式で設定
-# ROUTE_TO_VIEW = {
-#     "/": HomeView,
-#     "/projects": ProjectsView,
-#     "/tags": TagsView,
-#     "/tasks": TasksView,
-#     "/memos": MemosView,
-#     "/memos/inbox": InboxMemosView,
-#     "/memos/processing": ProcessingMemosView,
-#     "/memos/history": MemoHistoryView,
-#     "/terms": TermsView,
-#     "/weekly-review": WeeklyReviewView,
-#     "/settings": SettingsView,
-# }

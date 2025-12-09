@@ -37,6 +37,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import flet as ft
@@ -44,14 +45,18 @@ from loguru import logger
 
 from logic.application.memo_ai_job_queue import GeneratedTaskPayload, MemoAiJobSnapshot, MemoAiJobStatus
 from logic.application.memo_application_service import MemoApplicationService
+from logic.application.tag_application_service import TagApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import get_error_color
+from views.theme import get_dark_color, get_grey_color, get_light_color
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from . import presenter
 from .components import MemoCardList, MemoFilters, MemoStatusTabs
-from .controller import MemoApplicationPort, MemosController
+from .controller import MemoApplicationPort, MemosController, TagApplicationPort
 from .state import AiSuggestedTask, MemosViewState
 
 
@@ -69,19 +74,28 @@ class MemosView(BaseView):
     - AI提案機能（将来実装）
     """
 
-    def __init__(self, props: BaseViewProps, *, memo_app: MemoApplicationPort | None = None) -> None:
+    def __init__(
+        self,
+        props: BaseViewProps,
+        *,
+        memo_app: MemoApplicationPort | None = None,
+        tag_app: TagApplicationPort | None = None,
+    ) -> None:
         """メモビューを初期化。
 
         Args:
             props: View共通プロパティ
             memo_app: テストやDI用に注入するメモアプリケーションサービス
+            tag_app: テストやDI用に注入するタグアプリケーションサービス
         """
         super().__init__(props)
 
         self.memos_state = MemosViewState()
         if memo_app is None:
             memo_app = self.apps.get_service(MemoApplicationService)
-        self.controller = MemosController(memo_app=memo_app, state=self.memos_state)
+        if tag_app is None:
+            tag_app = self.apps.get_service(TagApplicationService)
+        self.controller = MemosController(memo_app=memo_app, state=self.memos_state, tag_app=tag_app)
 
         # UIコンポーネント
         self._header: ft.Control | None = None
@@ -92,7 +106,7 @@ class MemosView(BaseView):
         self._pending_async_tasks: list[asyncio.Task[None]] = []
 
         self.did_mount()
-        self.with_loading(self._load_initial_memos, user_error_message="メモの読み込みに失敗しました")
+        self.with_loading(self._load_initial_memos, user_error_message="データの読み込みに失敗しました")
 
     def did_mount(self) -> None:
         """マウント時の初期化処理。"""
@@ -234,14 +248,18 @@ class MemosView(BaseView):
         return self.controller.status_counts()
 
     def _load_initial_memos(self) -> None:
-        """DB から初期メモ一覧を読み込む (Inbox を優先)。"""
+        """DB から初期データ（メモとタグ）を読み込む。"""
         try:
             self.controller.load_initial_memos()
+            self.controller.load_tags()
             self._refresh()
             memo_count = len(self.controller.current_memos())
-            logger.info(f"Loaded {memo_count} memos from DB")
+            tag_count = len(self.controller.get_all_tags())
+            logger.info(f"Loaded {memo_count} memos and {tag_count} tags from DB")
+            # データ読み込み完了後に一時保存されたメモIDを処理
+            self._handle_pending_memo()
         except Exception as e:
-            self.notify_error("メモの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
+            self.notify_error("データの読み込みに失敗しました", details=f"{type(e).__name__}: {e}")
 
     def _update_memo_list(self) -> None:
         """メモリストを更新。"""
@@ -342,6 +360,39 @@ class MemosView(BaseView):
                     raise
         self._update_detail_panel()
         logger.debug(f"Memo selected: {memo.id}")
+
+    def _handle_pending_memo(self) -> None:
+        """一時保存されたメモIDを取得して選択する。"""
+        try:
+            # クライアントストレージから一時保存されたIDを取得
+            memo_id = self.page.client_storage.get("pending_memo_id")
+            if memo_id:
+                logger.info(f"一時保存されたメモIDを検出: {memo_id}")
+                # 一時保存データを先にクリア（無限ループ防止）
+                self.page.client_storage.remove("pending_memo_id")
+                # 全メモから検索（UUIDに変換）
+                try:
+                    target_uuid = UUID(memo_id)
+                except ValueError:
+                    logger.warning(f"無効なメモID形式: {memo_id}")
+                    return
+
+                # State内のインデックスから検索
+                memo = self.memos_state.memo_by_id(target_uuid)
+                if memo:
+                    logger.debug(f"メモを発見: id={memo.id}, status={memo.status}")
+                    # メモのステータスに合わせてタブを切り替え
+                    if memo.status != self.memos_state.current_tab:
+                        logger.debug(f"タブを切り替え: {self.memos_state.current_tab} -> {memo.status}")
+                        self.controller.update_tab(memo.status)
+                        self._refresh()
+                    # メモを選択
+                    self._handle_memo_select(memo)
+                    logger.debug(f"メモを選択しました: {memo_id}")
+                else:
+                    logger.warning(f"指定されたメモが見つかりません: {memo_id}")
+        except Exception as e:
+            logger.warning(f"一時保存メモIDの処理に失敗: {e}")
 
     def _handle_ai_suggestion(self, _: ft.ControlEvent) -> None:
         """AI提案ハンドラー。"""
@@ -481,7 +532,9 @@ class MemosView(BaseView):
         """選択されたAI提案タスクを承認済みとして扱う。"""
         ai_state = self.memos_state.ai_flow_state_for(memo.id)
         if not ai_state.selected_task_ids:
-            self.show_snack_bar("承認するタスクを選択してください", bgcolor=get_error_color())
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            error_color = get_dark_color("error") if is_dark else get_light_color("error")
+            self.show_snack_bar("承認するタスクを選択してください", bgcolor=error_color)
             return
         try:
             task_ids = [UUID(task_id) for task_id in ai_state.selected_task_ids]
@@ -592,15 +645,25 @@ class MemosView(BaseView):
         """内部インデックスからメモを検索する。"""
         return self.memos_state.memo_by_id(memo_id)
 
-    def _handle_edit_memo(self, _: ft.ControlEvent) -> None:
+    def _handle_edit_memo(self, _: ft.ControlEvent) -> None:  # noqa: C901, PLR0915
         """メモ編集ハンドラー。編集ダイアログを表示し、保存時に Controller 経由で更新する。
 
         Args:
             _: ft.ControlEvent (未使用)
         """
+        logger.debug("Edit memo button clicked")
         selected_memo = self.controller.current_selection()
         if selected_memo is None:
+            logger.warning("No memo selected for editing")
             return
+        logger.info(f"Editing memo: id={selected_memo.id}, title={selected_memo.title}")
+
+        # タグ一覧を取得
+        all_tags = self.controller.get_all_tags()
+        memo_tags = getattr(selected_memo, "tags", []) or []
+        memo_tag_names = [tag.name for tag in memo_tags]
+        selected_tag_ids: set[str] = set(memo_tag_names)
+        logger.debug(f"Memo has {len(memo_tag_names)} tags: {memo_tag_names}")
 
         # ダイアログの入力コントロールを構築
         title_field = ft.TextField(value=selected_memo.title or "", label="タイトル", expand=True)
@@ -608,11 +671,93 @@ class MemosView(BaseView):
             value=selected_memo.content or "", label="内容", multiline=True, min_lines=6, expand=True
         )
 
+        # タグ選択ドロップダウン（プロジェクト選択と同様の実装）
+        tag_options = [ft.dropdown.Option(key=tag.name, text=tag.name) for tag in all_tags]
+        tag_dropdown = ft.Dropdown(
+            label="タグを追加",
+            hint_text="タグを選択...",
+            options=tag_options,
+            width=300,
+        )
+
+        # 選択中タグのバッジ表示用コンテナ
+        selected_tags_container = ft.Row(wrap=True, spacing=8, run_spacing=8)
+
+        def _update_selected_tags_display() -> None:
+            """選択中タグのバッジ表示を更新"""
+            selected_tags_container.controls.clear()
+            for tag_name in sorted(selected_tag_ids):
+                tag = next((t for t in all_tags if t.name == tag_name), None)
+                if tag is None:
+                    continue
+
+                color = tag.color or get_grey_color(600)
+
+                def make_remove_handler(name: str) -> Callable[[ft.ControlEvent], None]:
+                    """タグ削除ハンドラを生成（クロージャ問題回避）"""
+
+                    def handler(_: ft.ControlEvent) -> None:
+                        _remove_tag(name)
+
+                    return handler
+
+                is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                on_primary_color = get_dark_color("on_primary") if is_dark else get_light_color("on_primary")
+
+                badge = ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text(tag_name, size=12, color=on_primary_color),
+                            ft.IconButton(
+                                icon=ft.Icons.CLOSE,
+                                icon_size=14,
+                                icon_color=on_primary_color,
+                                on_click=make_remove_handler(tag_name),
+                                tooltip=f"{tag_name}を削除",
+                            ),
+                        ],
+                        spacing=4,
+                        tight=True,
+                    ),
+                    bgcolor=color,
+                    border_radius=12,
+                    padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+                )
+                selected_tags_container.controls.append(badge)
+
+            # ダイアログがまだページに追加されていない場合はupdateをスキップ
+            if hasattr(selected_tags_container, "page") and selected_tags_container.page:
+                try:
+                    selected_tags_container.update()
+                except Exception as e:
+                    logger.debug(f"Failed to update selected tags display: {e}")
+
+        def _on_tag_select(e: ft.ControlEvent) -> None:
+            """タグ選択時のハンドラ"""
+            if e.control.value and e.control.value not in selected_tag_ids:
+                selected_tag_ids.add(e.control.value)
+                _update_selected_tags_display()
+                tag_dropdown.value = None
+                try:
+                    tag_dropdown.update()
+                except Exception as ex:
+                    logger.debug(f"Failed to update tag dropdown: {ex}")
+
+        def _remove_tag(tag_name: str) -> None:
+            """タグ削除時のハンドラ"""
+            selected_tag_ids.discard(tag_name)
+            _update_selected_tags_display()
+
+        tag_dropdown.on_change = _on_tag_select
+
         def _on_save(_: ft.ControlEvent | None = None) -> None:
             title = (title_field.value or "").strip() or "無題のメモ"
             content = (content_field.value or "").strip()
+            tags = list(selected_tag_ids)
             if not content:
-                self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
+                is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                error_color = get_dark_color("error") if is_dark else get_light_color("error")
+                self.show_snack_bar("内容を入力してください", bgcolor=error_color)
                 return
 
             def _save() -> None:
@@ -623,11 +768,18 @@ class MemosView(BaseView):
                         content=content,
                         status=selected_memo.status,
                     )
+
+                    # タグが変更されている場合は同期
+                    if set(tags) != set(memo_tag_names):
+                        tag_ids = [tag.id for tag in all_tags if tag.name in tags]
+                        updated = self.controller.sync_tags(selected_memo.id, tag_ids)
+                        logger.info(f"Tags synced for memo {updated.id}: {memo_tag_names} -> {tags}")
+
+                    logger.info(f"Memo updated via edit dialog: id={updated.id}")
                 except Exception as exc:  # Application層の例外をUIに伝える
                     self.notify_error("メモの更新に失敗しました", details=f"{type(exc).__name__}: {exc}")
                     raise
 
-                logger.info(f"Memo updated via edit dialog: id={updated.id}")
                 self.show_success_snackbar("メモを更新しました")
                 # ダイアログを閉じて表示を更新
                 try:
@@ -643,7 +795,19 @@ class MemosView(BaseView):
         dlg = ft.AlertDialog(
             modal=True,
             title=ft.Text("メモを編集"),
-            content=ft.Column(controls=[title_field, content_field], spacing=12),
+            content=ft.Column(
+                controls=[
+                    title_field,
+                    content_field,
+                    ft.Divider(height=1),
+                    ft.Text("タグ", weight=ft.FontWeight.BOLD, size=14),
+                    tag_dropdown,
+                    selected_tags_container,
+                ],
+                spacing=12,
+                scroll=ft.ScrollMode.AUTO,
+                height=400,
+            ),
             actions=[
                 ft.TextButton("キャンセル", on_click=lambda _: _close()),
                 ft.ElevatedButton("保存", on_click=_on_save),
@@ -657,12 +821,19 @@ class MemosView(BaseView):
             except Exception:
                 logger.exception("Failed to close edit dialog")
 
-        # 表示
+        # 表示（初期表示のためにここでタグを更新）
+        _update_selected_tags_display()
         try:
             self.page.open(dlg)
-        except Exception:
-            dlg.open = True
-            dlg.update()
+            logger.debug("Edit dialog opened successfully")
+        except Exception as e:
+            logger.exception(f"Failed to open edit dialog with page.open: {e}")
+            try:
+                dlg.open = True
+                self.page.update()
+                logger.debug("Edit dialog opened with fallback method")
+            except Exception as ex:
+                logger.exception(f"Failed to open edit dialog with fallback: {ex}")
 
     def _handle_delete_memo(self, _: ft.ControlEvent) -> None:
         """メモ削除ハンドラー。確認ダイアログ表示のうえ Controller 経由で削除する。"""
@@ -702,7 +873,13 @@ class MemosView(BaseView):
             content=ft.Text("この操作は取り消せません。よろしいですか？"),
             actions=[
                 ft.TextButton("キャンセル", on_click=_cancel),
-                ft.ElevatedButton("削除", bgcolor=get_error_color(), on_click=_confirm_delete),
+                ft.ElevatedButton(
+                    "削除",
+                    bgcolor=get_dark_color("error")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("error"),
+                    on_click=_confirm_delete,
+                ),
             ],
         )
 

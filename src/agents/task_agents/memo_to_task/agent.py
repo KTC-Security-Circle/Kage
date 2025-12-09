@@ -13,7 +13,6 @@ from pydantic import ValidationError
 from agents.base import AgentError, BaseAgent, KwargsAny
 from agents.task_agents.memo_to_task.prompt import (
     classification_prompt,
-    project_plan_prompt,
     quick_action_prompt,
     responsibility_prompt,
     schedule_prompt,
@@ -29,6 +28,7 @@ from agents.task_agents.memo_to_task.schema import (
     ScheduleAssessment,
     TaskDraft,
     TaskDraftSeed,
+    TaskListSuggestion,
     TaskPriority,
     TaskRoute,
     is_iso8601_string,
@@ -50,6 +50,11 @@ QUICK_ACTION_THRESHOLD_MINUTES = 2
 
 VALID_TASK_ROUTES: set[TaskRoute] = {"progress", "waiting", "calendar", "next_action"}
 VALID_TASK_PRIORITIES: set[TaskPriority] = {"low", "normal", "high"}
+PROJECT_PLAN_RETRY_HINT = (
+    "出力は project_title と next_actions のみ。各 next_actions[i] の due_date は ISO8601 例: "
+    '"2025-10-25T10:00:00+09:00" または "2025-10-25"。不要なら null。route は '
+    '"next_action"|"progress"|"waiting"|"calendar" のいずれかのみ。JSON のみを出力。'
+)
 
 
 _DEFAULT_FAKE_RESPONSES: list[MemoToTaskAgentOutput] = [
@@ -224,7 +229,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         """
         graph_builder.add_node("classify_memo", self._classify_memo)
         graph_builder.add_node("handle_idea", self._handle_idea)
-        graph_builder.add_node("plan_project", self._plan_project)
+        # プロジェクト専用ノードは廃止。プロジェクトでもタスク生成フローへ。
         graph_builder.add_node("generate_task_seed", self._generate_task_seed)
         graph_builder.add_node("evaluate_quick_action", self._evaluate_quick_action)
         graph_builder.add_node("apply_quick_action", self._apply_quick_action)
@@ -232,6 +237,7 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         graph_builder.add_node("apply_delegate", self._apply_delegate)
         graph_builder.add_node("evaluate_schedule", self._evaluate_schedule)
         graph_builder.add_node("apply_schedule", self._apply_schedule)
+        graph_builder.add_node("evaluate_bulk", self._evaluate_bulk)
         graph_builder.add_node("prepare_next_action", self._prepare_next_action)
         graph_builder.add_node("finalize_response", self._finalize_response)
 
@@ -241,14 +247,22 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             self._route_after_classification,
             [
                 "handle_idea",
-                "plan_project",
                 "generate_task_seed",
                 "finalize_response",
             ],
         )
         graph_builder.add_edge("handle_idea", "finalize_response")
-        graph_builder.add_edge("plan_project", "finalize_response")
-        graph_builder.add_edge("generate_task_seed", "evaluate_quick_action")
+        # 廃止したノードのエッジを撤去。
+        # 直列遷移は廃止し、条件分岐で単一/複数に応じて進行を制御する
+        # 複数タスクが生成された場合は下流の単一タスク評価をスキップして確定へ
+        graph_builder.add_conditional_edges(
+            "generate_task_seed",
+            self._route_after_seed_generation,
+            [
+                "evaluate_bulk",
+                "evaluate_quick_action",
+            ],
+        )
         graph_builder.add_conditional_edges(
             "evaluate_quick_action",
             self._route_after_quick_action,
@@ -478,13 +492,76 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         runner = self._get_structured_runner(runner_attr, prompt, schema)
         first_params = {**base_params, "retry_hint": ""}
         first = runner.invoke(first_params)
+        # サニタイズ（混線対策）
+        first = self._sanitize_raw_for_schema(first, schema)
         validated = self.validate_output(first, schema)
         if isinstance(validated, schema):  # type: ignore[arg-type]
             return validated
         # 2回目
         second_params = {**base_params, "retry_hint": retry_hint}
         second = runner.invoke(second_params)
+        second = self._sanitize_raw_for_schema(second, schema)
         return self.validate_output(second, schema)
+
+    def _invoke_schema_once(
+        self,
+        runner_attr: str,
+        prompt: ChatPromptTemplate,
+        schema: type[BaseModel],
+        base_params: dict[str, object],
+    ) -> BaseModel | AgentError:
+        """構造化出力を1回だけ試行して検証結果を返す（リトライなし）。
+
+        バルク評価のように多数の呼び出しが連続するケースで、
+        実行時間やモデル混線を抑えるために使用する。
+        """
+        runner = self._get_structured_runner(runner_attr, prompt, schema)
+        try:
+            first = runner.invoke({**base_params, "retry_hint": ""})
+        except KeyboardInterrupt:
+            return AgentError("Interrupted during LLM invoke")
+        # 形状混線のサニタイズ
+        first = self._sanitize_raw_for_schema(first, schema)
+        return self.validate_output(first, schema)
+
+    def _sanitize_raw_for_schema(self, raw: object, schema: type[BaseModel]) -> object:
+        """期待スキーマの主要フィールド不足を補完する軽量サニタイズ。"""
+        try:
+            if not isinstance(raw, dict):
+                return raw
+            handlers: dict[str, Callable[[dict[str, object]], dict[str, object]]] = {
+                "QuickActionAssessment": self._sanitize_quick_action_raw,
+                "ResponsibilityAssessment": self._sanitize_responsibility_raw,
+                "ScheduleAssessment": self._sanitize_schedule_raw,
+            }
+            handler = handlers.get(schema.__name__)
+            if handler is None:
+                return raw
+            return handler(raw)
+        except Exception as exc:
+            agents_logger.warning("sanitize_raw_for_schema failed: {}", str(exc))
+            return raw
+
+    def _sanitize_quick_action_raw(self, raw: dict[str, object]) -> dict[str, object]:
+        if "is_quick_action" in raw:
+            return raw
+        return {"is_quick_action": False, "reason": str(raw.get("reason", ""))}
+
+    def _sanitize_responsibility_raw(self, raw: dict[str, object]) -> dict[str, object]:
+        if "should_delegate" in raw:
+            return raw
+        return {"should_delegate": False, "reason": str(raw.get("reason", ""))}
+
+    def _sanitize_schedule_raw(self, raw: dict[str, object]) -> dict[str, object]:
+        fixed = dict(raw)
+        if fixed.get("due_date") == "":
+            fixed["due_date"] = None
+        due = fixed.get("due_date")
+        if isinstance(due, str) and due and not self._is_valid_iso8601(due):
+            fixed["due_date"] = None
+        if "requires_specific_date" not in fixed:
+            fixed["requires_specific_date"] = bool(fixed.get("due_date"))
+        return fixed
 
     def _repair_classification_response(  # noqa: C901
         self,
@@ -621,121 +698,20 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             agents_logger.debug("IDEA判定理由: %s", classification.reason)
         return {"routed_tasks": [], "suggested_status": "idea"}
 
-    def _plan_project(self, state: MemoToTaskState) -> dict[str, object]:
-        """プロジェクト前提のメモに対し、最初のアクション群を提案する。
+    # プロジェクト専用の計画生成は撤去し、task_seed_prompt に統一。
 
-        LLMから `ProjectPlanSuggestion` を取得・検証し、必要に応じて
-        - 出力のサニタイズ
-        - リトライ（`retry_hint`付き）
-        を行った上で、`next_actions` をタスク案にマッピングする。
+    # 廃止
 
-        Args:
-            state: 現在のメモ処理状態
+    # 廃止
 
-        Returns:
-            `project_plan` と `routed_tasks`、`suggested_status` を含む辞書。
-            検証失敗時は `error` を含む。
-        """
-        classification = state.get("classification")
-        if not isinstance(classification, MemoClassification):
-            return {"routed_tasks": [], "suggested_status": "idea"}
-        _, memo_text, memo_meta = self._get_memo_context(state)
-        base_params = {
-            "memo_text": memo_text,
-            **memo_meta,
-            "existing_tags": state["existing_tags"],
-            "current_datetime_iso": state["current_datetime_iso"],
-            "project_title_hint": classification.project_title or classification.reason,
-        }
-        base_params.update(self._prompt_overrides(state))
-        runner = self._get_structured_runner("_project_plan_runner", project_plan_prompt, ProjectPlanSuggestion)
-        first = runner.invoke({**base_params, "retry_hint": ""})
-        suggestion = self.validate_output(first, ProjectPlanSuggestion)
-        if not isinstance(suggestion, ProjectPlanSuggestion):
-            # 1. サニタイズで救済
-            if isinstance(first, dict):
-                cleaned = self._sanitize_project_plan_payload(first)
-                suggestion2 = self.validate_output(cleaned, ProjectPlanSuggestion)
-                if isinstance(suggestion2, ProjectPlanSuggestion):
-                    suggestion = suggestion2
-                else:
-                    # 2. LLM に修正指示を与えて1回だけ再試行
-                    retry_hint = (
-                        "出力は project_title と next_actions のみ。各 next_actions[i] の due_date は ISO8601 例: "
-                        '"2025-10-25T10:00:00+09:00" または "2025-10-25"。不要なら null。route は '
-                        '"next_action"|"progress"|"waiting"|"calendar" のいずれかのみ。JSON のみを出力。'
-                    )
-                    second = runner.invoke({**base_params, "retry_hint": retry_hint})
-                    suggestion3 = self.validate_output(second, ProjectPlanSuggestion)
-                    if not isinstance(suggestion3, ProjectPlanSuggestion):
-                        return {"error": suggestion3}
-                    suggestion = suggestion3
-            else:
-                # 直接リトライ
-                retry_hint = (
-                    "出力は project_title と next_actions のみ。各 next_actions[i] の due_date は ISO8601 例: "
-                    '"2025-10-25T10:00:00+09:00" または "2025-10-25"。不要なら null。route は '
-                    '"next_action"|"progress"|"waiting"|"calendar" のいずれかのみ。JSON のみを出力。'
-                )
-                second = runner.invoke({**base_params, "retry_hint": retry_hint})
-                suggestion2 = self.validate_output(second, ProjectPlanSuggestion)
-                if not isinstance(suggestion2, ProjectPlanSuggestion):
-                    return {"error": suggestion2}
-                suggestion = suggestion2
-
-        tasks: list[TaskDraft] = []
-        for index, task in enumerate(suggestion.next_actions or []):
-            updates: dict[str, object] = {"project_title": suggestion.project_title}
-            if not task.route:
-                updates["route"] = "next_action" if index == 0 else "progress"
-            tasks.append(task.model_copy(update=updates) if updates else task)
-        if not tasks:
-            tasks.append(
-                TaskDraft(
-                    title=f"{suggestion.project_title}の開始準備",
-                    description="プロジェクトの開始に必要な最初のステップを決める",
-                    route="next_action",
-                    project_title=suggestion.project_title,
-                )
-            )
-
-        return {
-            "project_plan": suggestion,
-            "routed_tasks": tasks,
-            "suggested_status": "active",
-            "requires_project": True,
-        }
+    # 廃止
 
     @staticmethod
     def _is_valid_iso8601(value: str) -> bool:
         """与えられた文字列が `datetime.fromisoformat` で解釈可能か判定する。"""
         return is_iso8601_string(value)
 
-    def _sanitize_project_plan_payload(self, raw: object) -> object:
-        """LLMの出力（辞書想定）から、検証で弾かれる可能性の高い箇所をサニタイズする。
-
-        現状の主目的は next_actions[].due_date のISO8601不備を None に落とすこと。
-        あわせて無効な route は削除して Pydantic 側でデフォルトに任せる。
-        """
-        if not isinstance(raw, dict):
-            return raw
-        payload: dict[str, object] = dict(raw)
-        actions = payload.get("next_actions")
-        if not isinstance(actions, list):
-            return payload
-
-        cleaned_actions: list[object] = []
-        for item in actions:
-            if isinstance(item, dict):
-                cleaned_actions.append(self._sanitize_action_dict(item))
-            elif isinstance(item, TaskDraft):
-                try:
-                    cleaned_actions.append(self._sanitize_action_model(item))
-                except Exception as exc:
-                    agents_logger.warning("Sanitize action model failed: {}", str(exc))
-            # サポート外の型はスキップ
-        payload["next_actions"] = cleaned_actions
-        return payload
+    # 廃止
 
     def _sanitize_action_dict(self, item: dict[str, object]) -> dict[str, object]:
         """辞書形のタスク案から、不正な期日とルート値を除去/修正する。"""
@@ -758,26 +734,33 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             new_item = new_item.model_copy(update={"route": None})
         return new_item
 
-    def _prompt_overrides(self, state: MemoToTaskState) -> dict[str, str]:
+    def _prompt_overrides(self, state: MemoToTaskState) -> dict[str, object]:
         """状態に格納されたプロンプト上書き値を抽出する。"""
         custom_text = str(state.get("custom_instructions", "") or "").strip()
         detail_hint = str(state.get("detail_hint", "") or "").strip()
+        task_count_hint = str(state.get("task_count_hint", "") or "").strip()
+        recommended_count = state.get("recommended_task_count")
+        resolved_count = recommended_count if isinstance(recommended_count, int) and recommended_count > 0 else None
         return {
             "custom_instructions": custom_text or "追加指示はありません。",
             "detail_hint": detail_hint or "標準的な詳細度で回答してください。",
+            "task_count_hint": task_count_hint or "タスク数は 2〜5 件を目安に選定してください。",
+            "recommended_task_count": resolved_count or 3,
         }
 
     def _generate_task_seed(self, state: MemoToTaskState) -> dict[str, object]:
-        """メモからタスク素案 `TaskDraftSeed` を生成する。
+        """メモから複数タスクの候補を生成し、状態へ格納する。
 
-        LLMに title/description/tags の最小セットをJSONで生成させ、
-        1回の再試行ロジック付きで検証を行う。
+        `task_seed_prompt` は `next_actions` 配列を返すため、構造化出力で
+        `TaskListSuggestion` を受け取り、`routed_tasks` に設定する。
+        旧フロー互換のため、先頭要素から `TaskDraftSeed` を組み立てて
+        下流の単一タスク評価にも供給する。
 
         Args:
             state: 現在のメモ処理状態
 
         Returns:
-            `task_seed` を含む辞書。検証失敗時は `error` を返す。
+            `routed_tasks` と `task_seed` を含む辞書。検証失敗時は `error` を返す。
         """
         _, memo_text, memo_meta = self._get_memo_context(state)
         params = {
@@ -787,14 +770,76 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
             "current_datetime_iso": state["current_datetime_iso"],
             **self._prompt_overrides(state),
         }
-        hint = (
-            "JSON 出力は title(string), description(string|null), "
-            "tags(array<string>|null) のみ。余計なキーは含めないでください。"
-        )
-        seed = self._invoke_schema_with_retry("_task_seed_runner", task_seed_prompt, TaskDraftSeed, params, hint)
-        if isinstance(seed, TaskDraftSeed):
-            return {"task_seed": seed, "requires_action": True, "suggested_status": "active"}
-        return {"error": seed}
+        runner = self._get_structured_runner("_task_list_runner", task_seed_prompt, TaskListSuggestion)
+        first = runner.invoke({**params, "retry_hint": ""})
+        suggestion = self.validate_output(first, TaskListSuggestion)
+        if not isinstance(suggestion, TaskListSuggestion):
+            # 2回目（強制ヒント）
+            second = runner.invoke({**params, "retry_hint": "出力形式の修正: next_actions 配列のみを返してください。"})
+            suggestion = self.validate_output(second, TaskListSuggestion)
+        if not isinstance(suggestion, TaskListSuggestion):
+            # フォールバック: 単一タスクをメモから生成して継続
+            _, memo_text, memo_meta = self._get_memo_context(state)
+            first_line = memo_text.splitlines()[0].strip() if memo_text else ""
+            if not first_line:
+                first_line = str(memo_meta.get("memo_title", "")).strip() or "メモの整理"
+            fallback_task = TaskDraft(title=first_line[:60] or "メモの整理", route="next_action")
+            tasks = self._normalize_routed_tasks([fallback_task])
+            seed = TaskDraftSeed(title=fallback_task.title, description=None, tags=None)
+            return {"routed_tasks": tasks, "task_seed": seed, "suggested_status": "active", "requires_action": True}
+
+        tasks = list(suggestion.next_actions or [])
+        tasks = self._normalize_routed_tasks(tasks)
+        seed: TaskDraftSeed | None = None
+        if tasks:
+            first_task = tasks[0]
+            if isinstance(first_task, TaskDraft):
+                seed = TaskDraftSeed(title=first_task.title, description=first_task.description, tags=first_task.tags)
+            elif isinstance(first_task, dict):
+                title = str(first_task.get("title", ""))
+                description = first_task.get("description")
+                tags = first_task.get("tags")
+                seed = TaskDraftSeed(title=title, description=description, tags=tags)
+
+        output: dict[str, object] = {"routed_tasks": tasks, "suggested_status": "active", "requires_action": True}
+        if seed is not None:
+            output["task_seed"] = seed
+        return output
+
+    def _normalize_routed_tasks(self, tasks: list[TaskDraft]) -> list[TaskDraft]:
+        """複数タスクの最低限の標準化を行う。
+
+        - route: 1件目は next_action、以降は progress をデフォルトに設定（未指定時）。
+        - priority: 未設定なら normal を付与。
+        - estimate_minutes: 未設定/不正なら None のまま（将来の推定に委ねる）。
+        - due_date: 文字列でない場合は None に落とす。
+        - tags: list以外は None に落とす。
+        少なくとも1件は next_action を含むよう保証する。
+        """
+        if not tasks:
+            return tasks
+        updated: list[TaskDraft] = []
+        has_next_action = any(t.route == "next_action" for t in tasks)
+        for idx, t in enumerate(tasks):
+            update: dict[str, object] = {}
+            route = t.route
+            if not isinstance(route, str) or route not in {"next_action", "progress", "waiting", "calendar"}:
+                update["route"] = "next_action" if idx == 0 else "progress"
+            priority = t.priority
+            if not isinstance(priority, str) or priority not in {"low", "normal", "high"}:
+                update["priority"] = "normal"
+            due = t.due_date
+            if due is not None and not isinstance(due, str):
+                update["due_date"] = None
+            tags = t.tags
+            if tags is not None and not isinstance(tags, list):
+                update["tags"] = None
+            updated.append(t.model_copy(update=update) if update else t)
+        # next_action が一つも無ければ先頭を next_action に補正
+        if not has_next_action and updated:
+            first = updated[0]
+            updated[0] = first.model_copy(update={"route": "next_action"})
+        return updated
 
     def _evaluate_quick_action(self, state: MemoToTaskState) -> dict[str, object]:
         """タスクが数分で終わる「クイックアクション」かを判定する。
@@ -827,6 +872,89 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
                 "is_quick_action": assessment.is_quick_action,
             }
         return {"error": assessment}
+
+    def _route_after_seed_generation(self, state: MemoToTaskState) -> str:
+        """種生成後の分岐。
+
+        複数タスク(`routed_tasks` の長さ > 1)がある場合は、そのまま確定へ進む。
+        1件のみの場合は、従来の単一タスク評価フローに入る。
+        """
+        tasks = state.get("routed_tasks") or []
+        return "evaluate_bulk" if isinstance(tasks, list) and len(tasks) > 1 else "evaluate_quick_action"
+
+    def _evaluate_bulk(self, state: MemoToTaskState) -> dict[str, object]:
+        """複数タスクに対して quick/delegate/schedule を順次適用する。
+
+        各タスクに対し、既存の評価プロンプトを用いてルートや期日を決定し、
+        変更後のタスク配列を `routed_tasks` として返す。
+        """
+        tasks = state.get("routed_tasks") or []
+        evaluated: list[TaskDraft] = []
+        for t in tasks:
+            # タスク個別コンテキストを形成
+            _, memo_text, memo_meta = self._get_memo_context(state)
+            task_context = {
+                "task_title": t.title,
+                "task_description": t.description or "",
+                "memo_text": memo_text,
+                **memo_meta,
+                **self._prompt_overrides(state),
+            }
+
+            # quick 判定
+            quick = self._invoke_schema_once(
+                "_quick_runner",
+                quick_action_prompt,
+                QuickActionAssessment,
+                {**task_context},
+            )
+            if isinstance(quick, AgentError):
+                # 評価失敗時はそのままの route を維持
+                evaluated.append(t)
+                continue
+
+            if isinstance(quick, QuickActionAssessment) and quick.is_quick_action:
+                # クイックなら progress + 推定2分
+                updated = t.model_copy(update={"route": "progress", "estimate_minutes": QUICK_ACTION_THRESHOLD_MINUTES})
+                evaluated.append(updated)
+                continue
+
+            # delegate 判定
+            resp = self._invoke_schema_once(
+                "_responsibility_runner",
+                responsibility_prompt,
+                ResponsibilityAssessment,
+                {**task_context},
+            )
+            if isinstance(resp, AgentError):
+                evaluated.append(t)
+                continue
+            if isinstance(resp, ResponsibilityAssessment) and resp.should_delegate:
+                evaluated.append(t.model_copy(update={"route": "waiting"}))
+                continue
+
+            # schedule 判定
+            sched_params = {**task_context, "current_datetime_iso": state["current_datetime_iso"]}
+            sched = self._invoke_schema_once(
+                "_schedule_runner",
+                schedule_prompt,
+                ScheduleAssessment,
+                sched_params,
+            )
+            if isinstance(sched, AgentError):
+                evaluated.append(t)
+                continue
+            if isinstance(sched, ScheduleAssessment) and sched.requires_specific_date:
+                due = sched.due_date if isinstance(sched.due_date, str) else None
+                evaluated.append(t.model_copy(update={"route": "calendar", "due_date": due}))
+                continue
+
+            # いずれにも該当しなければ next_action に整列
+            evaluated.append(t.model_copy(update={"route": "next_action"}))
+
+        # 正規化と重複 next_action の整合
+        normalized = self._normalize_routed_tasks(evaluated)
+        return {"routed_tasks": normalized, "suggested_status": "active"}
 
     def _apply_quick_action(self, state: MemoToTaskState) -> dict[str, object]:
         """クイックアクションとして実行可能なタスクの案を確定する。"""
@@ -883,7 +1011,10 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
     def _apply_schedule(self, state: MemoToTaskState) -> dict[str, object]:
         """期日ベースのタスクとして `calendar` ルートに割り当てる。"""
         assessment = state.get("schedule_assessment")
+        # due_date は ISO8601 以外を無効化
         due_date = assessment.due_date if isinstance(assessment, ScheduleAssessment) else None
+        if isinstance(due_date, str) and due_date and not self._is_valid_iso8601(due_date):
+            due_date = None
         overrides: dict[str, object] = {"route": "calendar"}
         if due_date:
             overrides["due_date"] = due_date
@@ -986,7 +1117,8 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         if classification.decision == "idea":
             return "handle_idea"
         if classification.decision == "project":
-            return "plan_project"
+            # プロジェクトでもタスク生成フローへ統一
+            return "generate_task_seed"
         return "generate_task_seed"
 
     def _route_after_quick_action(self, state: MemoToTaskState) -> str:
@@ -1125,7 +1257,11 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
         matched_tags = self._classify_tags(task, state)
         sanitized_tags = matched_tags if matched_tags else None
         due_date = task.due_date or None
-        return task.model_copy(update={"tags": sanitized_tags, "due_date": due_date})
+        # 期日ポリシーの統一: due_date が存在する場合は必ず calendar ルートへ寄せる
+        route_update: dict[str, object] = {}
+        if isinstance(due_date, str) and due_date and task.route != "calendar":
+            route_update["route"] = "calendar"
+        return task.model_copy(update={"tags": sanitized_tags, "due_date": due_date, **route_update})
 
     def _classify_tags(self, task: TaskDraft, state: MemoToTaskState) -> list[str]:
         """メモ本文/タイトル/説明に基づき、利用可能な既存タグをマッチングする。"""
@@ -1153,39 +1289,52 @@ class MemoToTaskAgent(BaseAgent[MemoToTaskState, MemoToTaskResult]):
 if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
     import json
     from copy import deepcopy
+    from datetime import datetime
     from uuid import uuid4
 
     from logging_conf import setup_logger
+    from logic.application.memo_to_task_application_service import MemoToTaskApplicationService
     from models import MemoRead, MemoStatus
     from settings.models import EnvSettings
 
     EnvSettings.init_environment()
     setup_logger()
 
-    # [AI GENERATED] 最終的な確認は HuggingFaceModel(OpenVINO) で実施。
-    # 実行環境に依存するため、失敗時は FAKE へフォールバックします。
+    service = MemoToTaskApplicationService()
+    prompt_overrides = service.get_prompt_overrides_snapshot()
+    provider = service.get_configured_provider()
+    device = service.get_configured_device()
+
     try:
+        agent = MemoToTaskAgent(
+            provider,
+            verbose=True,
+            error_response=False,
+            persist_on_finalize=True,
+            device=device,
+        )
+    except Exception as exc:
+        agents_logger.warning("Falling back to FAKE provider due to init error: {}", str(exc))
         agent = MemoToTaskAgent(
             LLMProvider.FAKE,
             verbose=True,
             error_response=False,
             persist_on_finalize=True,
-        )
-    except Exception as exc:
-        agents_logger.warning("Falling back to FAKE provider due to init error: {}", str(exc))
-        agent = MemoToTaskAgent(
-            LLMProvider.FAKE, verbose=True, error_response=False, persist_on_finalize=True, device="AUTO"
+            device="AUTO",
         )
 
-    current_datetime = "2025-10-25T10:00:00+09:00"
+    # current_datetime = "2025-10-25T10:00:00+09:00"
+    current_datetime = datetime.now()
 
     def _build_sample_state(content: str, tags: list[str], *, title: str | None = None) -> MemoToTaskState:
         memo_title = title if title is not None else (content.splitlines()[0].strip() or "サンプルメモ")
-        return {
+        payload: dict[str, object] = {
             "memo": MemoRead(id=uuid4(), title=memo_title, content=content, status=MemoStatus.INBOX),
             "existing_tags": tags,
             "current_datetime_iso": current_datetime,
         }
+        payload.update(prompt_overrides)
+        return cast("MemoToTaskState", payload)
 
     # [AI GENERATED] 少数シナリオで手動確認。
     all_samples: list[tuple[str, MemoToTaskState]] = [
@@ -1221,10 +1370,24 @@ if __name__ == "__main__":  # 単体テスト用簡易実行 # pragma: no cover
                 title="提案書作成",
             ),
         ),
+        (
+            "generation_multiple_tasks",
+            _build_sample_state(
+                "新製品の発売に向けて、マーケティング戦略を立てる。ターゲット市場の調査、広告キャンペーンの企画、販売チャネルの選定を行う。",
+                ["マーケティング", "新製品"],
+                title="新製品マーケティング戦略",
+            ),
+        ),
     ]
     # [AI GENERATED] ここで実行対象シナリオを直接選択（環境変数は使用しない）
     # 必要に応じて下記のラベル配列を書き換えて、1件ずつ確認してください。
-    selected_labels = ["task_with_schedule", "project_planning", "idea_handling"]
+    selected_labels = [
+        # "generation_multiple_tasks",
+        # "quick_action",
+        "project_planning",
+        # "idea_handling",
+        # "task_with_schedule",
+    ]
     sample_inputs = [item for item in all_samples if item[0] in selected_labels]
 
     for label, sample_state in sample_inputs:

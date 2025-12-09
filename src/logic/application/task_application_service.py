@@ -223,3 +223,26 @@ class TaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
                 results = [t for t in results if t.id in matched_ids]
 
             return results
+
+    def sync_tags(self, task_id: uuid.UUID, tag_ids: list[uuid.UUID]) -> TaskRead:
+        """タスクのタグを同期する
+
+        現在のタグを削除し、指定されたタグIDのセットで置き換える。
+        N+1問題を回避するため、バッチ操作を使用します。
+
+        Args:
+            task_id: タスクID
+            tag_ids: 設定するタグIDの一覧
+
+        Returns:
+            TaskRead: 更新されたタスク
+        """
+        with self._unit_of_work_factory() as uow:
+            task_service = uow.get_service(TaskService)
+            desired_tag_ids = set(tag_ids)
+
+            # バッチ操作で一括同期（1回のDB操作で完了）
+            task = task_service.sync_tags(task_id, desired_tag_ids)
+
+        logger.info(f"タグ同期完了: タスクID={task_id}, タグ数={len(desired_tag_ids)}")
+        return task

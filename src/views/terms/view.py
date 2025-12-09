@@ -18,13 +18,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 import flet as ft
 from loguru import logger
 
-from models import TermStatus
+from models import TermRead, TermStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
 
@@ -57,9 +57,11 @@ class TermsView(BaseView):
         # State & Controller
         self.term_state = TermsViewState()
         service = self.apps.terminology
+        tag_service = self.apps.tag
         self.controller = TermsController(
             state=self.term_state,
             service=TerminologyApplicationPortAdapter(service),
+            _tag_service=tag_service,
         )
 
         # Components
@@ -69,6 +71,7 @@ class TermsView(BaseView):
 
         # Dialogs
         self.create_dialog: CreateTermDialog | None = None
+        self.edit_dialog: Any | None = None
 
     def build(self) -> ft.Control:
         """Build the main content area."""
@@ -217,9 +220,20 @@ class TermsView(BaseView):
         """用語編集ボタンのクリックをハンドリングする。
 
         Args:
-            term_id: 編集する用語のID
+            term_id: 編集する用語ID
         """
-        self.show_snack_bar(f"用語編集機能は準備中です (ID: {term_id})")
+        try:
+            term_uuid = UUID(term_id)
+            # 用語データを取得
+            term = next((t for t in self.term_state.all_terms if t.id == term_uuid), None)
+            if term:
+                self._show_edit_dialog(term)
+            else:
+                self.show_snack_bar("用語が見つかりませんでした")
+        except ValueError:
+            logger.warning("Invalid UUID format", extra={"term_id": term_id})
+            if self.page:
+                self.show_error_snackbar(self.page, "無効なIDです")
 
     def _handle_tag_click(self, tag_name: str) -> None:
         """タグクリックをハンドリングする。
@@ -252,6 +266,13 @@ class TermsView(BaseView):
         derived_terms = self.term_state.visible_terms
         selected_id = self.term_state.selected_term_id
 
+        # タグマップを取得
+        from views.shared.components import TagBadgeData
+        from views.theme import get_dark_color, get_light_color
+
+        all_tags = self.controller.get_all_tags()
+        tag_map = {str(tag.id): tag for tag in all_tags}
+
         cards: list[TermCardData] = []
         for term in derived_terms:
             # [AI GENERATED] デフォルト引数で term_id をキャプチャ
@@ -259,10 +280,23 @@ class TermsView(BaseView):
             def _on_click(term_id: UUID = term.id) -> None:
                 self._handle_term_select_uuid(term_id)
 
+            # タグバッジを作成
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            grey_color = get_dark_color("grey_600") if is_dark else get_light_color("grey_600")
+            tag_badges = tuple(
+                TagBadgeData(
+                    name=tag.name,
+                    color=grey_color,
+                )
+                for tag_id in (getattr(term, "tags", None) or [])
+                if (tag := tag_map.get(str(tag_id.id) if hasattr(tag_id, "id") else str(tag_id)))
+            )
+
             card_data = create_term_card_data(
                 term,
                 is_selected=(term.id == selected_id) if selected_id else False,
                 on_click=_on_click,
+                tag_badges=tag_badges,
             )
             cards.append(card_data)
 
@@ -303,15 +337,55 @@ class TermsView(BaseView):
         """用語作成ダイアログを表示する。"""
         from .components.create_term_dialog import CreateTermDialog, CreateTermDialogProps
 
+        # 全タグを取得
+        all_tags = self.controller.get_all_tags()
+
         dialog_props = CreateTermDialogProps(
             on_create=self._handle_dialog_create,
             on_cancel=self._handle_dialog_cancel,
+            all_tags=all_tags,
         )
         self.create_dialog = CreateTermDialog(dialog_props)
 
         if self.page:
             self.page.overlay.append(self.create_dialog.dialog)
             self.create_dialog.dialog.open = True
+            self.page.update()
+
+    def _show_edit_dialog(self, term: TermRead) -> None:
+        """用語編集ダイアログを表示する。
+
+        Args:
+            term: 編集する用語データ
+        """
+        from .components.edit_term_dialog import EditTermDialog, EditTermDialogProps
+
+        # 全タグを取得
+        all_tags = self.controller.get_all_tags()
+
+        # 用語データを辞書形式に変換
+        term_data = {
+            "id": str(term.id),
+            "key": term.key,
+            "title": term.title,
+            "description": term.description,
+            "status": term.status,
+            "source_url": term.source_url,
+            "tags": [{"name": tag.name, "id": str(tag.id)} for tag in getattr(term, "tags", [])],
+            "synonyms": [syn.text for syn in getattr(term, "synonyms", [])],
+        }
+
+        dialog_props = EditTermDialogProps(
+            term_data=term_data,
+            on_update=lambda data: self._handle_dialog_update(term.id, data),
+            on_cancel=self._handle_edit_dialog_cancel,
+            all_tags=all_tags,
+        )
+        self.edit_dialog = EditTermDialog(dialog_props)
+
+        if self.page:
+            self.page.overlay.append(self.edit_dialog.dialog)
+            self.edit_dialog.dialog.open = True
             self.page.update()
 
     def _handle_dialog_create(self, form_data: dict[str, object]) -> None:
@@ -329,9 +403,21 @@ class TermsView(BaseView):
         Args:
             form_data: フォームデータ
         """
+        from errors import AlreadyExistsError
+
         try:
             # 用語作成
             created_term = await self.controller.create_term(cast("TermFormData", form_data))
+
+            # タグが指定されていれば同期
+            tag_ids = form_data.get("tag_ids", [])
+            if tag_ids and isinstance(tag_ids, list):
+                from uuid import UUID
+
+                tag_uuids = [UUID(tag_id) for tag_id in tag_ids]
+                # sync_tagsは更新された用語を返すので、それを使用
+                created_term = await self.controller.sync_tags(created_term.id, tag_uuids)
+
             self._close_create_dialog()
             self.show_snack_bar(f"用語 '{created_term.key}' を作成しました")
             normalized_status = self._normalize_status(created_term.status)
@@ -342,11 +428,17 @@ class TermsView(BaseView):
             self._set_active_status_tab(normalized_status)
             self._show_detail()
 
+        except AlreadyExistsError as e:
+            # 重複エラー（キーが既に存在）- ダイアログは開いたまま、ユーザーが修正できるようにする
+            logger.warning("Term key already exists", extra={"error": str(e)})
+            if self.create_dialog:
+                self.create_dialog.show_error("⚠️ この用語キーは既に使用されています。別のキーを入力してください。")
+
         except ValueError as e:
-            # バリデーションエラー
+            # バリデーションエラー - ダイアログは開いたまま
             logger.warning("Validation error during term creation", extra={"error": str(e)})
-            if self.page:
-                self.show_error_snackbar(self.page, f"バリデーションエラー: {e}")
+            if self.create_dialog:
+                self.create_dialog.show_error(f"バリデーションエラー: {e}")
 
         except Exception:
             # その他のエラー
@@ -358,6 +450,69 @@ class TermsView(BaseView):
     def _handle_dialog_cancel(self) -> None:
         """ダイアログのキャンセルをハンドリングする。"""
         self._close_create_dialog()
+
+    def _handle_dialog_update(self, term_id: UUID, form_data: dict[str, object]) -> None:
+        """ダイアログからの用語更新をハンドリングする。
+
+        Args:
+            term_id: 用語ID
+            form_data: フォームデータ（key, title, description, status, source_url, synonyms, tag_ids）
+        """
+        if self.page:
+            self.page.run_task(self._async_update_term, term_id, form_data)
+
+    async def _async_update_term(self, term_id: UUID, form_data: dict[str, object]) -> None:
+        """非同期で用語を更新する。
+
+        Args:
+            term_id: 用語ID
+            form_data: フォームデータ
+        """
+        from errors import AlreadyExistsError
+
+        try:
+            # 用語更新
+            updated_term = await self.controller.update_term(term_id, cast("TermFormData", form_data))
+
+            # タグが指定されていれば同期
+            tag_ids = form_data.get("tag_ids", [])
+            if isinstance(tag_ids, list):
+                tag_uuids = [UUID(tag_id) for tag_id in tag_ids]
+                # sync_tagsは更新された用語を返すので、それを使用
+                updated_term = await self.controller.sync_tags(term_id, tag_uuids)
+
+            self._close_edit_dialog()
+            self.show_snack_bar(f"用語 '{updated_term.key}' を更新しました")
+            normalized_status = self._normalize_status(updated_term.status)
+            self.controller.update_tab(normalized_status)
+            self.controller.select_term(updated_term.id)
+            self._refresh_term_list()
+            self._refresh_status_tabs()
+            self._set_active_status_tab(normalized_status)
+            self._show_detail()
+
+        except AlreadyExistsError as e:
+            # 重複エラー（キーが既に存在）- ダイアログは開いたまま、ユーザーが修正できるようにする
+            logger.warning("Term key already exists during update", extra={"error": str(e)})
+            if self.edit_dialog:
+                self.edit_dialog.show_error("⚠️ この用語キーは既に使用されています。別のキーを入力してください。")
+
+        except ValueError as e:
+            # バリデーションエラー - ダイアログは開いたまま
+            logger.warning("Validation error during term update", extra={"error": str(e)})
+            if self.edit_dialog:
+                self.edit_dialog.show_error(f"バリデーションエラー: {e}")
+
+        except Exception:
+            # その他のエラー
+            logger.exception("Failed to update term")
+            self._close_edit_dialog()
+            if self.page:
+                self.show_error_snackbar(self.page, "用語の更新に失敗しました")
+
+    def _handle_edit_dialog_cancel(self) -> None:
+        """編集ダイアログのキャンセルをハンドリングする。"""
+        self._close_edit_dialog()
 
     def _close_create_dialog(self) -> None:
         """用語作成ダイアログを閉じる。"""
@@ -373,6 +528,13 @@ class TermsView(BaseView):
 
             # # 3. 参照をクリア
             # self.create_dialog = None
+
+    def _close_edit_dialog(self) -> None:
+        """用語編集ダイアログを閉じる。"""
+        if hasattr(self, "edit_dialog") and self.edit_dialog and self.page:
+            # 1. ダイアログを閉じる
+            self.edit_dialog.dialog.open = False
+            self.page.update()
 
     def _set_active_status_tab(self, status: TermStatus) -> None:
         """ステータスタブの選択状態を指定したステータスに同期する。"""

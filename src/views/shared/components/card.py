@@ -66,9 +66,7 @@ from typing import TYPE_CHECKING, Final
 import flet as ft
 
 from views.theme import (
-    get_on_primary_color,
-    get_outline_color,
-    get_text_secondary_color,
+    get_light_color,
 )
 
 if TYPE_CHECKING:
@@ -138,6 +136,22 @@ class CardBadgeData:
 
 
 @dataclass(frozen=True, slots=True)
+class TagBadgeData:
+    """タグバッジの表示データ
+
+    タグの名前と色を表示するための共通データクラス。
+    メモ、タスク、プロジェクトなどで使用される。
+
+    Attributes:
+        name: タグ名
+        color: タグの背景色（Fletカラー文字列）
+    """
+
+    name: str
+    color: str
+
+
+@dataclass(frozen=True, slots=True)
 class CardMetadataData:
     """カードメタデータの表示データ
 
@@ -175,6 +189,7 @@ class CardData:
         title: カードタイトル
         description: 説明文
         badge: バッジデータ（省略可）
+        tag_badges: タグバッジのリスト（省略可）
         metadata: メタデータリスト
         actions: アクションボタンリスト
         on_click: カードクリック時のコールバック（省略可）
@@ -184,6 +199,7 @@ class CardData:
     title: str
     description: str
     badge: CardBadgeData | None = None
+    tag_badges: tuple[TagBadgeData, ...] = ()
     metadata: list[CardMetadataData] = field(default_factory=list)
     actions: list[CardActionData] = field(default_factory=list)
     on_click: Callable[[], None] | None = None
@@ -218,7 +234,7 @@ class Card(ft.Container):
         header = self._build_header()
 
         # Divider
-        divider = ft.Divider(height=1, color=get_outline_color())
+        divider = ft.Divider(height=1, color=get_light_color("outline"))
 
         # フッター（メタデータ + アクション）
         footer = self._build_footer()
@@ -233,6 +249,7 @@ class Card(ft.Container):
                 padding=CARD_PADDING,
             ),
             elevation=CARD_ELEVATION_SELECTED if self._data.is_selected else CARD_ELEVATION_DEFAULT,
+            color=get_light_color("surface"),
         )
         self.margin = ft.margin.symmetric(vertical=4, horizontal=8)
         self.border_radius = CARD_BORDER_RADIUS
@@ -257,7 +274,7 @@ class Card(ft.Container):
                 ft.Text(
                     self._data.description,
                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=get_text_secondary_color(),
+                    color=get_light_color("text_secondary"),
                     max_lines=2,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
@@ -273,7 +290,7 @@ class Card(ft.Container):
                 content=ft.Text(
                     self._data.badge.text,
                     theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                    color=get_on_primary_color(),
+                    color=get_light_color("on_primary"),
                     weight=ft.FontWeight.W_500,
                 ),
                 bgcolor=self._data.badge.color,
@@ -291,63 +308,118 @@ class Card(ft.Container):
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
+    def _build_tag_badges(self) -> ft.Control | None:
+        """タグバッジの行を構築する（メモカードスタイル準拠）
+
+        Returns:
+            タグバッジ行のコントロール。タグがない場合はNone
+        """
+        if not self._data.tag_badges:
+            return None
+
+        tag_containers = [
+            ft.Container(
+                content=ft.Text(
+                    tag.name,
+                    size=11,
+                    color=get_light_color("on_primary"),
+                    weight=ft.FontWeight.W_400,
+                ),
+                padding=ft.padding.symmetric(
+                    horizontal=BADGE_HORIZONTAL_PADDING,
+                    vertical=BADGE_VERTICAL_PADDING,
+                ),
+                bgcolor=tag.color,
+                border_radius=BADGE_BORDER_RADIUS,
+            )
+            for tag in self._data.tag_badges
+        ]
+
+        return ft.Row(
+            controls=tag_containers,
+            spacing=8,
+            wrap=True,
+        )
+
     def _build_footer(self) -> ft.Control:
-        """フッター（メタデータ + アクション）を構築する
+        """フッター（タグバッジ行 + メタデータ+アクション行）を構築する
+
+        メモカードスタイルに準拠:
+        - タグバッジは独立した行
+        - メタデータとアクションは同じ行に配置
 
         Returns:
             フッターコントロール
         """
-        footer_controls: list[ft.Control] = []
+        footer_rows: list[ft.Control] = []
 
-        # メタデータ
-        footer_controls.extend(
-            ft.Row(
-                controls=[
-                    ft.Icon(
-                        meta.icon,
-                        size=METADATA_ICON_SIZE,
-                        color=get_text_secondary_color(),
-                    ),
-                    ft.Text(
-                        meta.text,
-                        theme_style=ft.TextThemeStyle.BODY_SMALL,
-                        color=get_text_secondary_color(),
-                    ),
-                ],
-                spacing=METADATA_SPACING,
-            )
-            for meta in self._data.metadata
+        # タグバッジ行（存在する場合）
+        tag_badges_row = self._build_tag_badges()
+        if tag_badges_row:
+            footer_rows.append(tag_badges_row)
+
+        # メタデータ + アクション行
+        metadata_action_controls: list[ft.Control] = []
+
+        # メタデータアイテム
+        metadata_action_controls.extend(
+            [
+                ft.Row(
+                    controls=[
+                        ft.Icon(
+                            meta.icon,
+                            size=METADATA_ICON_SIZE,
+                            color=get_light_color("text_secondary"),
+                        ),
+                        ft.Text(
+                            meta.text,
+                            theme_style=ft.TextThemeStyle.BODY_SMALL,
+                            color=get_light_color("text_secondary"),
+                        ),
+                    ],
+                    spacing=METADATA_SPACING,
+                )
+                for meta in self._data.metadata
+            ]
         )
 
-        # スペーサー（アクションがある場合）
-        if self._data.actions:
-            footer_controls.append(ft.Container(expand=True))
+        # スペーサー（メタデータとアクションの間）
+        if self._data.metadata and self._data.actions:
+            metadata_action_controls.append(ft.Container(expand=True))
 
-        # アクション
+        # アクションボタン
         if self._data.actions:
-            action_buttons = []
-            for action in self._data.actions:
-                icon_color = action.icon_color or get_text_secondary_color()
-                action_buttons.append(
-                    ft.IconButton(
-                        icon=action.icon,
-                        tooltip=action.tooltip,
-                        icon_size=ACTION_ICON_SIZE,
-                        on_click=action.on_click,
-                        icon_color=icon_color,
-                    )
+            action_buttons = [
+                ft.IconButton(
+                    icon=action.icon,
+                    tooltip=action.tooltip,
+                    icon_size=ACTION_ICON_SIZE,
+                    on_click=action.on_click,
+                    icon_color=action.icon_color or get_light_color("text_secondary"),
                 )
-
-            footer_controls.append(
+                for action in self._data.actions
+            ]
+            metadata_action_controls.append(
                 ft.Row(
                     controls=action_buttons,
                     spacing=ACTION_BUTTON_SPACING,
                 )
             )
 
-        return ft.Row(
-            controls=footer_controls,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=METADATA_ROW_SPACING,
+        # メタデータ+アクション行を追加
+        if metadata_action_controls:
+            footer_rows.append(
+                ft.Row(
+                    controls=metadata_action_controls,
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=METADATA_ROW_SPACING,
+                )
+            )
+
+        # フッター全体を縦に配置
+        return ft.Column(
+            controls=footer_rows,
+            spacing=8,
+            tight=True,
         )

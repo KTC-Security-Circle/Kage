@@ -5,26 +5,11 @@
 明暗テーマの両方に対応し、一貫性のあるUIを提供します。
 
 主要なカラー取得関数:
-    get_primary_color(variant="base") -> str:
-        プライマリカラーを取得（variant: "base", "light", "dark"）
+    get_light_color(color_name: str) -> str:
+        ライトテーマの色を取得（例: "primary", "error", "surface", "outline", "grey_600"）
 
-    get_surface_color() -> str:
-        サーフェス（カード・パネル）背景色を取得
-
-    get_on_surface_color() -> str:
-        サーフェス上のテキスト色を取得
-
-    get_background_color() -> str:
-        アプリ全体の背景色を取得
-
-    get_outline_color() -> str:
-        アウトライン（境界線・Divider）用の色を取得
-
-    get_text_secondary_color() -> str:
-        補助テキスト用の色を取得（キャプション、タイムスタンプなど）
-
-    get_surface_variant_color() -> str:
-        サーフェスバリアント（強調背景）色を取得（選択状態、ホバー状態など）
+    get_dark_color(color_name: str) -> str:
+        ダークテーマの色を取得（例: "primary", "error", "surface", "outline", "grey_600"）
 
     get_status_color(status: str) -> str:
         ステータス名から対応する色コードを取得
@@ -32,34 +17,43 @@
     get_tag_color_palette() -> list[dict[str, str]]:
         タグ用のカラーパレットを取得
 
-使用例:
+利用可能な色名（color_name）:
+    基本色: primary, secondary, surface, background, error, success, warning, info
+    on系色: on_primary, on_secondary, on_surface, on_background, on_error
+    派生色: outline, text_secondary, surface_variant
+    グレー: grey (デフォルト600), grey_50, grey_100, ..., grey_900
+
+使用例（ダークモード対応）:
     ```python
     import flet as ft
-    from views.theme import (
-        get_primary_color,
-        get_surface_color,
-        get_on_surface_color,
-        get_outline_color,
-        SPACING,
-        BORDER_RADIUS,
-    )
+    from views.theme import get_light_color, get_dark_color, SPACING, BORDER_RADIUS
 
-    # カード背景とテキスト色
+    # テーマモード判定
+    is_dark = getattr(page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+
+    # カード背景とテキスト色（ダークモード対応）
     card = ft.Container(
-        bgcolor=get_surface_color(),
-        border=ft.border.all(1, get_outline_color()),
+        bgcolor=get_dark_color("surface") if is_dark else get_light_color("surface"),
+        border=ft.border.all(1, get_dark_color("outline") if is_dark else get_light_color("outline")),
         border_radius=BORDER_RADIUS.md,
         padding=SPACING.md,
-        content=ft.Text("カード", color=get_on_surface_color()),
+        content=ft.Text(
+            "カード",
+            color=get_dark_color("on_surface") if is_dark else get_light_color("on_surface"),
+        ),
     )
 
-    # プライマリアクションボタン
-    button = ft.ElevatedButton(
-        text="保存",
-        bgcolor=get_primary_color(),
-        color=get_on_primary_color(),
+    # エラー表示（ダークモード対応）
+    error_color = get_dark_color("error") if is_dark else get_light_color("error")
+    error_snackbar = ft.SnackBar(
+        content=ft.Text("エラーが発生しました"),
+        bgcolor=error_color,
     )
     ```
+
+レガシー関数（後方互換性のため維持）:
+    get_primary_color(), get_surface_color(), get_error_color() など
+    注意: これらはライトテーマ固定です。新規実装では get_light_color()/get_dark_color() を使用してください。
 """
 
 from __future__ import annotations
@@ -74,6 +68,11 @@ class Palette:
 
     DRY原則に基づき、色コードの定義を一箇所に集約します。
     """
+
+    zenn_ligth_sidebar = "#ECF5FAFF"
+    zenn_ligth_theme = "#FFFFFF"
+    zenn_dark_sidebar = "#081d35"
+    zenn_dark_theme = "#0d223a"
 
     # Red
     RED_400 = "#EF5350"
@@ -91,6 +90,7 @@ class Palette:
     INDIGO_500 = "#3F51B5"
 
     # Blue
+    BLUE_50 = "#E3F2FD"
     BLUE_300 = "#64B5F6"
     BLUE_400 = "#42A5F5"
     BLUE_500 = "#2196F3"
@@ -173,6 +173,7 @@ class ColorTokens:
     on_background: str
     surface: str
     on_surface: str
+    sidebar_bg: str  # サイドバー背景色（必要に応じて使用）
 
     # Error colors
     error: str
@@ -286,16 +287,17 @@ class FontTokens:
 
 # Light theme color tokens (Material Design 3)
 LIGHT_COLORS = ColorTokens(
-    primary=Palette.BLUE_500,  # Blue - アプリ全体の統一プライマリカラー
-    primary_variant=Palette.BLUE_700,
-    on_primary=Palette.WHITE,
-    secondary=Palette.SECONDARY_LIGHT,
-    secondary_variant=Palette.SECONDARY_VARIANT_LIGHT,
-    on_secondary=Palette.WHITE,
+    primary=Palette.BLUE_500,  # 文字の色
+    primary_variant=ft.Colors.with_opacity(0.5, ft.Colors.GREY_300),  # サイドバーの縦線
+    on_primary=Palette.WHITE,  # ボタンの文字の色
+    secondary=Palette.GREY_500,  # ステータスバーの件数の背景色
+    secondary_variant=Palette.GREY_500,  # ???
+    on_secondary=Palette.WHITE,  # ステータスバーの件数の文字色
     background=Palette.GREY_50,  # Neutral grey background
     on_background=Palette.TEXT_PRIMARY_LIGHT,
-    surface=Palette.WHITE,  # Pure white for cards/panels
-    on_surface=Palette.TEXT_PRIMARY_LIGHT,
+    surface=Palette.zenn_ligth_theme,  # カードの背景色
+    on_surface=Palette.TEXT_PRIMARY_LIGHT,  # カード内の文字色 (現在なぜか背景にも適応されている)
+    sidebar_bg=ft.Colors.with_opacity(0.4, ft.Colors.BLUE_50),
     error=Palette.RED_700,  # Material Red 700
     on_error=Palette.WHITE,
     success=Palette.GREEN_700,  # Material Green 700
@@ -305,21 +307,22 @@ LIGHT_COLORS = ColorTokens(
 
 # Dark theme color tokens (Material Design 3)
 DARK_COLORS = ColorTokens(
-    primary=Palette.BLUE_300,  # Light Blue - ダークモード用の明るいブルー
+    primary=Palette.BLUE_300,  # ダーク上で目立つ明るめのブルー
     primary_variant=Palette.BLUE_400,
-    on_primary=Palette.DARK_ON_PRIMARY,
+    on_primary=Palette.BLACK,
     secondary=Palette.SECONDARY_DARK,
     secondary_variant=Palette.SECONDARY_VARIANT_DARK,
     on_secondary=Palette.ON_SECONDARY_DARK,
     background=Palette.DARK_BG,  # True dark background
     on_background=Palette.TEXT_PRIMARY_DARK,
-    surface=Palette.DARK_SURFACE,  # Elevated surface
+    surface=ft.Colors.with_opacity(0.7, Palette.zenn_dark_sidebar),  # Elevated surface (保持)
     on_surface=Palette.TEXT_PRIMARY_DARK,
-    error=Palette.RED_400,  # Light Red for dark mode
-    on_error=Palette.DARK_ON_ERROR,
-    success=Palette.GREEN_400,  # Light Green for dark mode
-    warning=Palette.ORANGE_400,  # Light Orange for dark mode
-    info=Palette.BLUE_400,  # Light Blue for dark mode
+    sidebar_bg=Palette.zenn_dark_sidebar,  # サイドバー背景は既定値を維持
+    error=Palette.RED_400,
+    on_error=Palette.WHITE,
+    success=Palette.GREEN_400,
+    warning=Palette.ORANGE_400,
+    info=Palette.BLUE_400,
 )
 
 # Common tokens
@@ -433,13 +436,45 @@ def get_light_color(color_name: str) -> str:
 
     Args:
         color_name: 取得したい色の名前
+            基本色: primary, secondary, surface, background, error, success, warning, info
+            on系色: on_primary, on_secondary, on_surface, on_background, on_error
+            派生色: outline, text_secondary, surface_variant
+            グレー: grey (デフォルト600), grey_50-900
 
     Returns:
         色コード（HEX形式）
 
     Raises:
         AttributeError: 指定された色名が存在しない場合
+
+    Examples:
+        >>> get_light_color("error")  # エラー色
+        >>> get_light_color("outline")  # アウトライン色
+        >>> get_light_color("grey_600")  # グレー600
     """
+    # 派生色の処理
+    if color_name == "outline":
+        return get_outline_color()
+    if color_name == "text_secondary":
+        return get_text_secondary_color()
+    if color_name == "surface_variant":
+        return get_surface_variant_color()
+
+    # グレー系の処理
+    grey_parts_count = 2  # "grey_600" -> ["grey", "600"]
+    if color_name.startswith("grey"):
+        if color_name == "grey":
+            return get_grey_color(600)
+        # grey_300, grey_600 などの形式
+        parts = color_name.split("_")
+        if len(parts) == grey_parts_count:
+            try:
+                shade = int(parts[1])
+                return get_grey_color(shade)
+            except ValueError:
+                pass
+
+    # トークンから直接取得
     return _get_color_from_tokens(LIGHT_COLORS, color_name)
 
 
@@ -448,13 +483,45 @@ def get_dark_color(color_name: str) -> str:
 
     Args:
         color_name: 取得したい色の名前
+            基本色: primary, secondary, surface, background, error, success, warning, info
+            on系色: on_primary, on_secondary, on_surface, on_background, on_error
+            派生色: outline, text_secondary, surface_variant
+            グレー: grey (デフォルト600), grey_50-900
 
     Returns:
         色コード（HEX形式）
 
     Raises:
         AttributeError: 指定された色名が存在しない場合
+
+    Examples:
+        >>> get_dark_color("error")  # ダークモード用エラー色
+        >>> get_dark_color("outline")  # ダークモード用アウトライン色
+        >>> get_dark_color("grey_600")  # グレー600
     """
+    # 派生色の処理
+    if color_name == "outline":
+        return get_outline_color()
+    if color_name == "text_secondary":
+        return get_text_secondary_color()
+    if color_name == "surface_variant":
+        return get_surface_variant_color()
+
+    # グレー系の処理
+    grey_parts_count = 2  # "grey_600" -> ["grey", "600"]
+    if color_name.startswith("grey"):
+        if color_name == "grey":
+            return get_grey_color(600)
+        # grey_300, grey_600 などの形式
+        parts = color_name.split("_")
+        if len(parts) == grey_parts_count:
+            try:
+                shade = int(parts[1])
+                return get_grey_color(shade)
+            except ValueError:
+                pass
+
+    # トークンから直接取得
     return _get_color_from_tokens(DARK_COLORS, color_name)
 
 

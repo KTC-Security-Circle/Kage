@@ -42,6 +42,7 @@ class TaskCardData:
         subtitle: 補助テキスト（更新日など）
         status: 内部ステータスキー（例: "progress"）
         status_label: 表示用ラベル（例: "進行中"）
+        tag_badges: タグバッジのリスト（オプション）
         is_selected: 選択状態
         on_click: クリック時のコールバック
     """
@@ -51,6 +52,7 @@ class TaskCardData:
     subtitle: str
     status: str
     status_label: str | None = None
+    tag_badges: tuple = ()
     is_selected: bool = False
     on_click: Callable[[], None] | None = None
 
@@ -100,6 +102,7 @@ class TaskCard(Card):
             title=data.title or DEFAULT_EMPTY_TITLE,
             description=data.subtitle,
             badge=badge,
+            tag_badges=data.tag_badges,
             metadata=metadata_items,
             actions=actions,
             is_selected=data.is_selected,

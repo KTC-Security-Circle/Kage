@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import get_error_color, get_grey_color, get_on_primary_color
+from views.theme import get_dark_color, get_light_color
 
 from .base import BaseDialog
 
@@ -101,7 +101,11 @@ class ConfirmDialog(BaseDialog):
         # 危険な操作の場合は赤色にする
         if self.confirm_color:
             confirm_button.style = ft.ButtonStyle(
-                color={ft.ControlState.DEFAULT: get_on_primary_color()},
+                color={
+                    ft.ControlState.DEFAULT: get_dark_color("on_primary")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("on_primary")
+                },
                 bgcolor={ft.ControlState.DEFAULT: self.confirm_color},
             )
 
@@ -174,7 +178,9 @@ class DeleteConfirmDialog(ConfirmDialog):
                         [
                             ft.Icon(
                                 ft.Icons.WARNING,
-                                color=get_error_color(),
+                                color=get_dark_color("error")
+                                if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                                else get_light_color("error"),
                                 size=32,
                             ),
                             ft.Text(
@@ -239,7 +245,9 @@ class UnsavedChangesDialog(ConfirmDialog):
                         [
                             ft.Icon(
                                 ft.Icons.INFO,
-                                color=get_grey_color(600),
+                                color=get_dark_color("grey_600")
+                                if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                                else get_light_color("grey_600"),
                                 size=32,
                             ),
                             ft.Text(

@@ -162,6 +162,29 @@ class MemoApplicationService(BaseApplicationService[type[SqlModelUnitOfWork]]):
         logger.info(logger_msg.format(msg="メモ更新完了", memo_id=updated_memo.id))
         return updated_memo
 
+    def sync_tags(self, memo_id: uuid.UUID, tag_ids: Sequence[uuid.UUID]) -> MemoRead:
+        """メモのタグを同期する
+
+        現在のタグを削除し、指定されたタグIDのセットで置き換える。
+        N+1問題を回避するため、バッチ操作を使用します。
+
+        Args:
+            memo_id: メモID
+            tag_ids: 設定するタグIDの一覧
+
+        Returns:
+            MemoRead: 更新されたメモ
+        """
+        with self._unit_of_work_factory() as uow:
+            memo_service = uow.get_service(MemoService)
+            desired_tag_ids = set(tag_ids)
+
+            # バッチ操作で一括同期（1回のDB操作で完了）
+            memo = memo_service.sync_tags(memo_id, desired_tag_ids)
+
+        logger.info(logger_msg.format(msg=f"タグ同期完了: {len(desired_tag_ids)}個", memo_id=memo_id))
+        return memo
+
     def delete(self, memo_id: uuid.UUID) -> bool:
         """メモ削除
 

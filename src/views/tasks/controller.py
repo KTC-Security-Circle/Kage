@@ -72,6 +72,18 @@ class TaskApplicationPort(Protocol):
         """タスク削除。"""
         ...
 
+    def sync_tags(self, task_id: UUID, tag_ids: list[UUID]) -> TaskRead:  # pragma: no cover - interface
+        """タスクのタグを同期する。"""
+        ...
+
+
+class TagApplicationPort(Protocol):
+    """TagApplicationService への依存を抽象化するポート。"""
+
+    def get_all_tags(self) -> list:  # pragma: no cover - interface
+        """全タグ取得"""
+        ...
+
 
 class TasksController:
     """TasksView 用の調停役 Controller。
@@ -87,6 +99,7 @@ class TasksController:
         on_change: Callable[[list[TaskCardVM]], None],
         on_error: Callable[[str], None] | None = None,
         apps: object | None = None,
+        tag_service: TagApplicationPort | None = None,
     ) -> None:
         """Controller 初期化。
 
@@ -95,12 +108,14 @@ class TasksController:
             on_change: 一覧 VM 更新時コールバック
             on_error: ユーザー通知用エラーハンドラ(SnackBar 等)
             apps: ApplicationService コンテナ
+            tag_service: TagApplicationPort 実装（タグサービス）
         """
         self._service = service
         self._state = TasksState()
         self._on_change = on_change
         self._on_error = on_error
         self._apps = apps
+        self._tag_service = tag_service
 
     def _notify_error(self, message: str) -> None:
         """UI 層へエラー通知(存在すれば)。"""
@@ -188,18 +203,21 @@ class TasksController:
             # 反映
             self._update_and_render(self._state)
 
-    def create_task(
+    def create_task(  # noqa: ANN201
         self,
         title: str,
         description: str | None = None,
         status: str | None = None,
-    ) -> None:
+    ):
         """新規タスクを ApplicationService 経由で作成する。
 
         Args:
             title: タスクタイトル
             description: タスクの説明
             status: タスクのステータス
+
+        Returns:
+            TaskRead | None: 作成されたタスク、失敗時はNone
         """
         from models import TaskStatus
 
@@ -207,7 +225,7 @@ class TasksController:
         title = title.strip()
         if not title:
             self._notify_error("タイトルを入力してください。")
-            return
+            return None
 
         # ステータスの変換
         status_enum = None
@@ -219,6 +237,7 @@ class TasksController:
                 logger.debug(f"未知のステータス入力: {status}")
                 status_enum = None
 
+        created = None
         try:
             # ApplicationService経由でタスク作成
             created = self._service.create(
@@ -234,6 +253,9 @@ class TasksController:
         except Exception as e:
             logger.exception(f"タスク作成中にエラー: {e}")
             self._notify_error("タスクの作成に失敗しました。詳細はログを参照してください。")
+            created = None
+
+        return created
 
     # TODO: MVC整備後は Command/ApplicationService 層へ書き込み操作を委譲する。
     #       例: TaskApplicationService.change_status(cmd) にトランザクション管理/ドメイン検証を移管。
@@ -309,7 +331,7 @@ class TasksController:
             status_enum = TaskStatus(new_state.status) if new_state.status else None
             items = self._service.search(
                 new_state.keyword,
-                with_details=False,
+                with_details=True,  # タグ情報を取得するためTrueに変更
                 status=status_enum,
             )
 
@@ -333,7 +355,40 @@ class TasksController:
         except Exception as e:
             logger.error(f"タスク一覧更新エラー: {e}")
             self._on_change([])
-            self._notify_error("タスク一覧の取得に失敗しました。詳細はログを参照してください。")
+
+    def get_all_tags(self) -> list:
+        """全タグを取得する。
+
+        Returns:
+            list: タグの一覧
+        """
+        if self._tag_service is None:
+            return []
+        try:
+            return self._tag_service.get_all_tags()
+        except Exception as e:
+            logger.error(f"タグ取得エラー: {e}")
+            return []
+
+    def sync_tags(self, task_id: str, tag_ids: list[str]) -> None:
+        """タスクのタグを同期する。
+
+        Args:
+            task_id: タスクID
+            tag_ids: タグIDのリスト
+        """
+        from uuid import UUID
+
+        try:
+            task_uuid = UUID(task_id)
+            tag_uuids = [UUID(tag_id) for tag_id in tag_ids]
+            self._service.sync_tags(task_uuid, tag_uuids)
+            logger.info(f"タスク {task_id} のタグを同期しました")
+            # 状態を再描画
+            self._update_and_render(self._state)
+        except Exception as e:
+            logger.error(f"タグ同期エラー: task_id={task_id}, error={e}")
+            self._notify_error("タグの同期に失敗しました")
 
     def _task_read_to_dict(self, task: TaskRead) -> dict:
         """TaskRead を辞書形式に変換する。
@@ -394,6 +449,11 @@ class TasksController:
             except Exception as e:
                 logger.warning(f"タスク {task.id} のプロジェクト情報取得エラー: {e}")
 
+        # タグ情報を抽出
+        tags: list[str] = []
+        if hasattr(task, "tags") and task.tags:
+            tags = [tag.name for tag in task.tags]
+
         return {
             "id": _s(task.id),
             "title": _s(task.title),
@@ -407,6 +467,7 @@ class TasksController:
             "project_name": project_name or "",
             "project_status": project_status or "",
             "project_tasks": project_tasks,  # type: ignore[dict-item]
+            "tags": tags,
         }
         # TODO: ここでリカバリアクション (再試行/フォールバック) を検討し、View へユーザー向け通知を行う。
 

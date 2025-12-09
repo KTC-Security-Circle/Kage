@@ -145,6 +145,29 @@ class TaskService(ServiceBase):
 
         return updated_task
 
+    @handle_service_errors(SERVICE_NAME, "タグ同期", TaskServiceError)
+    @convert_read_model(TaskRead)
+    def sync_tags(self, task_id: uuid.UUID, tag_ids: set[uuid.UUID]) -> Task:
+        """タスクのタグを一括同期する
+
+        既存のループ操作を1回のDB操作に最適化し、N+1問題を回避します。
+
+        Args:
+            task_id: タスクのID
+            tag_ids: 設定するタグIDのセット
+
+        Returns:
+            TaskRead: 更新されたタスク
+
+        Raises:
+            NotFoundError: タスクまたはタグが存在しない場合
+            TaskServiceError: タスクの更新に失敗した場合
+        """
+        task = self.task_repo.sync_tags(task_id, tag_ids)
+        logger.debug(f"タスク({task_id})のタグを同期しました: {len(tag_ids)}個")
+
+        return task
+
     @handle_service_errors(SERVICE_NAME, "取得", TaskServiceError)
     @convert_read_model(TaskRead)
     def get_by_id(self, task_id: uuid.UUID, *, with_details: bool = False) -> Task:
@@ -219,6 +242,26 @@ class TaskService(ServiceBase):
             tasks = []
         logger.debug(f"タグ({tag_id})に紐づくタスクを {len(tasks)} 件取得しました。")
         return tasks
+
+    @handle_service_errors(SERVICE_NAME, "タグ追加", TaskServiceError)
+    @convert_read_model(TaskRead)
+    def add_tag(self, task_id: uuid.UUID, tag_id: uuid.UUID) -> Task:
+        """タスクにタグを追加する
+
+        Args:
+            task_id: タスクのID
+            tag_id: 追加するタグのID
+
+        Returns:
+            TaskRead: 更新されたタスク
+
+        Raises:
+            NotFoundError: エンティティが存在しない場合
+            TaskServiceError: タグ追加に失敗した場合
+        """
+        task = self.task_repo.add_tag(task_id, tag_id)
+        logger.debug(f"タスク({task_id})にタグ({tag_id})を追加しました。")
+        return task
 
     @handle_service_errors(SERVICE_NAME, "検索", TaskServiceError)
     @convert_read_model(TaskRead, is_list=True)

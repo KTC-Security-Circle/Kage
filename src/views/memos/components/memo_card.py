@@ -2,7 +2,7 @@
 
 【責務】
 - 整形済みデータ（MemoCardData）を受け取り、UIを構築する
-- カード内のレイアウト、スタイリング、視覚的表現
+- 共通Cardコンポーネントを利用してメモ表示
 - クリックイベントをコールバックに委譲
 - 選択状態の視覚的フィードバック
 
@@ -12,8 +12,8 @@
 - 状態管理（Stateで管理）
 
 【設計上の特徴】
-- MemoCardDataを受け取る設計（データと表示の完全分離）
-- 共通カードコンポーネント（views.shared.components.card）を使用
+- MemoCardDataを受け取り、CardDataに変換して共通Cardコンポーネントを使用
+- 共通TagBadgeData（views.shared.components.card）を使用
 - このファイル内でデータクラスと専用定数を定義（凝集度向上）
 - 純粋な表示コンポーネント（副作用なし）
 
@@ -37,11 +37,13 @@ from typing import TYPE_CHECKING, Final
 
 import flet as ft
 
-from views.shared.components import Card, CardBadgeData, CardData, CardMetadataData
+from views.shared.components.card import Card, CardBadgeData, CardData, CardMetadataData
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from uuid import UUID
+
+    from views.shared.components import TagBadgeData
 
 
 # ========================================
@@ -97,6 +99,7 @@ class MemoCardData:
         content_preview: 切り詰め済みのコンテンツプレビュー（"..."付き）
         formatted_date: フォーマット済み日付文字列（例: "2025/01/15"）
         badge_data: ステータスバッジ情報（オプション）
+        tag_badges: タグバッジのリスト（オプション）
         is_selected: 選択状態
         on_click: クリック時のコールバック（オプション）
     """
@@ -106,6 +109,7 @@ class MemoCardData:
     content_preview: str
     formatted_date: str
     badge_data: StatusBadgeData | None = None
+    tag_badges: tuple[TagBadgeData, ...] = ()
     is_selected: bool = False
     on_click: Callable[[], None] | None = None
 
@@ -118,8 +122,8 @@ class MemoCardData:
 class MemoCard(Card):
     """メモカード表示コンポーネント
 
-    共通カードコンポーネントを継承し、メモ専用のデータ変換を行う。
-    整形済みのMemoCardDataを受け取り、視覚的なカードUIを構築する。
+    共通Cardコンポーネントを継承し、MemoCardDataをCardDataに変換して表示する。
+    タグバッジを含む統一されたレイアウトを提供。
     """
 
     def __init__(
@@ -131,26 +135,29 @@ class MemoCard(Card):
         Args:
             data: 表示用データ（整形済み）
         """
-        # MemoCardDataをCardDataに変換
+        self._memo_data = data
+
+        # ステータスバッジをCardBadgeDataに変換
+        badge = None
+        if data.badge_data:
+            badge = CardBadgeData(text=data.badge_data.text, color=data.badge_data.color)
+
+        # メタデータ（更新日時）
+        metadata_items = [
+            CardMetadataData(icon=ft.Icons.UPDATE, text=data.formatted_date),
+        ]
+
+        # CardDataに変換
         card_data = CardData(
             title=data.title,
             description=data.content_preview,
-            badge=CardBadgeData(
-                text=data.badge_data.text,
-                color=data.badge_data.color,
-            )
-            if data.badge_data
-            else None,
-            metadata=[
-                CardMetadataData(
-                    icon=ft.Icons.CALENDAR_TODAY,
-                    text=data.formatted_date,
-                ),
-            ],
-            on_click=data.on_click,
+            badge=badge,
+            tag_badges=data.tag_badges,
+            metadata=metadata_items,
+            actions=[],
             is_selected=data.is_selected,
+            on_click=data.on_click,
         )
 
-        # 共通カードコンポーネントを初期化
-        super().__init__(data=card_data)
+        super().__init__(card_data)
         self.key = str(data.memo_id)

@@ -51,7 +51,7 @@ class MemoCardList(ft.Column):
 
         super().__init__(
             controls=self._build_controls(),
-            spacing=0,
+            spacing=8,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )

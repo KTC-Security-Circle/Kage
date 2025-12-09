@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, TypedDict, override
 from uuid import uuid4
 
 from loguru import logger
@@ -26,6 +26,27 @@ from logic.application.settings_application_service import SettingsApplicationSe
 from logic.unit_of_work import SqlModelUnitOfWork
 from models import MemoRead
 from settings.models import AgentDetailLevel
+
+TASK_COUNT_HINT_BY_LEVEL: dict[AgentDetailLevel, str] = {
+    AgentDetailLevel.BRIEF: "最優先度の 2 件を中心に提示してください。",
+    AgentDetailLevel.BALANCED: "状況に応じて 3 件前後を提案してください。",
+    AgentDetailLevel.DETAILED: "観点が異なる最大 5 件を整理してください。",
+}
+
+RECOMMENDED_TASK_COUNT_BY_LEVEL: dict[AgentDetailLevel, int] = {
+    AgentDetailLevel.BRIEF: 2,
+    AgentDetailLevel.BALANCED: 3,
+    AgentDetailLevel.DETAILED: 5,
+}
+
+
+class PromptOverrides(TypedDict):
+    """プロンプトオーバーライド設定。"""
+
+    custom_instructions: str
+    detail_hint: str
+    task_count_hint: str
+    recommended_task_count: int
 
 
 class MemoToTaskServiceError(ApplicationError):
@@ -177,15 +198,41 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         overrides = self._get_prompt_overrides()
         state["custom_instructions"] = overrides["custom_instructions"]
         state["detail_hint"] = overrides["detail_hint"]
+        state["task_count_hint"] = overrides["task_count_hint"]
+        state["recommended_task_count"] = overrides["recommended_task_count"]
 
-    def _get_prompt_overrides(self) -> dict[str, str]:
+    def get_prompt_overrides_snapshot(self) -> PromptOverrides:
+        """アプリ設定に基づくプロンプト上書き値を取得する。"""
+        overrides = self._get_prompt_overrides()
+        return PromptOverrides(
+            custom_instructions=str(overrides["custom_instructions"]),
+            detail_hint=str(overrides["detail_hint"]),
+            task_count_hint=str(overrides["task_count_hint"]),
+            recommended_task_count=int(overrides["recommended_task_count"]),
+        )
+
+    def get_configured_provider(self) -> LLMProvider:
+        """設定で指定された LLM プロバイダを返す。"""
+        return self._get_provider()
+
+    def get_configured_device(self) -> str:
+        """設定で指定された推論デバイスを返す。"""
+        return self._get_device()
+
+    def _get_prompt_overrides(self) -> PromptOverrides:
         from typing import cast
 
         settings_app = cast("SettingsApplicationService", SettingsApplicationService.get_instance())
         agents_settings = settings_app.get_agents_settings()
         prompt_cfg = getattr(agents_settings, "memo_to_task_prompt", None)
         if prompt_cfg is None:
-            return {"custom_instructions": "", "detail_hint": self._detail_hint_from_level(AgentDetailLevel.BALANCED)}
+            level_enum = AgentDetailLevel.BALANCED
+            return {
+                "custom_instructions": "",
+                "detail_hint": self._detail_hint_from_level(level_enum),
+                "task_count_hint": self._task_count_hint_from_level(level_enum),
+                "recommended_task_count": self._recommended_task_count_from_level(level_enum),
+            }
 
         custom_text = str(getattr(prompt_cfg, "custom_instructions", "") or "").strip()
         detail_level = getattr(prompt_cfg, "detail_level", AgentDetailLevel.BALANCED)
@@ -198,6 +245,8 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         return {
             "custom_instructions": custom_text,
             "detail_hint": self._detail_hint_from_level(level_enum),
+            "task_count_hint": self._task_count_hint_from_level(level_enum),
+            "recommended_task_count": self._recommended_task_count_from_level(level_enum),
         }
 
     @staticmethod
@@ -207,6 +256,16 @@ class MemoToTaskApplicationService(BaseApplicationService[type[SqlModelUnitOfWor
         if level == AgentDetailLevel.DETAILED:
             return "背景や理由も含めて丁寧に説明してください。"
         return "バランスよく適度な詳細度で回答してください。"
+
+    @staticmethod
+    def _task_count_hint_from_level(level: AgentDetailLevel) -> str:
+        fallback = TASK_COUNT_HINT_BY_LEVEL[AgentDetailLevel.BALANCED]
+        return TASK_COUNT_HINT_BY_LEVEL.get(level, fallback)
+
+    @staticmethod
+    def _recommended_task_count_from_level(level: AgentDetailLevel) -> int:
+        fallback = RECOMMENDED_TASK_COUNT_BY_LEVEL[AgentDetailLevel.BALANCED]
+        return RECOMMENDED_TASK_COUNT_BY_LEVEL.get(level, fallback)
 
 
 # 型ヒント用の前方宣言

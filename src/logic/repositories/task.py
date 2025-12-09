@@ -100,6 +100,43 @@ class TaskRepository(BaseRepository[Task, TaskCreate, TaskUpdate]):
 
         return task
 
+    def sync_tags(self, task_id: uuid.UUID, tag_ids: set[uuid.UUID]) -> Task:
+        """タスクのタグを一括同期する（N+1問題を回避）
+
+        Args:
+            task_id: タスクID
+            tag_ids: 設定するタグIDのセット
+
+        Returns:
+            Task: 更新されたタスク
+
+        Raises:
+            NotFoundError: タスクまたはタグが存在しない場合
+        """
+        task = self.get_by_id(task_id, with_details=True)
+
+        # 存在確認: 指定されたタグIDが全て存在するか確認
+        if tag_ids:
+            tag_id_col = cast("Any", Tag.id)
+            existing_tags = self.session.exec(select(Tag).where(tag_id_col.in_(tag_ids))).all()
+            existing_tag_ids = {tag.id for tag in existing_tags}
+            missing_ids = tag_ids - existing_tag_ids
+            if missing_ids:
+                msg = f"タグが見つかりません: {missing_ids}"
+                logger.warning(msg)
+                raise NotFoundError(msg)
+
+            # タグを一括設定
+            task.tags = list(existing_tags)
+        else:
+            # 空セットの場合は全タグをクリア
+            task.tags = []
+
+        self._commit_and_refresh(task)
+        logger.info(f"タスク({task_id})のタグを同期しました: {len(tag_ids)}個")
+
+        return task
+
     def remove_all_tags(self, task_id: uuid.UUID) -> Task:
         """タスクから全てのタグを削除する
 

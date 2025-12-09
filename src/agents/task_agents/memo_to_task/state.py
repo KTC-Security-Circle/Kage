@@ -88,6 +88,12 @@ class MemoToTaskState(BaseAgentState):
     detail_hint: NotRequired[str]
     """応答の詳細度を指示するテキスト。"""
 
+    task_count_hint: NotRequired[str]
+    """推奨タスク数に関するヒント文。"""
+
+    recommended_task_count: NotRequired[int]
+    """プロジェクト初期プランで推奨されるタスク数。"""
+
     # 最終応答は最終ノードで構築され、BaseAgent/_create_return_response で取り出されるため、
     # State での final_response は不要（互換フィールドを削除）。
 

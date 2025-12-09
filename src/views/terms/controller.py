@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, TypeVar
 
 from loguru import logger
 
@@ -100,6 +100,10 @@ class TermApplicationPort(Protocol):
         """用語を検索する。"""
         ...
 
+    def sync_tags(self, term_id: UUID, tag_ids: list[UUID]) -> TermRead:  # pragma: no cover - interface
+        """用語のタグを同期する。"""
+        ...
+
     def create_term(self, form_data: TermFormData) -> TermRead:  # pragma: no cover - interface
         """用語を作成する。"""
         ...
@@ -120,6 +124,45 @@ class TermsController:
     state: TermsViewState
     service: TermApplicationPort
     query_normalizer: SearchQueryNormalizer = field(default_factory=SearchQueryNormalizer)
+    _tag_service: Any = field(default=None)  # TagApplicationService
+
+    def get_all_tags(self) -> list[Any]:
+        """全タグを取得する。
+
+        Returns:
+            タグのリスト
+        """
+        if self._tag_service is None:
+            return []
+        try:
+            return self._tag_service.get_all_tags()
+        except Exception as e:
+            logger.error(f"Failed to get all tags: {e}")
+            return []
+
+    async def sync_tags(self, term_id: UUID, tag_ids: list[UUID]) -> TermRead:
+        """用語のタグを同期し、更新された用語を返す。
+
+        Args:
+            term_id: 用語ID
+            tag_ids: タグIDのリスト
+
+        Returns:
+            TermRead: タグが同期された用語
+
+        Raises:
+            Exception: タグ同期に失敗した場合
+        """
+        try:
+            updated_term = await self._call_service(self.service.sync_tags, term_id, tag_ids)
+        except Exception as e:
+            logger.error(f"Failed to sync tags for term {term_id}: {e}")
+            raise
+        else:
+            # Stateを更新（タグ情報を含む最新データに更新）
+            self.state.upsert_term(updated_term)
+            logger.info(f"用語 {term_id} のタグを同期しました")
+            return updated_term
 
     async def load_initial_terms(self) -> None:
         """初期表示に使用する用語一覧を読み込む。"""
@@ -242,6 +285,9 @@ class TerminologyApplicationPortAdapter(TermApplicationPort):
 
     def delete_term(self, term_id: UUID) -> bool:
         return self._service.delete(term_id)
+
+    def sync_tags(self, term_id: UUID, tag_ids: list[UUID]) -> TermRead:
+        return self._service.sync_tags(term_id, tag_ids)
 
 
 def _parse_status(value: str | TermStatus | None, *, default: TermStatus | None = None) -> TermStatus | None:

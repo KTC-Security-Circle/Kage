@@ -268,7 +268,7 @@ class TermsView(BaseView):
 
         # タグマップを取得
         from views.shared.components import TagBadgeData
-        from views.theme import get_grey_color
+        from views.theme import get_dark_color, get_light_color
 
         all_tags = self.controller.get_all_tags()
         tag_map = {str(tag.id): tag for tag in all_tags}
@@ -281,10 +281,12 @@ class TermsView(BaseView):
                 self._handle_term_select_uuid(term_id)
 
             # タグバッジを作成
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            grey_color = get_dark_color("grey_600") if is_dark else get_light_color("grey_600")
             tag_badges = tuple(
                 TagBadgeData(
                     name=tag.name,
-                    color=get_grey_color(),
+                    color=grey_color,
                 )
                 for tag_id in (getattr(term, "tags", None) or [])
                 if (tag := tag_map.get(str(tag_id.id) if hasattr(tag_id, "id") else str(tag_id)))

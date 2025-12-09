@@ -29,7 +29,7 @@ from views.projects.components import (
 from views.projects.controller import ProjectController
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import get_error_color, get_on_primary_color
+from views.theme import get_dark_color, get_light_color
 
 
 class ProjectsView(BaseView):
@@ -298,8 +298,12 @@ class ProjectsView(BaseView):
                 ft.ElevatedButton(
                     "削除",
                     icon=ft.Icons.DELETE,
-                    bgcolor=get_error_color(),
-                    color=get_on_primary_color(),
+                    bgcolor=get_dark_color("error")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("error"),
+                    color=get_dark_color("on_primary")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("on_primary"),
                     on_click=_delete,
                 ),
             ],

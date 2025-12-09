@@ -49,7 +49,7 @@ from logic.application.tag_application_service import TagApplicationService
 from models import AiSuggestionStatus, MemoRead, MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import HeaderButtonData
-from views.theme import get_error_color, get_grey_color, get_on_primary_color
+from views.theme import get_dark_color, get_grey_color, get_light_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -532,7 +532,9 @@ class MemosView(BaseView):
         """選択されたAI提案タスクを承認済みとして扱う。"""
         ai_state = self.memos_state.ai_flow_state_for(memo.id)
         if not ai_state.selected_task_ids:
-            self.show_snack_bar("承認するタスクを選択してください", bgcolor=get_error_color())
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            error_color = get_dark_color("error") if is_dark else get_light_color("error")
+            self.show_snack_bar("承認するタスクを選択してください", bgcolor=error_color)
             return
         try:
             task_ids = [UUID(task_id) for task_id in ai_state.selected_task_ids]
@@ -699,14 +701,17 @@ class MemosView(BaseView):
 
                     return handler
 
+                is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                on_primary_color = get_dark_color("on_primary") if is_dark else get_light_color("on_primary")
+
                 badge = ft.Container(
                     content=ft.Row(
                         [
-                            ft.Text(tag_name, size=12, color=get_on_primary_color()),
+                            ft.Text(tag_name, size=12, color=on_primary_color),
                             ft.IconButton(
                                 icon=ft.Icons.CLOSE,
                                 icon_size=14,
-                                icon_color=get_on_primary_color(),
+                                icon_color=on_primary_color,
                                 on_click=make_remove_handler(tag_name),
                                 tooltip=f"{tag_name}を削除",
                             ),
@@ -750,7 +755,9 @@ class MemosView(BaseView):
             content = (content_field.value or "").strip()
             tags = list(selected_tag_ids)
             if not content:
-                self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
+                is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                error_color = get_dark_color("error") if is_dark else get_light_color("error")
+                self.show_snack_bar("内容を入力してください", bgcolor=error_color)
                 return
 
             def _save() -> None:
@@ -866,7 +873,13 @@ class MemosView(BaseView):
             content=ft.Text("この操作は取り消せません。よろしいですか？"),
             actions=[
                 ft.TextButton("キャンセル", on_click=_cancel),
-                ft.ElevatedButton("削除", bgcolor=get_error_color(), on_click=_confirm_delete),
+                ft.ElevatedButton(
+                    "削除",
+                    bgcolor=get_dark_color("error")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("error"),
+                    on_click=_confirm_delete,
+                ),
             ],
         )
 

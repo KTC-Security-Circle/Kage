@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any
 from views.shared.components import Card, CardActionData, CardBadgeData, CardData, CardMetadataData
 from views.theme import (
     get_error_color,
-    get_on_primary_color,
     get_outline_color,
     get_primary_color,
     get_status_color,
@@ -90,9 +89,10 @@ def create_project_card_from_vm(
     *,
     is_selected: bool = False,
 ) -> ft.Control:  # type: ignore[name-defined]
-    """ViewModel からプロジェクトカードを作成する。
+    """ViewModel からプロジェクトカードを作成する（共通Cardコンポーネント使用）。
 
     View の直書きを置き換え、再利用性を高めた統一インターフェース。
+    プログレスバーを含む特殊なレイアウトのため、ProjectCardWithProgressを使用。
 
     Args:
         vm: プロジェクトカードViewModel
@@ -104,69 +104,84 @@ def create_project_card_from_vm(
     """
     import flet as ft
 
-    return ft.Card(
-        content=ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Text(
-                                vm.title,
-                                theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                                weight=ft.FontWeight.W_500,
-                                expand=True,
-                            ),
-                            ft.Container(
-                                content=ft.Text(
-                                    vm.status,
-                                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                                    color=get_on_primary_color(),
-                                    weight=ft.FontWeight.W_500,
-                                ),
-                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                                bgcolor=vm.status_color,
-                                border_radius=12,
-                            ),
-                        ],
-                    ),
-                    ft.Text(
-                        vm.subtitle,
-                        theme_style=ft.TextThemeStyle.BODY_SMALL,
-                        color=get_text_secondary_color(),
-                    ),
-                    ft.Text(
-                        vm.description,
-                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                        color=get_text_secondary_color(),
-                        max_lines=2,
-                        overflow=ft.TextOverflow.ELLIPSIS,
-                    ),
-                    ft.Column(
-                        controls=[
-                            ft.Row(
-                                controls=[
-                                    ft.Text(
-                                        vm.progress_text,
-                                        theme_style=ft.TextThemeStyle.BODY_SMALL,
-                                        color=get_text_secondary_color(),
-                                    ),
-                                ],
-                            ),
-                            ft.ProgressBar(
-                                value=vm.progress_value,
-                                color=get_primary_color(),
-                                bgcolor=get_outline_color(),
-                                height=6,
-                            ),
-                        ],
-                        spacing=4,
-                    ),
-                ],
-                spacing=8,
-            ),
-            padding=16,
-            ink=True,
-            on_click=lambda _: on_select(vm.id),
+    # CardDataを構築
+    card_data = CardData(
+        title=vm.title,
+        description=vm.description,
+        badge=CardBadgeData(
+            text=vm.status,
+            color=vm.status_color,
         ),
-        elevation=1 if not is_selected else 3,
+        metadata=[
+            CardMetadataData(
+                icon=ft.Icons.CALENDAR_TODAY,
+                text=vm.subtitle,
+            ),
+        ],
+        actions=[],
+        on_click=lambda: on_select(vm.id),
+        is_selected=is_selected,
     )
+
+    return ProjectCardWithProgress(
+        data=card_data,
+        progress_text=vm.progress_text,
+        progress_value=vm.progress_value,
+    )
+
+
+class ProjectCardWithProgress(Card):
+    """プログレスバー付きプロジェクトカード
+
+    共通Cardコンポーネントを継承し、プログレスバーを追加表示する。
+    """
+
+    def __init__(
+        self,
+        data: CardData,
+        progress_text: str,
+        progress_value: float,
+    ) -> None:
+        """プログレスバー付きカードを初期化。
+
+        Args:
+            data: カード表示データ
+            progress_text: 進捗表示テキスト
+            progress_value: 進捗値（0.0-1.0）
+        """
+        super().__init__(data)
+        self._progress_text = progress_text
+        self._progress_value = progress_value
+        self._inject_progress_bar()
+
+    def _inject_progress_bar(self) -> None:
+        """プログレスバーをカードに追加する"""
+        import flet as ft
+
+        try:
+            card_content = self.content
+            if isinstance(card_content, ft.Card):
+                container = card_content.content
+                if isinstance(container, ft.Container):
+                    column = container.content
+                    if isinstance(column, ft.Column):
+                        # フッターの後にプログレスバーを追加
+                        progress_section = ft.Column(
+                            controls=[
+                                ft.Text(
+                                    self._progress_text,
+                                    theme_style=ft.TextThemeStyle.BODY_SMALL,
+                                    color=get_text_secondary_color(),
+                                ),
+                                ft.ProgressBar(
+                                    value=self._progress_value,
+                                    color=get_primary_color(),
+                                    bgcolor=get_outline_color(),
+                                    height=6,
+                                ),
+                            ],
+                            spacing=4,
+                        )
+                        column.controls.append(progress_section)
+        except (AttributeError, IndexError):
+            pass  # エラーは無視（デフォルト表示のまま）

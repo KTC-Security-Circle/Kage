@@ -25,7 +25,7 @@ from logic.application.tag_application_service import TagApplicationService
 from models import MemoStatus
 from views.shared.base_view import BaseView, BaseViewProps
 from views.shared.components import Header, HeaderButtonData
-from views.theme import get_error_color, get_outline_color
+from views.theme import get_dark_color, get_light_color, get_outline_color
 
 from .components.create_form import CreateForm, FormCallbacks
 from .components.tag_selector import TagSelector, TagSelectorProps
@@ -274,7 +274,9 @@ class CreateMemoView(BaseView):
 
     def _handle_save(self) -> None:
         if not self._can_save():
-            self.show_snack_bar("内容を入力してください", bgcolor=get_error_color())
+            is_dark = getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+            error_color = get_dark_color("error") if is_dark else get_light_color("error")
+            self.show_snack_bar("内容を入力してください", bgcolor=error_color)
             return
         title = self.state_local.title.strip() or "無題のメモ"
         content = self.state_local.content.strip()

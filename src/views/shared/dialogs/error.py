@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import flet as ft
 
-from views.theme import SPACING, get_error_color, get_grey_color, get_surface_variant_color
+from views.theme import SPACING, get_dark_color, get_light_color
 
 from .base import BaseDialog
 
@@ -62,7 +62,9 @@ class ErrorDialog(BaseDialog):
                 [
                     ft.Icon(
                         ft.Icons.ERROR,
-                        color=get_error_color(),
+                        color=get_dark_color("error")
+                        if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                        else get_light_color("error"),
                         size=32,
                     ),
                     ft.Text(
@@ -109,7 +111,9 @@ class ErrorDialog(BaseDialog):
                                 selectable=True,
                                 no_wrap=False,
                             ),
-                            bgcolor=get_surface_variant_color(),
+                            bgcolor=get_dark_color("surface_variant")
+                            if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                            else get_light_color("surface_variant"),
                             border_radius=4,
                             padding=ft.padding.all(SPACING.sm),
                             width=500,
@@ -212,7 +216,9 @@ class CriticalErrorDialog(ErrorDialog):
             if first_row.controls and len(first_row.controls) > 0:
                 first_row.controls[0] = ft.Icon(
                     ft.Icons.DANGEROUS,
-                    color=get_error_color(),
+                    color=get_dark_color("error")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("error"),
                     size=40,
                 )
 
@@ -269,7 +275,9 @@ class ValidationErrorDialog(ErrorDialog):
             if first_row.controls and len(first_row.controls) > 0:
                 first_row.controls[0] = ft.Icon(
                     ft.Icons.WARNING,
-                    color=get_grey_color(600),
+                    color=get_dark_color("grey_600")
+                    if getattr(self.page, "theme_mode", ft.ThemeMode.LIGHT) == ft.ThemeMode.DARK
+                    else get_light_color("grey_600"),
                     size=32,
                 )
 

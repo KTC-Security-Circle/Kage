@@ -8,9 +8,16 @@ from loguru import logger
 
 from errors import ApplicationError
 from logic.application.base import BaseApplicationService
+from logic.services.weekly_review_action_service import WeeklyReviewActionService
 from logic.services.weekly_review_service import WeeklyReviewInsightsService
 from logic.unit_of_work import SqlModelUnitOfWork
-from models import WeeklyReviewInsights, WeeklyReviewInsightsQuery
+from models import (
+    WeeklyReviewActionResult,
+    WeeklyReviewInsights,
+    WeeklyReviewInsightsQuery,
+    WeeklyReviewMemoDecision,
+    WeeklyReviewTaskDecision,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from datetime import datetime
@@ -66,3 +73,18 @@ class WeeklyReviewApplicationService(BaseApplicationService[type[SqlModelUnitOfW
             user_id=user_id,
         )
         return self.generate_insights(query)
+
+    def apply_actions(
+        self,
+        task_decisions: list[WeeklyReviewTaskDecision],
+        memo_decisions: list[WeeklyReviewMemoDecision] | None = None,
+    ) -> WeeklyReviewActionResult:
+        """選択されたタスク/メモアクションを適用する。"""
+        try:
+            with self._unit_of_work_factory() as uow:
+                action_service = uow.service_factory.get_service(WeeklyReviewActionService)
+                result = action_service.apply_actions(task_decisions, memo_decisions)
+                uow.commit()
+                return result
+        except Exception as exc:  # pragma: no cover - エラー経路
+            raise WeeklyReviewApplicationError(str(exc)) from exc

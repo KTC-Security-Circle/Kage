@@ -99,6 +99,7 @@ class WeeklyReviewState:
     wizard_active: bool = False
     has_started: bool = False
     data_loaded: bool = False
+    applying_actions: bool = False
 
     # チェックリスト状態
     checklist: list[ChecklistItem] = field(
@@ -128,6 +129,14 @@ class WeeklyReviewState:
     # Step2: 整理データ
     zombie_tasks: list[ZombieTaskReviewItem] = field(default_factory=list)
     unprocessed_memos: list[MemoReviewItem] = field(default_factory=list)
+    split_draft_tasks: dict[str, list[TaskRead]] = field(default_factory=dict)
+    split_draft_parent_titles: dict[str, str] = field(default_factory=dict)
+    split_draft_task_parent: dict[str, str] = field(default_factory=dict)
+    completed_zombie_task_ids: set[str] = field(default_factory=set)
+    memo_draft_tasks: dict[str, list[TaskRead]] = field(default_factory=dict)
+    memo_draft_parent_titles: dict[str, str] = field(default_factory=dict)
+    memo_draft_task_parent: dict[str, str] = field(default_factory=dict)
+    completed_memo_ids: set[str] = field(default_factory=set)
 
     # Step3: 計画データ
     recommendations: list[RecommendationData] = field(default_factory=list)
@@ -241,3 +250,91 @@ class WeeklyReviewState:
             選択されたアクション (なければNone)
         """
         return self.memo_decisions.get(memo_id)
+
+    def add_split_draft_tasks(self, parent_id: str, parent_title: str, tasks: list[TaskRead]) -> None:
+        """承認待ちサブタスクを追加する。"""
+        collection = self.split_draft_tasks.setdefault(parent_id, [])
+        self.split_draft_parent_titles[parent_id] = parent_title
+        self.completed_zombie_task_ids.discard(parent_id)
+        existing_ids = {str(task.id) for task in collection}
+        for task in tasks:
+            if str(task.id) in existing_ids:
+                continue
+            collection.append(task)
+            self.split_draft_task_parent[str(task.id)] = parent_id
+
+    def remove_split_draft_task(self, task_id: str) -> str | None:
+        """承認待ちサブタスクを削除する。"""
+        parent_id = self.split_draft_task_parent.pop(task_id, None)
+        if parent_id is None:
+            return None
+        collection = self.split_draft_tasks.get(parent_id)
+        if collection is None:
+            return parent_id
+        self.split_draft_tasks[parent_id] = [task for task in collection if str(task.id) != task_id]
+        if not self.split_draft_tasks[parent_id]:
+            del self.split_draft_tasks[parent_id]
+            self.split_draft_parent_titles.pop(parent_id, None)
+        return parent_id
+
+    def get_split_drafts(self, parent_id: str) -> list[TaskRead]:
+        return self.split_draft_tasks.get(parent_id, [])
+
+    def get_split_parent_title(self, parent_id: str) -> str | None:
+        return self.split_draft_parent_titles.get(parent_id)
+
+    def mark_zombie_task_completed(self, parent_id: str) -> None:
+        self.completed_zombie_task_ids.add(parent_id)
+
+    def clear_completed_zombie_flags(self, valid_task_ids: set[str]) -> None:
+        self.completed_zombie_task_ids = {
+            task_id for task_id in self.completed_zombie_task_ids if task_id in valid_task_ids
+        }
+
+    def is_zombie_task_completed(self, task_id: str) -> bool:
+        return task_id in self.completed_zombie_task_ids
+
+    def add_memo_draft_tasks(self, memo_id: str, memo_title: str, tasks: list[TaskRead]) -> None:
+        collection = self.memo_draft_tasks.setdefault(memo_id, [])
+        self.memo_draft_parent_titles[memo_id] = memo_title
+        self.completed_memo_ids.discard(memo_id)
+        existing_ids = {str(task.id) for task in collection}
+        for task in tasks:
+            if str(task.id) in existing_ids:
+                continue
+            collection.append(task)
+            self.memo_draft_task_parent[str(task.id)] = memo_id
+
+    def remove_memo_draft_task(self, task_id: str) -> str | None:
+        memo_id = self.memo_draft_task_parent.pop(task_id, None)
+        if memo_id is None:
+            return None
+        collection = self.memo_draft_tasks.get(memo_id)
+        if collection is None:
+            return memo_id
+        self.memo_draft_tasks[memo_id] = [task for task in collection if str(task.id) != task_id]
+        if not self.memo_draft_tasks[memo_id]:
+            del self.memo_draft_tasks[memo_id]
+            self.memo_draft_parent_titles.pop(memo_id, None)
+        return memo_id
+
+    def get_memo_drafts(self, memo_id: str) -> list[TaskRead]:
+        return self.memo_draft_tasks.get(memo_id, [])
+
+    def get_memo_parent_title(self, memo_id: str) -> str | None:
+        return self.memo_draft_parent_titles.get(memo_id)
+
+    def mark_memo_completed(self, memo_id: str) -> None:
+        self.completed_memo_ids.add(memo_id)
+
+    def clear_completed_memo_flags(self, valid_ids: set[str]) -> None:
+        self.completed_memo_ids = {memo_id for memo_id in self.completed_memo_ids if memo_id in valid_ids}
+
+    def is_memo_completed(self, memo_id: str) -> bool:
+        return memo_id in self.completed_memo_ids
+
+    def has_pending_task_actions(self) -> bool:
+        """実行待ちアクションが存在するか判定する。"""
+        if any(action for action in self.zombie_task_decisions.values()):
+            return True
+        return any(action for action in self.memo_decisions.values())

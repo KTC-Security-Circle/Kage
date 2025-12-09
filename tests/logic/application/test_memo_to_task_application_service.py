@@ -8,7 +8,10 @@ import logic.application.memo_to_task_application_service as memo_to_task_module
 from agents.agent_conf import LLMProvider, OpenVINODevice
 from agents.task_agents.memo_to_task.schema import TaskDraft
 from agents.task_agents.memo_to_task.state import MemoToTaskResult, MemoToTaskState
-from logic.application.memo_to_task_application_service import MemoToTaskApplicationService
+from logic.application.memo_to_task_application_service import (
+    RECOMMENDED_TASK_COUNT_BY_LEVEL,
+    MemoToTaskApplicationService,
+)
 from models import MemoRead, MemoStatus
 from settings.models import AgentDetailLevel
 
@@ -63,7 +66,17 @@ def test_clarify_memo_injects_prompt_overrides(monkeypatch: pytest.MonkeyPatch, 
 
     service = MemoToTaskApplicationService()
 
+    overrides = service.get_prompt_overrides_snapshot()
+    assert overrides["custom_instructions"] == instructions
+    assert "5 件" in overrides["task_count_hint"]
+    assert overrides["recommended_task_count"] == RECOMMENDED_TASK_COUNT_BY_LEVEL[AgentDetailLevel.DETAILED]
+    assert service.get_configured_provider() == LLMProvider.GOOGLE
+    assert service.get_configured_device() == OpenVINODevice.CPU.value
+
     service.clarify_memo(memo)
 
     assert captured_state["custom_instructions"] == instructions
     assert "丁寧" in str(captured_state["detail_hint"])
+    expected_count = RECOMMENDED_TASK_COUNT_BY_LEVEL[AgentDetailLevel.DETAILED]
+    assert f"{expected_count} 件" in str(captured_state["task_count_hint"])
+    assert captured_state["recommended_task_count"] == expected_count

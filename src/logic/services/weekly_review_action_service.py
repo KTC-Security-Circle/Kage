@@ -371,12 +371,16 @@ class WeeklyReviewActionService(ServiceBase):
         plans: list[WeeklyReviewSplitPlan],
         targets: list[WeeklyReviewSplitTarget],
     ) -> list[WeeklyReviewSplitPlan]:
+        # 正常な親ID候補（実在するターゲットID）を準備
         fallback_ids = [target.task_id for target in targets]
         fallback_iter = iter(fallback_ids)
         normalized: list[WeeklyReviewSplitPlan] = []
+        valid_target_set = set(fallback_ids)
         for plan_entry in plans:
             parent_id = plan_entry.parent_task_id
-            if parent_id.int == 0:
+            # 1) ゼロUUID (0000...) の場合はフォールバックに差し替え
+            # 2) ターゲットに存在しない親ID（プレースホルダー等）の場合も差し替え
+            if parent_id.int == 0 or parent_id not in valid_target_set:
                 try:
                     replacement = next(fallback_iter)
                 except StopIteration:

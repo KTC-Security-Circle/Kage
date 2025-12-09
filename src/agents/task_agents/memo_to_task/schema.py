@@ -109,6 +109,12 @@ class ProjectPlanSuggestion(BaseModel):
     next_actions: list[TaskDraft] = Field(description="直近で着手すべきタスク候補一覧")
 
 
+class TaskListSuggestion(BaseModel):
+    """タスク分類時の複数タスク抽出結果。"""
+
+    next_actions: list[TaskDraft] = Field(description="抽出されたタスク候補一覧")
+
+
 def _ensure_iso8601(value: str) -> None:
     """与えられた文字列が ISO8601 として解釈できるか検証する。"""
     normalized = _normalize_iso8601(value)

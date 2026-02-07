@@ -181,3 +181,101 @@ class WeeklyReviewInsights(BaseModel):
     highlights: WeeklyReviewHighlightsPayload
     zombie_tasks: WeeklyReviewZombiePayload
     memo_audits: WeeklyReviewMemoAuditPayload
+
+
+class WeeklyReviewSplitTarget(BaseModel):
+    """細分化エージェントへ渡すタスク情報。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    task_id: UUID = Field(description="対象タスクのID。")
+    title: str = Field(description="タスクのタイトル。")
+    stale_days: int = Field(ge=0, description="停滞日数または経過日数。")
+    context: str | None = Field(default=None, description="エージェントに渡す補足情報。")
+
+
+class WeeklyReviewSplitSubtask(BaseModel):
+    """細分化結果で生成されるサブタスク定義。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    title: str = Field(description="サブタスクのタイトル。")
+    description: str | None = Field(default=None, description="詳細説明。")
+    first_step_hint: str | None = Field(default=None, description="最初に行うべき一歩。")
+    estimate_minutes: int | None = Field(
+        default=None,
+        ge=1,
+        le=8 * 60,
+        description="推定所要時間（分）。",
+    )
+
+
+class WeeklyReviewSplitPlan(BaseModel):
+    """1タスク分の細分化計画。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    parent_task_id: UUID = Field(description="元タスクのID。")
+    rationale: str = Field(description="分割案の根拠・説明。")
+    status: Literal["ready", "failure"] = Field(default="ready", description="生成結果のステータス。")
+    subtasks: list[WeeklyReviewSplitSubtask] = Field(default_factory=list)
+    fallback_reason: str | None = Field(default=None, description="failure 時の理由。")
+
+
+class WeeklyReviewSplitTaskInfo(BaseModel):
+    """作成された Draft タスクの親子関係。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    parent_task_id: UUID
+    task_id: UUID
+
+
+class WeeklyReviewTaskDecision(BaseModel):
+    """UI から送られるゾンビタスクの処理決定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    task_id: UUID = Field(description="対象タスクID。")
+    action: Literal["split", "someday", "delete"] = Field(description="実行するアクション。")
+
+
+class WeeklyReviewMemoDecision(BaseModel):
+    """未処理メモに対するアクションの決定。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    memo_id: UUID = Field(description="対象メモID。")
+    action: Literal["create_task", "archive", "skip"] = Field(description="実行するアクション。")
+
+
+class WeeklyReviewMemoTaskInfo(BaseModel):
+    """メモ起点で生成されたドラフトタスクの親子関係。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    memo_id: UUID
+    task_id: UUID
+
+
+class WeeklyReviewActionResult(BaseModel):
+    """週次レビュー整理アクションの集計結果。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    created_subtasks: int = Field(default=0, ge=0, description="作成されたサブタスク数。")
+    split_tasks: list[WeeklyReviewSplitTaskInfo] = Field(default_factory=list, description="生成された Draft の詳細。")
+    split_task_ids: list[UUID] = Field(default_factory=list, description="生成された Draft タスクID。")
+    moved_to_someday: int = Field(default=0, ge=0, description="Somedayへ移された件数。")
+    someday_task_ids: list[UUID] = Field(default_factory=list, description="Somedayへ移動したタスクID。")
+    deleted_tasks: int = Field(default=0, ge=0, description="削除されたタスク数。")
+    deleted_task_ids: list[UUID] = Field(default_factory=list, description="削除に成功したタスクID。")
+    memo_tasks_created: int = Field(default=0, ge=0, description="メモから生成されたタスク数。")
+    memo_task_infos: list[WeeklyReviewMemoTaskInfo] = Field(default_factory=list, description="メモ起点タスクの詳細。")
+    memo_task_ids: list[UUID] = Field(default_factory=list, description="メモ起点で生成されたタスクID。")
+    memos_archived: int = Field(default=0, ge=0, description="資料化(IDEA遷移)したメモ数。")
+    archived_memo_ids: list[UUID] = Field(default_factory=list, description="資料化されたメモID。")
+    memos_skipped: int = Field(default=0, ge=0, description="アーカイブに移動したメモ数。")
+    skipped_memo_ids: list[UUID] = Field(default_factory=list, description="アーカイブしたメモID。")
+    errors: list[str] = Field(default_factory=list, description="個別エラーの一覧。")
+    message: str = Field(default="", description="ユーザーへ表示する要約メッセージ。")

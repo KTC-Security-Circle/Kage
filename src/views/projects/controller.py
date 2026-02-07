@@ -363,6 +363,11 @@ class ProjectController:
                     logger.warning(f"不正なタスクID: {task_id_str}")
 
             logger.info(f"プロジェクト {project_id} のタスクを更新しました")
+
+            # タスク関連の変更は詳細・一覧の表示内容に直結するため即座に再描画する
+            # メモ→タスク生成の非同期完了にも追従できるよう明示的に更新を行う
+            self._update_detail()
+            self._update_list()
         except Exception as e:
             logger.exception(f"タスク更新中にエラー: {e}")
             self._notify_error("タスクの更新に失敗しました。")

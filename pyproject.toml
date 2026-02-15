@@ -10,7 +10,7 @@ authors = [
 ]
 dependencies = [
     "alembic>=1.16.2",
-    "flet==0.27.6",
+    "flet==0.80.5",
     "langchain>=0.3.25",
     "langchain-google-genai>=2.1.5",
     "langchain-huggingface>=0.3.1",
@@ -68,7 +68,7 @@ package = true
 
 [dependency-groups]
 dev = [
-    "flet[all]==0.27.6",
+    "flet[all]==0.80.5",
     "poethepoet>=0.36.0",
     "pre-commit>=4.2.0",
     # test

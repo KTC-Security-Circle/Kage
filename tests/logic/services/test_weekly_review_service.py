@@ -32,12 +32,12 @@ def _build_task(title: str, *, created_offset: int, completed_offset: int | None
     )
 
 
-def _build_memo(title: str) -> SimpleNamespace:
+def _build_memo(title: str, *, status: MemoStatus = MemoStatus.INBOX) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         title=title,
         content=f"{title} content",
-        status=MemoStatus.INBOX,
+        status=status,
         created_at=datetime.now(),
         tasks=[],
     )
@@ -50,7 +50,10 @@ def test_generate_insights_happy_path() -> None:
 
     task_repo.list_completed_between.return_value = [_build_task("完了A", created_offset=3, completed_offset=1)]
     task_repo.list_stale_tasks.return_value = [_build_task("停滞B", created_offset=20)]
-    memo_repo.list_unprocessed_memos.return_value = [_build_memo("メモC")]
+    memo_repo.list_unprocessed_memos.side_effect = [
+        [_build_memo("メモC")],
+        [_build_memo("メモIdea", status=MemoStatus.IDEA)],
+    ]
     project_repo.list_by_status.return_value = [SimpleNamespace(id=uuid.uuid4(), title="Project X")]
 
     review_settings = ReviewSettings()
@@ -71,7 +74,7 @@ def test_generate_insights_handles_empty_sources() -> None:
 
     task_repo.list_completed_between.side_effect = NotFoundError("no data")
     task_repo.list_stale_tasks.side_effect = NotFoundError("no data")
-    memo_repo.list_unprocessed_memos.side_effect = NotFoundError("no data")
+    memo_repo.list_unprocessed_memos.side_effect = [NotFoundError("no data"), NotFoundError("no data")]
     project_repo.list_by_status.side_effect = NotFoundError("no data")
 
     review_settings = ReviewSettings()

@@ -104,7 +104,8 @@ class ReviewCopilotAgent:
             msg = "ReviewHighlightsAgent.invoke が例外で失敗しました。"
             self._logger.exception(msg)
             return self._build_highlights_fallback(completed)
-        if isinstance(result, AgentError) or not getattr(result, "bullets", None):
+        # bullets が None の場合のみフォールバック。空リストは許容する。
+        if isinstance(result, AgentError) or getattr(result, "bullets", None) is None:
             msg = f"ReviewHighlightsAgent が無効な結果を返したためフォールバックします。 result={result}"
             self._logger.warning(msg)
             return self._build_highlights_fallback(completed)

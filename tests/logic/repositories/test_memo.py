@@ -245,7 +245,7 @@ class TestMemoRepository:
         test_session.add_all([inbox_memo, idea_memo, memo_with_task, linked_task])
         test_session.commit()
 
-        results = memo_repo.list_unprocessed_memos(created_after=base_time - timedelta(days=1))
+        results = memo_repo.list_unprocessed_memos(created_after=None)
         titles = {memo.title for memo in results}
 
         assert titles == {"Inbox", "Idea"}

@@ -123,6 +123,7 @@ test-cov = "uv run python scripts/run_logic_cov.py"
 # migrate = "uv run alembic -c src/models/migrations/alembic.ini upgrade head"
 migrate = "uv run scripts/run_migrate.py"
 sample-data = ["migrate", "_seed-sample-data"]
+initialize-db = ["_remove-database", "sample-data"]
 revision = "uv run alembic -c src/models/migrations/alembic.ini revision --autogenerate -m"
 db-status = "uv run alembic -c src/models/migrations/alembic.ini current"
 
@@ -148,6 +149,7 @@ _type-check = "uv run pyright src/ tests/"
 _docs-serve = "uv run mkdocs serve -a 127.0.0.1:8000"
 _gen-env-docs = "uv run scripts/generate_env_docs.py"
 _seed-sample-data = "uv run python scripts/seed_sample_data.py"
+_remove-database = "uv run scripts/remove_database.py"
 
 # (https://zenn.dev/mutex_inc/articles/4183b992ccd701)
 [tool.ruff]

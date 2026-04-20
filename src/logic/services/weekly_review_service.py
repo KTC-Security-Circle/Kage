@@ -16,6 +16,7 @@ from models import (
     CompletedTaskDigest,
     MemoAuditDigest,
     MemoRead,
+    MemoStatus,
     ProjectRead,
     ProjectStatus,
     ReviewPeriod,
@@ -173,12 +174,21 @@ class WeeklyReviewInsightsService(ServiceBase):
                 limit=self.review_settings.max_stale_tasks,
             )
         )
-        memo_entities = self._safe_fetch(
+        inbox_memos = self._safe_fetch(
+            lambda: self.memo_repo.list_unprocessed_memos(
+                created_after=None,
+                statuses=(MemoStatus.INBOX,),
+                limit=None,
+            )
+        )
+        idea_memos = self._safe_fetch(
             lambda: self.memo_repo.list_unprocessed_memos(
                 created_after=period_start,
+                statuses=(MemoStatus.IDEA,),
                 limit=self.review_settings.max_unprocessed_memos,
             )
         )
+        memo_entities = [*inbox_memos, *idea_memos]
 
         completed = [self._build_completed_digest(task) for task in completed_entities]
         stale = [self._build_stale_digest(task, reference=period_end) for task in stale_entities]

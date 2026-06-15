@@ -17,11 +17,14 @@ from models import (
     ReviewPeriod,
     TaskRead,
     TaskStatus,
+    WeeklyReviewActionResult,
     WeeklyReviewHighlightsItem,
     WeeklyReviewHighlightsPayload,
     WeeklyReviewInsights,
     WeeklyReviewMemoAuditPayload,
+    WeeklyReviewMemoTaskInfo,
     WeeklyReviewMetadata,
+    WeeklyReviewSplitTaskInfo,
     WeeklyReviewZombiePayload,
     ZombieTaskInsight,
     ZombieTaskSuggestion,
@@ -92,6 +95,10 @@ def _build_task(task_id: UUID) -> TaskRead:
         description="詳細",
         status=TaskStatus.COMPLETED,
     )
+
+
+def _build_memo_obj(memo_id: UUID | None = None) -> SimpleNamespace:
+    return SimpleNamespace(id=memo_id or uuid4(), title="メモ", content="コンテンツ")
 
 
 def test_load_initial_data_populates_state() -> None:
@@ -214,6 +221,301 @@ def test_load_initial_data_empty_insights_lists() -> None:
     assert state.unprocessed_memos == []
     assert state.recommendations == []
     assert state.data_loaded is True
+
+
+def test_execute_task_actions_builds_decisions() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    review_service.apply_actions.return_value = WeeklyReviewActionResult(message="ok")
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    task_id = uuid4()
+    state.zombie_task_decisions[str(task_id)] = "subdivide"
+
+    result = controller.execute_task_actions()
+
+    assert result.message == "ok"
+    sent_decisions, memo_decisions = review_service.apply_actions.call_args.args
+    assert sent_decisions[0].action == "split"
+    assert sent_decisions[0].task_id == task_id
+    assert memo_decisions == []
+
+
+def test_execute_task_actions_without_selection_raises() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    with pytest.raises(ValueError, match="アクションが選択されていません"):
+        controller.execute_task_actions()
+
+
+def test_execute_task_actions_records_split_drafts() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    parent_task_id = uuid4()
+    split_id = uuid4()
+    review_service.apply_actions.return_value = WeeklyReviewActionResult(
+        split_tasks=[WeeklyReviewSplitTaskInfo(parent_task_id=parent_task_id, task_id=split_id)],
+        split_task_ids=[split_id],
+    )
+    task_service.get_by_id.side_effect = [_build_task(split_id), _build_task(parent_task_id)]
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    state.zombie_task_decisions[str(parent_task_id)] = "subdivide"
+
+    result = controller.execute_task_actions()
+
+    assert result.split_task_ids == [split_id]
+    drafts = state.get_split_drafts(str(parent_task_id))
+    assert len(drafts) == 1
+    assert str(drafts[0].id) == str(split_id)
+    assert state.get_split_parent_title(str(parent_task_id)) is not None
+    _sent_decisions, memo_decisions = review_service.apply_actions.call_args.args
+    assert memo_decisions == []
+
+
+def test_execute_task_actions_marks_completed_for_someday_and_delete() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    someday_task_id = uuid4()
+    delete_task_id = uuid4()
+    state.zombie_task_decisions[str(someday_task_id)] = "someday"
+    state.zombie_task_decisions[str(delete_task_id)] = "delete"
+
+    review_service.apply_actions.return_value = WeeklyReviewActionResult(
+        moved_to_someday=1,
+        someday_task_ids=[someday_task_id],
+        deleted_tasks=1,
+        deleted_task_ids=[delete_task_id],
+    )
+
+    controller.execute_task_actions()
+
+    assert state.is_zombie_task_completed(str(someday_task_id))
+    assert state.is_zombie_task_completed(str(delete_task_id))
+
+
+def test_execute_task_actions_records_memo_drafts() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    memo_id = uuid4()
+    draft_task_id = uuid4()
+    review_service.apply_actions.return_value = WeeklyReviewActionResult(
+        memo_task_infos=[WeeklyReviewMemoTaskInfo(memo_id=memo_id, task_id=draft_task_id)],
+        memo_task_ids=[draft_task_id],
+    )
+    task_service.get_by_id.side_effect = [_build_task(draft_task_id)]
+    memo_service.get_by_id.return_value = _build_memo_obj(memo_id)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    state.memo_decisions[str(memo_id)] = "create_task"
+
+    controller.execute_task_actions()
+
+    drafts = state.get_memo_drafts(str(memo_id))
+    assert len(drafts) == 1
+    assert str(drafts[0].id) == str(draft_task_id)
+
+
+def test_execute_task_actions_collects_memo_decisions() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    review_service.apply_actions.return_value = WeeklyReviewActionResult()
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    memo_id = uuid4()
+    state.memo_decisions[str(memo_id)] = "create_task"
+
+    controller.execute_task_actions()
+
+    _, memo_decisions = review_service.apply_actions.call_args.args
+    assert len(memo_decisions) == 1
+    assert memo_decisions[0].memo_id == memo_id
+    assert memo_decisions[0].action == "create_task"
+
+
+def test_execute_task_actions_marks_completed_memos() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    memo_id = uuid4()
+    state.memo_decisions[str(memo_id)] = "archive"
+    review_service.apply_actions.return_value = WeeklyReviewActionResult(
+        memos_archived=1,
+        archived_memo_ids=[memo_id],
+    )
+
+    controller.execute_task_actions()
+
+    assert state.is_memo_completed(str(memo_id))
+
+
+def test_approve_split_task_updates_status_and_state() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    parent_id = uuid4()
+    task_id = uuid4()
+    draft = _build_task(task_id)
+    state.add_split_draft_tasks(str(parent_id), "親タスク", [draft])
+    task_service.update.return_value = draft
+
+    controller.approve_split_task(str(task_id))
+
+    update_args = task_service.update.call_args.args[1]
+    assert update_args.status == TaskStatus.TODO
+    assert state.get_split_drafts(str(parent_id)) == []
+    assert state.is_zombie_task_completed(str(parent_id))
+
+
+def test_discard_split_task_removes_state() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    parent_id = uuid4()
+    task_id = uuid4()
+    state.add_split_draft_tasks(str(parent_id), "親タスク", [_build_task(task_id)])
+    task_service.delete.return_value = True
+
+    controller.discard_split_task(str(task_id))
+
+    task_service.delete.assert_called_once()
+    assert state.get_split_drafts(str(parent_id)) == []
+    assert state.is_zombie_task_completed(str(parent_id))
+
+
+def test_approve_memo_task_updates_state() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    memo_id = uuid4()
+    task_id = uuid4()
+    draft = _build_task(task_id)
+    state.add_memo_draft_tasks(str(memo_id), "メモ", [draft])
+    task_service.update.return_value = draft
+
+    controller.approve_memo_task(str(task_id))
+
+    update_args = task_service.update.call_args.args[1]
+    assert update_args.status == TaskStatus.TODO
+    assert state.get_memo_drafts(str(memo_id)) == []
+    assert state.is_memo_completed(str(memo_id))
+
+
+def test_discard_memo_task_removes_state() -> None:
+    state = WeeklyReviewState()
+    task_service = MagicMock(spec=TaskApplicationService)
+    review_service = MagicMock(spec=WeeklyReviewApplicationService)
+    memo_service = MagicMock(spec=MemoApplicationService)
+
+    controller = WeeklyReviewController(
+        task_app_service=task_service,
+        review_app_service=review_service,
+        memo_app_service=memo_service,
+        state=state,
+    )
+
+    memo_id = uuid4()
+    task_id = uuid4()
+    state.add_memo_draft_tasks(str(memo_id), "メモ", [_build_task(task_id)])
+    task_service.delete.return_value = True
+
+    controller.discard_memo_task(str(task_id))
+
+    task_service.delete.assert_called_once()
+    assert state.get_memo_drafts(str(memo_id)) == []
+    assert state.is_memo_completed(str(memo_id))
 
 
 def test_zombie_insight_without_suggestions_uses_excerpt() -> None:

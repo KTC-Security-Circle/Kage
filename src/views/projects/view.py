@@ -6,6 +6,7 @@ MVP パターンの View として、Flet UI の描画とイベント配線の�
 
 from __future__ import annotations
 
+import threading
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -174,6 +175,20 @@ class ProjectsView(BaseView):
                 # プロジェクトを選択
                 self._controller.select_project(project_id)
                 logger.debug(f"プロジェクトを選択しました: {project_id}")
+
+                # 非同期生成直後の反映遅延に備えて短時間の再描画プローブを実施
+                # 0.8s 間隔で最大5回 refresh を呼び、タスク一覧の反映遅延を吸収する
+                def _refresh_probe(attempt: int = 1) -> None:
+                    try:
+                        if attempt > 5:
+                            return
+                        self._controller.refresh()
+                        # 次回予約
+                        threading.Timer(0.8, _refresh_probe, kwargs={"attempt": attempt + 1}).start()
+                    except Exception as e:
+                        logger.debug(f"プロジェクト詳細再描画プローブ失敗: {e}")
+
+                threading.Timer(0.8, _refresh_probe).start()
         except Exception as e:
             logger.warning(f"一時保存プロジェクトIDの処理に失敗: {e}")
 

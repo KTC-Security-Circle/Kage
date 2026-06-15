@@ -16,6 +16,14 @@ from errors import ValidationError
 
 agents_logger = logger.bind(agents=True)
 
+_MODEL_CACHE: dict[str, BaseChatModel] = {}
+
+
+def _cache_key(provider: LLMProvider, model_name: HuggingFaceModel | str | None, device: str | None) -> str:
+    name = str(model_name) if model_name is not None else ""
+    resolved_device = device or ""
+    return f"{provider.value}:{name}:{resolved_device}"
+
 
 def get_sqlite_conn() -> sqlite3.Connection:
     """SQLiteデータベースへの接続を取得する関数。
@@ -163,48 +171,7 @@ def get_model(
             max_retries=3,
         )
     elif provider == LLMProvider.OPENVINO:
-        try:
-            from langchain_openvino_genai import (  # pyright: ignore[reportMissingImports]
-                ChatOpenVINO,
-                OpenVINOLLM,
-                load_model,
-            )
-        except ImportError as e:
-            err_msg = (
-                "langchain-openvino-genai is not installed. "
-                "Please install it with 'uv sync --extra openvino' or 'pip install .[openvino]' to use."
-            )
-            agents_logger.exception(err_msg)
-            raise ImportError(err_msg) from e
-
-        if model_name is None:
-            warning_msg = "Model name is not specified. Using default model."
-            agents_logger.warning(warning_msg)
-            model_name = HuggingFaceModel.QWEN_3_8B_INT4
-
-        if not isinstance(model_name, HuggingFaceModel):
-            err_msg = f"Invalid model name for OPENVINO provider: {model_name}. Must be a HuggingFaceModel enum."
-            agents_logger.error(err_msg)
-            raise ValidationError(err_msg)
-
-        # モデルのロード
-        model_path = load_model(
-            model_name.value,
-            download_path=LLM_MODEL_DIR,
-        )
-        requested_device = (device or OpenVINODevice.CPU.value).upper()
-        try:
-            resolved_device = OpenVINODevice(requested_device).value
-        except ValueError as exc:
-            err_msg = f"Invalid OpenVINO device specified: {device}"
-            agents_logger.error(err_msg)  # noqa: TRY400
-            raise ValidationError(err_msg) from exc
-
-        ov_llm = OpenVINOLLM.from_model_path(
-            model_path=model_path,
-            device=resolved_device,
-        )
-        llm = ChatOpenVINO(llm=ov_llm)
+        llm = _get_openvino_model(model_name, device)
     elif provider == LLMProvider.FAKE:
         # FAKEプロバイダ用のダミー応答を設定
         # もし指定されていない場合はデフォルトの応答を使用
@@ -222,4 +189,60 @@ def get_model(
         agents_logger.error(err_msg)
         raise NotImplementedError(err_msg)
 
+    return llm
+
+
+def _get_openvino_model(
+    model_name: HuggingFaceModel | str | None,
+    device: str | None,
+) -> BaseChatModel:
+    try:
+        from langchain_openvino_genai import (  # pyright: ignore[reportMissingImports]
+            ChatOpenVINO,
+            OpenVINOLLM,
+            load_model,
+        )
+    except ImportError as e:
+        err_msg = (
+            "langchain-openvino-genai is not installed. "
+            "Please install it with 'uv sync --extra openvino' or 'pip install .[openvino]' to use."
+        )
+        agents_logger.exception(err_msg)
+        raise ImportError(err_msg) from e
+
+    resolved_model = model_name
+    if resolved_model is None:
+        warning_msg = "Model name is not specified. Using default model."
+        agents_logger.warning(warning_msg)
+        resolved_model = HuggingFaceModel.QWEN_3_8B_INT4
+
+    if not isinstance(resolved_model, HuggingFaceModel):
+        err_msg = f"Invalid model name for OPENVINO provider: {model_name}. Must be a HuggingFaceModel enum."
+        agents_logger.error(err_msg)
+        raise ValidationError(err_msg)
+
+    model_path = load_model(
+        resolved_model.value,
+        download_path=LLM_MODEL_DIR,
+    )
+    requested_device = (device or OpenVINODevice.CPU.value).upper()
+    try:
+        resolved_device = OpenVINODevice(requested_device).value
+    except ValueError as exc:
+        err_msg = f"Invalid OpenVINO device specified: {device}"
+        agents_logger.error(err_msg)  # noqa: TRY400
+        raise ValidationError(err_msg) from exc
+
+    cache_key = _cache_key(LLMProvider.OPENVINO, resolved_model, resolved_device)
+    cached_model = _MODEL_CACHE.get(cache_key)
+    if cached_model is not None:
+        agents_logger.debug("Reusing cached OpenVINO model", model=str(resolved_model), device=resolved_device)
+        return cached_model
+
+    ov_llm = OpenVINOLLM.from_model_path(
+        model_path=model_path,
+        device=resolved_device,
+    )
+    llm = ChatOpenVINO(llm=ov_llm)
+    _MODEL_CACHE[cache_key] = llm
     return llm
